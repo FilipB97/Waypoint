@@ -16,6 +16,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using AxMSTSCLib;
 using MSTSCLib;
+using RdpManager.Core;
 using RdpManager.Models;
 
 namespace RdpManager
@@ -209,9 +210,8 @@ namespace RdpManager
 
         private int ParseColorDepth()
         {
-            if (SetColorDepth.SelectedItem is ComboBoxItem item && int.TryParse(item.Content?.ToString(), out var v))
-                return v;
-            return 32;
+            var text = (SetColorDepth.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            return RdpUtils.ParseColorDepth(text);
         }
 
         private void ApplySettings()
@@ -343,7 +343,7 @@ namespace RdpManager
             var byGroup = new Dictionary<string, List<ServerInfo>>();
             foreach (var s in _allServers)
             {
-                if (!MatchesFilter(s, filter)) continue;
+                if (!RdpUtils.MatchesFilter(s, filter)) continue;
                 var g = string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group;
                 if (!byGroup.ContainsKey(g)) { order.Add(g); byGroup[g] = new List<ServerInfo>(); }
                 byGroup[g].Add(s);
@@ -702,7 +702,8 @@ namespace RdpManager
             {
                 IMsRdpClientAdvancedSettings8 adv = s.Rdp.AdvancedSettings9;
                 adv.RDPPort = s.Server.Port;
-                adv.AuthenticationLevel = 0;
+                // Weryfikacja tożsamości serwera (domyślnie 2 = ostrzegaj) — chroni przed MITM.
+                adv.AuthenticationLevel = (uint)Math.Clamp(s.Server.AuthenticationLevel, 0, 2);
                 adv.EnableCredSspSupport = true;
                 adv.SmartSizing = false;   // dynamiczna rozdzielczość zajmie się dopasowaniem
                 adv.EnableAutoReconnect = _settings.AutoReconnect;
@@ -770,6 +771,10 @@ namespace RdpManager
                 s.Connected = false;
                 s.LoggedIn = false;
                 SetTabStatus(s, ServerStatus.Offline);
+
+                // Bezpieczeństwo: nie trzymaj hasła w pamięci po rozłączeniu, jeśli nie jest
+                // zapisane w Credential Managerze. Ponowne połączenie wymaga wpisania go na nowo.
+                if (!s.Server.SavePassword) s.Password = "";
 
                 string msg = "Rozłączono: " + DescribeDisconnect(s.Rdp, a.discReason);
                 if (!wasLoggedIn)
@@ -1014,7 +1019,7 @@ namespace RdpManager
 
             foreach (var s in _sessions)
             {
-                if (!MatchesFilter(s.Server, filter)) continue;
+                if (!RdpUtils.MatchesFilter(s.Server, filter)) continue;
                 var dot = s.Connected ? ServerStatus.Online : ServerStatus.Offline;
                 var session = s;
                 FlyoutSessions.Children.Add(BuildFlyoutRow(s.Server, dot, s == _active, () => HandleFlyoutClick(session.Server)));
@@ -1022,17 +1027,10 @@ namespace RdpManager
 
             foreach (var server in _allServers)
             {
-                if (!MatchesFilter(server, filter)) continue;
+                if (!RdpUtils.MatchesFilter(server, filter)) continue;
                 var srv = server;
                 FlyoutServers.Children.Add(BuildFlyoutRow(server, server.Status, false, () => HandleFlyoutClick(srv)));
             }
-        }
-
-        private static bool MatchesFilter(ServerInfo s, string filter)
-        {
-            if (string.IsNullOrEmpty(filter)) return true;
-            return (s.Name ?? "").ToLowerInvariant().Contains(filter)
-                || (s.Host ?? "").ToLowerInvariant().Contains(filter);
         }
 
         private FrameworkElement BuildFlyoutRow(ServerInfo server, ServerStatus dotStatus, bool isActive, Action onClick)
@@ -1300,8 +1298,7 @@ namespace RdpManager
             try { ext = (uint)rdp.ExtendedDisconnectReason; } catch { }
             string d = null;
             try { d = rdp.GetErrorDescription((uint)reason, ext); } catch { }
-            d = string.IsNullOrWhiteSpace(d) ? "rozłączono" : d.Trim().TrimEnd('.');
-            return d + " (kod " + reason + "/" + ext + ")";
+            return RdpUtils.FormatDisconnectReason(d, reason, ext);
         }
 
         private void SetSessionStatus(Session s, string text, StatusKind kind = StatusKind.Info)

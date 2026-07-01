@@ -76,6 +76,14 @@
                         <ComboBoxItem>Odtwarzaj na serwerze</ComboBoxItem>
                     </ComboBox>
                 </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <TextBlock Text="Weryfikacja serwera" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="EdAuthLevel" Width="220">
+                        <ComboBoxItem>Nie sprawdzaj (niezalecane)</ComboBoxItem>
+                        <ComboBoxItem>Wymagaj — odrzuć przy błędzie</ComboBoxItem>
+                        <ComboBoxItem>Ostrzegaj przy błędzie (zalecane)</ComboBoxItem>
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
         </Grid>
 

@@ -38,6 +38,14 @@ namespace RdpManager.Models
         /// <summary>Dźwięk: 0 = odtwarzaj lokalnie, 1 = nie odtwarzaj, 2 = odtwarzaj na serwerze.</summary>
         public int AudioMode { get; set; }
 
+        /// <summary>
+        /// Weryfikacja tożsamości serwera (mapuje na IMsRdpClientAdvancedSettings.AuthenticationLevel):
+        /// 0 = nie sprawdzaj (niebezpieczne, ryzyko MITM),
+        /// 1 = wymagaj — połączenie się nie uda, jeśli weryfikacja zawiedzie,
+        /// 2 = ostrzegaj — próbuj zweryfikować, ostrzeż przy niepowodzeniu (bezpieczny domyślny).
+        /// </summary>
+        public int AuthenticationLevel { get; set; } = 2;
+
         /// <summary>Klucz w Credential Manager (hasło NIE jest trzymane w tym modelu ani w JSON).</summary>
         [JsonIgnore]
         public string CredTarget => "RdpManager:" + Id;
