@@ -373,6 +373,12 @@
                                            FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
                                 <ui:Button Content="Otwórz folder" Appearance="Secondary" Click="OpenDataFolder_Click" Margin="12,0,0,0"/>
                             </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <ui:Button Content="Eksportuj profil…" Appearance="Secondary" Click="ExportProfile_Click"/>
+                                <ui:Button Content="Importuj profil…" Appearance="Secondary" Click="ImportProfile_Click" Margin="8,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock Foreground="{StaticResource TextTer}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Text="Kopia zawiera serwery i ustawienia (bez haseł — te zostają w Windows Credential Manager)."/>
                         </StackPanel>
                     </Border>
 

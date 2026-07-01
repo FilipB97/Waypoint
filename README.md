@@ -24,6 +24,8 @@ Remote Desktop Connection (`mstsc.exe`).
 - **Keyboard shortcuts** — `Ctrl+Tab` cycle tabs, `Alt+1..9` jump, `Ctrl+W` close,
   `Ctrl+F`/`Ctrl+K` focus search, `Ctrl+±/0` zoom, `F11` full screen.
 - **Diagnostics & audit** — per-server TCP port test and an optional connection log.
+- **Multiple sessions per server**, duplicate tab, and tab reorder.
+- **Profile export / import** — back up all servers and settings to one file.
 - **Dashboard & recents**, UI zoom (Ctrl+scroll), dark Fluent theme.
 
 ## Requirements

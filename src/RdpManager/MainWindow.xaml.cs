@@ -18,6 +18,7 @@ using AxMSTSCLib;
 using MSTSCLib;
 using RdpManager.Core;
 using RdpManager.Models;
+using RdpManager.ViewModels;
 
 namespace RdpManager
 {
@@ -32,7 +33,7 @@ namespace RdpManager
         private readonly Dictionary<Session, Rectangle> _tabUnderline = new Dictionary<Session, Rectangle>();
         private readonly Dictionary<Session, Ellipse> _tabStatus = new Dictionary<Session, Ellipse>();
         private readonly Dictionary<Session, TextBlock> _tabName = new Dictionary<Session, TextBlock>();
-        private readonly List<ServerInfo> _allServers = new List<ServerInfo>();
+        private readonly MainViewModel _vm = new MainViewModel();
 
         private AppSettings _settings = new AppSettings();
 
@@ -71,6 +72,8 @@ namespace RdpManager
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             _settings = SettingsStore.Load();
+            ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
+            _vm.UseRecentIds(_settings.RecentIds);   // współdziel listę „ostatnich" z ustawieniami
             RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
 
             FsPopup.CustomPopupPlacementCallback = PlaceFsPopup;
@@ -244,29 +247,88 @@ namespace RdpManager
             catch { /* brak eksploratora / brak uprawnień — ignorujemy */ }
         }
 
+        private void ExportProfile_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Eksportuj profil",
+                Filter = "Profil RDP Manager (*.json)|*.json",
+                FileName = "rdpmanager-profil.json"
+            };
+            if (dlg.ShowDialog(this) != true) return;
+            try
+            {
+                System.IO.File.WriteAllText(dlg.FileName, ProfileBackup.Serialize(_settings, _vm.Servers));
+                SettingsStatus.Text = "Wyeksportowano profil ✓";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Nie udało się zapisać profilu:\n" + ex.Message,
+                    "Eksport profilu", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void ImportProfile_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Importuj profil",
+                Filter = "Profil RDP Manager (*.json)|*.json|Wszystkie pliki (*.*)|*.*"
+            };
+            if (dlg.ShowDialog(this) != true) return;
+
+            ProfileData data;
+            try { data = ProfileBackup.Parse(System.IO.File.ReadAllText(dlg.FileName)); }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Niepoprawny plik profilu:\n" + ex.Message,
+                    "Import profilu", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (data == null)
+            {
+                MessageBox.Show("Pusty lub niepoprawny plik profilu.", "Import profilu",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (MessageBox.Show("Zaimportować profil? Zastąpi bieżącą listę serwerów i ustawienia.",
+                    "Import profilu", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            if (data.Settings != null)
+            {
+                _settings = data.Settings;
+                SettingsStore.Save(_settings);
+                _vm.UseRecentIds(_settings.RecentIds);
+                ApplySettings();
+                LoadSettingsForm();
+            }
+            _vm.LoadServers(data.Servers);
+            PersistServers();
+            RenderTree(SearchBox.Text);
+            CheckReachabilityAsync();
+            SettingsStatus.Text = "Zaimportowano profil ✓";
+        }
+
         // ---------- Ostatnie / Pulpit ----------
 
         private void RecordRecent(ServerInfo server)
         {
             if (string.IsNullOrEmpty(server?.Id)) return;
-            _settings.RecentIds.Remove(server.Id);
-            _settings.RecentIds.Insert(0, server.Id);
-            if (_settings.RecentIds.Count > 15)
-                _settings.RecentIds.RemoveRange(15, _settings.RecentIds.Count - 15);
-            SettingsStore.Save(_settings);
+            _vm.RecordRecent(server.Id);
+            SettingsStore.Save(_settings);   // RecentIds jest współdzielone z _settings
         }
 
         private void BuildRecent()
         {
             RecentPanel.Children.Clear();
             bool any = false;
-            foreach (var id in _settings.RecentIds)
+            foreach (var srv in _vm.RecentServers())
             {
-                var server = _allServers.Find(x => x.Id == id);
-                if (server == null) continue;
                 any = true;
-                var srv = server;
-                RecentPanel.Children.Add(BuildFlyoutRow(srv, srv.Status, false, () => OpenServer(srv, true)));
+                var s = srv;
+                RecentPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => OpenServer(s, true)));
             }
             if (!any)
                 RecentPanel.Children.Add(new TextBlock { Text = "Brak ostatnich połączeń.", Foreground = (Brush)Resources["TextTer"] });
@@ -276,8 +338,8 @@ namespace RdpManager
         {
             DashboardPanel.Children.Clear();
 
-            int total = _allServers.Count;
-            int online = _allServers.Count(s => s.Status == ServerStatus.Online);
+            int total = _vm.Total;
+            int online = _vm.OnlineCount;
             int open = _sessions.Count;
 
             var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 22) };
@@ -293,12 +355,10 @@ namespace RdpManager
             });
 
             int shown = 0;
-            foreach (var id in _settings.RecentIds)
+            foreach (var srv in _vm.RecentServers())
             {
-                var server = _allServers.Find(x => x.Id == id);
-                if (server == null) continue;
-                var srv = server;
-                DashboardPanel.Children.Add(BuildFlyoutRow(srv, srv.Status, false, () => OpenServer(srv, true)));
+                var s = srv;
+                DashboardPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => OpenServer(s, true)));
                 if (++shown >= 5) break;
             }
             if (shown == 0)
@@ -330,8 +390,7 @@ namespace RdpManager
 
         private void BuildServerTree()
         {
-            _allServers.Clear();
-            _allServers.AddRange(ServerRepository.Load());
+            _vm.LoadServers(ServerRepository.Load());
             RenderTree();
         }
 
@@ -345,7 +404,7 @@ namespace RdpManager
 
             var order = new List<string>();
             var byGroup = new Dictionary<string, List<ServerInfo>>();
-            foreach (var s in _allServers)
+            foreach (var s in _vm.Servers)
             {
                 if (!RdpUtils.MatchesFilter(s, filter)) continue;
                 var g = string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group;
@@ -485,15 +544,18 @@ namespace RdpManager
 
         // ---------- Otwieranie / przełączanie sesji ----------
 
-        private void OpenServer(ServerInfo server, bool autoConnect = false)
+        private void OpenServer(ServerInfo server, bool autoConnect = false, bool forceNew = false)
         {
             ShowView("Sessions");   // kontrolka RDP musi powstać przy widocznym widoku sesji
-            var existing = _sessions.Find(x => x.Server == server);
-            if (existing != null)
+            if (!forceNew)
             {
-                Activate(existing);
-                if (autoConnect && !existing.Connected) BeginConnect(existing);
-                return;
+                var existing = _sessions.Find(x => x.Server == server);
+                if (existing != null)
+                {
+                    Activate(existing);
+                    if (autoConnect && !existing.Connected) BeginConnect(existing);
+                    return;
+                }
             }
 
             var rdp = new AxMsRdpClient11NotSafeForScripting();
@@ -642,10 +704,20 @@ namespace RdpManager
             tab.MouseLeftButtonUp += (s, e) => Activate(session);
 
             var tabMenu = new ContextMenu();
+            var dupItem = new MenuItem { Header = "Duplikuj" };
+            dupItem.Click += (s, e) => DuplicateSession(session);
+            var moveLeft = new MenuItem { Header = "Przesuń w lewo" };
+            moveLeft.Click += (s, e) => MoveTab(session, -1);
+            var moveRight = new MenuItem { Header = "Przesuń w prawo" };
+            moveRight.Click += (s, e) => MoveTab(session, +1);
             var closeOthers = new MenuItem { Header = "Zamknij pozostałe" };
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = "Zamknij" };
             closeThis.Click += (s, e) => RequestCloseSession(session);
+            tabMenu.Items.Add(dupItem);
+            tabMenu.Items.Add(moveLeft);
+            tabMenu.Items.Add(moveRight);
+            tabMenu.Items.Add(new Separator());
             tabMenu.Items.Add(closeOthers);
             tabMenu.Items.Add(closeThis);
             tab.ContextMenu = tabMenu;
@@ -683,6 +755,22 @@ namespace RdpManager
         {
             foreach (var s in _sessions.ToList())
                 if (s != keep) RequestCloseSession(s);
+        }
+
+        /// <summary>Otwiera drugą, niezależną sesję do tego samego serwera (osobna zakładka).</summary>
+        private void DuplicateSession(Session s) => OpenServer(s.Server, autoConnect: true, forceNew: true);
+
+        /// <summary>Przesuwa zakładkę w pasku o <paramref name="dir"/> (-1 w lewo, +1 w prawo).</summary>
+        private void MoveTab(Session s, int dir)
+        {
+            int i = _sessions.IndexOf(s);
+            int j = i + dir;
+            if (i < 0 || j < 0 || j >= _sessions.Count) return;
+
+            _sessions.RemoveAt(i);
+            _sessions.Insert(j, s);
+            TabStrip.Children.Remove(s.TabButton);
+            TabStrip.Children.Insert(j, s.TabButton);
         }
 
         private void RequestCloseSession(Session session)
@@ -1146,7 +1234,7 @@ namespace RdpManager
                 FlyoutSessions.Children.Add(BuildFlyoutRow(s.Server, dot, s == _active, () => HandleFlyoutClick(session.Server)));
             }
 
-            foreach (var server in _allServers)
+            foreach (var server in _vm.Servers)
             {
                 if (!RdpUtils.MatchesFilter(server, filter)) continue;
                 var srv = server;
@@ -1276,7 +1364,7 @@ namespace RdpManager
             var dlg = new ServerEditWindow(server, "") { Owner = this };
             if (dlg.ShowDialog() == true)
             {
-                _allServers.Add(server);
+                _vm.Add(server);
                 PersistServers();
                 SaveCredential(server, dlg.EnteredPassword);
                 RenderTree(SearchBox.Text);
@@ -1304,7 +1392,7 @@ namespace RdpManager
                     if (string.IsNullOrWhiteSpace(server.Name))
                         server.Name = System.IO.Path.GetFileNameWithoutExtension(path);
                     server.Status = ServerStatus.Offline;
-                    _allServers.Add(server);
+                    _vm.Add(server);
                     imported++;
                 }
                 catch (Exception ex)
@@ -1386,17 +1474,17 @@ namespace RdpManager
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
 
-            var open = _sessions.Find(x => x.Server == server);
-            if (open != null) CloseSession(open);
+            foreach (var open in _sessions.Where(x => x.Server == server).ToList())
+                CloseSession(open);
 
-            _allServers.Remove(server);
+            _vm.Remove(server);
             CredentialStore.Delete(server.CredTarget);
             PersistServers();
             RenderTree(SearchBox.Text);
             CheckReachabilityAsync();
         }
 
-        private void PersistServers() => ServerRepository.Save(_allServers);
+        private void PersistServers() => ServerRepository.Save(_vm.Servers.ToList());
 
         private void SaveCredential(ServerInfo server, string password)
         {
@@ -1465,7 +1553,7 @@ namespace RdpManager
             _reachBusy = true;
             try
             {
-                var servers = _allServers.ToList();
+                var servers = _vm.Servers.ToList();
                 var results = await Task.WhenAll(servers.Select(srv =>
                     Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv, Probe(srv.Host, srv.Port)))));
 
@@ -1475,6 +1563,7 @@ namespace RdpManager
                     if (_serverStatusDot.TryGetValue(kv.Key, out var dot))
                         dot.Fill = StatusBrush(kv.Value);
                 }
+                _vm.RaiseCounts();   // odśwież liczniki pulpitu (Osiągalne)
             }
             catch
             {
