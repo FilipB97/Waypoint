@@ -32,7 +32,7 @@
         <StackPanel x:Name="Toolbar" Grid.Row="0" Orientation="Horizontal"
                     Background="#212226" Margin="0" VerticalAlignment="Center">
             <TextBlock Text="Host:" Margin="10,0,4,0"/>
-            <TextBox x:Name="HostBox" Width="150" Text="10.10.15.17" VerticalContentAlignment="Center" Margin="0,6"/>
+            <TextBox x:Name="HostBox" Width="150" Text="192.0.2.10" VerticalContentAlignment="Center" Margin="0,6"/>
             <TextBlock Text="Użytkownik:" Margin="12,0,4,0"/>
             <TextBox x:Name="UserBox" Width="130" VerticalContentAlignment="Center" Margin="0,6"/>
             <TextBlock Text="Hasło:" Margin="12,0,4,0"/>

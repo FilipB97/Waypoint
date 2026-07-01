@@ -29,11 +29,15 @@ reflects the chosen priorities.
 - ✅ **MVVM foundation** — `ViewModelBase` + `MainViewModel` own the server collection,
   recents and filtering (`INotifyPropertyChanged`, `ObservableCollection`); code-behind
   delegates to it; unit-tested. (Full XAML data-binding is the next step.)
+- ✅ **Multi-monitor** *(experimental, untested on real 2+ monitor hardware)* — per-server
+  `UseAllMonitors` sets the RDP control's `UseMultimon` and full screen uses the control's
+  own spanning mode; gated on monitor count > 1, so single-monitor behavior is unchanged.
+  Mapped to/from `.rdp` (`use multimon`).
 
 ## Remaining (need local Windows verification)
 
-- **Multi-monitor.** Per-monitor / spanned full screen (`UseMultimon`). Deferred — hard to
-  verify without a multi-monitor setup.
+- **Multi-monitor — real-hardware validation.** The code path ships gated; verify spanning,
+  DPI mix and the control's connection bar once a 2+ monitor setup is available.
 - **MVVM — complete the migration.** Bind the XAML directly to the ViewModels (per-item
   `ServerViewModel`/`SessionViewModel`, `ItemsControl` bindings) and add DI, replacing the
   remaining imperative UI construction. Changes UI behavior that unit tests can't catch.

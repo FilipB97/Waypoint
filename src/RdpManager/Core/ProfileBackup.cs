@@ -31,13 +31,18 @@ namespace RdpManager.Core
             return JsonSerializer.Serialize(data, Options);
         }
 
-        /// <summary>Parsuje kopię; zwraca null przy pustych/niepoprawnych danych.</summary>
+        /// <summary>
+        /// Parsuje kopię; zwraca null przy pustych/niepoprawnych danych — także gdy JSON
+        /// jest poprawny, ale ma obcy kształt (ani ustawień, ani serwerów). Chroni to import
+        /// przed cichym zastąpieniem listy serwerów pustką.
+        /// </summary>
         public static ProfileData Parse(string json)
         {
             if (string.IsNullOrWhiteSpace(json)) return null;
             var data = JsonSerializer.Deserialize<ProfileData>(json, Options);
             if (data == null) return null;
             data.Servers ??= new List<ServerInfo>();
+            if (data.Settings == null && data.Servers.Count == 0) return null;
             return data;
         }
     }

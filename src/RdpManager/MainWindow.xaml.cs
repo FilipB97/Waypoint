@@ -177,6 +177,7 @@ namespace RdpManager
             {
                 try { s.Resizer?.Dispose(); } catch { }
                 try { s.Rdp.Disconnect(); } catch { }
+                try { s.Host.Dispose(); } catch { }
             }
         }
 
@@ -224,8 +225,9 @@ namespace RdpManager
         {
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
             RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
-            _fsBarDelay.Interval = TimeSpan.FromMilliseconds(_settings.FullscreenBarDelayMs);
-            _reachTimer.Interval = TimeSpan.FromSeconds(_settings.ReachabilityIntervalSec);
+            // Clampy także tutaj — ustawienia mogą przyjść z importu profilu (plik zewnętrzny).
+            _fsBarDelay.Interval = TimeSpan.FromMilliseconds(Math.Clamp(_settings.FullscreenBarDelayMs, 0, 3000));
+            _reachTimer.Interval = TimeSpan.FromSeconds(Math.Clamp(_settings.ReachabilityIntervalSec, 5, 3600));
             if (_settings.ReachabilityEnabled)
             {
                 if (!_reachTimer.IsEnabled) _reachTimer.Start();
@@ -292,9 +294,17 @@ namespace RdpManager
                 return;
             }
 
-            if (MessageBox.Show("Zaimportować profil? Zastąpi bieżącą listę serwerów i ustawienia.",
-                    "Import profilu", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            string prompt = "Zaimportować profil? Serwerów w pliku: " + data.Servers.Count +
+                            " — zastąpi bieżącą listę serwerów i ustawienia.";
+            if (_sessions.Count > 0)
+                prompt += "\nOtwarte sesje (" + _sessions.Count + ") zostaną zamknięte.";
+            if (MessageBox.Show(prompt, "Import profilu",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
+
+            // Zamknij sesje przed podmianą listy — inaczej trzymałyby osierocone ServerInfo.
+            foreach (var s in _sessions.ToList())
+                CloseSession(s);
 
             if (data.Settings != null)
             {
@@ -739,22 +749,39 @@ namespace RdpManager
             }
         }
 
-        /// <summary>Gdy kilka otwartych sesji ma tę samą nazwę serwera, dopisuje host, by je rozróżnić.</summary>
+        /// <summary>
+        /// Rozróżnia zakładki o tej samej nazwie: dopisuje host, a przy duplikatach tej samej
+        /// sesji (identyczna nazwa i host) — numer wystąpienia (#2, #3…).
+        /// </summary>
         private void RefreshTabTitles()
         {
+            var nameSeen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             foreach (var s in _sessions)
             {
                 if (!_tabName.TryGetValue(s, out var tn)) continue;
-                bool dup = _sessions.Any(o => o != s &&
+
+                bool dupName = _sessions.Any(o => o != s &&
                     string.Equals(o.Server.Name, s.Server.Name, StringComparison.OrdinalIgnoreCase));
-                tn.Text = dup ? s.Server.Name + " (" + s.Server.Host + ")" : s.Server.Name;
+                string title = dupName ? s.Server.Name + " (" + s.Server.Host + ")" : s.Server.Name;
+
+                nameSeen.TryGetValue(title, out int seen);
+                nameSeen[title] = seen + 1;
+                if (seen > 0) title += " #" + (seen + 1);   // duplikaty tej samej sesji
+
+                tn.Text = title;
             }
         }
 
         private void CloseOtherSessions(Session keep)
         {
-            foreach (var s in _sessions.ToList())
-                if (s != keep) RequestCloseSession(s);
+            var others = _sessions.Where(s => s != keep).ToList();
+            int connected = others.Count(s => s.Connected);
+            // Jedno zbiorcze potwierdzenie zamiast dialogu per sesja.
+            if (connected > 0 && _settings.ConfirmCloseConnected &&
+                MessageBox.Show("Zamknąć pozostałe sesje? Połączonych: " + connected + ".",
+                    "Zamknij pozostałe", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            foreach (var s in others) CloseSession(s);
         }
 
         /// <summary>Otwiera drugą, niezależną sesję do tego samego serwera (osobna zakładka).</summary>
@@ -771,6 +798,7 @@ namespace RdpManager
             _sessions.Insert(j, s);
             TabStrip.Children.Remove(s.TabButton);
             TabStrip.Children.Insert(j, s.TabButton);
+            RefreshTabTitles();   // numeracja duplikatów (#2) podąża za kolejnością
         }
 
         private void RequestCloseSession(Session session)
@@ -788,6 +816,7 @@ namespace RdpManager
             session.Resizer?.Dispose();
 
             SessionContainer.Children.Remove(session.Host);
+            try { session.Host.Dispose(); } catch { }   // zwalnia hosta i kontrolkę ActiveX (HWND)
             TabStrip.Children.Remove(session.TabButton);
             _tabUnderline.Remove(session);
             _tabStatus.Remove(session);
@@ -843,6 +872,12 @@ namespace RdpManager
                 s.Server.SavePassword = true;
                 SaveCredential(s.Server, dlg.EnteredPassword);
             }
+            else
+            {
+                // Odznaczenie „zapisz" ma być honorowane: usuń też ewentualny stary wpis z sejfu.
+                s.Server.SavePassword = false;
+                CredentialStore.Delete(s.Server.CredTarget);
+            }
             PersistServers();
             if (s == _active) LoadToolbar(s);
             ConnectSession(s);
@@ -874,6 +909,14 @@ namespace RdpManager
                 adv.RedirectPrinters = s.Server.RedirectPrinters;
                 adv.AudioRedirectionMode = (uint)Math.Clamp(s.Server.AudioMode, 0, 2);
                 try { s.Rdp.SecuredSettings2.KeyboardHookMode = 2; } catch { }  // Alt+Tab/Win -> zdalna w pełnym ekranie
+
+                // Multi-monitor (eksperymentalne): tylko przy >1 monitorze — na jednym bez zmian.
+                try
+                {
+                    ((IMsRdpClient9)s.Rdp.GetOcx()).UseMultimon =
+                        s.Server.UseAllMonitors && MonitorCount() > 1;
+                }
+                catch { /* starsza kontrolka bez multimon — pomijamy */ }
 
                 ApplyGateway(s);
 
@@ -978,6 +1021,11 @@ namespace RdpManager
                 SetSessionStatus(s, "Błąd krytyczny (errorCode " + a.errorCode + ")", StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             };
+            // Fullscreen kontrolki (ścieżka multimon) — tylko komunikaty statusu.
+            s.Rdp.OnEnterFullScreenMode += (o, a) =>
+                SetSessionStatus(s, "Pełny ekran (wszystkie monitory) — Ctrl+Alt+Break lub pasek połączenia, by wrócić.", StatusKind.Info);
+            s.Rdp.OnLeaveFullScreenMode += (o, a) =>
+                SetSessionStatus(s, "● Połączono", StatusKind.Ok);
         }
 
         private void SetTabStatus(Session s, ServerStatus status)
@@ -1029,6 +1077,16 @@ namespace RdpManager
         private void ToggleFullscreen()
         {
             if (_active == null && !_isFullscreen) return;
+
+            // Multi-monitor (eksperymentalne): połączona sesja z UseAllMonitors przy >1 monitorze
+            // używa pełnego ekranu KONTROLKI (sama spina monitory i ma własny pasek połączenia).
+            // Na jednym monitorze warunek nigdy nie zachodzi — ścieżka okna bez zmian.
+            if (!_isFullscreen && _active != null && _active.Connected &&
+                _active.Server.UseAllMonitors && MonitorCount() > 1)
+            {
+                try { _active.Rdp.FullScreen = true; return; } catch { /* fallback niżej */ }
+            }
+
             if (!_isFullscreen) EnterFullscreen();
             else ExitFullscreen();
         }
@@ -1111,6 +1169,13 @@ namespace RdpManager
             Point br = toDip.Transform(new Point(mi.rcMonitor.right, mi.rcMonitor.bottom));
             rect = new Rect(tl, br);
             return true;
+        }
+
+        /// <summary>Liczba monitorów w systemie (bramkuje ścieżkę multimon).</summary>
+        private static int MonitorCount()
+        {
+            try { return System.Windows.Forms.Screen.AllScreens.Length; }
+            catch { return 1; }
         }
 
         private const int MONITOR_DEFAULTTONEAREST = 0x2;
@@ -1231,7 +1296,13 @@ namespace RdpManager
                 if (!RdpUtils.MatchesFilter(s.Server, filter)) continue;
                 var dot = s.Connected ? ServerStatus.Online : ServerStatus.Offline;
                 var session = s;
-                FlyoutSessions.Children.Add(BuildFlyoutRow(s.Server, dot, s == _active, () => HandleFlyoutClick(session.Server)));
+                // Aktywuj KONKRETNĄ sesję (przy duplikatach HandleFlyoutClick trafiałby zawsze w pierwszą).
+                FlyoutSessions.Children.Add(BuildFlyoutRow(s.Server, dot, s == _active, () =>
+                {
+                    Activate(session);
+                    FsPopup.IsOpen = false;
+                    CollapseFlyout();
+                }));
             }
 
             foreach (var server in _vm.Servers)
@@ -1453,17 +1524,13 @@ namespace RdpManager
                 RenderTree(SearchBox.Text);
                 CheckReachabilityAsync();
 
-                // odśwież otwartą sesję tego serwera (etykieta zakładki + pasek)
-                var open = _sessions.Find(x => x.Server == server);
-                if (open != null)
+                // odśwież otwarte sesje tego serwera (etykiety zakładek + pasek aktywnej)
+                RefreshTabTitles();
+                if (_active?.Server == server)
                 {
-                    RefreshTabTitles();
-                    if (open == _active)
-                    {
-                        LoadToolbar(open);
-                        UpdateToolbarMode();
-                        FsName.Text = server.Name + " · " + server.Host;
-                    }
+                    LoadToolbar(_active);
+                    UpdateToolbarMode();
+                    FsName.Text = server.Name + " · " + server.Host;
                 }
             }
         }

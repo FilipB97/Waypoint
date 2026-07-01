@@ -26,7 +26,13 @@ Remote Desktop Connection (`mstsc.exe`).
 - **Diagnostics & audit** — per-server TCP port test and an optional connection log.
 - **Multiple sessions per server**, duplicate tab, and tab reorder.
 - **Profile export / import** — back up all servers and settings to one file.
+- **Multi-monitor full screen** *(experimental)* — per-server "use all monitors" option
+  (mstsc `use multimon`); active only on systems with more than one monitor.
 - **Dashboard & recents**, UI zoom (Ctrl+scroll), dark Fluent theme.
+
+> **Known limitation:** keyboard shortcuts (Ctrl+Tab, Alt+1..9, F11, …) work while focus
+> is on the app chrome. Inside a connected RDP session the keyboard goes to the remote
+> desktop — same as `mstsc`.
 
 ## Requirements
 

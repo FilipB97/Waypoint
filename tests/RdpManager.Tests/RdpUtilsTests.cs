@@ -99,5 +99,21 @@ namespace RdpManager.Tests
         {
             Assert.Equal(expected, RdpUtils.FormatDiagnostics("host", 3389, reachable, ms));
         }
+
+        [Fact]
+        public void FormatConnectionLog_SanitizesControlCharsAgainstLogForging()
+        {
+            var s = new ServerInfo
+            {
+                Name = "srv\r\n2026-01-01 00:00:00  CONNECTED fake",   // próba wstrzyknięcia linii
+                Host = "h\tost",
+                Username = "u\nser"
+            };
+            var line = RdpUtils.FormatConnectionLog(new DateTime(2026, 1, 1), "FAILED", s);
+
+            Assert.DoesNotContain("\n", line);
+            Assert.DoesNotContain("\r", line);
+            Assert.DoesNotContain("\t", line);
+        }
     }
 }

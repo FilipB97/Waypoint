@@ -50,5 +50,23 @@ namespace RdpManager.Tests
             else
                 Assert.ThrowsAny<System.Exception>(() => ProfileBackup.Parse(input));
         }
+
+        [Theory]
+        [InlineData("{}")]                       // pusty obiekt
+        [InlineData("{\"foo\":1}")]              // obcy kształt
+        [InlineData("{\"Version\":1}")]          // sam nagłówek, bez danych
+        public void Parse_RejectsForeignShapedJson(string json)
+        {
+            // Poprawny JSON bez ustawień i serwerów NIE może przejść — import
+            // zastąpiłby całą listę serwerów pustką (utrata danych).
+            Assert.Null(ProfileBackup.Parse(json));
+        }
+
+        [Fact]
+        public void Parse_AcceptsServersOnlyAndSettingsOnly()
+        {
+            Assert.NotNull(ProfileBackup.Parse("{\"Servers\":[{\"Name\":\"a\",\"Host\":\"h\"}]}"));
+            Assert.NotNull(ProfileBackup.Parse("{\"Settings\":{\"DefaultPort\":3390}}"));
+        }
     }
 }

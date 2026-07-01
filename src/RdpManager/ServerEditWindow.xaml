@@ -85,6 +85,9 @@
                     </ComboBox>
                 </StackPanel>
 
+                <CheckBox x:Name="EdMultimon" Content="Użyj wszystkich monitorów w pełnym ekranie (eksperymentalne)"
+                          Margin="0,10,0,0"/>
+
                 <TextBlock Text="Brama (RD Gateway / jump-host)" FontWeight="SemiBold" Margin="0,16,0,6"/>
                 <ui:TextBox x:Name="GatewayHostBox" PlaceholderText="host bramy — puste = połączenie bezpośrednie"/>
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">

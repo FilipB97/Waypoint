@@ -32,6 +32,7 @@ namespace RdpManager
             EdPrinters.IsChecked = server.RedirectPrinters;
             EdAudio.SelectedIndex = Math.Clamp(server.AudioMode, 0, 2);
             EdAuthLevel.SelectedIndex = Math.Clamp(server.AuthenticationLevel, 0, 2);
+            EdMultimon.IsChecked = server.UseAllMonitors;
             GatewayHostBox.Text = server.GatewayHostname ?? "";
             EdGatewayUsage.SelectedIndex = Math.Clamp(server.GatewayUsageMethod, 0, 2);
 
@@ -71,6 +72,7 @@ namespace RdpManager
             _server.RedirectPrinters = EdPrinters.IsChecked == true;
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
             _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;
+            _server.UseAllMonitors = EdMultimon.IsChecked == true;
             _server.GatewayHostname = GatewayHostBox.Text.Trim();
             _server.GatewayUsageMethod = EdGatewayUsage.SelectedIndex < 0 ? 0 : EdGatewayUsage.SelectedIndex;
 

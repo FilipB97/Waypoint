@@ -27,12 +27,16 @@ jobs:
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
           -o publish
 
+      # Nazwa taga przez env (nie inline ${{ }} w skrypcie) — chroni przed injection w pwsh.
       - name: Package
         shell: pwsh
-        run: Compress-Archive -Path publish/* -DestinationPath "RdpManager-${{ github.ref_name }}-win-x64.zip"
+        env:
+          TAG: ${{ github.ref_name }}
+        run: Compress-Archive -Path publish/* -DestinationPath "RdpManager-$env:TAG-win-x64.zip"
 
       - name: Create GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "${{ github.ref_name }}" "RdpManager-${{ github.ref_name }}-win-x64.zip" --title "${{ github.ref_name }}" --generate-notes
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$env:TAG" "RdpManager-$env:TAG-win-x64.zip" --title "$env:TAG" --generate-notes
