@@ -911,9 +911,10 @@ namespace RdpManager
                 try { s.Rdp.SecuredSettings2.KeyboardHookMode = 2; } catch { }  // Alt+Tab/Win -> zdalna w pełnym ekranie
 
                 // Multi-monitor (eksperymentalne): tylko przy >1 monitorze — na jednym bez zmian.
+                // UseMultimon żyje na IMsRdpClientNonScriptable5 (nie na IMsRdpClient9).
                 try
                 {
-                    ((IMsRdpClient9)s.Rdp.GetOcx()).UseMultimon =
+                    ((IMsRdpClientNonScriptable5)s.Rdp.GetOcx()).UseMultimon =
                         s.Server.UseAllMonitors && MonitorCount() > 1;
                 }
                 catch { /* starsza kontrolka bez multimon — pomijamy */ }
