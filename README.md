@@ -18,8 +18,12 @@ Remote Desktop Connection (`mstsc.exe`).
 - **Credential handling** via the Windows Credential Manager (DPAPI) — passwords are never
   written to app files.
 - **Per-server options** — port, domain/Windows account, clipboard/drive/printer/audio
-  redirection, and server-identity verification level.
-- **Dashboard & recents**, UI zoom (Ctrl+scroll / Ctrl+±/0), dark Fluent theme.
+  redirection, server-identity verification level, and RD Gateway / jump-host.
+- **Credential prompt** at connect time and "connect as" for retrying with other credentials.
+- **Import / export `.rdp`** files for easy migration from `mstsc`.
+- **Keyboard shortcuts** — `Ctrl+Tab` cycle tabs, `Alt+1..9` jump, `Ctrl+W` close,
+  `Ctrl+F`/`Ctrl+K` focus search, `Ctrl+±/0` zoom, `F11` full screen.
+- **Dashboard & recents**, UI zoom (Ctrl+scroll), dark Fluent theme.
 
 ## Requirements
 

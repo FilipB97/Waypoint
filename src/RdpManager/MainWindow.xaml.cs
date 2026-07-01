@@ -510,6 +510,7 @@ namespace RdpManager
             _sessions.Add(session);
             session.TabButton = BuildTab(session);
             TabStrip.Children.Add(session.TabButton);
+            RefreshTabTitles();
 
             Activate(session);
             if (autoConnect) BeginConnect(session);
@@ -633,6 +634,15 @@ namespace RdpManager
             tab.Child = grid;
             tab.MouseLeftButtonUp += (s, e) => Activate(session);
 
+            var tabMenu = new ContextMenu();
+            var closeOthers = new MenuItem { Header = "Zamknij pozostałe" };
+            closeOthers.Click += (s, e) => CloseOtherSessions(session);
+            var closeThis = new MenuItem { Header = "Zamknij" };
+            closeThis.Click += (s, e) => RequestCloseSession(session);
+            tabMenu.Items.Add(closeOthers);
+            tabMenu.Items.Add(closeThis);
+            tab.ContextMenu = tabMenu;
+
             _tabUnderline[session] = underline;
             return tab;
         }
@@ -648,6 +658,24 @@ namespace RdpManager
                 if (_tabUnderline.TryGetValue(s, out var u))
                     u.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
             }
+        }
+
+        /// <summary>Gdy kilka otwartych sesji ma tę samą nazwę serwera, dopisuje host, by je rozróżnić.</summary>
+        private void RefreshTabTitles()
+        {
+            foreach (var s in _sessions)
+            {
+                if (!_tabName.TryGetValue(s, out var tn)) continue;
+                bool dup = _sessions.Any(o => o != s &&
+                    string.Equals(o.Server.Name, s.Server.Name, StringComparison.OrdinalIgnoreCase));
+                tn.Text = dup ? s.Server.Name + " (" + s.Server.Host + ")" : s.Server.Name;
+            }
+        }
+
+        private void CloseOtherSessions(Session keep)
+        {
+            foreach (var s in _sessions.ToList())
+                if (s != keep) RequestCloseSession(s);
         }
 
         private void RequestCloseSession(Session session)
@@ -670,6 +698,7 @@ namespace RdpManager
             _tabStatus.Remove(session);
             _tabName.Remove(session);
             _sessions.Remove(session);
+            RefreshTabTitles();
 
             if (_active == session)
             {
@@ -1160,14 +1189,49 @@ namespace RdpManager
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (e.Key == Key.F11) ToggleFullscreen();
-            else if (e.Key == Key.Escape && _isFullscreen) ToggleFullscreen();
-            else if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            if (e.Key == Key.F11) { ToggleFullscreen(); return; }
+            if (e.Key == Key.Escape && _isFullscreen) { ToggleFullscreen(); return; }
+
+            var mods = Keyboard.Modifiers;
+
+            // Alt+1..9 -> skok do zakładki (Alt zamienia e.Key na Key.System, cyfra jest w SystemKey).
+            if ((mods & ModifierKeys.Alt) != 0)
             {
-                if (e.Key == Key.D0 || e.Key == Key.NumPad0) { ZoomTo(1.0); e.Handled = true; }
+                int n = DigitIndex(e.Key == Key.System ? e.SystemKey : e.Key);
+                if (n >= 0) { ActivateByIndex(n); e.Handled = true; }
+                return;
+            }
+
+            if ((mods & ModifierKeys.Control) != 0)
+            {
+                if (e.Key == Key.Tab) { CycleSession((mods & ModifierKeys.Shift) != 0 ? -1 : 1); e.Handled = true; }
+                else if (e.Key == Key.W) { if (_active != null) RequestCloseSession(_active); e.Handled = true; }
+                else if (e.Key == Key.F || e.Key == Key.K) { ShowView("Sessions"); SearchBox.Focus(); e.Handled = true; }
+                else if (e.Key == Key.D0 || e.Key == Key.NumPad0) { ZoomTo(1.0); e.Handled = true; }
                 else if (e.Key == Key.OemPlus || e.Key == Key.Add) { ZoomTo(_settings.UiScale + 0.1); e.Handled = true; }
                 else if (e.Key == Key.OemMinus || e.Key == Key.Subtract) { ZoomTo(_settings.UiScale - 0.1); e.Handled = true; }
             }
+        }
+
+        // Zwraca 0-based indeks zakładki dla klawiszy 1..9 (górny rząd i NumPad), inaczej -1.
+        private static int DigitIndex(Key k)
+        {
+            if (k >= Key.D1 && k <= Key.D9) return k - Key.D1;
+            if (k >= Key.NumPad1 && k <= Key.NumPad9) return k - Key.NumPad1;
+            return -1;
+        }
+
+        private void ActivateByIndex(int i)
+        {
+            if (i >= 0 && i < _sessions.Count) Activate(_sessions[i]);
+        }
+
+        private void CycleSession(int dir)
+        {
+            if (_sessions.Count == 0) return;
+            int idx = _active == null ? -1 : _sessions.IndexOf(_active);
+            idx = ((idx + dir) % _sessions.Count + _sessions.Count) % _sessions.Count;
+            Activate(_sessions[idx]);
         }
 
         // ---------- Pomocnicze ----------
@@ -1271,7 +1335,7 @@ namespace RdpManager
                 var open = _sessions.Find(x => x.Server == server);
                 if (open != null)
                 {
-                    if (_tabName.TryGetValue(open, out var tn)) tn.Text = server.Name;
+                    RefreshTabTitles();
                     if (open == _active)
                     {
                         LoadToolbar(open);
