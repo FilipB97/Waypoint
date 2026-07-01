@@ -1,3 +1,4 @@
+using System;
 using RdpManager.Core;
 using RdpManager.Models;
 using Xunit;
