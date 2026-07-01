@@ -56,6 +56,7 @@ namespace RdpManager
         private bool _prevTopmost;
         private double _prevScale = 1.0;
         private bool _isFullscreen;
+        private bool _fsPinned;   // pasek pełnoekranowy „przypięty" (bez auto-chowania)
 
         // Opóźnienie pojawienia się paska pełnoekranowego (jak w mstsc) + polling pozycji kursora.
         private DispatcherTimer _fsBarDelay;
@@ -188,6 +189,7 @@ namespace RdpManager
             SetReachEnabled.IsChecked = _settings.ReachabilityEnabled;
             SetReachInterval.Text = _settings.ReachabilityIntervalSec.ToString();
             SetConfirmClose.IsChecked = _settings.ConfirmCloseConnected;
+            SetConnLog.IsChecked = _settings.ConnectionLogEnabled;
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
         }
@@ -202,6 +204,7 @@ namespace RdpManager
             _settings.ReachabilityEnabled = SetReachEnabled.IsChecked == true;
             _settings.ReachabilityIntervalSec = int.TryParse(SetReachInterval.Text.Trim(), out var r) ? Math.Clamp(r, 5, 3600) : 30;
             _settings.ConfirmCloseConnected = SetConfirmClose.IsChecked == true;
+            _settings.ConnectionLogEnabled = SetConnLog.IsChecked == true;
 
             SettingsStore.Save(_settings);
             ApplySettings();
@@ -216,6 +219,7 @@ namespace RdpManager
 
         private void ApplySettings()
         {
+            ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
             RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
             _fsBarDelay.Interval = TimeSpan.FromMilliseconds(_settings.FullscreenBarDelayMs);
             _reachTimer.Interval = TimeSpan.FromSeconds(_settings.ReachabilityIntervalSec);
@@ -451,12 +455,15 @@ namespace RdpManager
             };
             var editItem = new MenuItem { Header = "Edytuj…" };
             editItem.Click += (s, e) => EditServer(server);
+            var diagItem = new MenuItem { Header = "Diagnostyka…" };
+            diagItem.Click += (s, e) => DiagnoseServer(server);
             var exportItem = new MenuItem { Header = "Eksportuj .rdp…" };
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = "Usuń" };
             delItem.Click += (s, e) => DeleteServer(server);
             menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
+            menu.Items.Add(diagItem);
             menu.Items.Add(exportItem);
             menu.Items.Add(delItem);
             row.ContextMenu = menu;
@@ -842,6 +849,7 @@ namespace RdpManager
             {
                 s.Connected = true;
                 RecordRecent(s.Server);
+                ConnectionLog.Append("CONNECTED", s.Server);
                 SetTabStatus(s, ServerStatus.Online);
                 SetSessionStatus(s, "● Połączono", StatusKind.Ok);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
@@ -858,6 +866,8 @@ namespace RdpManager
                 s.Connected = false;
                 s.LoggedIn = false;
                 SetTabStatus(s, ServerStatus.Offline);
+
+                ConnectionLog.Append(wasLoggedIn ? "DISCONNECTED" : "FAILED", s.Server);
 
                 // Bezpieczeństwo: nie trzymaj hasła w pamięci po rozłączeniu, jeśli nie jest
                 // zapisane w Credential Managerze. Ponowne połączenie wymaga wpisania go na nowo.
@@ -989,6 +999,8 @@ namespace RdpManager
 
             FsPopup.IsOpen = false;
             _isFullscreen = false;
+            _fsPinned = false;
+            PinBtn.Content = "📌 przypnij";
         }
 
         /// <summary>Pełny prostokąt monitora, na którym jest okno, przeliczony na DIP.</summary>
@@ -1051,6 +1063,7 @@ namespace RdpManager
         {
             if (!_isFullscreen) { _fsCursorPoll.Stop(); return; }
             if (WindowState == WindowState.Minimized) return;   // zminimalizowane — nie pokazuj paska
+            if (_fsPinned) { if (!FsPopup.IsOpen) FsPopup.IsOpen = true; return; }   // przypięty: zawsze widoczny
             if (!GetCursorPos(out POINT p)) return;
 
             bool withinX = p.X >= _fsMonRect.left && p.X < _fsMonRect.right;
@@ -1072,6 +1085,7 @@ namespace RdpManager
 
         private void FsPopup_MouseLeave(object sender, MouseEventArgs e)
         {
+            if (_fsPinned) return;   // przypięty pasek nie chowa się po zjechaniu myszą
             FsPopup.IsOpen = false;
             CollapseFlyout();
         }
@@ -1085,6 +1099,26 @@ namespace RdpManager
             BuildFlyoutLists("");
             FsFlyout.Visibility = Visibility.Visible;
             InnyBtn.Content = "inne połączenia  ▴";
+            // Fokus na szukajkę zaraz po wyrenderowaniu popupu (dostępność klawiaturowa).
+            FsFlyoutSearch.Dispatcher.BeginInvoke(
+                new Action(() => FsFlyoutSearch.Focus()), DispatcherPriority.Input);
+        }
+
+        private void TogglePin_Click(object sender, RoutedEventArgs e)
+        {
+            _fsPinned = !_fsPinned;
+            PinBtn.Content = _fsPinned ? "📌 przypięte" : "📌 przypnij";
+            if (_fsPinned) FsPopup.IsOpen = true;   // przypięty pasek pozostaje widoczny
+        }
+
+        private void TabScroller_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0) return;   // Ctrl+kółko = zoom
+            if (sender is ScrollViewer sv)
+            {
+                sv.ScrollToHorizontalOffset(sv.HorizontalOffset - e.Delta);
+                e.Handled = true;
+            }
         }
 
         private void CollapseFlyout()
@@ -1450,6 +1484,27 @@ namespace RdpManager
             {
                 _reachBusy = false;
             }
+        }
+
+        private async void DiagnoseServer(ServerInfo server)
+        {
+            string host = server.Host;
+            int port = server.Port;
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                MessageBox.Show("Serwer nie ma ustawionego hosta.", "Diagnostyka", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            SetStatus("Diagnostyka " + host + ":" + port + "…", StatusKind.Connecting);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            bool ok = await Task.Run(() => Probe(host, port) == ServerStatus.Online);
+            sw.Stop();
+
+            string msg = RdpUtils.FormatDiagnostics(host, port, ok, sw.ElapsedMilliseconds);
+            SetStatus(msg, ok ? StatusKind.Ok : StatusKind.Error);
+            MessageBox.Show(msg, "Diagnostyka — " + (server.Name ?? host),
+                MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
         private static ServerStatus Probe(string host, int port)

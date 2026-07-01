@@ -20,6 +20,9 @@ namespace RdpManager
         /// <summary>Pytaj przed zamknięciem połączonej sesji.</summary>
         public bool ConfirmCloseConnected { get; set; } = true;
 
+        /// <summary>Zapisuj dziennik audytu połączeń (metadane, bez haseł).</summary>
+        public bool ConnectionLogEnabled { get; set; } = true;
+
         /// <summary>Id serwerów w kolejności ostatnich połączeń (najnowsze pierwsze).</summary>
         public List<string> RecentIds { get; set; } = new List<string>();
     }

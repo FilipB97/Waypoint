@@ -19,6 +19,10 @@ reflects the chosen priorities.
 - ✅ **Recents view** — populated from `AppSettings.RecentIds`.
 - ✅ **Release workflow** (`release.yml`) — self-contained x64 build published to GitHub
   Releases on `v*` tags.
+- ✅ **Logging & diagnostics** — connection audit log (`connections.log`, metadata only,
+  toggle in settings) and a per-server "Diagnostyka…" TCP port test.
+- ✅ **Full screen "pin bar"** + keyboard focus for the "other connections" flyout;
+  mouse-wheel horizontal scroll on the tab strip.
 
 ## Priority 1 — remaining big items (need local Windows verification)
 
@@ -29,19 +33,12 @@ reflects the chosen priorities.
   monolithic `MainWindow.xaml.cs` — unlocks wider unit-test coverage. Large; changes UI
   behavior that unit tests can't catch, so it needs a dedicated, locally-verified PR.
 
-## Priority 2 — quality
+## Priority 3 — UX polish (remaining)
 
-- **Logging / diagnostics.** Optional connection audit log, built-in reachability diagnostics
-  (ping / port), clearer RDP error codes in the UI.
-
-## Priority 3 — UX polish
-
-- **Tabs:** overflow/scroll menu for many sessions, drag-and-drop reorder, duplicate session
-  (needs multiple sessions per server).
-- **Full screen:** a "pin bar" option and keyboard accessibility for the "other connections"
-  flyout.
+- **Tabs:** drag-and-drop reorder, duplicate session (needs multiple sessions per server).
 - **Redirection:** consider safer defaults (clipboard redirection is on by default today);
   add USB / serial redirection as an extension.
+- **Diagnostics:** friendlier RDP disconnect-code descriptions (needs a verified code table).
 
 ## Priority 4 — distribution
 

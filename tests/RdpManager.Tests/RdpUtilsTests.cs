@@ -68,5 +68,35 @@ namespace RdpManager.Tests
         {
             Assert.Equal(expected, RdpUtils.FormatDisconnectReason(desc, reason, ext));
         }
+
+        [Fact]
+        public void FormatConnectionLog_IncludesTimestampEventAndTargetNoPassword()
+        {
+            var s = new ServerInfo { Name = "prod-web1", Host = "10.0.0.1", Port = 3389, Username = "admin", Domain = "CORP" };
+            var line = RdpUtils.FormatConnectionLog(new DateTime(2026, 7, 1, 14, 30, 5), "CONNECTED", s);
+
+            Assert.StartsWith("2026-07-01 14:30:05", line);
+            Assert.Contains("CONNECTED", line);
+            Assert.Contains("prod-web1 (10.0.0.1:3389)", line);
+            Assert.Contains("user=CORP\\admin", line);
+        }
+
+        [Fact]
+        public void FormatConnectionLog_WindowsAccountAndNoUser()
+        {
+            var win = new ServerInfo { Name = "h", Host = "h", UseWindowsAccount = true };
+            Assert.Contains("user=(konto Windows)", RdpUtils.FormatConnectionLog(new DateTime(2026, 1, 1), "CONNECTED", win));
+
+            var anon = new ServerInfo { Name = "h", Host = "h", Username = "" };
+            Assert.Contains("user=-", RdpUtils.FormatConnectionLog(new DateTime(2026, 1, 1), "FAILED", anon));
+        }
+
+        [Theory]
+        [InlineData(true, 42, "host:3389 — port OTWARTY (odpowiedź w 42 ms).")]
+        [InlineData(false, 0, "host:3389 — BRAK odpowiedzi (port zamknięty, zapora lub host nieosiągalny).")]
+        public void FormatDiagnostics_Formats(bool reachable, long ms, string expected)
+        {
+            Assert.Equal(expected, RdpUtils.FormatDiagnostics("host", 3389, reachable, ms));
+        }
     }
 }
