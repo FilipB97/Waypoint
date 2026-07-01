@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using RdpManager.Models;
 
@@ -69,6 +70,30 @@ namespace RdpManager.Core
         {
             string d = string.IsNullOrWhiteSpace(description) ? "rozłączono" : description.Trim().TrimEnd('.');
             return d + " (kod " + reason + "/" + ext + ")";
+        }
+
+        /// <summary>Jedna linia dziennika połączeń (audyt). Znacznik czasu podaje wołający (testowalne).</summary>
+        public static string FormatConnectionLog(DateTime ts, string ev, ServerInfo s)
+        {
+            string user = s == null ? "-"
+                : s.UseWindowsAccount ? "(konto Windows)"
+                : string.IsNullOrEmpty(s.Username) ? "-"
+                : string.IsNullOrEmpty(s.Domain) ? s.Username : s.Domain + "\\" + s.Username;
+            string name = s?.Name ?? "-";
+            string host = s?.Host ?? "-";
+            int port = s?.Port ?? 0;
+            return string.Format(CultureInfo.InvariantCulture,
+                "{0:yyyy-MM-dd HH:mm:ss}  {1,-12} {2} ({3}:{4}) user={5}", ts, ev, name, host, port, user);
+        }
+
+        /// <summary>Czytelny wynik diagnostyki osiągalności portu RDP.</summary>
+        public static string FormatDiagnostics(string host, int port, bool reachable, long elapsedMs)
+        {
+            return reachable
+                ? string.Format(CultureInfo.InvariantCulture,
+                    "{0}:{1} — port OTWARTY (odpowiedź w {2} ms).", host, port, elapsedMs)
+                : string.Format(CultureInfo.InvariantCulture,
+                    "{0}:{1} — BRAK odpowiedzi (port zamknięty, zapora lub host nieosiągalny).", host, port);
         }
     }
 }
