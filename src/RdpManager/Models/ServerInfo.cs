@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace RdpManager.Models
 {
@@ -8,6 +10,9 @@ namespace RdpManager.Models
     /// </summary>
     public class ServerInfo
     {
+        /// <summary>Stały identyfikator — klucz poświadczeń w Windows Credential Manager.</summary>
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
         public string Name { get; set; }
         public string Host { get; set; }
         public int Port { get; set; } = 3389;
@@ -21,6 +26,21 @@ namespace RdpManager.Models
 
         /// <summary>Inicjały do "awatara" na liście (jak w mockupie).</summary>
         public string Initials { get; set; }
+
+        /// <summary>Czy hasło ma być zapisane w Windows Credential Manager.</summary>
+        public bool SavePassword { get; set; }
+
+        // Przekierowania zasobów lokalnych do sesji.
+        public bool RedirectClipboard { get; set; } = true;
+        public bool RedirectDrives { get; set; }
+        public bool RedirectPrinters { get; set; }
+
+        /// <summary>Dźwięk: 0 = odtwarzaj lokalnie, 1 = nie odtwarzaj, 2 = odtwarzaj na serwerze.</summary>
+        public int AudioMode { get; set; }
+
+        /// <summary>Klucz w Credential Manager (hasło NIE jest trzymane w tym modelu ani w JSON).</summary>
+        [JsonIgnore]
+        public string CredTarget => "RdpManager:" + Id;
 
         /// <summary>
         /// Status prezentacyjny (kropka online/idle/offline). Na razie dane testowe —

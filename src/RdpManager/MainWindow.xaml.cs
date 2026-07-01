@@ -1,12 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Forms.Integration;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using AxMSTSCLib;
 using MSTSCLib;
 using RdpManager.Models;
@@ -20,12 +27,39 @@ namespace RdpManager
 
         private readonly Dictionary<ServerInfo, Border> _serverRows = new Dictionary<ServerInfo, Border>();
         private readonly Dictionary<ServerInfo, Rectangle> _serverAccent = new Dictionary<ServerInfo, Rectangle>();
+        private readonly Dictionary<ServerInfo, Ellipse> _serverStatusDot = new Dictionary<ServerInfo, Ellipse>();
         private readonly Dictionary<Session, Rectangle> _tabUnderline = new Dictionary<Session, Rectangle>();
+        private readonly Dictionary<Session, Ellipse> _tabStatus = new Dictionary<Session, Ellipse>();
+        private readonly Dictionary<Session, TextBlock> _tabName = new Dictionary<Session, TextBlock>();
+        private readonly List<ServerInfo> _allServers = new List<ServerInfo>();
+
+        private AppSettings _settings = new AppSettings();
+
+        // Sprawdzanie osiągalności serwerów w tle (TCP na porcie RDP) -> kropki statusu.
+        private DispatcherTimer _reachTimer;
+        private bool _reachBusy;
+
+        // Stabilne, odrębne kolory awatarów dla dowolnych (także własnych) grup.
+        private readonly Dictionary<string, LinearGradientBrush> _avatarCache = new Dictionary<string, LinearGradientBrush>();
+        private static readonly string[][] GroupPalette =
+        {
+            new[]{"#7C6CFB","#4F3FD1"}, new[]{"#FFB454","#D98F2E"}, new[]{"#36C4CF","#1F8B94"},
+            new[]{"#3DDC97","#1F9E6B"}, new[]{"#FB6C9C","#D13F6E"}, new[]{"#6C9CFB","#3F5FD1"},
+            new[]{"#C06CFB","#7A3FD1"}, new[]{"#F0C05A","#C79030"}
+        };
 
         private WindowStyle _prevStyle;
         private WindowState _prevState;
         private ResizeMode _prevResize;
+        private double _prevLeft, _prevTop, _prevWidth, _prevHeight;
+        private bool _prevTopmost;
+        private double _prevScale = 1.0;
         private bool _isFullscreen;
+
+        // Opóźnienie pojawienia się paska pełnoekranowego (jak w mstsc) + polling pozycji kursora.
+        private DispatcherTimer _fsBarDelay;
+        private DispatcherTimer _fsCursorPoll;
+        private RECT _fsMonRect;   // prostokąt monitora w pikselach fizycznych (do wykrycia górnej krawędzi)
 
         public MainWindow()
         {
@@ -34,22 +68,296 @@ namespace RdpManager
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            _settings = SettingsStore.Load();
+            RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
+
+            FsPopup.CustomPopupPlacementCallback = PlaceFsPopup;
+            _fsBarDelay = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(Math.Clamp(_settings.FullscreenBarDelayMs, 0, 3000))
+            };
+            _fsBarDelay.Tick += (s, a) =>
+            {
+                _fsBarDelay.Stop();
+                if (_isFullscreen) FsPopup.IsOpen = true;
+            };
+
+            _fsCursorPoll = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(90)
+            };
+            _fsCursorPoll.Tick += FsCursorPollTick;
+
             BuildServerTree();
             UpdateToolbarEnabled();
             UpdateToolbarMode();
+
+            _reachTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+            {
+                Interval = TimeSpan.FromSeconds(Math.Clamp(_settings.ReachabilityIntervalSec, 5, 3600))
+            };
+            _reachTimer.Tick += (s, a) => CheckReachabilityAsync();
+            if (_settings.ReachabilityEnabled) { _reachTimer.Start(); CheckReachabilityAsync(); }
+
+            ShowView("Sessions");
+        }
+
+        // ---------- Nawigacja (rail) ----------
+
+        private void Nav_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button b && b.Tag is string v) ShowView(v);
+        }
+
+        private void ShowView(string view)
+        {
+            SessionsView.Visibility = view == "Sessions" ? Visibility.Visible : Visibility.Collapsed;
+            DashboardView.Visibility = view == "Dashboard" ? Visibility.Visible : Visibility.Collapsed;
+            RecentView.Visibility = view == "Recent" ? Visibility.Visible : Visibility.Collapsed;
+            SettingsView.Visibility = view == "Settings" ? Visibility.Visible : Visibility.Collapsed;
+
+            SetNav(NavDashboard, IcoDashboard, view == "Dashboard");
+            SetNav(NavSessions, IcoSessions, view == "Sessions");
+            SetNav(NavRecent, IcoRecent, view == "Recent");
+            SetNav(NavSettings, IcoSettings, view == "Settings");
+
+            if (view == "Dashboard") BuildDashboard();
+            else if (view == "Recent") BuildRecent();
+            else if (view == "Settings") LoadSettingsForm();
+        }
+
+        private void SetNav(Button b, Wpf.Ui.Controls.SymbolIcon ico, bool active)
+        {
+            b.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
+            ico.Foreground = active ? (Brush)Resources["Accent"] : (Brush)Resources["TextTer"];
+        }
+
+        private void Avatar_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(
+                "RDP Manager\nNowoczesny menedżer połączeń RDP (WPF / Fluent).\n\nFolder danych:\n" + SettingsStore.Dir,
+                "O aplikacji", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        // ---------- Zoom interfejsu (Ctrl + kółko / Ctrl +/- / Ctrl 0) ----------
+
+        private void ZoomTo(double scale)
+        {
+            scale = Math.Round(Math.Clamp(scale, 0.7, 1.8), 2);
+            _settings.UiScale = scale;
+            RootScale.ScaleX = RootScale.ScaleY = scale;
+            if (SettingsView.Visibility == Visibility.Visible)
+                SetUiScale.Text = ((int)Math.Round(scale * 100)).ToString();
+            SettingsStore.Save(_settings);
+        }
+
+        private void Window_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == 0 || _isFullscreen) return;
+            ZoomTo(_settings.UiScale + (e.Delta > 0 ? 0.1 : -0.1));
+            e.Handled = true;
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_settings.ConfirmCloseConnected && _sessions.Any(s => s.Connected) &&
+                MessageBox.Show("Są aktywne połączenia. Zamknąć aplikację?", "Zamknij",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            foreach (var s in _sessions)
+            {
+                try { s.Resizer?.Dispose(); } catch { }
+                try { s.Rdp.Disconnect(); } catch { }
+            }
+        }
+
+        // ---------- Ustawienia ----------
+
+        private void LoadSettingsForm()
+        {
+            SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
+            SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
+            SetDefaultPort.Text = _settings.DefaultPort.ToString();
+            SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
+            SetAutoReconnect.IsChecked = _settings.AutoReconnect;
+            SetReachEnabled.IsChecked = _settings.ReachabilityEnabled;
+            SetReachInterval.Text = _settings.ReachabilityIntervalSec.ToString();
+            SetConfirmClose.IsChecked = _settings.ConfirmCloseConnected;
+            SetDataPath.Text = SettingsStore.Dir;
+            SettingsStatus.Text = "";
+        }
+
+        private void SaveSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(SetUiScale.Text.Trim(), out var us)) _settings.UiScale = Math.Clamp(us / 100.0, 0.7, 1.8);
+            _settings.FullscreenBarDelayMs = int.TryParse(SetBarDelay.Text.Trim(), out var d) ? Math.Clamp(d, 0, 3000) : 450;
+            _settings.DefaultPort = int.TryParse(SetDefaultPort.Text.Trim(), out var p) ? Math.Clamp(p, 1, 65535) : 3389;
+            _settings.ColorDepth = ParseColorDepth();
+            _settings.AutoReconnect = SetAutoReconnect.IsChecked == true;
+            _settings.ReachabilityEnabled = SetReachEnabled.IsChecked == true;
+            _settings.ReachabilityIntervalSec = int.TryParse(SetReachInterval.Text.Trim(), out var r) ? Math.Clamp(r, 5, 3600) : 30;
+            _settings.ConfirmCloseConnected = SetConfirmClose.IsChecked == true;
+
+            SettingsStore.Save(_settings);
+            ApplySettings();
+            SettingsStatus.Text = "Zapisano ✓";
+        }
+
+        private int ParseColorDepth()
+        {
+            if (SetColorDepth.SelectedItem is ComboBoxItem item && int.TryParse(item.Content?.ToString(), out var v))
+                return v;
+            return 32;
+        }
+
+        private void ApplySettings()
+        {
+            RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
+            _fsBarDelay.Interval = TimeSpan.FromMilliseconds(_settings.FullscreenBarDelayMs);
+            _reachTimer.Interval = TimeSpan.FromSeconds(_settings.ReachabilityIntervalSec);
+            if (_settings.ReachabilityEnabled)
+            {
+                if (!_reachTimer.IsEnabled) _reachTimer.Start();
+                CheckReachabilityAsync();
+            }
+            else
+            {
+                _reachTimer.Stop();
+            }
+        }
+
+        private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                System.IO.Directory.CreateDirectory(SettingsStore.Dir);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SettingsStore.Dir) { UseShellExecute = true });
+            }
+            catch { /* brak eksploratora / brak uprawnień — ignorujemy */ }
+        }
+
+        // ---------- Ostatnie / Pulpit ----------
+
+        private void RecordRecent(ServerInfo server)
+        {
+            if (string.IsNullOrEmpty(server?.Id)) return;
+            _settings.RecentIds.Remove(server.Id);
+            _settings.RecentIds.Insert(0, server.Id);
+            if (_settings.RecentIds.Count > 15)
+                _settings.RecentIds.RemoveRange(15, _settings.RecentIds.Count - 15);
+            SettingsStore.Save(_settings);
+        }
+
+        private void BuildRecent()
+        {
+            RecentPanel.Children.Clear();
+            bool any = false;
+            foreach (var id in _settings.RecentIds)
+            {
+                var server = _allServers.Find(x => x.Id == id);
+                if (server == null) continue;
+                any = true;
+                var srv = server;
+                RecentPanel.Children.Add(BuildFlyoutRow(srv, srv.Status, false, () => OpenServer(srv, true)));
+            }
+            if (!any)
+                RecentPanel.Children.Add(new TextBlock { Text = "Brak ostatnich połączeń.", Foreground = (Brush)Resources["TextTer"] });
+        }
+
+        private void BuildDashboard()
+        {
+            DashboardPanel.Children.Clear();
+
+            int total = _allServers.Count;
+            int online = _allServers.Count(s => s.Status == ServerStatus.Online);
+            int open = _sessions.Count;
+
+            var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 22) };
+            cards.Children.Add(StatCard("Serwery", total.ToString()));
+            cards.Children.Add(StatCard("Osiągalne", online.ToString()));
+            cards.Children.Add(StatCard("Otwarte sesje", open.ToString()));
+            DashboardPanel.Children.Add(cards);
+
+            DashboardPanel.Children.Add(new TextBlock
+            {
+                Text = "Ostatnio używane", Foreground = (Brush)Resources["TextSec"],
+                FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8)
+            });
+
+            int shown = 0;
+            foreach (var id in _settings.RecentIds)
+            {
+                var server = _allServers.Find(x => x.Id == id);
+                if (server == null) continue;
+                var srv = server;
+                DashboardPanel.Children.Add(BuildFlyoutRow(srv, srv.Status, false, () => OpenServer(srv, true)));
+                if (++shown >= 5) break;
+            }
+            if (shown == 0)
+                DashboardPanel.Children.Add(new TextBlock { Text = "Brak historii.", Foreground = (Brush)Resources["TextTer"] });
+        }
+
+        private FrameworkElement StatCard(string label, string value)
+        {
+            var card = new Border
+            {
+                Background = (Brush)Resources["Panel"], BorderBrush = (Brush)Resources["Border"], BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10), Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
+            };
+            var sp = new StackPanel();
+            sp.Children.Add(new TextBlock { Text = value, Foreground = (Brush)Resources["Accent"], FontSize = 26, FontWeight = FontWeights.Bold });
+            sp.Children.Add(new TextBlock { Text = label, Foreground = (Brush)Resources["TextSec"], FontSize = 12 });
+            card.Child = sp;
+            return card;
+        }
+
+        // Wyśrodkuj pasek u samej góry względem celu (HotZone rozciąga się na całą szerokość obszaru).
+        private CustomPopupPlacement[] PlaceFsPopup(Size popupSize, Size targetSize, Point offset)
+        {
+            double x = (targetSize.Width - popupSize.Width) / 2.0;
+            return new[] { new CustomPopupPlacement(new Point(x, 0), PopupPrimaryAxis.Horizontal) };
         }
 
         // ---------- Drzewo serwerów ----------
 
         private void BuildServerTree()
         {
-            foreach (var group in TestData.Groups())
-            {
-                ServerTree.Children.Add(BuildGroupHeader(group));
-                foreach (var server in group.Servers)
-                    ServerTree.Children.Add(BuildServerRow(server));
-            }
+            _allServers.Clear();
+            _allServers.AddRange(ServerRepository.Load());
+            RenderTree();
         }
+
+        private void RenderTree(string filter = null)
+        {
+            filter = (filter ?? "").Trim().ToLowerInvariant();
+            ServerTree.Children.Clear();
+            _serverRows.Clear();
+            _serverAccent.Clear();
+            _serverStatusDot.Clear();
+
+            var order = new List<string>();
+            var byGroup = new Dictionary<string, List<ServerInfo>>();
+            foreach (var s in _allServers)
+            {
+                if (!MatchesFilter(s, filter)) continue;
+                var g = string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group;
+                if (!byGroup.ContainsKey(g)) { order.Add(g); byGroup[g] = new List<ServerInfo>(); }
+                byGroup[g].Add(s);
+            }
+            foreach (var g in order)
+            {
+                ServerTree.Children.Add(BuildGroupHeader(new ServerGroup { Name = g }));
+                foreach (var s in byGroup[g])
+                    ServerTree.Children.Add(BuildServerRow(s));
+            }
+            UpdateActiveRows();
+        }
+
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RenderTree(SearchBox.Text);
 
         private FrameworkElement BuildGroupHeader(ServerGroup group)
         {
@@ -126,12 +434,22 @@ namespace RdpManager
             };
             Grid.SetColumn(status, 3);
             grid.Children.Add(status);
+            _serverStatusDot[server] = status;
 
             row.Child = grid;
 
             row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)Resources["Elevated"]; };
             row.MouseLeave += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
-            row.MouseLeftButtonUp += (s, e) => OpenServer(server);
+            row.MouseLeftButtonUp += (s, e) => OpenServer(server, true);
+
+            var menu = new ContextMenu();
+            var editItem = new MenuItem { Header = "Edytuj…" };
+            editItem.Click += (s, e) => EditServer(server);
+            var delItem = new MenuItem { Header = "Usuń" };
+            delItem.Click += (s, e) => DeleteServer(server);
+            menu.Items.Add(editItem);
+            menu.Items.Add(delItem);
+            row.ContextMenu = menu;
 
             _serverRows[server] = row;
             _serverAccent[server] = accent;
@@ -150,57 +468,95 @@ namespace RdpManager
 
         // ---------- Otwieranie / przełączanie sesji ----------
 
-        private void OpenServer(ServerInfo server)
+        private void OpenServer(ServerInfo server, bool autoConnect = false)
         {
+            ShowView("Sessions");   // kontrolka RDP musi powstać przy widocznym widoku sesji
             var existing = _sessions.Find(x => x.Server == server);
-            if (existing != null) { Activate(existing); return; }
+            if (existing != null)
+            {
+                Activate(existing);
+                if (autoConnect && !existing.Connected && CanAuto(existing)) ConnectSession(existing);
+                return;
+            }
 
             var rdp = new AxMsRdpClient11NotSafeForScripting();
-            var host = new WindowsFormsHost { Visibility = Visibility.Visible };
+            var host = new WindowsFormsHost();
 
             ((ISupportInitialize)rdp).BeginInit();
             rdp.Dock = System.Windows.Forms.DockStyle.Fill;
             host.Child = rdp;
             ((ISupportInitialize)rdp).EndInit();
 
+            SessionContainer.Children.Add(host);
+            host.UpdateLayout();
+            try { ((System.Windows.Forms.Control)rdp).CreateControl(); } catch { }  // wymuś utworzenie kontrolki ActiveX
+
             var session = new Session(server, rdp, host);
+            if (server.SavePassword && CredentialStore.TryRead(server.CredTarget, out var savedPw))
+                session.Password = savedPw;
             session.Resizer = new RdpDynamicResolution(session, host);
             WireEvents(session);
 
-            SessionContainer.Children.Add(host);
             _sessions.Add(session);
             session.TabButton = BuildTab(session);
             TabStrip.Children.Add(session.TabButton);
 
             Activate(session);
+            if (autoConnect && CanAuto(session)) ConnectSession(session);
         }
+
+        private static bool CanAuto(Session s) => s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
 
         private void Activate(Session session)
         {
             _active = session;
-            EmptyHint.Visibility = Visibility.Collapsed;
-
-            foreach (var s in _sessions)
-                s.Host.Visibility = s == session ? Visibility.Visible : Visibility.Collapsed;
-
             RefreshTabStyles();
             UpdateActiveRows();
             LoadToolbar(session);
             UpdateToolbarEnabled();
             UpdateToolbarMode();
-            SetStatus(session.Status);
+            UpdateCanvas();
+            SetStatus(session.Status, session.StatusKind);
             FsName.Text = session.Server.Name + " · " + session.Server.Host;
+        }
+
+        /// <summary>
+        /// Steruje kanwą: aktywna kontrolka RDP widoczna tylko gdy połączona; w przeciwnym razie
+        /// nakładka (spinner „Łączenie…" albo „Rozłączono" + przycisk ponownego połączenia).
+        /// </summary>
+        private void UpdateCanvas()
+        {
+            bool has = _active != null;
+            EmptyHint.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
+
+            foreach (var s in _sessions)
+                s.Host.Visibility = (s == _active && s.Connected) ? Visibility.Visible : Visibility.Collapsed;
+
+            if (!has || _active.Connected)
+            {
+                SessionOverlay.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            SessionOverlay.Visibility = Visibility.Visible;
+            bool connecting = _active.StatusKind == StatusKind.Connecting;
+            OverlaySpinner.Visibility = connecting ? Visibility.Visible : Visibility.Collapsed;
+            OverlayReconnect.Visibility = connecting ? Visibility.Collapsed : Visibility.Visible;
+            OverlayTitle.Text = connecting
+                ? "Łączenie z " + _active.Server.Host + "…"
+                : (_active.StatusKind == StatusKind.Error ? "Rozłączono" : "Gotowe do połączenia");
+            OverlayMsg.Text = connecting ? "" : _active.Status;
         }
 
         private void LoadToolbar(Session s)
         {
-            HostBox.Text = s.Server.Host;
-            PortBox.Text = s.Server.Port.ToString();
-            UserBox.Text = s.Server.Username;
-            DomainBox.Text = s.Server.Domain;
-            PassBox.Password = s.Password;
+            CfAvatar.Background = AvatarBrush(s.Server.Group);
+            CfAvatarText.Text = s.Server.Initials;
+            CfName.Text = s.Server.Name;
+            CfHost.Text = s.Server.Host + ":" + s.Server.Port;
             WinAuthCheck.IsChecked = s.Server.UseWindowsAccount;
-            ApplyWinAuthState();
+            PassBox.Password = s.Password ?? "";
+            UpdatePassVisibility();
         }
 
         // ---------- Pasek zakładek ----------
@@ -232,22 +588,27 @@ namespace RdpManager
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             });
-            content.Children.Add(new TextBlock
+            var tabName = new TextBlock
             {
                 Text = session.Server.Name, Foreground = (Brush)Resources["TextPrim"], FontSize = 12.5,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
-            });
-            content.Children.Add(new Ellipse
+            };
+            _tabName[session] = tabName;
+            content.Children.Add(tabName);
+            // Kropka odzwierciedla ŻYWY stan sesji (nie statyczny status serwera): startowo rozłączona.
+            var tabDot = new Ellipse
             {
-                Width = 6, Height = 6, Fill = StatusBrush(session.Server.Status),
+                Width = 6, Height = 6, Fill = StatusBrush(ServerStatus.Offline),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
-            });
+            };
+            _tabStatus[session] = tabDot;
+            content.Children.Add(tabDot);
             var close = new TextBlock
             {
                 Text = "✕", Foreground = (Brush)Resources["TextTer"], FontSize = 12,
                 Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand
             };
-            close.MouseLeftButtonUp += (s, e) => { e.Handled = true; CloseSession(session); };
+            close.MouseLeftButtonUp += (s, e) => { e.Handled = true; RequestCloseSession(session); };
             content.Children.Add(close);
             grid.Children.Add(content);
 
@@ -279,6 +640,15 @@ namespace RdpManager
             }
         }
 
+        private void RequestCloseSession(Session session)
+        {
+            if (session.Connected && _settings.ConfirmCloseConnected &&
+                MessageBox.Show("Zamknąć połączoną sesję \"" + session.Server.Name + "\"?", "Zamknij sesję",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            CloseSession(session);
+        }
+
         private void CloseSession(Session session)
         {
             try { session.Rdp.Disconnect(); } catch { /* nie połączona */ }
@@ -287,6 +657,8 @@ namespace RdpManager
             SessionContainer.Children.Remove(session.Host);
             TabStrip.Children.Remove(session.TabButton);
             _tabUnderline.Remove(session);
+            _tabStatus.Remove(session);
+            _tabName.Remove(session);
             _sessions.Remove(session);
 
             if (_active == session)
@@ -295,11 +667,11 @@ namespace RdpManager
                 if (_sessions.Count > 0) Activate(_sessions[_sessions.Count - 1]);
                 else
                 {
-                    EmptyHint.Visibility = Visibility.Visible;
                     UpdateActiveRows();
                     UpdateToolbarEnabled();
                     UpdateToolbarMode();
-                    SetStatus("—");
+                    UpdateCanvas();
+                    SetStatus("—", StatusKind.Info);
                 }
             }
         }
@@ -310,23 +682,36 @@ namespace RdpManager
         {
             if (_active == null) return;
             var s = _active;
+            s.Server.UseWindowsAccount = WinAuthCheck.IsChecked == true;
+            if (!s.Server.UseWindowsAccount) s.Password = PassBox.Password;
+            ConnectSession(s);
+        }
 
+        private void PassBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && ConnectBtn.IsEnabled) Connect_Click(sender, e);
+        }
+
+        /// <summary>Łączy sesję na podstawie jej modelu (bez odczytu z formularza) — używane też z flyoutu.</summary>
+        private void ConnectSession(Session s)
+        {
             try { s.Rdp.Disconnect(); } catch { /* nie połączona */ }
+            s.LoggedIn = false;
 
             try
             {
-                s.Server.Host = HostBox.Text.Trim();
-                s.Server.Port = int.TryParse(PortBox.Text.Trim(), out var p) ? p : 3389;
-                s.Server.UseWindowsAccount = WinAuthCheck.IsChecked == true;
-                s.Server.Username = UserBox.Text.Trim();
-                s.Server.Domain = DomainBox.Text.Trim();
-                s.Password = PassBox.Password;
-
                 IMsRdpClientAdvancedSettings8 adv = s.Rdp.AdvancedSettings9;
                 adv.RDPPort = s.Server.Port;
                 adv.AuthenticationLevel = 0;
                 adv.EnableCredSspSupport = true;
                 adv.SmartSizing = false;   // dynamiczna rozdzielczość zajmie się dopasowaniem
+                adv.EnableAutoReconnect = _settings.AutoReconnect;
+                s.Rdp.ColorDepth = _settings.ColorDepth;
+                adv.RedirectClipboard = s.Server.RedirectClipboard;
+                adv.RedirectDrives = s.Server.RedirectDrives;
+                adv.RedirectPrinters = s.Server.RedirectPrinters;
+                adv.AudioRedirectionMode = (uint)Math.Clamp(s.Server.AudioMode, 0, 2);
+                try { s.Rdp.SecuredSettings2.KeyboardHookMode = 2; } catch { }  // Alt+Tab/Win -> zdalna w pełnym ekranie
 
                 s.Rdp.Server = s.Server.Host;
                 if (s.Server.UseWindowsAccount)
@@ -343,60 +728,96 @@ namespace RdpManager
                 }
 
                 s.Rdp.Connect();
-                SetSessionStatus(s, "Łączenie z " + s.Server.Host + "…");
+                SetSessionStatus(s, "Łączenie z " + s.Server.Host + "…", StatusKind.Connecting);
             }
             catch (Exception ex)
             {
-                SetSessionStatus(s, "Wyjątek: " + ex.Message);
+                SetSessionStatus(s, "Wyjątek: " + ex.Message, StatusKind.Error);
             }
         }
 
         private void Disconnect_Click(object sender, RoutedEventArgs e)
         {
             if (_active == null) return;
-            try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, "Rozłączanie: " + ex.Message); }
+            try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, "Rozłączanie: " + ex.Message, StatusKind.Error); }
         }
 
         private void WireEvents(Session s)
         {
-            s.Rdp.OnConnecting += (o, a) => SetSessionStatus(s, "Łączenie…");
+            s.Rdp.OnConnecting += (o, a) =>
+            {
+                SetSessionStatus(s, "Łączenie…", StatusKind.Connecting);
+                SetTabStatus(s, ServerStatus.Idle);
+                if (s == _active) UpdateCanvas();
+            };
             s.Rdp.OnConnected += (o, a) =>
             {
                 s.Connected = true;
-                if (s == _active) UpdateToolbarMode();
+                RecordRecent(s.Server);
+                SetTabStatus(s, ServerStatus.Online);
+                SetSessionStatus(s, "● Połączono", StatusKind.Ok);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             };
             s.Rdp.OnLoginComplete += (o, a) =>
             {
+                s.LoggedIn = true;
                 s.Resizer?.ApplyInitial();
-                if (s == _active) UpdateToolbarMode();
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); try { s.Rdp.Focus(); } catch { } }
             };
             s.Rdp.OnDisconnected += (o, a) =>
             {
+                bool wasLoggedIn = s.LoggedIn;
                 s.Connected = false;
-                SetSessionStatus(s, "Rozłączono (reason " + a.discReason + ")");
-                if (s == _active) UpdateToolbarMode();
+                s.LoggedIn = false;
+                SetTabStatus(s, ServerStatus.Offline);
+
+                string msg = "Rozłączono: " + DescribeDisconnect(s.Rdp, a.discReason);
+                if (!wasLoggedIn)
+                {
+                    msg += s.Server.UseWindowsAccount
+                        ? "  Wskazówka: konto Windows może nie mieć dostępu do hosta — odznacz „Konto Windows” i podaj login/hasło."
+                        : "  Wskazówka: sprawdź login, hasło, domenę i dostępność hosta.";
+                }
+                SetSessionStatus(s, msg, StatusKind.Error);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             };
-            s.Rdp.OnFatalError += (o, a) => SetSessionStatus(s, "Błąd krytyczny: errorCode " + a.errorCode);
+            s.Rdp.OnFatalError += (o, a) =>
+            {
+                s.Connected = false;
+                SetTabStatus(s, ServerStatus.Offline);
+                SetSessionStatus(s, "Błąd krytyczny (errorCode " + a.errorCode + ")", StatusKind.Error);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
+            };
+        }
+
+        private void SetTabStatus(Session s, ServerStatus status)
+        {
+            if (_tabStatus.TryGetValue(s, out var dot)) dot.Fill = StatusBrush(status);
         }
 
         // ---------- Konto Windows ----------
 
-        private void WinAuth_Changed(object sender, RoutedEventArgs e) => ApplyWinAuthState();
+        private void WinAuth_Changed(object sender, RoutedEventArgs e) => UpdatePassVisibility();
 
-        private void ApplyWinAuthState()
+        private void UpdatePassVisibility()
         {
-            bool win = WinAuthCheck.IsChecked == true;
-            bool has = _active != null;
-            UserBox.IsEnabled = has && !win;
-            DomainBox.IsEnabled = has && !win;
-            PassBox.IsEnabled = has && !win;
+            CfPassGroup.Visibility = WinAuthCheck.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
         }
 
         // ---------- Pasek sesji: dwa stany ----------
 
         private void UpdateToolbarMode()
         {
-            bool connected = _active != null && _active.Connected;
+            // W pełnym ekranie widocznością paska/zakładek steruje Enter/ExitFullscreen — nie dotykamy jej tutaj.
+            if (!_isFullscreen)
+            {
+                bool has = _active != null;
+                SessionToolbar.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
+                TabStripHost.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (_active == null) return;
+
+            bool connected = _active.Connected;
             ConnectForm.Visibility = connected ? Visibility.Collapsed : Visibility.Visible;
             StatusPanel.Visibility = connected ? Visibility.Visible : Visibility.Collapsed;
             if (connected)
@@ -406,11 +827,9 @@ namespace RdpManager
         private void UpdateToolbarEnabled()
         {
             bool has = _active != null;
-            HostBox.IsEnabled = has;
-            PortBox.IsEnabled = has;
             WinAuthCheck.IsEnabled = has;
+            PassBox.IsEnabled = has;
             ConnectBtn.IsEnabled = has;
-            ApplyWinAuthState();
         }
 
         // ---------- Pełny ekran ----------
@@ -420,73 +839,398 @@ namespace RdpManager
         private void ToggleFullscreen()
         {
             if (_active == null && !_isFullscreen) return;
+            if (!_isFullscreen) EnterFullscreen();
+            else ExitFullscreen();
+        }
 
-            if (!_isFullscreen)
+        private void EnterFullscreen()
+        {
+            _prevStyle = WindowStyle;
+            _prevState = WindowState;
+            _prevResize = ResizeMode;
+            _prevTopmost = Topmost;
+            _prevLeft = Left; _prevTop = Top; _prevWidth = Width; _prevHeight = Height;
+            _prevScale = RootScale.ScaleX;
+            RootScale.ScaleX = RootScale.ScaleY = 1.0;   // zdalny pulpit ostro 1:1 w pełnym ekranie
+
+            AppTitleBar.Visibility = Visibility.Collapsed;
+            Rail.Visibility = Visibility.Collapsed;
+            Sidebar.Visibility = Visibility.Collapsed;
+            TabStripHost.Visibility = Visibility.Collapsed;
+            SessionToolbar.Visibility = Visibility.Collapsed;
+
+            WindowState = WindowState.Normal;   // trzeba być Normal, żeby ręcznie ustawić granice
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+
+            // Cały prostokąt monitora (rcMonitor, NIE rcWork) => zakrywa pasek zadań; Topmost trzyma nad nim.
+            if (TryGetMonitorRectDip(out Rect r))
             {
-                _prevStyle = WindowStyle;
-                _prevState = WindowState;
-                _prevResize = ResizeMode;
-
-                AppTitleBar.Visibility = Visibility.Collapsed;
-                Rail.Visibility = Visibility.Collapsed;
-                Sidebar.Visibility = Visibility.Collapsed;
-                TabStripHost.Visibility = Visibility.Collapsed;
-                SessionToolbar.Visibility = Visibility.Collapsed;
-
-                WindowStyle = WindowStyle.None;
-                ResizeMode = ResizeMode.NoResize;
-                WindowState = WindowState.Maximized;
-                _isFullscreen = true;
+                Left = r.Left; Top = r.Top; Width = r.Width; Height = r.Height;
+                Topmost = true;
             }
             else
             {
-                WindowStyle = _prevStyle;
-                ResizeMode = _prevResize;
-                WindowState = _prevState;
+                WindowState = WindowState.Maximized;   // awaryjnie (bez zakrycia paska)
+            }
 
-                AppTitleBar.Visibility = Visibility.Visible;
-                Rail.Visibility = Visibility.Visible;
-                Sidebar.Visibility = Visibility.Visible;
-                TabStripHost.Visibility = Visibility.Visible;
-                SessionToolbar.Visibility = Visibility.Visible;
+            _isFullscreen = true;
+            _fsCursorPoll.Start();
+        }
 
-                FsPopup.IsOpen = false;
-                _isFullscreen = false;
+        private void ExitFullscreen()
+        {
+            _fsCursorPoll.Stop();
+            _fsBarDelay.Stop();
+            RootScale.ScaleX = RootScale.ScaleY = _prevScale;
+            Topmost = _prevTopmost;
+            WindowStyle = _prevStyle;
+            ResizeMode = _prevResize;
+            Left = _prevLeft; Top = _prevTop; Width = _prevWidth; Height = _prevHeight;
+            WindowState = _prevState;
+
+            AppTitleBar.Visibility = Visibility.Visible;
+            Rail.Visibility = Visibility.Visible;
+            Sidebar.Visibility = Visibility.Visible;
+            TabStripHost.Visibility = Visibility.Visible;
+            SessionToolbar.Visibility = Visibility.Visible;
+
+            FsPopup.IsOpen = false;
+            _isFullscreen = false;
+        }
+
+        /// <summary>Pełny prostokąt monitora, na którym jest okno, przeliczony na DIP.</summary>
+        private bool TryGetMonitorRectDip(out Rect rect)
+        {
+            rect = default;
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return false;
+
+            IntPtr mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
+            if (!GetMonitorInfo(mon, ref mi)) return false;
+            _fsMonRect = mi.rcMonitor;   // piksele fizyczne — do pollingu górnej krawędzi
+
+            var src = PresentationSource.FromVisual(this);
+            if (src?.CompositionTarget == null) return false;
+            Matrix toDip = src.CompositionTarget.TransformFromDevice;
+
+            Point tl = toDip.Transform(new Point(mi.rcMonitor.left, mi.rcMonitor.top));
+            Point br = toDip.Transform(new Point(mi.rcMonitor.right, mi.rcMonitor.bottom));
+            rect = new Rect(tl, br);
+            return true;
+        }
+
+        private const int MONITOR_DEFAULTTONEAREST = 0x2;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int dwFlags);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT { public int X, Y; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int left, top, right, bottom; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public int dwFlags;
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            FsPopup.IsOpen = false;
+            WindowState = WindowState.Minimized;   // po przywróceniu wraca do pełnego ekranu (granice zachowane)
+        }
+
+        // Polling kursora w pełnym ekranie: łapie SAMĄ górną krawędź (y=0), niezależnie od
+        // nibeklienckiego brzegu okna i od "airspace" kontrolki RDP.
+        private void FsCursorPollTick(object sender, EventArgs e)
+        {
+            if (!_isFullscreen) { _fsCursorPoll.Stop(); return; }
+            if (WindowState == WindowState.Minimized) return;   // zminimalizowane — nie pokazuj paska
+            if (!GetCursorPos(out POINT p)) return;
+
+            bool withinX = p.X >= _fsMonRect.left && p.X < _fsMonRect.right;
+            bool atTop = withinX && p.Y <= _fsMonRect.top + 2;
+
+            if (atTop)
+            {
+                // Nie od razu — dopiero gdy kursor chwilę postoi przy krawędzi (jak w mstsc).
+                if (!FsPopup.IsOpen && !_fsBarDelay.IsEnabled) _fsBarDelay.Start();
+            }
+            else
+            {
+                if (_fsBarDelay.IsEnabled) _fsBarDelay.Stop();
+                // zabezpieczenie: gdy kursor zjedzie wyraźnie poniżej paska (a flyout zwinięty) — zamknij
+                if (FsPopup.IsOpen && FsFlyout.Visibility != Visibility.Visible && p.Y > _fsMonRect.top + 140)
+                    FsPopup.IsOpen = false;
             }
         }
 
-        private void HotZone_MouseEnter(object sender, MouseEventArgs e)
+        private void FsPopup_MouseLeave(object sender, MouseEventArgs e)
         {
-            if (_isFullscreen) FsPopup.IsOpen = true;
+            FsPopup.IsOpen = false;
+            CollapseFlyout();
         }
 
-        private void FsPopup_MouseLeave(object sender, MouseEventArgs e) => FsPopup.IsOpen = false;
+        // ---------- Flyout "inne połączenia" (krok 7) ----------
+
+        private void ToggleFlyout_Click(object sender, RoutedEventArgs e)
+        {
+            if (FsFlyout.Visibility == Visibility.Visible) { CollapseFlyout(); return; }
+            FsFlyoutSearch.Text = "";
+            BuildFlyoutLists("");
+            FsFlyout.Visibility = Visibility.Visible;
+            InnyBtn.Content = "inne połączenia  ▴";
+        }
+
+        private void CollapseFlyout()
+        {
+            FsFlyout.Visibility = Visibility.Collapsed;
+            InnyBtn.Content = "inne połączenia  ▾";
+        }
+
+        private void FsFlyoutSearch_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            BuildFlyoutLists(FsFlyoutSearch.Text);
+        }
+
+        private void BuildFlyoutLists(string filter)
+        {
+            filter = (filter ?? "").Trim().ToLowerInvariant();
+            FlyoutSessions.Children.Clear();
+            FlyoutServers.Children.Clear();
+
+            foreach (var s in _sessions)
+            {
+                if (!MatchesFilter(s.Server, filter)) continue;
+                var dot = s.Connected ? ServerStatus.Online : ServerStatus.Offline;
+                var session = s;
+                FlyoutSessions.Children.Add(BuildFlyoutRow(s.Server, dot, s == _active, () => HandleFlyoutClick(session.Server)));
+            }
+
+            foreach (var server in _allServers)
+            {
+                if (!MatchesFilter(server, filter)) continue;
+                var srv = server;
+                FlyoutServers.Children.Add(BuildFlyoutRow(server, server.Status, false, () => HandleFlyoutClick(srv)));
+            }
+        }
+
+        private static bool MatchesFilter(ServerInfo s, string filter)
+        {
+            if (string.IsNullOrEmpty(filter)) return true;
+            return (s.Name ?? "").ToLowerInvariant().Contains(filter)
+                || (s.Host ?? "").ToLowerInvariant().Contains(filter);
+        }
+
+        private FrameworkElement BuildFlyoutRow(ServerInfo server, ServerStatus dotStatus, bool isActive, Action onClick)
+        {
+            var row = new Border
+            {
+                Padding = new Thickness(7, 6, 7, 6),
+                CornerRadius = new CornerRadius(7),
+                Background = isActive ? (Brush)Resources["AccentSoft"] : Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                Margin = new Thickness(0, 1, 0, 1)
+            };
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var avatar = new Border
+            {
+                Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = AvatarBrush(server.Group),
+                Child = new TextBlock
+                {
+                    Text = server.Initials, Foreground = Brushes.White, FontSize = 7.5, FontWeight = FontWeights.Bold,
+                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            Grid.SetColumn(avatar, 0);
+            grid.Children.Add(avatar);
+
+            var name = new TextBlock
+            {
+                Text = server.Name, Foreground = (Brush)Resources["TextPrim"], FontSize = 12,
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
+            };
+            Grid.SetColumn(name, 1);
+            grid.Children.Add(name);
+
+            var dot = new Ellipse { Width = 7, Height = 7, Fill = StatusBrush(dotStatus), VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(dot, 2);
+            grid.Children.Add(dot);
+
+            row.Child = grid;
+            row.MouseEnter += (s, e) => { if (!isActive) row.Background = (Brush)Resources["Elevated"]; };
+            row.MouseLeave += (s, e) => { if (!isActive) row.Background = Brushes.Transparent; };
+            row.MouseLeftButtonUp += (s, e) => { e.Handled = true; onClick(); };
+            return row;
+        }
+
+        private void HandleFlyoutClick(ServerInfo server)
+        {
+            var existing = _sessions.Find(x => x.Server == server);
+            if (existing != null)
+            {
+                Activate(existing);            // przełącz — zostajemy w pełnym ekranie
+                FsPopup.IsOpen = false;
+                CollapseFlyout();
+                return;
+            }
+
+            OpenServer(server);                // nowa zakładka + aktywacja (wczytuje też zapisane hasło)
+            var s = _active;
+            FsPopup.IsOpen = false;
+            CollapseFlyout();
+
+            bool canAuto = server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
+            if (canAuto)
+            {
+                ConnectSession(s);             // konto Windows lub zapisane hasło — bez wychodzenia z pełnego ekranu
+            }
+            else if (_isFullscreen)
+            {
+                // Brak poświadczeń — w pełnym ekranie nie ma jak podać hasła: wyjdź i pokaż formularz.
+                ToggleFullscreen();
+            }
+        }
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.F11) ToggleFullscreen();
             else if (e.Key == Key.Escape && _isFullscreen) ToggleFullscreen();
+            else if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            {
+                if (e.Key == Key.D0 || e.Key == Key.NumPad0) { ZoomTo(1.0); e.Handled = true; }
+                else if (e.Key == Key.OemPlus || e.Key == Key.Add) { ZoomTo(_settings.UiScale + 0.1); e.Handled = true; }
+                else if (e.Key == Key.OemMinus || e.Key == Key.Subtract) { ZoomTo(_settings.UiScale - 0.1); e.Handled = true; }
+            }
         }
 
         // ---------- Pomocnicze ----------
 
         private void AddServer_Click(object sender, RoutedEventArgs e)
         {
-            SetStatus("Dodawanie serwerów — Faza 2 (SQLite/CRUD).");
+            var server = new ServerInfo { Group = "Serwery", Status = ServerStatus.Offline, Port = _settings.DefaultPort };
+            var dlg = new ServerEditWindow(server, "") { Owner = this };
+            if (dlg.ShowDialog() == true)
+            {
+                _allServers.Add(server);
+                PersistServers();
+                SaveCredential(server, dlg.EnteredPassword);
+                RenderTree(SearchBox.Text);
+                CheckReachabilityAsync();
+            }
+        }
+
+        private void EditServer(ServerInfo server)
+        {
+            string current = "";
+            if (server.SavePassword) CredentialStore.TryRead(server.CredTarget, out current);
+
+            var dlg = new ServerEditWindow(server, current) { Owner = this };
+            if (dlg.ShowDialog() == true)
+            {
+                PersistServers();
+                SaveCredential(server, dlg.EnteredPassword);
+                RenderTree(SearchBox.Text);
+                CheckReachabilityAsync();
+
+                // odśwież otwartą sesję tego serwera (etykieta zakładki + pasek)
+                var open = _sessions.Find(x => x.Server == server);
+                if (open != null)
+                {
+                    if (_tabName.TryGetValue(open, out var tn)) tn.Text = server.Name;
+                    if (open == _active)
+                    {
+                        LoadToolbar(open);
+                        UpdateToolbarMode();
+                        FsName.Text = server.Name + " · " + server.Host;
+                    }
+                }
+            }
+        }
+
+        private void DeleteServer(ServerInfo server)
+        {
+            if (MessageBox.Show("Usunąć serwer \"" + server.Name + "\"?", "Usuń serwer",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            var open = _sessions.Find(x => x.Server == server);
+            if (open != null) CloseSession(open);
+
+            _allServers.Remove(server);
+            CredentialStore.Delete(server.CredTarget);
+            PersistServers();
+            RenderTree(SearchBox.Text);
+            CheckReachabilityAsync();
+        }
+
+        private void PersistServers() => ServerRepository.Save(_allServers);
+
+        private void SaveCredential(ServerInfo server, string password)
+        {
+            if (server.SavePassword && !string.IsNullOrEmpty(password))
+                CredentialStore.Save(server.CredTarget, server.Username, password);
+            else
+                CredentialStore.Delete(server.CredTarget);   // nie zapisujemy / kasujemy stare
         }
 
         private Brush AvatarBrush(string group)
         {
-            if (group == "Produkcja") return (Brush)Resources["AvProd"];
-            if (group == "Staging") return (Brush)Resources["AvStaging"];
-            return (Brush)Resources["AvClient"];
+            switch (group)
+            {
+                case "Produkcja": return (Brush)Resources["AvProd"];
+                case "Staging": return (Brush)Resources["AvStaging"];
+                case "Klienci": return (Brush)Resources["AvClient"];
+            }
+            var key = group ?? "";
+            if (!_avatarCache.TryGetValue(key, out var b))
+            {
+                int i = Math.Abs(StableHash(key)) % GroupPalette.Length;
+                var c1 = (Color)ColorConverter.ConvertFromString(GroupPalette[i][0]);
+                var c2 = (Color)ColorConverter.ConvertFromString(GroupPalette[i][1]);
+                b = new LinearGradientBrush(c1, c2, 45);
+                b.Freeze();
+                _avatarCache[key] = b;
+            }
+            return b;
         }
 
         private Brush GroupDotBrush(string group)
         {
-            if (group == "Produkcja") return (Brush)Resources["GdProd"];
-            if (group == "Staging") return (Brush)Resources["GdStaging"];
-            return (Brush)Resources["GdClient"];
+            switch (group)
+            {
+                case "Produkcja": return (Brush)Resources["GdProd"];
+                case "Staging": return (Brush)Resources["GdStaging"];
+                case "Klienci": return (Brush)Resources["GdClient"];
+            }
+            return AvatarBrush(group) is LinearGradientBrush g
+                ? new SolidColorBrush(g.GradientStops[0].Color)
+                : (Brush)Resources["GdClient"];
+        }
+
+        private static int StableHash(string s)
+        {
+            int h = 17;
+            foreach (char c in s) h = h * 31 + c;
+            return h;
         }
 
         private Brush StatusBrush(ServerStatus status)
@@ -499,12 +1243,93 @@ namespace RdpManager
             }
         }
 
-        private void SetSessionStatus(Session s, string text)
+        // ---------- Osiągalność serwerów (kropki statusu w drzewie) ----------
+
+        private async void CheckReachabilityAsync()
         {
-            s.Status = text;
-            if (s == _active) SetStatus(text);
+            if (_reachBusy) return;
+            _reachBusy = true;
+            try
+            {
+                var servers = _allServers.ToList();
+                var results = await Task.WhenAll(servers.Select(srv =>
+                    Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv, Probe(srv.Host, srv.Port)))));
+
+                foreach (var kv in results)
+                {
+                    kv.Key.Status = kv.Value;
+                    if (_serverStatusDot.TryGetValue(kv.Key, out var dot))
+                        dot.Fill = StatusBrush(kv.Value);
+                }
+            }
+            catch
+            {
+                // problemy sieciowe nie mogą wywrócić UI
+            }
+            finally
+            {
+                _reachBusy = false;
+            }
         }
 
-        private void SetStatus(string text) => StatusText.Text = text;
+        private static ServerStatus Probe(string host, int port)
+        {
+            if (string.IsNullOrWhiteSpace(host)) return ServerStatus.Offline;
+            try
+            {
+                using (var c = new TcpClient())
+                {
+                    var ar = c.BeginConnect(host, port, null, null);
+                    if (ar.AsyncWaitHandle.WaitOne(1500) && c.Connected)
+                    {
+                        c.EndConnect(ar);
+                        return ServerStatus.Online;
+                    }
+                    return ServerStatus.Offline;
+                }
+            }
+            catch
+            {
+                return ServerStatus.Offline;
+            }
+        }
+
+        private static string DescribeDisconnect(AxMsRdpClient11NotSafeForScripting rdp, int reason)
+        {
+            uint ext = 0;
+            try { ext = (uint)rdp.ExtendedDisconnectReason; } catch { }
+            string d = null;
+            try { d = rdp.GetErrorDescription((uint)reason, ext); } catch { }
+            d = string.IsNullOrWhiteSpace(d) ? "rozłączono" : d.Trim().TrimEnd('.');
+            return d + " (kod " + reason + "/" + ext + ")";
+        }
+
+        private void SetSessionStatus(Session s, string text, StatusKind kind = StatusKind.Info)
+        {
+            s.Status = text;
+            s.StatusKind = kind;
+            if (s == _active) SetStatus(text, kind);
+        }
+
+        private void SetStatus(string text, StatusKind kind = StatusKind.Info)
+        {
+            StatusText.Text = text;
+            StatusText.ToolTip = (string.IsNullOrEmpty(text) || text == "—") ? null : text;
+            var b = KindBrush(kind);
+            StatusText.Foreground = b;
+            CfStatusDot.Fill = b;
+            CfStatusDot.Visibility = kind == StatusKind.Info ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private Brush KindBrush(StatusKind kind)
+        {
+            switch (kind)
+            {
+                case StatusKind.Connecting: return (Brush)Resources["Idle"];
+                case StatusKind.Ok: return (Brush)Resources["Online"];
+                case StatusKind.Error: return (Brush)Resources["Danger"];
+                default: return (Brush)Resources["TextSec"];
+            }
+        }
     }
 }

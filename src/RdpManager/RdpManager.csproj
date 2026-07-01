@@ -11,7 +11,13 @@
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>RdpManager</AssemblyName>
     <RootNamespace>RdpManager</RootNamespace>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\app.ico" />
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="WPF-UI" Version="4.3.0" />

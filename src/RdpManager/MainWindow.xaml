@@ -4,11 +4,12 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
         Title="RDP Manager" Width="1180" Height="720" MinWidth="900" MinHeight="560"
+        Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         WindowCornerPreference="Round"
-        Loaded="Window_Loaded" KeyDown="Window_KeyDown">
+        Loaded="Window_Loaded" KeyDown="Window_KeyDown" PreviewMouseWheel="Window_PreviewMouseWheel" Closing="Window_Closing">
 
     <Window.Resources>
         <SolidColorBrush x:Key="Panel"      Color="#B31C1D21"/>
@@ -101,6 +102,21 @@
             <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Panel}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="18,14"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+        <Style x:Key="CardHead" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrim}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -115,8 +131,11 @@
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <!-- BODY -->
+        <!-- BODY (skalowane zoomem Ctrl+kółko; titlebar zostaje 1:1) -->
         <Grid x:Name="BodyGrid" Grid.Row="1">
+            <Grid.LayoutTransform>
+                <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1"/>
+            </Grid.LayoutTransform>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -134,31 +153,29 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" HorizontalAlignment="Center">
-                        <Button Style="{StaticResource RailBtn}" ToolTip="Pulpit">
-                            <ui:SymbolIcon Symbol="Apps24" FontSize="18" Foreground="{StaticResource TextTer}"/>
+                        <Button x:Name="NavDashboard" Style="{StaticResource RailBtn}" ToolTip="Pulpit" Tag="Dashboard" Click="Nav_Click">
+                            <ui:SymbolIcon x:Name="IcoDashboard" Symbol="Apps24" FontSize="18" Foreground="{StaticResource TextTer}"/>
                         </Button>
-                        <Grid>
-                            <Rectangle Width="3" Height="20" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource Accent}"
-                                       HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-7,0,0,0"/>
-                            <Button Style="{StaticResource RailBtnActive}" ToolTip="Połączenia">
-                                <ui:SymbolIcon Symbol="Desktop24" FontSize="18" Foreground="{StaticResource Accent}"/>
-                            </Button>
-                        </Grid>
-                        <Button Style="{StaticResource RailBtn}" ToolTip="Ostatnie">
-                            <ui:SymbolIcon Symbol="History24" FontSize="18" Foreground="{StaticResource TextTer}"/>
+                        <Button x:Name="NavSessions" Style="{StaticResource RailBtn}" ToolTip="Połączenia" Tag="Sessions" Click="Nav_Click">
+                            <ui:SymbolIcon x:Name="IcoSessions" Symbol="Desktop24" FontSize="18" Foreground="{StaticResource TextTer}"/>
+                        </Button>
+                        <Button x:Name="NavRecent" Style="{StaticResource RailBtn}" ToolTip="Ostatnie" Tag="Recent" Click="Nav_Click">
+                            <ui:SymbolIcon x:Name="IcoRecent" Symbol="History24" FontSize="18" Foreground="{StaticResource TextTer}"/>
                         </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">
-                        <Ellipse Width="30" Height="30" Margin="0,0,0,6">
-                            <Ellipse.Fill>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#7C6CFB" Offset="0"/><GradientStop Color="#4F3FD1" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
-                        <Button Style="{StaticResource RailBtn}" ToolTip="Ustawienia">
-                            <ui:SymbolIcon Symbol="Settings24" FontSize="17" Foreground="{StaticResource TextTer}"/>
+                        <Button x:Name="AvatarBtn" Style="{StaticResource RailBtn}" ToolTip="O aplikacji" Click="Avatar_Click">
+                            <Ellipse Width="26" Height="26">
+                                <Ellipse.Fill>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#7C6CFB" Offset="0"/><GradientStop Color="#4F3FD1" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                        </Button>
+                        <Button x:Name="NavSettings" Style="{StaticResource RailBtn}" ToolTip="Ustawienia" Tag="Settings" Click="Nav_Click">
+                            <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="17" Foreground="{StaticResource TextTer}"/>
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -174,7 +191,8 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <ui:TextBox x:Name="SearchBox" Grid.Row="0" Margin="12" PlaceholderText="Szukaj serwera…">
+                    <ui:TextBox x:Name="SearchBox" Grid.Row="0" Margin="12" PlaceholderText="Szukaj serwera…"
+                                TextChanged="SearchBox_TextChanged">
                         <ui:TextBox.Icon>
                             <ui:SymbolIcon Symbol="Search24"/>
                         </ui:TextBox.Icon>
@@ -191,8 +209,9 @@
                 </Grid>
             </Border>
 
-            <!-- MAIN -->
-            <Grid x:Name="Main" Grid.Column="2">
+            <!-- MAIN (przełączane widoki: Sesje / Pulpit / Ostatnie / Ustawienia) -->
+            <Grid Grid.Column="2">
+            <Grid x:Name="SessionsView">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -211,22 +230,26 @@
                 <Border x:Name="SessionToolbar" Grid.Row="1" Background="{StaticResource Panel}"
                         BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" Padding="12,8">
                     <Grid>
-                        <!-- disconnected -> connection form -->
+                        <!-- disconnected -> kompaktowy pasek połączenia (pełna edycja jest w oknie serwera) -->
                         <StackPanel x:Name="ConnectForm" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Host" Style="{StaticResource FieldLabel}"/>
-                            <ui:TextBox x:Name="HostBox" Width="140" Margin="0,0,8,0"/>
-                            <TextBlock Text="Port" Style="{StaticResource FieldLabel}"/>
-                            <ui:TextBox x:Name="PortBox" Width="52" Text="3389" Margin="0,0,8,0"/>
-                            <TextBlock Text="Użytkownik" Style="{StaticResource FieldLabel}"/>
-                            <ui:TextBox x:Name="UserBox" Width="104" Margin="0,0,8,0"/>
-                            <TextBlock Text="Domena" Style="{StaticResource FieldLabel}"/>
-                            <ui:TextBox x:Name="DomainBox" Width="84" Margin="0,0,8,0"/>
-                            <TextBlock Text="Hasło" Style="{StaticResource FieldLabel}"/>
-                            <PasswordBox x:Name="PassBox" Width="104" Margin="0,0,8,0" VerticalContentAlignment="Center"/>
+                            <Border x:Name="CfAvatar" Width="18" Height="18" CornerRadius="5" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <TextBlock x:Name="CfAvatarText" Foreground="White" FontSize="7.5" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock x:Name="CfName" Foreground="{StaticResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="CfHost" FontFamily="{StaticResource Mono}" Foreground="{StaticResource TextTer}"
+                                       VerticalAlignment="Center" Margin="10,0,0,0"/>
                             <CheckBox x:Name="WinAuthCheck" Content="Konto Windows" Foreground="{StaticResource TextSec}"
-                                      VerticalAlignment="Center" Margin="0,0,10,0" Checked="WinAuth_Changed" Unchecked="WinAuth_Changed"/>
-                            <ui:Button x:Name="ConnectBtn" Content="Połącz" Appearance="Primary" Click="Connect_Click" Margin="0,0,10,0"/>
-                            <TextBlock x:Name="StatusText" Text="—" Foreground="{StaticResource TextSec}" VerticalAlignment="Center"/>
+                                      VerticalAlignment="Center" Margin="16,0,0,0" Checked="WinAuth_Changed" Unchecked="WinAuth_Changed"/>
+                            <StackPanel x:Name="CfPassGroup" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                                <TextBlock Text="Hasło" Style="{StaticResource FieldLabel}"/>
+                                <PasswordBox x:Name="PassBox" Width="150" VerticalContentAlignment="Center" KeyDown="PassBox_KeyDown"/>
+                            </StackPanel>
+                            <ui:Button x:Name="ConnectBtn" Content="Połącz" Appearance="Primary" Click="Connect_Click" Margin="16,0,0,0"/>
+                            <Ellipse x:Name="CfStatusDot" Width="7" Height="7" Fill="{StaticResource TextTer}"
+                                     VerticalAlignment="Center" Margin="14,0,6,0" Visibility="Collapsed"/>
+                            <TextBlock x:Name="StatusText" Text="—" Foreground="{StaticResource TextSec}" VerticalAlignment="Center"
+                                       MaxWidth="460" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
 
                         <!-- connected -> compact status bar -->
@@ -252,28 +275,150 @@
                     </Grid>
                 </Border>
 
-                <Border x:Name="HotZone" Grid.Row="2" Background="Transparent" MouseEnter="HotZone_MouseEnter"/>
+                <Border x:Name="HotZone" Grid.Row="2" Background="Transparent"/>
 
                 <!-- all sessions' hosts live here; only the active one is Visible -->
                 <Grid x:Name="SessionContainer" Grid.Row="3" Background="{StaticResource CanvasBrush}">
                     <TextBlock x:Name="EmptyHint" Text="Wybierz serwer z listy po lewej, aby otworzyć sesję."
                                Foreground="{StaticResource TextTer}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                    <!-- Stan sesji gdy kontrolka RDP jest schowana (łączenie / rozłączono) -->
+                    <Border x:Name="SessionOverlay" Visibility="Collapsed" Background="{StaticResource CanvasBrush}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
+                            <ui:ProgressRing x:Name="OverlaySpinner" IsIndeterminate="True" Width="46" Height="46"
+                                             Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,0,0,18"/>
+                            <TextBlock x:Name="OverlayTitle" Foreground="{StaticResource TextPrim}" FontSize="16"
+                                       FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="OverlayMsg" Foreground="{StaticResource TextSec}" HorizontalAlignment="Center"
+                                       TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <ui:Button x:Name="OverlayReconnect" Content="Połącz ponownie" Appearance="Primary"
+                                       Click="Connect_Click" HorizontalAlignment="Center" Margin="0,18,0,0" Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
+            </Grid>
+            <!-- /SessionsView -->
+
+            <!-- Pulpit -->
+            <ScrollViewer x:Name="DashboardView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{StaticResource CanvasBrush}">
+                <StackPanel Margin="28,24">
+                    <TextBlock Text="Pulpit" Foreground="{StaticResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+                    <StackPanel x:Name="DashboardPanel"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Ostatnie -->
+            <ScrollViewer x:Name="RecentView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{StaticResource CanvasBrush}">
+                <StackPanel Margin="28,24">
+                    <TextBlock Text="Ostatnie połączenia" Foreground="{StaticResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+                    <StackPanel x:Name="RecentPanel"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Ustawienia -->
+            <ScrollViewer x:Name="SettingsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{StaticResource CanvasBrush}">
+                <StackPanel Margin="28,24" MaxWidth="600" HorizontalAlignment="Left">
+                    <TextBlock Text="Ustawienia" Foreground="{StaticResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+
+                    <!-- Interfejs -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Interfejs" Style="{StaticResource CardHead}"/>
+                            <TextBlock Text="Skala interfejsu (%) — także Ctrl + kółko myszy" Foreground="{StaticResource TextSec}" Margin="0,6,0,4"/>
+                            <ui:TextBox x:Name="SetUiScale" Width="120" HorizontalAlignment="Left"/>
+                            <TextBlock Text="Opóźnienie paska pełnoekranowego (ms)" Foreground="{StaticResource TextSec}" Margin="0,16,0,4"/>
+                            <ui:TextBox x:Name="SetBarDelay" Width="120" HorizontalAlignment="Left"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Połączenie -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Połączenie" Style="{StaticResource CardHead}"/>
+                            <TextBlock Text="Domyślny port RDP" Foreground="{StaticResource TextSec}" Margin="0,6,0,4"/>
+                            <ui:TextBox x:Name="SetDefaultPort" Width="120" HorizontalAlignment="Left"/>
+                            <TextBlock Text="Domyślna głębia kolorów (bit)" Foreground="{StaticResource TextSec}" Margin="0,16,0,4"/>
+                            <ComboBox x:Name="SetColorDepth" Width="120" HorizontalAlignment="Left">
+                                <ComboBoxItem>16</ComboBoxItem>
+                                <ComboBoxItem>24</ComboBoxItem>
+                                <ComboBoxItem>32</ComboBoxItem>
+                            </ComboBox>
+                            <CheckBox x:Name="SetAutoReconnect" Content="Automatycznie wznawiaj zerwane połączenie" Foreground="{StaticResource TextSec}" Margin="0,16,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Zachowanie -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Zachowanie" Style="{StaticResource CardHead}"/>
+                            <CheckBox x:Name="SetReachEnabled" Content="Sprawdzaj osiągalność serwerów w tle" Foreground="{StaticResource TextSec}" Margin="0,6,0,0"/>
+                            <TextBlock Text="Interwał sprawdzania (s)" Foreground="{StaticResource TextSec}" Margin="0,10,0,4"/>
+                            <ui:TextBox x:Name="SetReachInterval" Width="120" HorizontalAlignment="Left"/>
+                            <CheckBox x:Name="SetConfirmClose" Content="Pytaj przed zamknięciem połączonej sesji" Foreground="{StaticResource TextSec}" Margin="0,16,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Dane -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Dane aplikacji" Style="{StaticResource CardHead}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock x:Name="SetDataPath" Foreground="{StaticResource TextTer}" FontFamily="{StaticResource Mono}"
+                                           FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
+                                <ui:Button Content="Otwórz folder" Appearance="Secondary" Click="OpenDataFolder_Click" Margin="12,0,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <ui:Button Content="Zapisz ustawienia" Appearance="Primary" Click="SaveSettings_Click"/>
+                        <TextBlock x:Name="SettingsStatus" Foreground="{StaticResource Online}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
             </Grid>
         </Grid>
 
         <!-- floating fullscreen bar (Popup = osobny HWND -> rysuje się nad kontrolką RDP) -->
-        <Popup x:Name="FsPopup" Placement="Bottom" PlacementTarget="{Binding ElementName=HotZone}"
+        <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
-            <Border Background="#DD212226" CornerRadius="10" Padding="14,8" Margin="12"
+            <Border Background="#DD212226" CornerRadius="10" Padding="14,7" Margin="12,4,12,12"
                     BorderBrush="{StaticResource Border}" BorderThickness="1">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/>
                 </Border.Effect>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="FsName" Text="—" Foreground="{StaticResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Border Width="1" Background="{StaticResource Border}" Margin="12,2"/>
-                    <ui:Button Content="Przywróć okno" Appearance="Secondary" Click="Fullscreen_Click"/>
+                <StackPanel Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="FsName" Text="—" Foreground="{StaticResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Border Width="1" Background="{StaticResource Border}" Margin="12,2"/>
+                        <ui:Button x:Name="InnyBtn" Content="inne połączenia  ▾" Appearance="Secondary" Click="ToggleFlyout_Click"/>
+                        <Border Width="1" Background="{StaticResource Border}" Margin="12,2"/>
+                        <Button Style="{StaticResource IconBtn}" Click="Minimize_Click" ToolTip="Minimalizuj">
+                            <TextBlock Text="&#x2212;" FontSize="15" Foreground="{StaticResource TextSec}" VerticalAlignment="Center"/>
+                        </Button>
+                        <ui:Button Content="Przywróć okno" Appearance="Secondary" Click="Fullscreen_Click" Margin="6,0,0,0"/>
+                    </StackPanel>
+
+                    <!-- flyout "inne połączenia" -->
+                    <Border x:Name="FsFlyout" Visibility="Collapsed" Width="300" Margin="0,8,0,0"
+                            Background="#22FFFFFF" CornerRadius="8" Padding="8">
+                        <StackPanel>
+                            <ui:TextBox x:Name="FsFlyoutSearch" PlaceholderText="Szukaj serwera…"
+                                        Margin="0,0,0,6" TextChanged="FsFlyoutSearch_TextChanged">
+                                <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
+                            </ui:TextBox>
+                            <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <TextBlock Text="OTWARTE SESJE" Foreground="{StaticResource TextTer}" FontSize="10"
+                                               FontWeight="SemiBold" Margin="6,6,6,4"/>
+                                    <StackPanel x:Name="FlyoutSessions"/>
+                                    <TextBlock Text="WSZYSTKIE SERWERY" Foreground="{StaticResource TextTer}" FontSize="10"
+                                               FontWeight="SemiBold" Margin="6,8,6,4"/>
+                                    <StackPanel x:Name="FlyoutServers"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
         </Popup>

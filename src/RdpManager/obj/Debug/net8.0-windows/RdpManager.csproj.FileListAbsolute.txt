@@ -24,3 +24,6 @@ C:\Apps\RemoteDesktopManager\src\RdpManager\obj\Debug\net8.0-windows\refint\RdpM
 C:\Apps\RemoteDesktopManager\src\RdpManager\obj\Debug\net8.0-windows\RdpManager.pdb
 C:\Apps\RemoteDesktopManager\src\RdpManager\obj\Debug\net8.0-windows\RdpManager.genruntimeconfig.cache
 C:\Apps\RemoteDesktopManager\src\RdpManager\obj\Debug\net8.0-windows\ref\RdpManager.dll
+C:\Apps\RemoteDesktopManager\src\RdpManager\obj\Debug\net8.0-windows\RdpManager.sourcelink.json
+C:\Apps\RemoteDesktopManager\src\RdpManager\obj\Debug\net8.0-windows\ServerEditWindow.baml
+C:\Apps\RemoteDesktopManager\src\RdpManager\obj\Debug\net8.0-windows\ServerEditWindow.g.cs

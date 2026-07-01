@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RdpManager")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ca95ed85856071ef9831a44d381e0cd6446a72c5")]
 [assembly: System.Reflection.AssemblyProductAttribute("RdpManager")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RdpManager")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
