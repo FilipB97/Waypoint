@@ -76,6 +76,25 @@
                         <ComboBoxItem>Odtwarzaj na serwerze</ComboBoxItem>
                     </ComboBox>
                 </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <TextBlock Text="Weryfikacja serwera" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="EdAuthLevel" Width="220">
+                        <ComboBoxItem>Nie sprawdzaj (niezalecane)</ComboBoxItem>
+                        <ComboBoxItem>Wymagaj — odrzuć przy błędzie</ComboBoxItem>
+                        <ComboBoxItem>Ostrzegaj przy błędzie (zalecane)</ComboBoxItem>
+                    </ComboBox>
+                </StackPanel>
+
+                <TextBlock Text="Brama (RD Gateway / jump-host)" FontWeight="SemiBold" Margin="0,16,0,6"/>
+                <ui:TextBox x:Name="GatewayHostBox" PlaceholderText="host bramy — puste = połączenie bezpośrednie"/>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="Tryb bramy" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="EdGatewayUsage" Width="220">
+                        <ComboBoxItem>Nie używaj</ComboBoxItem>
+                        <ComboBoxItem>Zawsze przez bramę</ComboBoxItem>
+                        <ComboBoxItem>Wykryj automatycznie</ComboBoxItem>
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
         </Grid>
 

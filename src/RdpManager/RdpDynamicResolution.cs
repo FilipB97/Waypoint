@@ -5,6 +5,7 @@ using System.Windows.Forms.Integration;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AxMSTSCLib;
+using RdpManager.Core;
 
 namespace RdpManager
 {
@@ -22,8 +23,7 @@ namespace RdpManager
     /// </summary>
     public sealed class RdpDynamicResolution : IDisposable
     {
-        private const int MinDim = 200;
-        private const int MaxDim = 8192;
+        private const int MinDim = RdpUtils.MinDim;
 
         private readonly Session _session;
         private readonly WindowsFormsHost _host;
@@ -78,8 +78,8 @@ namespace RdpManager
 
             if (!TryGetPhysicalPixels(out int w, out int h)) return;
 
-            w = NormalizeDim(w);
-            h = NormalizeDim(h);
+            w = RdpUtils.NormalizeDim(w);
+            h = RdpUtils.NormalizeDim(h);
             if (w < MinDim || h < MinDim) return;
             if (w == _lastW && h == _lastH) return;
 
@@ -125,15 +125,6 @@ namespace RdpManager
             w = (int)Math.Round(dipW * sx);
             h = (int)Math.Round(dipH * sy);
             return true;
-        }
-
-        // [200,8192], parzyste (zaokrąglenie w dół — odd => E_INVALIDARG).
-        private static int NormalizeDim(int v)
-        {
-            if (v < MinDim) v = MinDim;
-            if (v > MaxDim) v = MaxDim;
-            v &= ~1;
-            return v;
         }
 
         private static void TrySetSmartSizing(AxMsRdpClient11NotSafeForScripting rdp, bool on)

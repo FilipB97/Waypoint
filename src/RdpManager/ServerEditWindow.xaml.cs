@@ -1,6 +1,6 @@
 using System;
-using System.Linq;
 using System.Windows;
+using RdpManager.Core;
 using RdpManager.Models;
 
 namespace RdpManager
@@ -31,6 +31,9 @@ namespace RdpManager
             EdDrives.IsChecked = server.RedirectDrives;
             EdPrinters.IsChecked = server.RedirectPrinters;
             EdAudio.SelectedIndex = Math.Clamp(server.AudioMode, 0, 2);
+            EdAuthLevel.SelectedIndex = Math.Clamp(server.AuthenticationLevel, 0, 2);
+            GatewayHostBox.Text = server.GatewayHostname ?? "";
+            EdGatewayUsage.SelectedIndex = Math.Clamp(server.GatewayUsageMethod, 0, 2);
 
             ApplyWinAuthState();
         }
@@ -67,23 +70,17 @@ namespace RdpManager
             _server.RedirectDrives = EdDrives.IsChecked == true;
             _server.RedirectPrinters = EdPrinters.IsChecked == true;
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
+            _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;
+            _server.GatewayHostname = GatewayHostBox.Text.Trim();
+            _server.GatewayUsageMethod = EdGatewayUsage.SelectedIndex < 0 ? 0 : EdGatewayUsage.SelectedIndex;
 
             if (string.IsNullOrWhiteSpace(_server.Initials))
-                _server.Initials = MakeInitials(_server.Name);
+                _server.Initials = RdpUtils.MakeInitials(_server.Name);
 
             EnteredPassword = _server.UseWindowsAccount ? "" : PassBox.Password;
             DialogResult = true;
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
-
-        private static string MakeInitials(string name)
-        {
-            var parts = name.Split(new[] { ' ', '-', '_', '.' }, StringSplitOptions.RemoveEmptyEntries);
-            string s = parts.Length >= 2
-                ? "" + parts[0][0] + parts[1][0]
-                : new string(name.Where(char.IsLetterOrDigit).Take(2).ToArray());
-            return s.ToUpperInvariant();
-        }
     }
 }

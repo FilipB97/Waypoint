@@ -38,6 +38,24 @@ namespace RdpManager.Models
         /// <summary>Dźwięk: 0 = odtwarzaj lokalnie, 1 = nie odtwarzaj, 2 = odtwarzaj na serwerze.</summary>
         public int AudioMode { get; set; }
 
+        /// <summary>
+        /// Weryfikacja tożsamości serwera (mapuje na IMsRdpClientAdvancedSettings.AuthenticationLevel):
+        /// 0 = nie sprawdzaj (niebezpieczne, ryzyko MITM),
+        /// 1 = wymagaj — połączenie się nie uda, jeśli weryfikacja zawiedzie,
+        /// 2 = ostrzegaj — próbuj zweryfikować, ostrzeż przy niepowodzeniu (bezpieczny domyślny).
+        /// </summary>
+        public int AuthenticationLevel { get; set; } = 2;
+
+        /// <summary>Host bramy RD Gateway / jump-hosta (puste = połączenie bezpośrednie).</summary>
+        public string GatewayHostname { get; set; } = "";
+
+        /// <summary>
+        /// Tryb użycia bramy (mapuje na IMsRdpClientTransportSettings.GatewayUsageMethod):
+        /// 0 = nie używaj, 1 = zawsze przez bramę, 2 = wykryj automatycznie.
+        /// Gdy pusty GatewayHostname, brama jest ignorowana niezależnie od tej wartości.
+        /// </summary>
+        public int GatewayUsageMethod { get; set; }
+
         /// <summary>Klucz w Credential Manager (hasło NIE jest trzymane w tym modelu ani w JSON).</summary>
         [JsonIgnore]
         public string CredTarget => "RdpManager:" + Id;

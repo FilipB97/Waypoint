@@ -12,19 +12,26 @@ namespace RdpManager
     /// </summary>
     public static class ServerRepository
     {
-        private static readonly string Dir =
+        private static readonly string DefaultDir =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RdpManager");
-        private static readonly string FilePath = Path.Combine(Dir, "servers.json");
 
         private static readonly JsonSerializerOptions Options = new JsonSerializerOptions { WriteIndented = true };
 
-        public static List<ServerInfo> Load()
+        private static string FilePath(string dir) => Path.Combine(dir, "servers.json");
+
+        public static List<ServerInfo> Load() => Load(DefaultDir);
+
+        public static void Save(List<ServerInfo> servers) => Save(servers, DefaultDir);
+
+        /// <summary>Wczytuje listę z podanego katalogu (testowalne). Pierwszy start — seed.</summary>
+        public static List<ServerInfo> Load(string dir)
         {
             try
             {
-                if (File.Exists(FilePath))
+                var path = FilePath(dir);
+                if (File.Exists(path))
                 {
-                    var json = File.ReadAllText(FilePath);
+                    var json = File.ReadAllText(path);
                     var list = JsonSerializer.Deserialize<List<ServerInfo>>(json);
                     if (list != null) return list;
                 }
@@ -34,19 +41,20 @@ namespace RdpManager
                 // uszkodzony/niekompatybilny plik — seedujemy poniżej
             }
 
-            // Pierwsze uruchomienie: seed z danych testowych, potem zapis.
+            // Pierwsze uruchomienie: seed z przykładowych danych, potem zapis.
             var seed = new List<ServerInfo>();
             foreach (var g in TestData.Groups())
                 foreach (var s in g.Servers)
                     seed.Add(s);
-            Save(seed);
+            Save(seed, dir);
             return seed;
         }
 
-        public static void Save(List<ServerInfo> servers)
+        /// <summary>Zapisuje listę do podanego katalogu (testowalne).</summary>
+        public static void Save(List<ServerInfo> servers, string dir)
         {
-            Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(servers, Options));
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(FilePath(dir), JsonSerializer.Serialize(servers, Options));
         }
     }
 }

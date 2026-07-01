@@ -8,16 +8,23 @@ namespace RdpManager
     {
         public static readonly string Dir =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RdpManager");
-        private static readonly string FilePath = Path.Combine(Dir, "settings.json");
         private static readonly JsonSerializerOptions Options = new JsonSerializerOptions { WriteIndented = true };
 
-        public static AppSettings Load()
+        private static string FilePath(string dir) => Path.Combine(dir, "settings.json");
+
+        public static AppSettings Load() => Load(Dir);
+
+        public static void Save(AppSettings settings) => Save(settings, Dir);
+
+        /// <summary>Wczytuje ustawienia z podanego katalogu (testowalne).</summary>
+        public static AppSettings Load(string dir)
         {
             try
             {
-                if (File.Exists(FilePath))
+                var path = FilePath(dir);
+                if (File.Exists(path))
                 {
-                    var s = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath));
+                    var s = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path));
                     if (s != null) return s;
                 }
             }
@@ -25,10 +32,11 @@ namespace RdpManager
             return new AppSettings();
         }
 
-        public static void Save(AppSettings settings)
+        /// <summary>Zapisuje ustawienia do podanego katalogu (testowalne).</summary>
+        public static void Save(AppSettings settings, string dir)
         {
-            Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(settings, Options));
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(FilePath(dir), JsonSerializer.Serialize(settings, Options));
         }
     }
 }

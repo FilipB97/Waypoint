@@ -1,0 +1,100 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using RdpManager;
+using RdpManager.Models;
+using Xunit;
+
+namespace RdpManager.Tests
+{
+    public class StoreTests : IDisposable
+    {
+        private readonly string _dir;
+
+        public StoreTests()
+        {
+            _dir = Path.Combine(Path.GetTempPath(), "RdpManagerTests_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_dir);
+        }
+
+        public void Dispose()
+        {
+            try { Directory.Delete(_dir, recursive: true); } catch { /* najlepszy wysiłek */ }
+        }
+
+        [Fact]
+        public void SettingsStore_RoundTripsToDisk()
+        {
+            var settings = new AppSettings
+            {
+                DefaultPort = 3390,
+                UiScale = 1.25,
+                ColorDepth = 24,
+                AutoReconnect = false,
+                RecentIds = new List<string> { "a", "b" }
+            };
+
+            SettingsStore.Save(settings, _dir);
+            var loaded = SettingsStore.Load(_dir);
+
+            Assert.Equal(3390, loaded.DefaultPort);
+            Assert.Equal(1.25, loaded.UiScale);
+            Assert.Equal(24, loaded.ColorDepth);
+            Assert.False(loaded.AutoReconnect);
+            Assert.Equal(new[] { "a", "b" }, loaded.RecentIds);
+        }
+
+        [Fact]
+        public void SettingsStore_ReturnsDefaultsWhenMissing()
+        {
+            var loaded = SettingsStore.Load(_dir);
+            Assert.Equal(3389, loaded.DefaultPort);
+            Assert.Equal(1.0, loaded.UiScale);
+        }
+
+        [Fact]
+        public void ServerRepository_RoundTripsWithoutPersistingPassword()
+        {
+            var servers = new List<ServerInfo>
+            {
+                new ServerInfo { Name = "srv1", Host = "10.0.0.1", Username = "admin", AuthenticationLevel = 1 },
+                new ServerInfo { Name = "srv2", Host = "example.com", SavePassword = true },
+            };
+
+            ServerRepository.Save(servers, _dir);
+            var loaded = ServerRepository.Load(_dir);
+
+            Assert.Equal(2, loaded.Count);
+            Assert.Equal("srv1", loaded[0].Name);
+            Assert.Equal("admin", loaded[0].Username);
+            Assert.Equal(1, loaded[0].AuthenticationLevel);
+            Assert.True(loaded[1].SavePassword);
+
+            // Model nie ma pola z hasłem, a klucz Credential Managera jest [JsonIgnore] —
+            // do pliku trafia tylko flaga SavePassword, nigdy żaden sekret ani jego lokalizacja.
+            var json = File.ReadAllText(Path.Combine(_dir, "servers.json"));
+            Assert.DoesNotContain("CredTarget", json);
+        }
+
+        [Fact]
+        public void ServerRepository_SeedsSafeSampleDataOnFirstRun()
+        {
+            var loaded = ServerRepository.Load(_dir); // pusty katalog -> seed
+
+            Assert.NotEmpty(loaded);
+            // Seed nie może zawierać realnych/prywatnych IP — tylko neutralne przykłady.
+            Assert.All(loaded, s =>
+                Assert.False(s.Host.StartsWith("10.") || s.Host.StartsWith("192.168."),
+                    "Seed nie powinien zawierać prywatnych adresów IP: " + s.Host));
+        }
+
+        [Fact]
+        public void ServerRepository_SeedPersistsSoSecondLoadMatches()
+        {
+            var first = ServerRepository.Load(_dir);
+            var second = ServerRepository.Load(_dir);
+            Assert.Equal(first.Count, second.Count);
+        }
+    }
+}
