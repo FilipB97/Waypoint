@@ -46,6 +46,16 @@ namespace RdpManager.Models
         /// </summary>
         public int AuthenticationLevel { get; set; } = 2;
 
+        /// <summary>Host bramy RD Gateway / jump-hosta (puste = połączenie bezpośrednie).</summary>
+        public string GatewayHostname { get; set; } = "";
+
+        /// <summary>
+        /// Tryb użycia bramy (mapuje na IMsRdpClientTransportSettings.GatewayUsageMethod):
+        /// 0 = nie używaj, 1 = zawsze przez bramę, 2 = wykryj automatycznie.
+        /// Gdy pusty GatewayHostname, brama jest ignorowana niezależnie od tej wartości.
+        /// </summary>
+        public int GatewayUsageMethod { get; set; }
+
         /// <summary>Klucz w Credential Manager (hasło NIE jest trzymane w tym modelu ani w JSON).</summary>
         [JsonIgnore]
         public string CredTarget => "RdpManager:" + Id;

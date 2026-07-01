@@ -443,11 +443,21 @@ namespace RdpManager
             row.MouseLeftButtonUp += (s, e) => OpenServer(server, true);
 
             var menu = new ContextMenu();
+            var connectAsItem = new MenuItem { Header = "Połącz jako…" };
+            connectAsItem.Click += (s, e) =>
+            {
+                OpenServer(server);
+                if (_active?.Server == server) PromptAndConnect(_active, "Połącz z innymi poświadczeniami.");
+            };
             var editItem = new MenuItem { Header = "Edytuj…" };
             editItem.Click += (s, e) => EditServer(server);
+            var exportItem = new MenuItem { Header = "Eksportuj .rdp…" };
+            exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = "Usuń" };
             delItem.Click += (s, e) => DeleteServer(server);
+            menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
+            menu.Items.Add(exportItem);
             menu.Items.Add(delItem);
             row.ContextMenu = menu;
 
@@ -475,7 +485,7 @@ namespace RdpManager
             if (existing != null)
             {
                 Activate(existing);
-                if (autoConnect && !existing.Connected && CanAuto(existing)) ConnectSession(existing);
+                if (autoConnect && !existing.Connected) BeginConnect(existing);
                 return;
             }
 
@@ -502,7 +512,7 @@ namespace RdpManager
             TabStrip.Children.Add(session.TabButton);
 
             Activate(session);
-            if (autoConnect && CanAuto(session)) ConnectSession(session);
+            if (autoConnect) BeginConnect(session);
         }
 
         private static bool CanAuto(Session s) => s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
@@ -687,6 +697,33 @@ namespace RdpManager
             ConnectSession(s);
         }
 
+        /// <summary>Łączy sesję; gdy brak poświadczeń (i nie konto Windows) — pyta o nie promptem.</summary>
+        private void BeginConnect(Session s)
+        {
+            if (CanAuto(s)) ConnectSession(s);
+            else PromptAndConnect(s, null);
+        }
+
+        /// <summary>Pokazuje prompt poświadczeń i po zatwierdzeniu łączy (np. „Połącz jako…" lub po błędzie logowania).</summary>
+        private void PromptAndConnect(Session s, string reason)
+        {
+            var dlg = new CredentialPromptWindow(s.Server, s.Password, reason) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+
+            s.Server.UseWindowsAccount = false;
+            s.Server.Username = dlg.EnteredUser;
+            s.Server.Domain = dlg.EnteredDomain;
+            s.Password = dlg.EnteredPassword;
+            if (dlg.SavePassword)
+            {
+                s.Server.SavePassword = true;
+                SaveCredential(s.Server, dlg.EnteredPassword);
+            }
+            PersistServers();
+            if (s == _active) LoadToolbar(s);
+            ConnectSession(s);
+        }
+
         private void PassBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.Enter && ConnectBtn.IsEnabled) Connect_Click(sender, e);
@@ -714,6 +751,8 @@ namespace RdpManager
                 adv.AudioRedirectionMode = (uint)Math.Clamp(s.Server.AudioMode, 0, 2);
                 try { s.Rdp.SecuredSettings2.KeyboardHookMode = 2; } catch { }  // Alt+Tab/Win -> zdalna w pełnym ekranie
 
+                ApplyGateway(s);
+
                 s.Rdp.Server = s.Server.Host;
                 if (s.Server.UseWindowsAccount)
                 {
@@ -735,6 +774,25 @@ namespace RdpManager
             {
                 SetSessionStatus(s, "Wyjątek: " + ex.Message, StatusKind.Error);
             }
+        }
+
+        /// <summary>Konfiguruje bramę RD Gateway / jump-host, jeśli serwer ją ma. Bezpieczne dla starszych kontrolek.</summary>
+        private static void ApplyGateway(Session s)
+        {
+            try
+            {
+                var ts = s.Rdp.TransportSettings;
+                if (string.IsNullOrWhiteSpace(s.Server.GatewayHostname))
+                {
+                    ts.GatewayUsageMethod = 0; // brak bramy
+                    return;
+                }
+                ts.GatewayHostname = s.Server.GatewayHostname;
+                ts.GatewayUsageMethod = (uint)(s.Server.GatewayUsageMethod == 0 ? 1 : s.Server.GatewayUsageMethod);
+                ts.GatewayProfileUsageMethod = 1; // 1 = jawnie z ustawień połączenia
+                ts.GatewayCredsSource = 0;        // 0 = login/hasło (TSC_PROXY_CREDS_MODE_USERPASS)
+            }
+            catch (Exception) { /* kontrolka bez obsługi bramy — pomijamy */ }
         }
 
         private void Disconnect_Click(object sender, RoutedEventArgs e)
@@ -1096,16 +1154,8 @@ namespace RdpManager
             FsPopup.IsOpen = false;
             CollapseFlyout();
 
-            bool canAuto = server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
-            if (canAuto)
-            {
-                ConnectSession(s);             // konto Windows lub zapisane hasło — bez wychodzenia z pełnego ekranu
-            }
-            else if (_isFullscreen)
-            {
-                // Brak poświadczeń — w pełnym ekranie nie ma jak podać hasła: wyjdź i pokaż formularz.
-                ToggleFullscreen();
-            }
+            // Konto Windows/zapisane hasło łączą od razu; brak poświadczeń -> prompt (modalny, działa też w pełnym ekranie).
+            BeginConnect(s);
         }
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -1134,6 +1184,74 @@ namespace RdpManager
                 RenderTree(SearchBox.Text);
                 CheckReachabilityAsync();
             }
+        }
+
+        private void ImportRdp_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Importuj plik .rdp",
+                Filter = "Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp|Wszystkie pliki (*.*)|*.*",
+                Multiselect = true
+            };
+            if (dlg.ShowDialog(this) != true) return;
+
+            int imported = 0;
+            foreach (var path in dlg.FileNames)
+            {
+                try
+                {
+                    var server = RdpFile.Parse(System.IO.File.ReadAllText(path));
+                    server.Group = "Zaimportowane";
+                    if (string.IsNullOrWhiteSpace(server.Name))
+                        server.Name = System.IO.Path.GetFileNameWithoutExtension(path);
+                    server.Status = ServerStatus.Offline;
+                    _allServers.Add(server);
+                    imported++;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Nie udało się zaimportować \"" + System.IO.Path.GetFileName(path) + "\":\n" + ex.Message,
+                        "Import .rdp", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+
+            if (imported > 0)
+            {
+                PersistServers();
+                RenderTree(SearchBox.Text);
+                CheckReachabilityAsync();
+                SetStatus("Zaimportowano serwerów: " + imported, StatusKind.Ok);
+            }
+        }
+
+        private void ExportRdp(ServerInfo server)
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Eksportuj do .rdp",
+                Filter = "Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp",
+                FileName = MakeSafeFileName(server.Name ?? server.Host ?? "serwer") + ".rdp"
+            };
+            if (dlg.ShowDialog(this) != true) return;
+
+            try
+            {
+                System.IO.File.WriteAllText(dlg.FileName, RdpFile.Serialize(server));
+                SetStatus("Wyeksportowano do " + System.IO.Path.GetFileName(dlg.FileName), StatusKind.Ok);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Nie udało się zapisać pliku:\n" + ex.Message,
+                    "Eksport .rdp", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private static string MakeSafeFileName(string name)
+        {
+            foreach (var c in System.IO.Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+            return string.IsNullOrWhiteSpace(name) ? "serwer" : name;
         }
 
         private void EditServer(ServerInfo server)
