@@ -39,7 +39,7 @@ namespace RdpManager
         // Pełny ekran (bezramkowy na bieżącym monitorze) + auto-chowany pasek.
         private bool _fs;
         private bool _fsPinned;   // pasek „przypięty" — nie chowa się automatycznie
-        private WindowStyle _pStyle; private WindowState _pState; private ResizeMode _pResize; private bool _pTopmost;
+        private WindowStyle _pStyle; private ResizeMode _pResize; private bool _pTopmost;
         private double _pL, _pT, _pW, _pH, _fsBarOffset;
         private RECT _fsMon;
         private readonly DispatcherTimer _fsPoll, _fsDelay;
@@ -274,10 +274,20 @@ namespace RdpManager
             if (_fs) ExitFs(); else EnterFs();
         }
 
+        // mstsc-owo: maksymalizacja okna = pełny ekran. Wyjście z pełnego ekranu wraca do okna (Normal).
+        private void Window_StateChanged(object sender, EventArgs e)
+        {
+            if (WindowState == WindowState.Maximized && !_fs) EnterFs();
+        }
+
         private void EnterFs()
         {
-            _pStyle = WindowStyle; _pState = WindowState; _pResize = ResizeMode; _pTopmost = Topmost;
-            _pL = Left; _pT = Top; _pW = Width; _pH = Height;
+            _pStyle = WindowStyle; _pResize = ResizeMode; _pTopmost = Topmost;
+            // Przy wejściu z maksymalizacji Left/Width dają śmieci — bierzemy granice okna z RestoreBounds.
+            if (WindowState == WindowState.Maximized)
+            { var rb = RestoreBounds; _pL = rb.Left; _pT = rb.Top; _pW = rb.Width; _pH = rb.Height; }
+            else { _pL = Left; _pT = Top; _pW = Width; _pH = Height; }
+            _fs = true;   // wcześnie: StateChanged w trakcie przełączania (WindowState=Normal) nie odpali EnterFs ponownie
 
             WinTitleBar.Visibility = Visibility.Collapsed;
             Toolbar.Visibility = Visibility.Collapsed;
@@ -313,7 +323,8 @@ namespace RdpManager
         {
             _fsPoll.Stop(); _fsDelay.Stop();
             Topmost = _pTopmost; WindowStyle = _pStyle; ResizeMode = _pResize;
-            Left = _pL; Top = _pT; Width = _pW; Height = _pH; WindowState = _pState;
+            // Zawsze wracamy do OKNA (Normal), nie do Maximized — inaczej StateChanged znów odpaliłby fullscreen.
+            Left = _pL; Top = _pT; Width = _pW; Height = _pH; WindowState = WindowState.Normal;
             WinTitleBar.Visibility = Visibility.Visible;
             Toolbar.Visibility = Visibility.Visible;
             HotZoneRow.Height = new GridLength(6);
