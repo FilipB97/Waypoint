@@ -80,6 +80,7 @@
     <sys:String x:Key="S.se.keypath">Private key (optional)</sys:String>
     <sys:String x:Key="S.se.keypath.ph">path to key file — empty = password only</sys:String>
     <sys:String x:Key="S.se.comport">Serial port (COM)</sys:String>
+    <sys:String x:Key="S.se.url">URL</sys:String>
     <sys:String x:Key="S.se.baud">Baud rate</sys:String>
     <sys:String x:Key="S.se.tunnels">Local tunnels (like ssh -L)</sys:String>
     <sys:String x:Key="S.se.tunnels.ph">localPort:host:remotePort — one rule per line, e.g. 5433:db.internal:5432</sys:String>

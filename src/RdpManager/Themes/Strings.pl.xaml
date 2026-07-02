@@ -80,6 +80,7 @@
     <sys:String x:Key="S.se.keypath">Klucz prywatny (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.keypath.ph">ścieżka do pliku klucza — puste = tylko hasło</sys:String>
     <sys:String x:Key="S.se.comport">Port szeregowy (COM)</sys:String>
+    <sys:String x:Key="S.se.url">Adres URL</sys:String>
     <sys:String x:Key="S.se.baud">Prędkość (baud)</sys:String>
     <sys:String x:Key="S.se.tunnels">Tunele lokalne (jak ssh -L)</sys:String>
     <sys:String x:Key="S.se.tunnels.ph">portLokalny:host:portZdalny — jedna reguła na linię, np. 5433:db.internal:5432</sys:String>

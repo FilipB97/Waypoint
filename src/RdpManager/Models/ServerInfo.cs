@@ -99,13 +99,17 @@ namespace RdpManager.Models
         Offline
     }
 
-    /// <summary>Protokół zdalnego połączenia. Serial: Host = nazwa portu COM, Port = baud.</summary>
+    /// <summary>
+    /// Protokół zdalnego połączenia. Serial: Host = nazwa portu COM, Port = baud.
+    /// Http: Host = pełny adres URL (panel webowy otwierany w przeglądarce).
+    /// </summary>
     public enum RemoteProtocol
     {
         Rdp,
         Ssh,
         Telnet,
-        Serial
+        Serial,
+        Http
     }
 
     /// <summary>Grupa serwerów w drzewie (Produkcja / Staging / Klienci …).</summary>

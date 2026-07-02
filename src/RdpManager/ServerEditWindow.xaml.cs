@@ -43,7 +43,8 @@ namespace RdpManager
             ProtocolCombo.SelectedIndex =
                 server.Protocol == RemoteProtocol.Ssh ? 1 :
                 server.Protocol == RemoteProtocol.Telnet ? 2 :
-                server.Protocol == RemoteProtocol.Serial ? 3 : 0;
+                server.Protocol == RemoteProtocol.Serial ? 3 :
+                server.Protocol == RemoteProtocol.Http ? 4 : 0;
             KeyPathBox.Text = server.PrivateKeyPath ?? "";
             TunnelsBox.Text = server.Tunnels == null ? "" : string.Join(Environment.NewLine, server.Tunnels);
             ApplyWinAuthState();
@@ -96,14 +97,16 @@ namespace RdpManager
         }
 
         private static int DefaultPortFor(int protocolIndex)
-            => protocolIndex == 1 ? 22 : protocolIndex == 2 ? 23 : protocolIndex == 3 ? 115200 : 3389;
+            => protocolIndex == 1 ? 22 : protocolIndex == 2 ? 23 : protocolIndex == 3 ? 115200
+             : protocolIndex == 4 ? 443 : 3389;
 
         // Widoczność pól zależnie od protokołu: RDP = wszystko; SSH = poświadczenia + klucz + tunele;
-        // Telnet/Serial = bez poświadczeń (logowanie dzieje się w terminalu). Serial: Host=COM, Port=baud.
+        // Telnet/Serial = bez poświadczeń (logowanie w terminalu); WWW = tylko URL (bez portu).
+        // Serial: Host=COM, Port=baud. Http: Host=URL.
         private void ApplyProtocolState()
         {
             int idx = ProtocolCombo.SelectedIndex;
-            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3;
+            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3, http = idx == 4;
             bool creds = rdp || ssh;
 
             var rdpVis = rdp ? Visibility.Visible : Visibility.Collapsed;
@@ -121,9 +124,14 @@ namespace RdpManager
             PassLabel.Visibility = credsVis;
             PassPanel.Visibility = credsVis;
 
-            HostLabel.Text = serial ? LocalizationManager.S("S.se.comport") : "Host";
+            var portVis = http ? Visibility.Collapsed : Visibility.Visible;   // URL niesie port w sobie
+            PortLabel.Visibility = portVis;
+            PortBox.Visibility = portVis;
+
+            HostLabel.Text = serial ? LocalizationManager.S("S.se.comport")
+                           : http ? LocalizationManager.S("S.se.url") : "Host";
             PortLabel.Text = serial ? LocalizationManager.S("S.se.baud") : "Port";
-            HostBox.PlaceholderText = serial ? "COM3" : "";
+            HostBox.PlaceholderText = serial ? "COM3" : http ? "https://…" : "";
         }
 
         private void BrowseKey_Click(object sender, RoutedEventArgs e)
@@ -144,6 +152,7 @@ namespace RdpManager
             var protocol = idx == 1 ? RemoteProtocol.Ssh
                          : idx == 2 ? RemoteProtocol.Telnet
                          : idx == 3 ? RemoteProtocol.Serial
+                         : idx == 4 ? RemoteProtocol.Http
                          : RemoteProtocol.Rdp;
             bool ssh = protocol == RemoteProtocol.Ssh;
             bool rdp = protocol == RemoteProtocol.Rdp;

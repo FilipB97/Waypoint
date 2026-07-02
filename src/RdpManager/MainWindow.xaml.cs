@@ -907,7 +907,8 @@ namespace RdpManager
             if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
             if (rdp || server.Protocol == RemoteProtocol.Ssh) menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
-            if (server.Protocol != RemoteProtocol.Serial) menu.Items.Add(diagItem);   // sonda TCP — nie dla COM
+            if (server.Protocol != RemoteProtocol.Serial && server.Protocol != RemoteProtocol.Http)
+                menu.Items.Add(diagItem);   // sonda TCP — nie dla COM/URL
             menu.Items.Add(wolItem);
             if (rdp) menu.Items.Add(exportItem);       // .rdp ma sens tylko dla RDP
             menu.Items.Add(new Separator());
@@ -1011,8 +1012,24 @@ namespace RdpManager
             else OpenServer(server, autoConnect, forceNew);
         }
 
+        // Wpis WWW: nie ma sesji — otwieramy panel webowy w domyślnej przeglądarce.
+        private void OpenUrl(ServerInfo server)
+        {
+            string url = (server.Host ?? "").Trim();
+            if (url.Length == 0) return;
+            if (!url.Contains("://")) url = "https://" + url;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+                RecordRecent(server);
+            }
+            catch (Exception ex) { SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error); }
+        }
+
         private void OpenServer(ServerInfo server, bool autoConnect = false, bool forceNew = false)
         {
+            if (server.Protocol == RemoteProtocol.Http) { OpenUrl(server); return; }
+
             ShowView("Sessions");   // kontrolka RDP musi powstać przy widocznym widoku sesji
             if (!forceNew)
             {
@@ -2574,8 +2591,9 @@ namespace RdpManager
                 var servers = _vm.Servers.ToList();
                 var results = await Task.WhenAll(servers.Select(srv =>
                     Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv,
-                        // Serial: Host to port COM — sonda TCP nie ma sensu, zostaw bieżący status.
-                        srv.Protocol == RemoteProtocol.Serial ? srv.Status : Probe(srv.Host, srv.Port)))));
+                        // Serial (COM) i WWW (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status.
+                        srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http
+                            ? srv.Status : Probe(srv.Host, srv.Port)))));
 
                 foreach (var kv in results)
                 {

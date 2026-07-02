@@ -27,6 +27,7 @@
                 <ComboBoxItem Content="SSH"/>
                 <ComboBoxItem Content="Telnet"/>
                 <ComboBoxItem Content="Serial (COM)"/>
+                <ComboBoxItem Content="WWW (link)"/>
             </ComboBox>
         </StackPanel>
         <Grid>
