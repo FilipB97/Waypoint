@@ -26,6 +26,9 @@ namespace RdpManager.Models
         /// <summary>SSH: ścieżka do pliku klucza prywatnego (puste = uwierzytelnianie hasłem).</summary>
         public string PrivateKeyPath { get; set; } = "";
 
+        /// <summary>SSH: tunele lokalne w składni ssh -L („portLokalny:host:portZdalny", po jednej regule).</summary>
+        public List<string> Tunnels { get; set; } = new List<string>();
+
         /// <summary>Logowanie zintegrowane kontem Windows (bez podawania loginu/hasła).</summary>
         public bool UseWindowsAccount { get; set; }
 
@@ -62,6 +65,12 @@ namespace RdpManager.Models
         /// </summary>
         public bool UseAllMonitors { get; set; }
 
+        /// <summary>Sesja administracyjna/konsolowa (mstsc /admin).</summary>
+        public bool AdminSession { get; set; }
+
+        /// <summary>Adres MAC do Wake-on-LAN (puste = funkcja nieaktywna dla tego serwera).</summary>
+        public string MacAddress { get; set; } = "";
+
         /// <summary>Host bramy RD Gateway / jump-hosta (puste = połączenie bezpośrednie).</summary>
         public string GatewayHostname { get; set; } = "";
 
@@ -90,11 +99,17 @@ namespace RdpManager.Models
         Offline
     }
 
-    /// <summary>Protokół zdalnego połączenia.</summary>
+    /// <summary>
+    /// Protokół zdalnego połączenia. Serial: Host = nazwa portu COM, Port = baud.
+    /// Http: Host = pełny adres URL (panel webowy otwierany w przeglądarce).
+    /// </summary>
     public enum RemoteProtocol
     {
         Rdp,
-        Ssh
+        Ssh,
+        Telnet,
+        Serial,
+        Http
     }
 
     /// <summary>Grupa serwerów w drzewie (Produkcja / Staging / Klienci …).</summary>

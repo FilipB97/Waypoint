@@ -1,47 +1,57 @@
 # Roadmap
 
-Goal: make Waypoint a full daily replacement for the Windows built-in Remote Desktop
-Connection (`mstsc.exe`). This list comes from a full review of the current tool. Order
-reflects the chosen priorities.
+Goal: a modern, lightweight **RDP + SSH** connection manager that replaces `mstsc.exe` day to
+day and gives users of dated managers (mRemoteNG, RDCMan) an easy way over. Order reflects
+current priorities.
 
-## Done
+## Done (v1.1)
 
-- ✅ **Credential prompt at connect time + per-server** — login dialog when no password is
-  saved, plus "Połącz jako…" (connect as) for retrying with different credentials.
-- ✅ **RD Gateway / jump-host** — `GatewayHostname` / `GatewayUsageMethod` applied via the
-  RDP transport settings; configurable in the server dialog.
-- ✅ **Import / export `.rdp`** — `Core/RdpFile` parser/serializer (mstsc format), sidebar
-  import and per-server export, with unit tests.
-- ✅ **Keyboard shortcuts** — `Ctrl+Tab` / `Ctrl+Shift+Tab` (cycle), `Alt+1..9` (jump),
-  `Ctrl+W` (close), `Ctrl+F` / `Ctrl+K` (focus search), `Ctrl+±/0` (zoom).
-- ✅ **Tabs** — right-click context menu (close / close others) and host suffix to
-  disambiguate duplicate server names.
-- ✅ **Recents view** — populated from `AppSettings.RecentIds`.
-- ✅ **Release workflow** (`release.yml`) — self-contained x64 build published to GitHub
-  Releases on `v*` tags.
-- ✅ **Logging & diagnostics** — connection audit log (`connections.log`, metadata only,
-  toggle in settings) and a per-server "Diagnostyka…" TCP port test.
-- ✅ **Full screen "pin bar"** + keyboard focus for the "other connections" flyout;
-  mouse-wheel horizontal scroll on the tab strip.
-- ✅ **Profile import/export** — whole profile (servers + settings, no passwords) to a single
-  JSON file (`Core/ProfileBackup`, with tests); buttons in Settings.
-- ✅ **Multiple sessions per server + duplicate tab**, and tab reorder (move left/right).
-- ✅ **MVVM foundation** — `ViewModelBase` + `MainViewModel` own the server collection,
-  recents and filtering (`INotifyPropertyChanged`, `ObservableCollection`); code-behind
-  delegates to it; unit-tested. (Full XAML data-binding is the next step.)
-- ✅ **Multi-monitor** *(experimental, untested on real 2+ monitor hardware)* — per-server
-  `UseAllMonitors` sets the RDP control's `UseMultimon` and full screen uses the control's
-  own spanning mode; gated on monitor count > 1, so single-monitor behavior is unchanged.
-  Mapped to/from `.rdp` (`use multimon`).
+- ✅ **Tabbed RDP sessions** — live control per tab, switch without disconnecting; duplicate
+  tab, middle-click close, drag-and-drop tab reorder, `Ctrl+Tab` / `Alt+1..9` / `Ctrl+W`.
+- ✅ **Embedded SSH terminal** — WebView2 + xterm.js (bundled offline) + SSH.NET; password
+  and private-key auth, keyboard-interactive; copy-on-select, `Ctrl+Shift+C/V`,
+  Ctrl+wheel font size; local status lines printed in-terminal.
+- ✅ **SSH host-key verification (TOFU)** — SHA256 fingerprint prompt on first connect,
+  stored in `known_hosts.json`; changed key = loud warning, defaults to reject.
+- ✅ **Migration imports** — mstsc registry history, `.rdp` files (multi-select),
+  **mRemoteNG** `confCons.xml` (RDP + SSH, folder paths preserved), **RDCMan** `.rdg`
+  (inherited credentials); dedup by host:port; passwords intentionally not migrated.
+- ✅ **Multi-monitor, mstsc-style** — standalone session windows (drag to a monitor, go
+  full screen; maximizing a session window = full screen); tear-off a tab ↔ dock back.
+- ✅ **Focus mode** — maximized main window hides all chrome except the tab strip;
+  window controls move onto the strip. Distinct from true full screen (F11).
+- ✅ **Full-screen** with auto-hiding, draggable, pinnable bar + "other connections" flyout.
+- ✅ **Dynamic resolution** — session = window/monitor physical pixels, DPI-safe.
+- ✅ **Credentials in Windows Credential Manager** (DPAPI); prompt at connect; "connect as".
+- ✅ **Server tree** — groups, favorites (pinned), collapsible groups, one-click group
+  rename, search, drag-and-drop reorder, background reachability dots.
+- ✅ **Quick connect** (`host`, `host:port`, `user@host`, `DOMAIN\user@host`).
+- ✅ **Per-server RDP options** — port, domain/Windows account, redirections
+  (clipboard/drives/printers/audio), server-identity verification, RD Gateway.
+- ✅ **Themes** (dark / light / system) and **localization** (English / Polish), both
+  switchable live.
+- ✅ **Dashboard, recents, connection audit log, per-server TCP diagnostics, profile
+  export/import, UI zoom, single-instance guard.**
+- ✅ **Packaging** — self-contained single-file exe; GitHub Actions release workflow
+  (`v*` tag or manual dispatch); `scripts/release.ps1`.
 
-## Remaining (need local Windows verification)
+## Next
 
-- **Multi-monitor — real-hardware validation.** The code path ships gated; verify spanning,
-  DPI mix and the control's connection bar once a 2+ monitor setup is available.
-- **MVVM — complete the migration.** Bind the XAML directly to the ViewModels (per-item
-  `ServerViewModel`/`SessionViewModel`, `ItemsControl` bindings) and add DI, replacing the
-  remaining imperative UI construction. Changes UI behavior that unit tests can't catch.
-- **Tabs:** true drag-and-drop reorder (context-menu move left/right ships today).
-- **Redirection:** safer defaults (clipboard on by default today); USB / serial redirection.
-- **Diagnostics:** friendlier RDP disconnect-code descriptions (needs a verified code table).
-- **Code signing** of the release binary (currently unsigned).
+- **Publish v1.1** — merge to `master`, tag, GitHub Release; then a **winget** manifest
+  (`winget install waypoint`) for low-friction installs.
+- **SSH tunnels / port forwarding** — local forwards per server (SSH.NET supports it);
+  the killer feature for "database behind a jump host" workflows.
+- **Auto-update** — check GitHub Releases, offer one-click update (important while unsigned).
+- **SSH key passphrase** + OpenSSH agent / Pageant support; import OpenSSH `known_hosts`.
+- **Code signing** — Azure Trusted Signing or SignPath (OSS) to remove the SmartScreen warning.
+- **Tray icon + global Quick Connect hotkey.**
+- **RDP admin/console session** (`/admin`) and **Wake-on-LAN**.
+
+## Later / ideas
+
+- SFTP file browser attached to SSH sessions.
+- Sub-groups / tags in the server tree; shared credential profiles.
+- Light terminal theme following the app theme; terminal font/color settings.
+- Session logging (SSH transcript), configurable scrollback.
+- Portable mode (settings next to the exe).
+- ARM64 build.

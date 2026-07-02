@@ -16,12 +16,16 @@ namespace RdpManager
         public AxMsRdpClient11NotSafeForScripting Rdp { get; }
         public WindowsFormsHost Host { get; }
 
-        /// <summary>Terminal SSH (WebView2 + xterm.js) — null dla sesji RDP.</summary>
-        public SshTerminalControl Ssh { get; }
-        public bool IsSsh => Ssh != null;
+        /// <summary>Terminal tekstowy (SSH/Telnet/Serial na xterm) — null dla sesji RDP.</summary>
+        public XtermControl Term { get; }
+        public bool IsTerm => Term != null;
 
-        /// <summary>Element wizualny sesji w kontenerze (host RDP albo terminal SSH).</summary>
-        public FrameworkElement View => IsSsh ? (FrameworkElement)Ssh : Host;
+        /// <summary>Terminal SSH, jeśli to sesja SSH (skrót dla ścieżek SSH-owych: SFTP, tunele).</summary>
+        public SshTerminalControl Ssh => Term as SshTerminalControl;
+        public bool IsSsh => Term is SshTerminalControl;
+
+        /// <summary>Element wizualny sesji w kontenerze (host RDP albo terminal).</summary>
+        public FrameworkElement View => IsTerm ? (FrameworkElement)Term : Host;
 
         public FrameworkElement TabButton { get; set; }
         public bool Connected { get; set; }
@@ -29,7 +33,7 @@ namespace RdpManager
         /// <summary>Czy sesja doszła do pełnego zalogowania (odróżnia błąd połączenia od zwykłego rozłączenia).</summary>
         public bool LoggedIn { get; set; }
 
-        public string Status { get; set; } = "Rozłączony";
+        public string Status { get; set; } = LocalizationManager.S("S.st.disconnectedShort");
         public StatusKind StatusKind { get; set; } = StatusKind.Info;
 
         /// <summary>Hasło — wyłącznie w pamięci, na czas życia sesji. Nigdzie nie zapisywane.</summary>
@@ -45,11 +49,11 @@ namespace RdpManager
             Host = host;
         }
 
-        /// <summary>Sesja SSH — zamiast kontrolki RDP żyje terminal.</summary>
-        public Session(ServerInfo server, SshTerminalControl ssh)
+        /// <summary>Sesja terminalowa (SSH/Telnet/Serial) — zamiast kontrolki RDP żyje terminal.</summary>
+        public Session(ServerInfo server, XtermControl term)
         {
             Server = server;
-            Ssh = ssh;
+            Term = term;
         }
     }
 

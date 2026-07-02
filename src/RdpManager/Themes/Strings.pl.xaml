@@ -37,6 +37,12 @@
     <sys:String x:Key="S.set.connlog">Zapisuj dziennik audytu połączeń (bez haseł)</sys:String>
     <sys:String x:Key="S.set.opennewwin">Otwieraj połączenia w osobnym oknie</sys:String>
     <sys:String x:Key="S.set.immersive">Tryb skupienia po zmaksymalizowaniu (ukryj panel boczny)</sys:String>
+    <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje przy starcie</sys:String>
+    <sys:String x:Key="S.update.available">Nowa wersja {0} — pobierz</sys:String>
+    <sys:String x:Key="S.set.traymin">Minimalizuj do zasobnika systemowego</sys:String>
+    <sys:String x:Key="S.set.hotkey">Globalny skrót szybkiego połączenia (Ctrl+Alt+Q)</sys:String>
+    <sys:String x:Key="S.tray.show">Pokaż Waypoint</sys:String>
+    <sys:String x:Key="S.tray.exit">Zakończ</sys:String>
     <sys:String x:Key="S.set.data">Dane aplikacji</sys:String>
     <sys:String x:Key="S.set.openfolder">Otwórz folder</sys:String>
     <sys:String x:Key="S.set.exportprofile">Eksportuj profil…</sys:String>
@@ -73,6 +79,13 @@
     <sys:String x:Key="S.se.protocol">Protokół</sys:String>
     <sys:String x:Key="S.se.keypath">Klucz prywatny (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.keypath.ph">ścieżka do pliku klucza — puste = tylko hasło</sys:String>
+    <sys:String x:Key="S.se.comport">Port szeregowy (COM)</sys:String>
+    <sys:String x:Key="S.se.url">Adres URL</sys:String>
+    <sys:String x:Key="S.se.baud">Prędkość (baud)</sys:String>
+    <sys:String x:Key="S.se.tunnels">Tunele lokalne (jak ssh -L)</sys:String>
+    <sys:String x:Key="S.se.tunnels.ph">portLokalny:host:portZdalny — jedna reguła na linię, np. 5433:db.internal:5432</sys:String>
+    <sys:String x:Key="S.se.tunnels.bad">Niepoprawna reguła tunelu: {0}
+Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.browse">Przeglądaj…</sys:String>
     <sys:String x:Key="S.se.name">Nazwa</sys:String>
     <sys:String x:Key="S.se.group">Grupa</sys:String>
@@ -98,6 +111,10 @@
     <sys:String x:Key="S.se.gw0">Nie używaj</sys:String>
     <sys:String x:Key="S.se.gw1">Zawsze przez bramę</sys:String>
     <sys:String x:Key="S.se.gw2">Wykryj automatycznie</sys:String>
+    <sys:String x:Key="S.se.admin">Sesja administracyjna / konsola (jak mstsc /admin)</sys:String>
+    <sys:String x:Key="S.se.mac">Adres MAC — Wake-on-LAN (opcjonalnie)</sys:String>
+    <sys:String x:Key="S.se.mac.ph">np. AA:BB:CC:DD:EE:FF</sys:String>
+    <sys:String x:Key="S.se.mac.bad">Niepoprawny adres MAC: {0}</sys:String>
 
     <!-- dialog: poświadczenia -->
     <sys:String x:Key="S.cp.title">Poświadczenia</sys:String>
@@ -123,6 +140,7 @@
     <sys:String x:Key="S.m.closeothers">Zamknij pozostałe</sys:String>
     <sys:String x:Key="S.m.close">Zamknij</sys:String>
     <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
+    <sys:String x:Key="S.m.wol">Obudź (Wake-on-LAN)</sys:String>
 
     <!-- pass 2b: ulotne komunikaty z code-behind (statusy, dialogi, prompty, diagnostyka) -->
     <sys:String x:Key="S.st.connecting">Łączenie z {0}…</sys:String>
@@ -143,6 +161,7 @@
     <sys:String x:Key="S.st.exported">Wyeksportowano do {0}</sys:String>
     <sys:String x:Key="S.st.saved">Zapisano ✓</sys:String>
     <sys:String x:Key="S.st.exportedProfile">Wyeksportowano profil ✓</sys:String>
+    <sys:String x:Key="S.st.wolsent">Wysłano pakiet Wake-on-LAN do {0}</sys:String>
 
     <sys:String x:Key="S.dash.servers">Serwery</sys:String>
     <sys:String x:Key="S.dash.reachable">Osiągalne</sys:String>
@@ -198,7 +217,53 @@
     <sys:String x:Key="S.dlg.exportrdp.title">Eksportuj do .rdp</sys:String>
     <sys:String x:Key="S.dlg.rdp.filter">Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp</sys:String>
 
+    <!-- import z innych menedżerów -->
+    <sys:String x:Key="S.import">Importuj…</sys:String>
+    <sys:String x:Key="S.import.mstsc">Z mstsc (historia)</sys:String>
+    <sys:String x:Key="S.import.rdpfile">Plik .rdp…</sys:String>
+    <sys:String x:Key="S.import.mrng">mRemoteNG (confCons.xml)…</sys:String>
+    <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
+    <sys:String x:Key="S.dlg.importmrng.title">Importuj z mRemoteNG</sys:String>
+    <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdg.title">Importuj z RDCMan</sys:String>
+    <sys:String x:Key="S.dlg.rdg.filter">RDCMan (*.rdg)|*.rdg|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.msg.import.unsupported">Pominięto nieobsługiwane protokoły: {0}</sys:String>
+    <sys:String x:Key="S.msg.import.nopass">Hasła nie są przenoszone — podasz je przy pierwszym połączeniu.</sys:String>
+
     <sys:String x:Key="S.ssh.nowebview">Terminal SSH wymaga składnika WebView2 Runtime (wbudowany w Windows 11; na starszych systemach doinstaluj go ze strony Microsoft).</sys:String>
+    <!-- panel plików SFTP -->
+    <sys:String x:Key="S.sftp.toggle">Pliki (SFTP)</sys:String>
+    <sys:String x:Key="S.sftp.name">Nazwa</sys:String>
+    <sys:String x:Key="S.sftp.size">Rozmiar</sys:String>
+    <sys:String x:Key="S.sftp.modified">Zmieniono</sys:String>
+    <sys:String x:Key="S.sftp.up">Katalog wyżej</sys:String>
+    <sys:String x:Key="S.sftp.refresh">Odśwież</sys:String>
+    <sys:String x:Key="S.sftp.upload">Wyślij…</sys:String>
+    <sys:String x:Key="S.sftp.download">Pobierz…</sys:String>
+    <sys:String x:Key="S.sftp.newfolder">Nowy folder</sys:String>
+    <sys:String x:Key="S.sftp.newfolder.label">Nazwa nowego folderu:</sys:String>
+    <sys:String x:Key="S.sftp.delete">Usuń</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirm">Usunąć "{0}"? (katalogi tylko puste)</sys:String>
+    <sys:String x:Key="S.sftp.connecting">Łączenie SFTP…</sys:String>
+    <sys:String x:Key="S.sftp.uploading">Wysyłanie {0}…</sys:String>
+    <sys:String x:Key="S.sftp.downloading">Pobieranie {0}…</sys:String>
+    <sys:String x:Key="S.sftp.done">Gotowe ✓</sys:String>
+
+    <sys:String x:Key="S.ssh.tunnel.up">tunel {0} aktywny — nasłuch na 127.0.0.1</sys:String>
+    <sys:String x:Key="S.ssh.tunnel.fail">tunel {0}: {1}</sys:String>
+    <sys:String x:Key="S.ssh.keypass.title">Klucz SSH</sys:String>
+    <sys:String x:Key="S.ssh.keypass.label">Klucz {0} jest zaszyfrowany. Podaj passphrase:</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.title">Klucz hosta SSH</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.new">Pierwsze połączenie z {0}.
+Odcisk klucza hosta:
+{1}
+
+Zaufać i zapamiętać ten klucz?</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.changed">UWAGA: klucz hosta {0} ZMIENIŁ SIĘ!
+Nowy odcisk:
+{1}
+
+To może oznaczać atak (podszywanie się pod serwer) albo reinstalację serwera. Kontynuować i zapisać nowy klucz?</sys:String>
 
     <sys:String x:Key="S.cp.header">Podaj poświadczenia dla {0} ({1}).</sys:String>
     <sys:String x:Key="S.cp.needuser">Podaj nazwę użytkownika.</sys:String>

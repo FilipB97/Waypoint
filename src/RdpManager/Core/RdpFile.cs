@@ -68,6 +68,7 @@ namespace RdpManager.Core
             if (TryGetInt(map, "audiomode", out var audio)) s.AudioMode = Clamp(audio, 0, 2);
             if (TryGetInt(map, "authentication level", out var auth)) s.AuthenticationLevel = Clamp(auth, 0, 2);
             if (TryGetInt(map, "use multimon", out var mm)) s.UseAllMonitors = mm != 0;
+            if (TryGetInt(map, "administrative session", out var admin)) s.AdminSession = admin != 0;
 
             if (map.TryGetValue("gatewayhostname", out var gw) && !string.IsNullOrWhiteSpace(gw))
                 s.GatewayHostname = gw.Trim();
@@ -101,6 +102,7 @@ namespace RdpManager.Core
             sb.Append("audiomode:i:").Append(Clamp(s.AudioMode, 0, 2).ToString(CultureInfo.InvariantCulture)).Append("\r\n");
             sb.Append("authentication level:i:").Append(Clamp(s.AuthenticationLevel, 0, 2).ToString(CultureInfo.InvariantCulture)).Append("\r\n");
             sb.Append("use multimon:i:").Append(s.UseAllMonitors ? "1" : "0").Append("\r\n");
+            sb.Append("administrative session:i:").Append(s.AdminSession ? "1" : "0").Append("\r\n");
 
             if (!string.IsNullOrWhiteSpace(s.GatewayHostname))
             {

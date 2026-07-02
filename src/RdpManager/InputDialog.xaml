@@ -20,6 +20,7 @@
             <TextBlock x:Name="PromptLabel" TextWrapping="Wrap" Margin="0,0,0,8"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             <ui:TextBox x:Name="InputBox"/>
+            <PasswordBox x:Name="MaskedBox" Visibility="Collapsed" VerticalContentAlignment="Center"/>
         </StackPanel>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,4,18,16">

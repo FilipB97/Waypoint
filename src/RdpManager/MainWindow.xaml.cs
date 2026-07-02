@@ -124,6 +124,49 @@ namespace RdpManager
             if (_settings.ReachabilityEnabled) { _reachTimer.Start(); CheckReachabilityAsync(); }
 
             ShowView("Sessions");
+
+            InitTray();
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndHook);
+            ApplyHotkey();
+
+            CheckForUpdatesAsync();
+        }
+
+        // ---------- Aktualizacje ----------
+
+        // Ciche sprawdzenie GitHub releases/latest; nowsza wersja → przycisk w panelu bocznym.
+        // Bez sieci / rate limitu / złego JSON-a — po prostu nic się nie pokazuje.
+        private async void CheckForUpdatesAsync()
+        {
+            if (!_settings.CheckUpdates) return;
+            try
+            {
+                using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) })
+                {
+                    http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
+                    string json = await http.GetStringAsync(
+                        "https://api.github.com/repos/FilipB97/Waypoint/releases/latest");
+                    var latest = Core.UpdateCheck.ParseLatest(json);
+                    var cur = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                    var current = new Version(cur.Major, cur.Minor, Math.Max(cur.Build, 0));
+                    if (Core.UpdateCheck.IsNewer(latest, current))
+                    {
+                        UpdateBtn.Content = string.Format(L("S.update.available"), latest);
+                        UpdateBtn.Visibility = Visibility.Visible;
+                    }
+                }
+            }
+            catch { /* offline / proxy / rate limit — sprawdzimy przy kolejnym starcie */ }
+        }
+
+        private void Update_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    "https://github.com/FilipB97/Waypoint/releases/latest") { UseShellExecute = true });
+            }
+            catch { /* brak przeglądarki — ignoruj */ }
         }
 
         // ---------- Nawigacja (rail) ----------
@@ -152,7 +195,78 @@ namespace RdpManager
             UpdateImmersive();
         }
 
-        private void Window_StateChanged(object sender, System.EventArgs e) => UpdateImmersive();
+        private void Window_StateChanged(object sender, System.EventArgs e)
+        {
+            // Minimalizacja do zasobnika (opcjonalna): chowamy okno; powrót przez ikonę/skrót.
+            if (WindowState == WindowState.Minimized && _settings != null
+                && _settings.MinimizeToTray && !_isFullscreen)
+            {
+                Hide();
+                return;
+            }
+            UpdateImmersive();
+        }
+
+        // ---------- Zasobnik + globalny skrót ----------
+
+        private System.Windows.Forms.NotifyIcon _tray;
+
+        private void InitTray()
+        {
+            _tray = new System.Windows.Forms.NotifyIcon { Text = "Waypoint", Visible = true };
+            using (var s = Application.GetResourceStream(new Uri("pack://application:,,,/Assets/app.ico")).Stream)
+                _tray.Icon = new System.Drawing.Icon(s);
+            _tray.MouseClick += (o, e) =>
+            {
+                if (e.Button == System.Windows.Forms.MouseButtons.Left) RestoreFromTray();
+            };
+            BuildTrayMenu();
+        }
+
+        // Osobno, bo etykiety zależą od języka — przebudowywane też po zmianie ustawień.
+        private void BuildTrayMenu()
+        {
+            if (_tray == null) return;
+            var menu = new System.Windows.Forms.ContextMenuStrip();
+            menu.Items.Add(L("S.tray.show"), null, (o, e) => RestoreFromTray());
+            menu.Items.Add(L("S.quickConnect"), null, (o, e) => { RestoreFromTray(); QuickConnect_Click(this, null); });
+            menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+            menu.Items.Add(L("S.tray.exit"), null, (o, e) => Close());
+            _tray.ContextMenuStrip = menu;
+        }
+
+        private void RestoreFromTray()
+        {
+            Show();
+            if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+            Activate();
+        }
+
+        private const int WM_HOTKEY = 0x0312;
+        private const int HotkeyId = 0x5751;   // 'WQ'
+        private const uint MOD_ALT = 0x0001, MOD_CONTROL = 0x0002;
+
+        // Globalny skrót Ctrl+Alt+Q → Szybkie połączenie (opt-in; rejestracja może się nie udać,
+        // gdy inny program zajął kombinację — wtedy po prostu nie działa, bez błędu).
+        private void ApplyHotkey()
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            UnregisterHotKey(hwnd, HotkeyId);
+            if (_settings.QuickConnectHotkey)
+                RegisterHotKey(hwnd, HotkeyId, MOD_CONTROL | MOD_ALT, (uint)'Q');
+        }
+
+        private IntPtr WndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_HOTKEY && wParam.ToInt32() == HotkeyId)
+            {
+                RestoreFromTray();
+                QuickConnect_Click(this, null);
+                handled = true;
+            }
+            return IntPtr.Zero;
+        }
 
         // Czy tryb skupienia jest aktywny: zmaksymalizowane okno + aktywna sesja w widoku Połączenia.
         private bool IsImmersive()
@@ -207,7 +321,20 @@ namespace RdpManager
             RootScale.ScaleX = RootScale.ScaleY = scale;
             if (SettingsView.Visibility == Visibility.Visible)
                 SetUiScale.Text = ((int)Math.Round(scale * 100)).ToString();
-            SettingsStore.Save(_settings);
+            QueueSettingsSave();   // kółko myszy potrafi sypnąć dziesiątkami zdarzeń — nie pisz pliku co tick
+        }
+
+        private DispatcherTimer _settingsSaveTimer;
+
+        private void QueueSettingsSave()
+        {
+            if (_settingsSaveTimer == null)
+            {
+                _settingsSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+                _settingsSaveTimer.Tick += (s, e) => { _settingsSaveTimer.Stop(); SettingsStore.Save(_settings); };
+            }
+            _settingsSaveTimer.Stop();
+            _settingsSaveTimer.Start();
         }
 
         private void Window_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
@@ -228,9 +355,19 @@ namespace RdpManager
                 return;
             }
 
+            // Dograj odroczony zapis ustawień (debounce zoomu), zanim aplikacja zniknie.
+            if (_settingsSaveTimer != null && _settingsSaveTimer.IsEnabled)
+            {
+                _settingsSaveTimer.Stop();
+                SettingsStore.Save(_settings);
+            }
+
+            if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
+            try { UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId); } catch { }
+
             foreach (var s in _sessions)
             {
-                if (s.IsSsh) { try { s.Ssh.DisposeTerminal(); } catch { } continue; }
+                if (s.IsTerm) { try { s.Term.DisposeTerminal(); } catch { } continue; }
                 try { s.Resizer?.Dispose(); } catch { }
                 try { s.Rdp.Disconnect(); } catch { }
                 try { s.Host.Dispose(); } catch { }
@@ -258,6 +395,9 @@ namespace RdpManager
             SetConnLog.IsChecked = _settings.ConnectionLogEnabled;
             SetOpenNewWindow.IsChecked = _settings.OpenInNewWindowByDefault;
             SetImmersive.IsChecked = _settings.ImmersiveOnMaximize;
+            SetCheckUpdates.IsChecked = _settings.CheckUpdates;
+            SetMinimizeToTray.IsChecked = _settings.MinimizeToTray;
+            SetHotkey.IsChecked = _settings.QuickConnectHotkey;
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
         }
@@ -275,6 +415,9 @@ namespace RdpManager
             _settings.ConnectionLogEnabled = SetConnLog.IsChecked == true;
             _settings.OpenInNewWindowByDefault = SetOpenNewWindow.IsChecked == true;
             _settings.ImmersiveOnMaximize = SetImmersive.IsChecked == true;
+            _settings.CheckUpdates = SetCheckUpdates.IsChecked == true;
+            _settings.MinimizeToTray = SetMinimizeToTray.IsChecked == true;
+            _settings.QuickConnectHotkey = SetHotkey.IsChecked == true;
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
@@ -308,6 +451,8 @@ namespace RdpManager
 
             ThemeManager.Apply(_settings.Theme);
             LocalizationManager.Apply(_settings.Language);
+            BuildTrayMenu();   // etykiety menu zasobnika w nowym języku
+            ApplyHotkey();
             UpdateImmersive();
         }
 
@@ -665,7 +810,7 @@ namespace RdpManager
             meta.Children.Add(new TextBlock { Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5 });
             meta.Children.Add(new TextBlock
             {
-                Text = server.Host, Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10.5,
+                Text = DisplayHost(server), Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10.5,
                 FontFamily = (FontFamily)TryFindResource("Mono"), TextTrimming = TextTrimming.CharacterEllipsis
             });
             Grid.SetColumn(meta, 2);
@@ -746,18 +891,26 @@ namespace RdpManager
             editItem.Click += (s, e) => EditServer(server);
             var diagItem = new MenuItem { Header = L("S.m.diag") };
             diagItem.Click += (s, e) => DiagnoseServer(server);
+            var wolItem = new MenuItem
+            {
+                Header = L("S.m.wol"),
+                IsEnabled = !string.IsNullOrWhiteSpace(server.MacAddress)   // bez MAC nie ma czego budzić
+            };
+            wolItem.Click += (s, e) => WakeServer(server);
             var exportItem = new MenuItem { Header = L("S.m.exportrdp") };
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
-            bool ssh = server.Protocol == RemoteProtocol.Ssh;
+            bool rdp = server.Protocol == RemoteProtocol.Rdp;
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
-            if (!ssh) menu.Items.Add(newWinItem);      // osobne okno sesji jest RDP-owe
-            menu.Items.Add(connectAsItem);
+            if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
+            if (rdp || server.Protocol == RemoteProtocol.Ssh) menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
-            menu.Items.Add(diagItem);
-            if (!ssh) menu.Items.Add(exportItem);      // .rdp nie ma sensu dla SSH
+            if (server.Protocol != RemoteProtocol.Serial && server.Protocol != RemoteProtocol.Http)
+                menu.Items.Add(diagItem);   // sonda TCP — nie dla COM/URL
+            menu.Items.Add(wolItem);
+            if (rdp) menu.Items.Add(exportItem);       // .rdp ma sens tylko dla RDP
             menu.Items.Add(new Separator());
             menu.Items.Add(delItem);
             row.ContextMenu = menu;
@@ -854,13 +1007,29 @@ namespace RdpManager
         // albo od razu osobne okno — zależnie od ustawienia OpenInNewWindowByDefault.
         private void LaunchServer(ServerInfo server, bool autoConnect, bool forceNew = false)
         {
-            // SSH zawsze jako karta — osobne okno sesji (SessionWindow) jest RDP-owe.
-            if (_settings.OpenInNewWindowByDefault && server.Protocol != RemoteProtocol.Ssh) OpenInNewWindow(server);
+            // Terminale zawsze jako karta — osobne okno sesji (SessionWindow) jest RDP-owe.
+            if (_settings.OpenInNewWindowByDefault && server.Protocol == RemoteProtocol.Rdp) OpenInNewWindow(server);
             else OpenServer(server, autoConnect, forceNew);
+        }
+
+        // Wpis WWW: nie ma sesji — otwieramy panel webowy w domyślnej przeglądarce.
+        private void OpenUrl(ServerInfo server)
+        {
+            string url = (server.Host ?? "").Trim();
+            if (url.Length == 0) return;
+            if (!url.Contains("://")) url = "https://" + url;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+                RecordRecent(server);
+            }
+            catch (Exception ex) { SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error); }
         }
 
         private void OpenServer(ServerInfo server, bool autoConnect = false, bool forceNew = false)
         {
+            if (server.Protocol == RemoteProtocol.Http) { OpenUrl(server); return; }
+
             ShowView("Sessions");   // kontrolka RDP musi powstać przy widocznym widoku sesji
             if (!forceNew)
             {
@@ -874,13 +1043,42 @@ namespace RdpManager
             }
 
             Session session;
-            if (server.Protocol == RemoteProtocol.Ssh)
+            if (server.Protocol == RemoteProtocol.Telnet)
+            {
+                var term = new TelnetTerminalControl();
+                SessionContainer.Children.Add(term);
+                session = new Session(server, term);
+                WireTermEvents(session);
+            }
+            else if (server.Protocol == RemoteProtocol.Serial)
+            {
+                var term = new SerialTerminalControl();
+                SessionContainer.Children.Add(term);
+                session = new Session(server, term);
+                WireTermEvents(session);
+            }
+            else if (server.Protocol == RemoteProtocol.Ssh)
             {
                 // SSH: terminal (WebView2 + xterm.js) zamiast kontrolki RDP; reszta cyklu życia wspólna.
                 var term = new SshTerminalControl();
+                // TOFU: pytanie o klucz hosta przychodzi z wątku SSH — pokaż dialog na wątku UI.
+                term.TrustHostKey = (hostPort, fp, changed) => (bool)Dispatcher.Invoke(new Func<bool>(() =>
+                    MessageBox.Show(this,
+                        string.Format(L(changed ? "S.ssh.hostkey.changed" : "S.ssh.hostkey.new"), hostPort, fp),
+                        L("S.ssh.hostkey.title"), MessageBoxButton.YesNo,
+                        changed ? MessageBoxImage.Warning : MessageBoxImage.Question,
+                        changed ? MessageBoxResult.No : MessageBoxResult.Yes) == MessageBoxResult.Yes));
+                // Zaszyfrowany klucz prywatny → maskowany prompt o passphrase (null = anuluj).
+                term.RequestKeyPassphrase = path => (string)Dispatcher.Invoke(new Func<string>(() =>
+                {
+                    var dlg = new InputDialog(L("S.ssh.keypass.title"),
+                        string.Format(L("S.ssh.keypass.label"), System.IO.Path.GetFileName(path)),
+                        "", masked: true) { Owner = this };
+                    return dlg.ShowDialog() == true ? dlg.Value : null;
+                }));
                 SessionContainer.Children.Add(term);
                 session = new Session(server, term);
-                WireSshEvents(session);
+                WireTermEvents(session);
             }
             else
             {
@@ -912,11 +1110,20 @@ namespace RdpManager
             if (autoConnect) BeginConnect(session);
         }
 
-        private static bool CanAuto(Session s) =>
-            s.Server.Protocol == RemoteProtocol.Ssh
-                ? !string.IsNullOrWhiteSpace(s.Server.Username)
-                  && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath))
-                : s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
+        private static bool CanAuto(Session s)
+        {
+            switch (s.Server.Protocol)
+            {
+                case RemoteProtocol.Telnet:
+                case RemoteProtocol.Serial:
+                    return true;   // logowanie (jeśli jest) dzieje się w terminalu
+                case RemoteProtocol.Ssh:
+                    return !string.IsNullOrWhiteSpace(s.Server.Username)
+                           && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath));
+                default:
+                    return s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
+            }
+        }
 
         private void Activate(Session session)
         {
@@ -941,9 +1148,9 @@ namespace RdpManager
             bool has = _active != null;
             EmptyHint.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
 
-            // SSH: terminal widoczny od razu (statusy łączenia pisze do siebie, jak prawdziwy klient ssh).
+            // Terminale (SSH/Telnet/Serial): widoczne od razu — statusy łączenia piszą do siebie.
             foreach (var s in _sessions)
-                s.View.Visibility = (s == _active && (s.Connected || s.IsSsh)) ? Visibility.Visible : Visibility.Collapsed;
+                s.View.Visibility = (s == _active && (s.Connected || s.IsTerm)) ? Visibility.Visible : Visibility.Collapsed;
 
             if (!has)
             {
@@ -951,8 +1158,8 @@ namespace RdpManager
                 return;
             }
 
-            // Nakładka nie dla SSH — terminal (HWND) i tak by ją zakrył; komunikaty idą do terminala.
-            if (_active.Connected || _active.IsSsh)
+            // Nakładka nie dla terminali — ich HWND i tak by ją zakrył; komunikaty idą do terminala.
+            if (_active.Connected || _active.IsTerm)
             {
                 SessionOverlay.Visibility = Visibility.Collapsed;
                 return;
@@ -971,7 +1178,11 @@ namespace RdpManager
 
         private void OverlayAction_Click(object sender, RoutedEventArgs e)
         {
-            if (_active != null) Connect_Click(sender, e);
+            // Nie przez Connect_Click: pasek z hasłem bywa ukryty (tryb skupienia) — działaj na modelu
+            // sesji i dopytaj dialogiem, gdy brakuje poświadczeń.
+            if (_active == null) return;
+            if (CanAuto(_active)) ConnectSession(_active);
+            else PromptAndConnect(_active, null);
         }
 
         private void LoadToolbar(Session s)
@@ -980,7 +1191,8 @@ namespace RdpManager
             CfAvatarText.Text = s.Server.Initials;
             CfName.Text = s.Server.Name;
             CfHost.Text = s.Server.Host + ":" + s.Server.Port;
-            WinAuthCheck.Visibility = s.IsSsh ? Visibility.Collapsed : Visibility.Visible;   // SSH nie ma konta Windows
+            // Konto Windows tylko dla RDP; Telnet/Serial nie mają pól poświadczeń w ogóle.
+            WinAuthCheck.Visibility = s.Server.Protocol == RemoteProtocol.Rdp ? Visibility.Visible : Visibility.Collapsed;
             WinAuthCheck.IsChecked = s.Server.UseWindowsAccount;
             PassBox.Password = s.Password ?? "";
             UpdatePassVisibility();
@@ -1025,7 +1237,7 @@ namespace RdpManager
             // Adres na karcie (pasek stanu z adresem znika w trybie skupienia).
             content.Children.Add(new TextBlock
             {
-                Text = session.Server.Host, Foreground = (Brush)TryFindResource("TextTer"),
+                Text = DisplayHost(session.Server), Foreground = (Brush)TryFindResource("TextTer"),
                 FontFamily = (System.Windows.Media.FontFamily)TryFindResource("Mono"), FontSize = 10.5,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 1, 0, 0)
             });
@@ -1055,7 +1267,43 @@ namespace RdpManager
             grid.Children.Add(underline);
 
             tab.Child = grid;
-            tab.MouseLeftButtonUp += (s, e) => Activate(session);
+            tab.MouseLeftButtonUp += (s, e) =>
+            {
+                if (_tabDidDrag) { _tabDidDrag = false; return; }   // to było przeciąganie, nie klik
+                Activate(session);
+            };
+            // Środkowy klik zamyka kartę (standard z przeglądarek).
+            tab.MouseDown += (s, e) =>
+            {
+                if (e.ChangedButton == MouseButton.Middle) { RequestCloseSession(session); e.Handled = true; }
+            };
+
+            // Drag&drop kart: przeciągnięcie zmienia kolejność (upuszczenie na lewą/prawą połowę celu).
+            tab.AllowDrop = true;
+            tab.PreviewMouseLeftButtonDown += (s, e) => { _tabDragStart = e.GetPosition(null); _tabDragSession = session; _tabDidDrag = false; };
+            tab.PreviewMouseMove += (s, e) =>
+            {
+                if (e.LeftButton != MouseButtonState.Pressed || _tabDragSession != session) return;
+                var pos = e.GetPosition(null);
+                if (Math.Abs(pos.X - _tabDragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                    Math.Abs(pos.Y - _tabDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+                _tabDidDrag = true;
+                tab.Opacity = 0.5;
+                try { DragDrop.DoDragDrop(tab, session, DragDropEffects.Move); }
+                catch { }
+                finally { tab.Opacity = 1.0; _tabDragSession = null; }
+            };
+            tab.DragOver += (s, e) =>
+            {
+                if (e.Data.GetData(typeof(Session)) is Session) { e.Effects = DragDropEffects.Move; e.Handled = true; }
+            };
+            tab.Drop += (s, e) =>
+            {
+                var dragged = e.Data.GetData(typeof(Session)) as Session;
+                if (dragged == null || dragged == session) return;
+                MoveTabTo(dragged, session, after: e.GetPosition(tab).X > tab.ActualWidth / 2);
+                e.Handled = true;
+            };
 
             var tabMenu = new ContextMenu();
             var tearItem = new MenuItem { Header = L("S.m.tearoff") };
@@ -1070,7 +1318,7 @@ namespace RdpManager
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => RequestCloseSession(session);
-            if (!session.IsSsh) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
+            if (!session.IsTerm) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
             tabMenu.Items.Add(dupItem);
             tabMenu.Items.Add(new Separator());
             tabMenu.Items.Add(moveLeft);
@@ -1135,6 +1383,35 @@ namespace RdpManager
         /// <summary>Otwiera drugą, niezależną sesję do tego samego serwera (osobna zakładka).</summary>
         private void DuplicateSession(Session s) => OpenServer(s.Server, autoConnect: true, forceNew: true);
 
+        private Point _tabDragStart;
+        private Session _tabDragSession;
+        private bool _tabDidDrag;
+
+        /// <summary>Wstawia przeciąganą zakładkę przed/za <paramref name="target"/> (drag&amp;drop w pasku).</summary>
+        private void MoveTabTo(Session dragged, Session target, bool after)
+        {
+            int from = _sessions.IndexOf(dragged);
+            if (from < 0 || _sessions.IndexOf(target) < 0) return;
+            _sessions.RemoveAt(from);
+            int to = _sessions.IndexOf(target) + (after ? 1 : 0);
+            _sessions.Insert(to, dragged);
+            TabStrip.Children.Remove(dragged.TabButton);
+            TabStrip.Children.Insert(to, dragged.TabButton);
+            RefreshTabTitles();   // numeracja duplikatów (#2) podąża za kolejnością
+        }
+
+        /// <summary>Adres do wyświetlenia — z prefiksem protokołu, żeby odróżnić na pierwszy rzut oka.</summary>
+        private static string DisplayHost(ServerInfo s)
+        {
+            switch (s.Protocol)
+            {
+                case RemoteProtocol.Ssh: return "ssh://" + s.Host;
+                case RemoteProtocol.Telnet: return "telnet://" + s.Host;
+                case RemoteProtocol.Serial: return s.Host + " @" + s.Port;   // COM3 @115200
+                default: return s.Host;
+            }
+        }
+
         /// <summary>Przesuwa zakładkę w pasku o <paramref name="dir"/> (-1 w lewo, +1 w prawo).</summary>
         private void MoveTab(Session s, int dir)
         {
@@ -1160,10 +1437,10 @@ namespace RdpManager
 
         private void CloseSession(Session session)
         {
-            if (session.IsSsh)
+            if (session.IsTerm)
             {
-                try { session.Ssh.DisposeTerminal(); } catch { }
-                SessionContainer.Children.Remove(session.Ssh);
+                try { session.Term.DisposeTerminal(); } catch { }
+                SessionContainer.Children.Remove(session.Term);
             }
             else
             {
@@ -1248,7 +1525,7 @@ namespace RdpManager
         /// <summary>Łączy sesję na podstawie jej modelu (bez odczytu z formularza) — używane też z flyoutu.</summary>
         private void ConnectSession(Session s)
         {
-            if (s.IsSsh) { ConnectSsh(s); return; }
+            if (s.IsTerm) { ConnectTerm(s); return; }
 
             try { s.Rdp.Disconnect(); } catch { /* nie połączona */ }
             s.LoggedIn = false;
@@ -1260,6 +1537,7 @@ namespace RdpManager
                 // Weryfikacja tożsamości serwera (domyślnie 2 = ostrzegaj) — chroni przed MITM.
                 adv.AuthenticationLevel = (uint)Math.Clamp(s.Server.AuthenticationLevel, 0, 2);
                 adv.EnableCredSspSupport = true;
+                adv.ConnectToAdministerServer = s.Server.AdminSession;   // sesja konsolowa (mstsc /admin)
                 adv.SmartSizing = false;   // dynamiczna rozdzielczość zajmie się dopasowaniem
                 adv.EnableAutoReconnect = _settings.AutoReconnect;
                 s.Rdp.ColorDepth = _settings.ColorDepth;
@@ -1320,30 +1598,50 @@ namespace RdpManager
             catch (Exception) { /* kontrolka bez obsługi bramy — pomijamy */ }
         }
 
+        // Panel plików SFTP przy aktywnej sesji SSH (przycisk folderu na pasku stanu).
+        private void Files_Click(object sender, RoutedEventArgs e)
+        {
+            if (_active?.IsSsh == true) _active.Ssh.ToggleFiles();
+        }
+
         private void Disconnect_Click(object sender, RoutedEventArgs e)
         {
             if (_active == null) return;
-            if (_active.IsSsh) { _active.Ssh.Disconnect(); return; }
+            if (_active.IsTerm) { _active.Term.Disconnect(); return; }
             try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
         }
 
         // ---------- SSH ----------
 
-        /// <summary>Łączy sesję SSH: inicjalizuje terminal (WebView2 + xterm) i loguje w tle (SSH.NET).</summary>
-        private async void ConnectSsh(Session s)
+        /// <summary>Łączy sesję terminalową (SSH/Telnet/Serial): inicjalizuje xterm i transport w tle.</summary>
+        private async void ConnectTerm(Session s)
         {
             // SSH wymaga loginu (nie ma odpowiednika konta Windows) — dopytaj, jeśli brak.
-            if (string.IsNullOrWhiteSpace(s.Server.Username)) { PromptAndConnect(s, null); return; }
+            if (s.IsSsh && string.IsNullOrWhiteSpace(s.Server.Username)) { PromptAndConnect(s, null); return; }
             try
             {
                 SetTabStatus(s, ServerStatus.Idle);
                 SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
                 if (s == _active) UpdateCanvas();
 
-                var (cols, rows) = await s.Ssh.InitAsync();
-                s.Ssh.WriteLocal("\x1b[90m" + string.Format(L("S.st.connecting"),
-                    s.Server.Username + "@" + s.Server.Host + ":" + s.Server.Port) + "\x1b[0m\r\n");
-                await s.Ssh.ConnectAsync(s.Server, s.Password, cols, rows);
+                var (cols, rows) = await s.Term.InitAsync();
+                string target = s.IsSsh
+                    ? s.Server.Username + "@" + s.Server.Host + ":" + s.Server.Port
+                    : s.Server.Host + (s.Server.Protocol == RemoteProtocol.Serial ? " @" + s.Server.Port : ":" + s.Server.Port);
+                s.Term.WriteLocal("\x1b[90m" + string.Format(L("S.st.connecting"), target) + "\x1b[0m\r\n");
+
+                switch (s.Server.Protocol)
+                {
+                    case RemoteProtocol.Telnet:
+                        await ((TelnetTerminalControl)s.Term).ConnectAsync(s.Server.Host, s.Server.Port);
+                        break;
+                    case RemoteProtocol.Serial:
+                        await ((SerialTerminalControl)s.Term).ConnectAsync(s.Server.Host, s.Server.Port);
+                        break;
+                    default:
+                        await s.Ssh.ConnectAsync(s.Server, s.Password, cols, rows);
+                        break;
+                }
             }
             catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException)
             {
@@ -1354,32 +1652,37 @@ namespace RdpManager
             catch (Renci.SshNet.Common.SshAuthenticationException ex)
             {
                 SetTabStatus(s, ServerStatus.Offline);
-                s.Ssh.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
+                s.Term.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
                 SetSessionStatus(s, ex.Message + "  " + L("S.st.hint.creds"), StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             }
             catch (Exception ex)
             {
                 SetTabStatus(s, ServerStatus.Offline);
-                s.Ssh.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
+                s.Term.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
                 SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             }
         }
 
-        /// <summary>Zdarzenia terminala SSH → stan sesji/karty (marshalowane na wątek UI).</summary>
-        private void WireSshEvents(Session s)
+        /// <summary>Zdarzenia terminala (SSH/Telnet/Serial) → stan sesji/karty (marshalowane na wątek UI).</summary>
+        private void WireTermEvents(Session s)
         {
-            s.Ssh.Connected += () => Dispatcher.BeginInvoke(new Action(() =>
+            s.Term.Connected += () => Dispatcher.BeginInvoke(new Action(() =>
             {
                 s.Connected = true;
                 RecordRecent(s.Server);
                 ConnectionLog.Append("CONNECTED", s.Server);
                 SetTabStatus(s, ServerStatus.Online);
                 SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); s.Ssh.FocusTerminal(); }
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); s.Term.FocusTerminal(); }
             }));
-            s.Ssh.Disconnected += reason => Dispatcher.BeginInvoke(new Action(() =>
+            if (s.Ssh != null)
+                s.Ssh.TunnelStatus += (spec, ok, err) => Dispatcher.BeginInvoke(new Action(() =>
+                    s.Term.WriteLocal(ok
+                        ? "\x1b[92m" + string.Format(L("S.ssh.tunnel.up"), spec) + "\x1b[0m\r\n"
+                        : "\x1b[91m" + string.Format(L("S.ssh.tunnel.fail"), spec, err) + "\x1b[0m\r\n")));
+            s.Term.Disconnected += reason => Dispatcher.BeginInvoke(new Action(() =>
             {
                 bool was = s.Connected;
                 s.Connected = false;
@@ -1388,8 +1691,8 @@ namespace RdpManager
                 if (!s.Server.SavePassword) s.Password = "";   // jak przy RDP: hasło nie zostaje w pamięci
 
                 string msg = string.Format(L("S.st.disconnected"),
-                    string.IsNullOrWhiteSpace(reason) ? "ssh" : reason);
-                s.Ssh.WriteLocal("\r\n\x1b[91m" + msg + "\x1b[0m\r\n");
+                    string.IsNullOrWhiteSpace(reason) ? s.Server.Protocol.ToString().ToLowerInvariant() : reason);
+                s.Term.WriteLocal("\r\n\x1b[91m" + msg + "\x1b[0m\r\n");
                 SetSessionStatus(s, msg, StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             }));
@@ -1464,9 +1767,14 @@ namespace RdpManager
 
         private void WinAuth_Changed(object sender, RoutedEventArgs e) => UpdatePassVisibility();
 
+        private bool ActiveHasNoCreds()
+            => _active != null && (_active.Server.Protocol == RemoteProtocol.Telnet
+                                   || _active.Server.Protocol == RemoteProtocol.Serial);
+
         private void UpdatePassVisibility()
         {
-            CfPassGroup.Visibility = WinAuthCheck.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+            CfPassGroup.Visibility = (ActiveHasNoCreds() || WinAuthCheck.IsChecked == true)
+                ? Visibility.Collapsed : Visibility.Visible;
         }
 
         // ---------- Pasek sesji: dwa stany ----------
@@ -1486,6 +1794,7 @@ namespace RdpManager
             bool connected = _active.Connected;
             ConnectForm.Visibility = connected ? Visibility.Collapsed : Visibility.Visible;
             StatusPanel.Visibility = connected ? Visibility.Visible : Visibility.Collapsed;
+            FilesBtn.Visibility = _active.IsSsh ? Visibility.Visible : Visibility.Collapsed;   // SFTP tylko dla SSH
             if (connected)
                 StatusHost.Text = _active.Server.Host + ":" + _active.Server.Port;
         }
@@ -1688,6 +1997,12 @@ namespace RdpManager
 
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT { public int X, Y; }
@@ -1965,6 +2280,70 @@ namespace RdpManager
             }
         }
 
+        // Przycisk „Importuj…" rozwija menu źródeł (mstsc / .rdp / mRemoteNG / RDCMan).
+        private void ImportMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button b && b.ContextMenu != null)
+            {
+                b.ContextMenu.PlacementTarget = b;
+                b.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                b.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void ImportMrng_Click(object sender, RoutedEventArgs e)
+            => ImportExternal(L("S.dlg.importmrng.title"), L("S.dlg.mrng.filter"),
+                text => ExternalImport.ParseMRemoteNg(text));
+
+        private void ImportRdg_Click(object sender, RoutedEventArgs e)
+            => ImportExternal(L("S.dlg.importrdg.title"), L("S.dlg.rdg.filter"),
+                text => ExternalImport.ParseRdcMan(text, _settings.DefaultPort));
+
+        // Wspólny przebieg importu z innego menedżera: plik → parser → dedup po host:port → zapis.
+        // Hasła nie są przenoszone (mRemoteNG/RDCMan szyfrują je własnymi kluczami).
+        private void ImportExternal(string title, string filter, Func<string, ExternalImport.Result> parse)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = title, Filter = filter };
+            if (dlg.ShowDialog(this) != true) return;
+
+            ExternalImport.Result result;
+            try { result = parse(System.IO.File.ReadAllText(dlg.FileName)); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    string.Format(L("S.msg.importrdp.fail"), System.IO.Path.GetFileName(dlg.FileName)) + "\n" + ex.Message,
+                    title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var existing = new HashSet<string>(
+                _vm.Servers.Select(s => (s.Host ?? "") + ":" + s.Port), StringComparer.OrdinalIgnoreCase);
+            int added = 0, skipped = 0;
+            foreach (var srv in result.Servers)
+            {
+                if (!existing.Add(srv.Host + ":" + srv.Port)) { skipped++; continue; }
+                _vm.Add(srv);
+                added++;
+            }
+
+            if (added > 0)
+            {
+                PersistServers();
+                RenderTree(SearchBox.Text);
+                CheckReachabilityAsync();
+                SetStatus(string.Format(L("S.st.imported"), added), StatusKind.Ok);
+            }
+
+            MessageBox.Show(
+                string.Format(L("S.st.imported"), added)
+                + (skipped > 0 ? "\n" + string.Format(L("S.msg.mstsc.skipped"), skipped) : "")
+                + (result.UnsupportedProtocol > 0
+                    ? "\n" + string.Format(L("S.msg.import.unsupported"), result.UnsupportedProtocol) : "")
+                + "\n\n" + L("S.msg.import.nopass"),
+                title, MessageBoxButton.OK,
+                added > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        }
+
         private void ImportRdp_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
@@ -2211,7 +2590,10 @@ namespace RdpManager
             {
                 var servers = _vm.Servers.ToList();
                 var results = await Task.WhenAll(servers.Select(srv =>
-                    Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv, Probe(srv.Host, srv.Port)))));
+                    Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv,
+                        // Serial (COM) i WWW (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status.
+                        srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http
+                            ? srv.Status : Probe(srv.Host, srv.Port)))));
 
                 foreach (var kv in results)
                 {
@@ -2228,6 +2610,26 @@ namespace RdpManager
             finally
             {
                 _reachBusy = false;
+            }
+        }
+
+        // Wake-on-LAN: magic packet broadcastem na podstawie MAC z ustawień serwera.
+        private void WakeServer(ServerInfo server)
+        {
+            if (!Core.WakeOnLan.TryParseMac(server.MacAddress, out var mac))
+            {
+                MessageBox.Show(string.Format(L("S.se.mac.bad"), server.MacAddress),
+                    L("S.m.wol"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            try
+            {
+                Core.WakeOnLan.Send(mac);
+                SetStatus(string.Format(L("S.st.wolsent"), server.Name), StatusKind.Ok);
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
             }
         }
 
