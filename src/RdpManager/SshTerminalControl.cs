@@ -56,12 +56,56 @@ namespace RdpManager
         private readonly List<ForwardedPortLocal> _forwards = new List<ForwardedPortLocal>();
         private string _hostKeyHost;
         private int _hostKeyPort;
+        private ServerInfo _server;          // parametry ostatniego połączenia — dla SFTP
+        private string _password;
+        private PrivateKeyFile _loadedKey;   // cache: passphrase pytamy raz, nie przy każdym łączu
+        private string _loadedKeyPath;
+
+        private readonly Grid _grid = new Grid();
+        private readonly ColumnDefinition _splitCol = new ColumnDefinition { Width = new GridLength(0) };
+        private readonly ColumnDefinition _filesCol = new ColumnDefinition { Width = new GridLength(0) };
+        private readonly GridSplitter _split = new GridSplitter
+        {
+            Width = 5,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Background = System.Windows.Media.Brushes.Transparent,
+            ResizeBehavior = GridResizeBehavior.PreviousAndNext,
+            Visibility = Visibility.Collapsed
+        };
+        private SftpPanel _files;
 
         public SshTerminalControl()
         {
-            Child = _web;
+            // terminal | splitter | panel plików SFTP (domyślnie zwinięty)
+            _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _grid.ColumnDefinitions.Add(_splitCol);
+            _grid.ColumnDefinitions.Add(_filesCol);
+            Grid.SetColumn(_web, 0);
+            Grid.SetColumn(_split, 1);
+            _grid.Children.Add(_web);
+            _grid.Children.Add(_split);
+            Child = _grid;
+
             // Ciemne tło od pierwszej klatki (bez białego błysku WebView2).
             _web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(16, 18, 22);
+        }
+
+        /// <summary>Pokazuje/chowa panel plików SFTP (tworzony leniwie przy pierwszym użyciu).</summary>
+        public void ToggleFiles()
+        {
+            if (_files == null)
+            {
+                _files = new SftpPanel(CreateSftpClient);
+                Grid.SetColumn(_files, 2);
+                _grid.Children.Add(_files);
+            }
+            bool show = _files.Visibility != Visibility.Visible;
+            _files.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            _split.Visibility = _files.Visibility;
+            _splitCol.Width = show ? GridLength.Auto : new GridLength(0);
+            _filesCol.Width = show ? new GridLength(360) : new GridLength(0);
+            if (show) _files.RefreshAsync();
         }
 
         // ---------- Inicjalizacja WebView2 + xterm ----------
@@ -164,29 +208,9 @@ namespace RdpManager
                 DisposeClient();   // rekonekt: sprzątnij poprzednie połączenie
                 Interlocked.Exchange(ref _down, 0);
 
-                var methods = new List<AuthenticationMethod>();
-                if (!string.IsNullOrWhiteSpace(server.PrivateKeyPath))
-                    methods.Add(new PrivateKeyAuthenticationMethod(server.Username,
-                        LoadPrivateKey(server.PrivateKeyPath)));
-                if (!string.IsNullOrEmpty(password))
-                {
-                    methods.Add(new PasswordAuthenticationMethod(server.Username, password));
-                    // Wiele serwerów używa keyboard-interactive zamiast czystego "password".
-                    var kbi = new KeyboardInteractiveAuthenticationMethod(server.Username);
-                    kbi.AuthenticationPrompt += (o, e) => { foreach (var p in e.Prompts) p.Response = password; };
-                    methods.Add(kbi);
-                }
-                if (methods.Count == 0)
-                    methods.Add(new NoneAuthenticationMethod(server.Username));
-
-                _hostKeyHost = server.Host;
-                _hostKeyPort = server.Port > 0 ? server.Port : 22;
-                var ci = new ConnectionInfo(server.Host, _hostKeyPort,
-                                            server.Username, methods.ToArray())
-                {
-                    Timeout = TimeSpan.FromSeconds(15),
-                    Encoding = Encoding.UTF8
-                };
+                _server = server;
+                _password = password;
+                var ci = BuildConnectionInfo(server, password);
 
                 var client = new SshClient(ci);
                 client.KeepAliveInterval = TimeSpan.FromSeconds(30);   // NAT/zapory ubijają bezczynne sesje
@@ -207,10 +231,53 @@ namespace RdpManager
             });
         }
 
+        // Wspólne dla terminala i SFTP (osobne łącza TCP na tych samych poświadczeniach).
+        private ConnectionInfo BuildConnectionInfo(ServerInfo server, string password)
+        {
+            var methods = new List<AuthenticationMethod>();
+            if (!string.IsNullOrWhiteSpace(server.PrivateKeyPath))
+                methods.Add(new PrivateKeyAuthenticationMethod(server.Username,
+                    LoadPrivateKey(server.PrivateKeyPath)));
+            if (!string.IsNullOrEmpty(password))
+            {
+                methods.Add(new PasswordAuthenticationMethod(server.Username, password));
+                // Wiele serwerów używa keyboard-interactive zamiast czystego "password".
+                var kbi = new KeyboardInteractiveAuthenticationMethod(server.Username);
+                kbi.AuthenticationPrompt += (o, e) => { foreach (var p in e.Prompts) p.Response = password; };
+                methods.Add(kbi);
+            }
+            if (methods.Count == 0)
+                methods.Add(new NoneAuthenticationMethod(server.Username));
+
+            _hostKeyHost = server.Host;
+            _hostKeyPort = server.Port > 0 ? server.Port : 22;
+            return new ConnectionInfo(server.Host, _hostKeyPort, server.Username, methods.ToArray())
+            {
+                Timeout = TimeSpan.FromSeconds(15),
+                Encoding = Encoding.UTF8
+            };
+        }
+
+        /// <summary>
+        /// Nowe połączenie SFTP na poświadczeniach tej sesji (wątek roboczy; osobne łącze TCP,
+        /// ten sam mechanizm weryfikacji klucza hosta — po TOFU terminala przechodzi cicho).
+        /// </summary>
+        public SftpClient CreateSftpClient()
+        {
+            var server = _server;
+            if (server == null) throw new InvalidOperationException("Sesja SSH nie była jeszcze łączona.");
+            var c = new SftpClient(BuildConnectionInfo(server, _password));
+            c.HostKeyReceived += OnHostKey;
+            c.Connect();
+            return c;
+        }
+
         // Klucz zaszyfrowany passphrasem → dopytaj przez RequestKeyPassphrase (do 3 prób).
         private PrivateKeyFile LoadPrivateKey(string path)
         {
-            try { return new PrivateKeyFile(path); }
+            if (_loadedKey != null && _loadedKeyPath == path) return _loadedKey;   // passphrase pytamy raz
+
+            try { return Cache(new PrivateKeyFile(path), path); }
             catch (SshPassPhraseNullOrEmptyException)
             {
                 var ask = RequestKeyPassphrase;
@@ -219,12 +286,19 @@ namespace RdpManager
                 {
                     string phrase = ask(path);
                     if (phrase == null) throw new SshAuthenticationException("Anulowano podawanie passphrase klucza.");
-                    try { return new PrivateKeyFile(path, phrase); }
+                    try { return Cache(new PrivateKeyFile(path, phrase), path); }
                     catch (SshException) { /* złe hasło klucza — spróbuj ponownie */ }
                     catch (InvalidOperationException) { /* jw. — starsze wersje rzucają inaczej */ }
                 }
                 throw new SshAuthenticationException("Niepoprawna passphrase klucza (3 próby).");
             }
+        }
+
+        private PrivateKeyFile Cache(PrivateKeyFile key, string path)
+        {
+            _loadedKey = key;
+            _loadedKeyPath = path;
+            return key;
         }
 
         // Tunele lokalne (ssh -L): 127.0.0.1:portLokalny → host:portZdalny przez serwer SSH.
@@ -352,11 +426,12 @@ namespace RdpManager
             try { c?.Dispose(); } catch { }
         }
 
-        /// <summary>Pełne sprzątanie przy zamknięciu karty/aplikacji (SSH + WebView2).</summary>
+        /// <summary>Pełne sprzątanie przy zamknięciu karty/aplikacji (SSH + SFTP + WebView2).</summary>
         public void DisposeTerminal()
         {
             _disposed = true;
             DisposeClient();
+            try { _files?.DisposePanel(); } catch { }
             try { _web.Dispose(); } catch { }
         }
 

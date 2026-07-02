@@ -228,6 +228,24 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.msg.import.nopass">Hasła nie są przenoszone — podasz je przy pierwszym połączeniu.</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">Terminal SSH wymaga składnika WebView2 Runtime (wbudowany w Windows 11; na starszych systemach doinstaluj go ze strony Microsoft).</sys:String>
+    <!-- panel plików SFTP -->
+    <sys:String x:Key="S.sftp.toggle">Pliki (SFTP)</sys:String>
+    <sys:String x:Key="S.sftp.name">Nazwa</sys:String>
+    <sys:String x:Key="S.sftp.size">Rozmiar</sys:String>
+    <sys:String x:Key="S.sftp.modified">Zmieniono</sys:String>
+    <sys:String x:Key="S.sftp.up">Katalog wyżej</sys:String>
+    <sys:String x:Key="S.sftp.refresh">Odśwież</sys:String>
+    <sys:String x:Key="S.sftp.upload">Wyślij…</sys:String>
+    <sys:String x:Key="S.sftp.download">Pobierz…</sys:String>
+    <sys:String x:Key="S.sftp.newfolder">Nowy folder</sys:String>
+    <sys:String x:Key="S.sftp.newfolder.label">Nazwa nowego folderu:</sys:String>
+    <sys:String x:Key="S.sftp.delete">Usuń</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirm">Usunąć "{0}"? (katalogi tylko puste)</sys:String>
+    <sys:String x:Key="S.sftp.connecting">Łączenie SFTP…</sys:String>
+    <sys:String x:Key="S.sftp.uploading">Wysyłanie {0}…</sys:String>
+    <sys:String x:Key="S.sftp.downloading">Pobieranie {0}…</sys:String>
+    <sys:String x:Key="S.sftp.done">Gotowe ✓</sys:String>
+
     <sys:String x:Key="S.ssh.tunnel.up">tunel {0} aktywny — nasłuch na 127.0.0.1</sys:String>
     <sys:String x:Key="S.ssh.tunnel.fail">tunel {0}: {1}</sys:String>
     <sys:String x:Key="S.ssh.keypass.title">Klucz SSH</sys:String>

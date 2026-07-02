@@ -284,6 +284,10 @@
                                            Foreground="{DynamicResource TextTer}" Margin="14,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button x:Name="FilesBtn" Style="{DynamicResource IconBtn}" Click="Files_Click"
+                                        Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}">
+                                    <ui:SymbolIcon Symbol="Folder24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                                </Button>
                                 <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
                                     <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
                                 </Button>

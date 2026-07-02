@@ -228,6 +228,24 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.msg.import.nopass">Passwords are not migrated — you'll enter them on first connect.</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">The SSH terminal requires the WebView2 Runtime (built into Windows 11; on older systems install it from Microsoft).</sys:String>
+    <!-- SFTP file panel -->
+    <sys:String x:Key="S.sftp.toggle">Files (SFTP)</sys:String>
+    <sys:String x:Key="S.sftp.name">Name</sys:String>
+    <sys:String x:Key="S.sftp.size">Size</sys:String>
+    <sys:String x:Key="S.sftp.modified">Modified</sys:String>
+    <sys:String x:Key="S.sftp.up">Parent directory</sys:String>
+    <sys:String x:Key="S.sftp.refresh">Refresh</sys:String>
+    <sys:String x:Key="S.sftp.upload">Upload…</sys:String>
+    <sys:String x:Key="S.sftp.download">Download…</sys:String>
+    <sys:String x:Key="S.sftp.newfolder">New folder</sys:String>
+    <sys:String x:Key="S.sftp.newfolder.label">New folder name:</sys:String>
+    <sys:String x:Key="S.sftp.delete">Delete</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirm">Delete "{0}"? (directories must be empty)</sys:String>
+    <sys:String x:Key="S.sftp.connecting">Connecting SFTP…</sys:String>
+    <sys:String x:Key="S.sftp.uploading">Uploading {0}…</sys:String>
+    <sys:String x:Key="S.sftp.downloading">Downloading {0}…</sys:String>
+    <sys:String x:Key="S.sftp.done">Done ✓</sys:String>
+
     <sys:String x:Key="S.ssh.tunnel.up">tunnel {0} up — listening on 127.0.0.1</sys:String>
     <sys:String x:Key="S.ssh.tunnel.fail">tunnel {0}: {1}</sys:String>
     <sys:String x:Key="S.ssh.keypass.title">SSH key</sys:String>

@@ -1549,6 +1549,12 @@ namespace RdpManager
             catch (Exception) { /* kontrolka bez obsługi bramy — pomijamy */ }
         }
 
+        // Panel plików SFTP przy aktywnej sesji SSH (przycisk folderu na pasku stanu).
+        private void Files_Click(object sender, RoutedEventArgs e)
+        {
+            if (_active?.IsSsh == true) _active.Ssh.ToggleFiles();
+        }
+
         private void Disconnect_Click(object sender, RoutedEventArgs e)
         {
             if (_active == null) return;
@@ -1719,6 +1725,7 @@ namespace RdpManager
             bool connected = _active.Connected;
             ConnectForm.Visibility = connected ? Visibility.Collapsed : Visibility.Visible;
             StatusPanel.Visibility = connected ? Visibility.Visible : Visibility.Collapsed;
+            FilesBtn.Visibility = _active.IsSsh ? Visibility.Visible : Visibility.Collapsed;   // SFTP tylko dla SSH
             if (connected)
                 StatusHost.Text = _active.Server.Host + ":" + _active.Server.Port;
         }
