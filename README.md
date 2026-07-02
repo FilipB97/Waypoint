@@ -1,9 +1,10 @@
 # Waypoint
 
-**Waypoint** is a modern, tabbed Remote Desktop client for Windows, built with WPF (.NET 8) and the
-Windows 11 **Fluent / Mica** design. It wraps the official Microsoft RDP ActiveX control
-(`mstscax`) and aims to be a comfortable daily replacement for the built-in
-Remote Desktop Connection (`mstsc.exe`).
+**Waypoint** is a modern, tabbed **RDP + SSH** connection manager for Windows, built with WPF
+(.NET 8) and the Windows 11 **Fluent / Mica** design. RDP sessions use the official Microsoft
+RDP ActiveX control (`mstscax`); SSH opens an embedded **xterm.js terminal**. It aims to be a
+comfortable daily replacement for `mstsc.exe` — and a modern alternative to dated connection
+managers.
 
 > Status: early but usable. See the [roadmap](docs/ROADMAP.md) for what's next.
 
@@ -17,8 +18,11 @@ it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 
 ## Features
 
-- **Tabbed sessions** — multiple simultaneous RDP connections, switch without disconnecting.
-- **Server list with groups**, search/filter, and reachability dots (background TCP probe on the RDP port).
+- **Tabbed sessions** — multiple simultaneous RDP **and SSH** connections, switch without disconnecting.
+- **Embedded SSH terminal** (xterm.js) — password and private-key auth, host-key verification
+  (trust-on-first-use with fingerprint prompt), copy-on-select, Ctrl+Shift+C/V, Ctrl+wheel font size.
+- **Server list with groups**, favorites (pinned), collapsible groups, one-click group rename,
+  search/filter, and reachability dots (background TCP probe).
 - **Full-screen mode** with an auto-hiding toolbar and an "other connections" flyout to
   switch sessions without leaving full screen.
 - **Dynamic resolution** — the session resolution follows the window/full-screen size for a
@@ -28,7 +32,9 @@ it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 - **Per-server options** — port, domain/Windows account, clipboard/drive/printer/audio
   redirection, server-identity verification level, and RD Gateway / jump-host.
 - **Credential prompt** at connect time and "connect as" for retrying with other credentials.
-- **Import / export `.rdp`** files for easy migration from `mstsc`.
+- **One-click migration** — import from **mstsc history**, **`.rdp` files**, **mRemoteNG**
+  (`confCons.xml`) and **RDCMan** (`.rdg`); export back to `.rdp`.
+- **Quick connect** — `host`, `host:port`, `user@host` or `DOMAIN\user@host` without saving.
 - **Keyboard shortcuts** — `Ctrl+Tab` cycle tabs, `Alt+1..9` jump, `Ctrl+W` close,
   `Ctrl+F`/`Ctrl+K` focus search, `Ctrl+±/0` zoom, `F11` full screen.
 - **Diagnostics & audit** — per-server TCP port test and an optional connection log.
@@ -37,11 +43,23 @@ it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 - **Multi-monitor, mstsc-style** — open any session in a **standalone window**, drag it to
   another monitor and go full screen there; run several sessions on several screens at once.
   **Tear off** a tab into its own window and **dock** it back to a tab (seamless reconnect).
-- **Dashboard & recents**, UI zoom (Ctrl+scroll), dark Fluent theme.
+- **Focus mode** — maximize the window and the chrome melts away: just the tab strip and the
+  remote screen (window controls move onto the tab strip). In a standalone session window,
+  maximizing goes straight to full screen, mstsc-style.
+- **Dashboard & recents**, UI zoom (Ctrl+scroll), **dark / light / system theme**,
+  **English & Polish** UI (switchable live).
 
-> **Known limitation:** keyboard shortcuts (Ctrl+Tab, Alt+1..9, F11, …) work while focus
-> is on the app chrome. Inside a connected RDP session the keyboard goes to the remote
-> desktop — same as `mstsc`.
+## Known limitations
+
+- **Not code-signed** — SmartScreen warns on first run (*More info → Run anyway*).
+- **SSH host keys** use trust-on-first-use with a fingerprint prompt; existing OpenSSH
+  `known_hosts` files are not imported (yet).
+- **SSH private keys with a passphrase** are not supported yet (use an unencrypted key or
+  password auth for now).
+- The SSH terminal needs the **WebView2 Runtime** (built into Windows 11; a free Microsoft
+  download on older Windows 10).
+- Keyboard shortcuts (Ctrl+Tab, Alt+1..9, F11, …) work while focus is on the app chrome.
+  Inside a connected session the keyboard goes to the remote — same as `mstsc`.
 
 ## Requirements
 
@@ -98,6 +116,9 @@ UI and RDP-control behavior require a real Windows desktop session and are verif
 - **Server identity verification** is configurable per server and defaults to *warn on failure*
   (RDP `AuthenticationLevel = 2`) to mitigate man-in-the-middle attacks. You can raise it to
   *require* or lower it to *don't check* per connection.
+- **SSH host keys** are verified trust-on-first-use: the SHA256 fingerprint is shown on first
+  connect, remembered in `%APPDATA%\RdpManager\known_hosts.json`, and a **changed key raises a
+  warning** (defaulting to reject).
 
 Found a vulnerability? See [SECURITY.md](SECURITY.md).
 
