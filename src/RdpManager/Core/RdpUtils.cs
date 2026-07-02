@@ -42,6 +42,26 @@ namespace RdpManager.Core
         }
 
         /// <summary>
+        /// Parsuje adres „szybkiego połączenia" na host/port/login/domenę. Obsługuje formy:
+        /// host, host:port, user@host, user@host:port, DOMENA\user@host[:port].
+        /// (Część host:port deleguje do <see cref="SplitHostPort"/>.)
+        /// </summary>
+        public static (string Host, int Port, string Username, string Domain) ParseQuickConnect(string input, int defaultPort)
+        {
+            string s = (input ?? "").Trim();
+            string userPart = "";
+            int at = s.LastIndexOf('@');
+            if (at >= 0) { userPart = s.Substring(0, at); s = s.Substring(at + 1); }
+
+            var (host, port) = SplitHostPort(s, defaultPort);
+
+            string domain = "", user = userPart.Trim();
+            int bs = user.IndexOf('\\');
+            if (bs > 0) { domain = user.Substring(0, bs); user = user.Substring(bs + 1); }
+            return (host, port, user, domain);
+        }
+
+        /// <summary>
         /// Normalizuje wymiar sesji: zakres [200, 8192] i parzystość (nieparzyste =&gt; E_INVALIDARG
         /// w UpdateSessionDisplaySettings). Źródło: RdpDynamicResolution.NormalizeDim.
         /// </summary>
@@ -116,14 +136,16 @@ namespace RdpManager.Core
             return new string(chars);
         }
 
-        /// <summary>Czytelny wynik diagnostyki osiągalności portu RDP.</summary>
-        public static string FormatDiagnostics(string host, int port, bool reachable, long elapsedMs)
+        /// <summary>
+        /// Czytelny wynik diagnostyki osiągalności portu RDP. Szablony (zlokalizowane) podaje wołający:
+        /// <paramref name="openFormat"/> dostaje {0}=host, {1}=port, {2}=ms; <paramref name="closedFormat"/> {0}=host, {1}=port.
+        /// </summary>
+        public static string FormatDiagnostics(string host, int port, bool reachable, long elapsedMs,
+                                               string openFormat, string closedFormat)
         {
             return reachable
-                ? string.Format(CultureInfo.InvariantCulture,
-                    "{0}:{1} — port OTWARTY (odpowiedź w {2} ms).", host, port, elapsedMs)
-                : string.Format(CultureInfo.InvariantCulture,
-                    "{0}:{1} — BRAK odpowiedzi (port zamknięty, zapora lub host nieosiągalny).", host, port);
+                ? string.Format(CultureInfo.InvariantCulture, openFormat, host, port, elapsedMs)
+                : string.Format(CultureInfo.InvariantCulture, closedFormat, host, port);
         }
     }
 }

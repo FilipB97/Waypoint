@@ -8,20 +8,9 @@
         Icon="pack://application:,,,/Assets/app.ico"
         Loaded="Window_Loaded" Closing="Window_Closing" KeyDown="Window_KeyDown">
 
+    <!-- Kolory żyją w Themes/Palette.{Dark,Light}.xaml (App), przełączane przez ThemeManager. -->
     <Window.Resources>
-        <SolidColorBrush x:Key="Panel"    Color="#B31C1D21"/>
-        <SolidColorBrush x:Key="Border"   Color="#22FFFFFF"/>
-        <SolidColorBrush x:Key="Elevated" Color="#272830"/>
-        <SolidColorBrush x:Key="TextPrim" Color="#F1F2F4"/>
-        <SolidColorBrush x:Key="TextSec"  Color="#9DA0A8"/>
-        <SolidColorBrush x:Key="TextTer"  Color="#6C6F78"/>
-        <SolidColorBrush x:Key="Online"   Color="#3DDC97"/>
-        <SolidColorBrush x:Key="Idle"     Color="#FFB454"/>
-        <SolidColorBrush x:Key="Danger"   Color="#E8463F"/>
         <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
-        <LinearGradientBrush x:Key="Canvas" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#0F1014" Offset="0"/><GradientStop Color="#1A1B22" Offset="1"/>
-        </LinearGradientBrush>
     </Window.Resources>
 
     <Grid>
@@ -36,40 +25,40 @@
             <ui:TitleBar.Icon><ui:SymbolIcon Symbol="Desktop24" Foreground="#29C5D6"/></ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <Border x:Name="Toolbar" Grid.Row="1" Background="{StaticResource Panel}"
-                BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" Padding="12,8">
+        <Border x:Name="Toolbar" Grid.Row="1" Background="{DynamicResource Panel}"
+                BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="12,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource TextTer}" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                    <TextBlock x:Name="StatusText" Text="—" Foreground="{StaticResource TextSec}" VerticalAlignment="Center"
+                    <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{DynamicResource TextTer}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <TextBlock x:Name="StatusText" Text="—" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"
                                MaxWidth="640" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <ui:Button x:Name="TbDock" Content="Zadokuj do karty" Appearance="Secondary" Click="Dock_Click" Margin="0,0,6,0"
-                               ToolTip="Wstaw sesję z powrotem jako kartę w managerze"/>
-                    <ui:Button x:Name="TbConnect" Content="Połącz" Appearance="Secondary" Click="Connect_Click" Margin="0,0,6,0"/>
-                    <ui:Button x:Name="TbFullscreen" Content="Pełny ekran" Appearance="Secondary" Click="Fullscreen_Click" Margin="0,0,6,0"/>
-                    <ui:Button x:Name="TbDisconnect" Content="Rozłącz" Appearance="Secondary" Click="Disconnect_Click"/>
+                    <ui:Button x:Name="TbDock" Content="{DynamicResource S.dock}" Appearance="Secondary" Click="Dock_Click" Margin="0,0,6,0"
+                               ToolTip="{DynamicResource S.dock.tip}"/>
+                    <ui:Button x:Name="TbConnect" Content="{DynamicResource S.connect}" Appearance="Secondary" Click="Connect_Click" Margin="0,0,6,0"/>
+                    <ui:Button x:Name="TbFullscreen" Content="{DynamicResource S.fullscreen}" Appearance="Secondary" Click="Fullscreen_Click" Margin="0,0,6,0"/>
+                    <ui:Button x:Name="TbDisconnect" Content="{DynamicResource S.disconnect}" Appearance="Secondary" Click="Disconnect_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <Border x:Name="HotZone" Grid.Row="2" Background="Transparent" MouseEnter="HotZone_MouseEnter"/>
 
-        <Grid x:Name="HostContainer" Grid.Row="3" Background="{StaticResource Canvas}">
-            <Border x:Name="Overlay" Visibility="Collapsed" Background="{StaticResource Canvas}">
+        <Grid x:Name="HostContainer" Grid.Row="3" Background="{DynamicResource Canvas}">
+            <Border x:Name="Overlay" Visibility="Collapsed" Background="{DynamicResource Canvas}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
                     <ui:ProgressRing x:Name="Spinner" IsIndeterminate="True" Width="46" Height="46"
                                      Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,0,0,18"/>
-                    <TextBlock x:Name="OverlayTitle" Foreground="{StaticResource TextPrim}" FontSize="16"
+                    <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}" FontSize="16"
                                FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="OverlayMsg" Foreground="{StaticResource TextSec}" HorizontalAlignment="Center"
+                    <TextBlock x:Name="OverlayMsg" Foreground="{DynamicResource TextSec}" HorizontalAlignment="Center"
                                TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                    <ui:Button x:Name="OverlayReconnect" Content="Połącz ponownie" Appearance="Primary"
+                    <ui:Button x:Name="OverlayReconnect" Content="{DynamicResource S.reconnect}" Appearance="Primary"
                                Click="Connect_Click" HorizontalAlignment="Center" Margin="0,18,0,0" Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
@@ -79,23 +68,23 @@
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
             <Border Background="#DD212226" CornerRadius="10" Padding="14,7" Margin="12,4,12,12"
-                    BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1">
                 <Border.Effect><DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/></Border.Effect>
                 <StackPanel Orientation="Horizontal">
                     <Thumb x:Name="FsBarThumb" Width="20" Cursor="SizeWE" DragDelta="FsBarThumb_DragDelta" Margin="0,0,10,0">
                         <Thumb.Template>
                             <ControlTemplate TargetType="Thumb">
                                 <Border Background="Transparent">
-                                    <TextBlock Text="⠿" FontSize="15" Foreground="{StaticResource TextTer}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="⠿" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                                 </Border>
                             </ControlTemplate>
                         </Thumb.Template>
                     </Thumb>
-                    <TextBlock x:Name="FsName" Foreground="{StaticResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Border Width="1" Background="{StaticResource Border}" Margin="12,2"/>
-                    <ui:Button x:Name="FsPinBtn" Content="📌 przypnij" Appearance="Secondary" Click="FsPin_Click" Margin="0,0,6,0"/>
-                    <ui:Button Content="Minimalizuj" Appearance="Secondary" Click="FsMinimize_Click" Margin="0,0,6,0"/>
-                    <ui:Button Content="Przywróć okno" Appearance="Secondary" Click="Fullscreen_Click"/>
+                    <TextBlock x:Name="FsName" Foreground="{DynamicResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
+                    <ui:Button x:Name="FsPinBtn" Content="{DynamicResource S.fs.pin}" Appearance="Secondary" Click="FsPin_Click" Margin="0,0,6,0"/>
+                    <ui:Button Content="{DynamicResource S.tip.minimize}" Appearance="Secondary" Click="FsMinimize_Click" Margin="0,0,6,0"/>
+                    <ui:Button Content="{DynamicResource S.fs.restore}" Appearance="Secondary" Click="Fullscreen_Click"/>
                 </StackPanel>
             </Border>
         </Popup>

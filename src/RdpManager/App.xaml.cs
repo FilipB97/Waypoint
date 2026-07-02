@@ -22,6 +22,9 @@ namespace RdpManager
             };
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
                 LogCrash("AppDomain", args.ExceptionObject as Exception);
+
+            // Zastosuj zapisany motyw i język ZANIM powstanie okno (bez mignięcia).
+            try { var s = SettingsStore.Load(); ThemeManager.Apply(s.Theme); LocalizationManager.Apply(s.Language); } catch { }
         }
 
         private static void LogCrash(string source, Exception ex)

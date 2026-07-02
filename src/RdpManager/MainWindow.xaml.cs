@@ -69,6 +69,12 @@ namespace RdpManager
         private InsertionAdorner _dropAdorner;   // linia „tu wyląduje" na krawędzi wiersza
         private Border _dropRow;                  // wiersz, do którego przypięty jest adorner
 
+        // Klucz sekcji „Przypięte" w AppSettings.CollapsedGroups (nie koliduje z nazwami grup użytkownika).
+        private const string PinnedGroupKey = "__pinned__";
+
+        // Skrót do lokalizowanego tekstu (dla UI budowanego w kodzie: menu, komunikaty).
+        private static string L(string key) => LocalizationManager.S(key);
+
         // Otwarte, samodzielne okna sesji (model wielookienny).
         private readonly System.Collections.Generic.List<SessionWindow> _sessionWindows = new System.Collections.Generic.List<SessionWindow>();
 
@@ -146,15 +152,15 @@ namespace RdpManager
 
         private void SetNav(Button b, Wpf.Ui.Controls.SymbolIcon ico, bool active)
         {
-            b.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
-            ico.Foreground = active ? (Brush)Resources["Accent"] : (Brush)Resources["TextTer"];
+            b.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+            ico.Foreground = active ? (Brush)TryFindResource("Accent") : (Brush)TryFindResource("TextTer");
         }
 
         private void Avatar_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(
-                "Waypoint\nNowoczesny menedżer połączeń RDP (WPF / Fluent).\n\nFolder danych:\n" + SettingsStore.Dir,
-                "O aplikacji", MessageBoxButton.OK, MessageBoxImage.Information);
+                "Waypoint\n" + L("S.msg.about.desc") + "\n\n" + L("S.msg.about.datafolder") + "\n" + SettingsStore.Dir,
+                L("S.nav.about"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // ---------- Zoom interfejsu (Ctrl + kółko / Ctrl +/- / Ctrl 0) ----------
@@ -180,7 +186,7 @@ namespace RdpManager
         {
             if (_settings.ConfirmCloseConnected &&
                 (_sessions.Any(s => s.Connected) || _sessionWindows.Any(w => w.IsConnected)) &&
-                MessageBox.Show("Są aktywne połączenia. Zamknąć aplikację?", "Zamknij",
+                MessageBox.Show(L("S.msg.closeapp"), L("S.msg.closeapp.title"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             {
                 e.Cancel = true;
@@ -205,6 +211,8 @@ namespace RdpManager
         {
             SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
+            SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
+            SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
             SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
             SetAutoReconnect.IsChecked = _settings.AutoReconnect;
@@ -227,10 +235,12 @@ namespace RdpManager
             _settings.ReachabilityIntervalSec = int.TryParse(SetReachInterval.Text.Trim(), out var r) ? Math.Clamp(r, 5, 3600) : 30;
             _settings.ConfirmCloseConnected = SetConfirmClose.IsChecked == true;
             _settings.ConnectionLogEnabled = SetConnLog.IsChecked == true;
+            _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
+            _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
             SettingsStore.Save(_settings);
             ApplySettings();
-            SettingsStatus.Text = "Zapisano ✓";
+            SettingsStatus.Text = L("S.st.saved");
         }
 
         private int ParseColorDepth()
@@ -255,6 +265,9 @@ namespace RdpManager
             {
                 _reachTimer.Stop();
             }
+
+            ThemeManager.Apply(_settings.Theme);
+            LocalizationManager.Apply(_settings.Language);
         }
 
         private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
@@ -271,20 +284,20 @@ namespace RdpManager
         {
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
-                Title = "Eksportuj profil",
-                Filter = "Profil Waypoint (*.json)|*.json",
+                Title = L("S.dlg.exportprofile.title"),
+                Filter = L("S.dlg.profile.filter"),
                 FileName = "rdpmanager-profil.json"
             };
             if (dlg.ShowDialog(this) != true) return;
             try
             {
                 System.IO.File.WriteAllText(dlg.FileName, ProfileBackup.Serialize(_settings, _vm.Servers));
-                SettingsStatus.Text = "Wyeksportowano profil ✓";
+                SettingsStatus.Text = L("S.st.exportedProfile");
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Nie udało się zapisać profilu:\n" + ex.Message,
-                    "Eksport profilu", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(L("S.msg.exportprofile.fail") + "\n" + ex.Message,
+                    L("S.msg.exportprofile.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -292,8 +305,8 @@ namespace RdpManager
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Title = "Importuj profil",
-                Filter = "Profil Waypoint (*.json)|*.json|Wszystkie pliki (*.*)|*.*"
+                Title = L("S.dlg.importprofile.title"),
+                Filter = L("S.dlg.profile.filterAll")
             };
             if (dlg.ShowDialog(this) != true) return;
 
@@ -301,22 +314,21 @@ namespace RdpManager
             try { data = ProfileBackup.Parse(System.IO.File.ReadAllText(dlg.FileName)); }
             catch (Exception ex)
             {
-                MessageBox.Show("Niepoprawny plik profilu:\n" + ex.Message,
-                    "Import profilu", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(L("S.msg.importprofile.bad") + "\n" + ex.Message,
+                    L("S.msg.importprofile.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (data == null)
             {
-                MessageBox.Show("Pusty lub niepoprawny plik profilu.", "Import profilu",
+                MessageBox.Show(L("S.msg.importprofile.empty"), L("S.msg.importprofile.title"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            string prompt = "Zaimportować profil? Serwerów w pliku: " + data.Servers.Count +
-                            " — zastąpi bieżącą listę serwerów i ustawienia.";
+            string prompt = string.Format(L("S.msg.importprofile.confirm"), data.Servers.Count);
             if (_sessions.Count > 0)
-                prompt += "\nOtwarte sesje (" + _sessions.Count + ") zostaną zamknięte.";
-            if (MessageBox.Show(prompt, "Import profilu",
+                prompt += "\n" + string.Format(L("S.msg.importprofile.confirmSessions"), _sessions.Count);
+            if (MessageBox.Show(prompt, L("S.msg.importprofile.title"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
 
@@ -359,7 +371,7 @@ namespace RdpManager
                 RecentPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => OpenServer(s, true)));
             }
             if (!any)
-                RecentPanel.Children.Add(new TextBlock { Text = "Brak ostatnich połączeń.", Foreground = (Brush)Resources["TextTer"] });
+                RecentPanel.Children.Add(new TextBlock { Text = L("S.dash.norecent"), Foreground = (Brush)TryFindResource("TextTer") });
         }
 
         private void BuildDashboard()
@@ -371,14 +383,14 @@ namespace RdpManager
             int open = _sessions.Count + _sessionWindows.Count;
 
             var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 22) };
-            cards.Children.Add(StatCard("Serwery", total.ToString()));
-            cards.Children.Add(StatCard("Osiągalne", online.ToString()));
-            cards.Children.Add(StatCard("Otwarte sesje", open.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.servers"), total.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.reachable"), online.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.opensessions"), open.ToString()));
             DashboardPanel.Children.Add(cards);
 
             DashboardPanel.Children.Add(new TextBlock
             {
-                Text = "Ostatnio używane", Foreground = (Brush)Resources["TextSec"],
+                Text = L("S.dash.recent"), Foreground = (Brush)TryFindResource("TextSec"),
                 FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8)
             });
 
@@ -390,19 +402,19 @@ namespace RdpManager
                 if (++shown >= 5) break;
             }
             if (shown == 0)
-                DashboardPanel.Children.Add(new TextBlock { Text = "Brak historii.", Foreground = (Brush)Resources["TextTer"] });
+                DashboardPanel.Children.Add(new TextBlock { Text = "Brak historii.", Foreground = (Brush)TryFindResource("TextTer") });
         }
 
         private FrameworkElement StatCard(string label, string value)
         {
             var card = new Border
             {
-                Background = (Brush)Resources["Panel"], BorderBrush = (Brush)Resources["Border"], BorderThickness = new Thickness(1),
+                Background = (Brush)TryFindResource("Panel"), BorderBrush = (Brush)TryFindResource("Border"), BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(10), Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
             };
             var sp = new StackPanel();
-            sp.Children.Add(new TextBlock { Text = value, Foreground = (Brush)Resources["Accent"], FontSize = 26, FontWeight = FontWeights.Bold });
-            sp.Children.Add(new TextBlock { Text = label, Foreground = (Brush)Resources["TextSec"], FontSize = 12 });
+            sp.Children.Add(new TextBlock { Text = value, Foreground = (Brush)TryFindResource("Accent"), FontSize = 26, FontWeight = FontWeights.Bold });
+            sp.Children.Add(new TextBlock { Text = label, Foreground = (Brush)TryFindResource("TextSec"), FontSize = 12 });
             card.Child = sp;
             return card;
         }
@@ -440,10 +452,22 @@ namespace RdpManager
             _serverAccent.Clear();
             _serverStatusDot.Clear();
 
+            // Sekcja „Przypięte" na górze — ulubione serwery (kolejność z listy), niezależnie od grupy.
+            var pinned = _vm.Servers.Where(s => s.Pinned && RdpUtils.MatchesFilter(s, filter)).ToList();
+            if (pinned.Count > 0)
+            {
+                bool pinCollapsed = _settings.CollapsedGroups.Contains(PinnedGroupKey);
+                ServerTree.Children.Add(BuildGroupHeader(PinnedGroupKey, pinned.Count, pinCollapsed, isPinned: true));
+                if (!pinCollapsed)
+                    foreach (var s in pinned) ServerTree.Children.Add(BuildServerRow(s));
+            }
+
+            // Zwykłe grupy (bez przypiętych).
             var order = new List<string>();
             var byGroup = new Dictionary<string, List<ServerInfo>>();
             foreach (var s in _vm.Servers)
             {
+                if (s.Pinned) continue;
                 if (!RdpUtils.MatchesFilter(s, filter)) continue;
                 var g = string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group;
                 if (!byGroup.ContainsKey(g)) { order.Add(g); byGroup[g] = new List<ServerInfo>(); }
@@ -451,31 +475,109 @@ namespace RdpManager
             }
             foreach (var g in order)
             {
-                ServerTree.Children.Add(BuildGroupHeader(new ServerGroup { Name = g }));
-                foreach (var s in byGroup[g])
-                    ServerTree.Children.Add(BuildServerRow(s));
+                bool collapsed = _settings.CollapsedGroups.Contains(g);
+                ServerTree.Children.Add(BuildGroupHeader(g, byGroup[g].Count, collapsed, isPinned: false));
+                if (!collapsed)
+                    foreach (var s in byGroup[g])
+                        ServerTree.Children.Add(BuildServerRow(s));
             }
             UpdateActiveRows();
         }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RenderTree(SearchBox.Text);
 
-        private FrameworkElement BuildGroupHeader(ServerGroup group)
+        private FrameworkElement BuildGroupHeader(string name, int count, bool collapsed, bool isPinned)
         {
-            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(6, 10, 6, 4) };
-            sp.Children.Add(new Ellipse
+            var row = new Border
             {
-                Width = 6, Height = 6, Fill = GroupDotBrush(group.Name),
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
-            });
+                Padding = new Thickness(6, 10, 6, 4),
+                Background = Brushes.Transparent,
+                Cursor = Cursors.Hand
+            };
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+
+            // Strzałka zwijania (▸ zwinięte / ▾ rozwinięte).
             sp.Children.Add(new TextBlock
             {
-                Text = group.Name.ToUpperInvariant(),
-                Foreground = (Brush)Resources["TextSec"],
+                Text = collapsed ? "▸" : "▾",
+                Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10, Width = 12,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            if (isPinned)
+                sp.Children.Add(new TextBlock
+                {
+                    Text = "★", Foreground = (Brush)TryFindResource("Idle"), FontSize = 11,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+                });
+            else
+                sp.Children.Add(new Ellipse
+                {
+                    Width = 6, Height = 6, Fill = GroupDotBrush(name),
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+                });
+
+            sp.Children.Add(new TextBlock
+            {
+                Text = (isPinned ? L("S.group.pinned") : name.ToUpperInvariant()) + "  ·  " + count,
+                Foreground = (Brush)TryFindResource("TextSec"),
                 FontSize = 11.5, FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
             });
-            return sp;
+
+            row.Child = sp;
+
+            string key = isPinned ? PinnedGroupKey : name;
+            row.MouseLeftButtonUp += (s, e) => ToggleGroupCollapse(key);
+
+            if (!isPinned)
+            {
+                var menu = new ContextMenu();
+                var rename = new MenuItem { Header = L("S.m.renamegroup") };
+                rename.Click += (s, e) => RenameGroup(name);
+                menu.Items.Add(rename);
+                row.ContextMenu = menu;
+            }
+            return row;
+        }
+
+        // Zwija/rozwija grupę i zapamiętuje stan w ustawieniach.
+        private void ToggleGroupCollapse(string key)
+        {
+            if (!_settings.CollapsedGroups.Remove(key)) _settings.CollapsedGroups.Add(key);
+            SettingsStore.Save(_settings);
+            RenderTree(SearchBox.Text);
+        }
+
+        // Zmienia nazwę grupy dla WSZYSTKICH jej serwerów naraz (bez wchodzenia w każdy z osobna).
+        private void RenameGroup(string oldName)
+        {
+            var dlg = new InputDialog(L("S.prompt.renamegroup.title"),
+                string.Format(L("S.prompt.renamegroup.label"), oldName), oldName) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+
+            string newName = dlg.Value;
+            if (string.IsNullOrWhiteSpace(newName) || newName == oldName) return;
+
+            foreach (var s in _vm.Servers)
+                if ((string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group) == oldName)
+                    s.Group = newName;
+
+            // Przenieś stan zwinięcia na nową nazwę.
+            if (_settings.CollapsedGroups.Remove(oldName) && !_settings.CollapsedGroups.Contains(newName))
+                _settings.CollapsedGroups.Add(newName);
+            SettingsStore.Save(_settings);
+
+            PersistServers();
+            RenderTree(SearchBox.Text);
+        }
+
+        // Przypina/odpina serwer (sekcja „Przypięte" na górze).
+        private void TogglePin(ServerInfo server)
+        {
+            server.Pinned = !server.Pinned;
+            PersistServers();
+            RenderTree(SearchBox.Text);
         }
 
         private FrameworkElement BuildServerRow(ServerInfo server)
@@ -498,7 +600,7 @@ namespace RdpManager
 
             var accent = new Rectangle
             {
-                Width = 3, RadiusX = 1.5, RadiusY = 1.5, Fill = (Brush)Resources["Accent"],
+                Width = 3, RadiusX = 1.5, RadiusY = 1.5, Fill = (Brush)TryFindResource("Accent"),
                 VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(0, 2, 0, 2),
                 Visibility = Visibility.Collapsed
             };
@@ -519,11 +621,11 @@ namespace RdpManager
             grid.Children.Add(avatar);
 
             var meta = new StackPanel { Margin = new Thickness(9, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = (Brush)Resources["TextPrim"], FontSize = 12.5 });
+            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5 });
             meta.Children.Add(new TextBlock
             {
-                Text = server.Host, Foreground = (Brush)Resources["TextTer"], FontSize = 10.5,
-                FontFamily = (FontFamily)Resources["Mono"], TextTrimming = TextTrimming.CharacterEllipsis
+                Text = server.Host, Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10.5,
+                FontFamily = (FontFamily)TryFindResource("Mono"), TextTrimming = TextTrimming.CharacterEllipsis
             });
             Grid.SetColumn(meta, 2);
             grid.Children.Add(meta);
@@ -533,13 +635,22 @@ namespace RdpManager
                 Width = 7, Height = 7, Fill = StatusBrush(server.Status),
                 VerticalAlignment = VerticalAlignment.Center
             };
-            Grid.SetColumn(status, 3);
-            grid.Children.Add(status);
             _serverStatusDot[server] = status;
+
+            var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            if (server.Pinned)
+                right.Children.Add(new TextBlock
+                {
+                    Text = "★", Foreground = (Brush)TryFindResource("Idle"), FontSize = 10,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+                });
+            right.Children.Add(status);
+            Grid.SetColumn(right, 3);
+            grid.Children.Add(right);
 
             row.Child = grid;
 
-            row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)Resources["Elevated"]; };
+            row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
             row.MouseLeave += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
 
             // Drag&drop: przeciągnięcie zmienia kolejność (a upuszczenie na inną grupę przenosi do niej).
@@ -580,27 +691,32 @@ namespace RdpManager
             };
 
             var menu = new ContextMenu();
-            var newWinItem = new MenuItem { Header = "Otwórz w nowym oknie" };
+            var pinItem = new MenuItem { Header = L(server.Pinned ? "S.m.unpin" : "S.m.pin") };
+            pinItem.Click += (s, e) => TogglePin(server);
+            var newWinItem = new MenuItem { Header = L("S.m.newwin") };
             newWinItem.Click += (s, e) => OpenInNewWindow(server);
-            var connectAsItem = new MenuItem { Header = "Połącz jako…" };
+            var connectAsItem = new MenuItem { Header = L("S.m.connectas") };
             connectAsItem.Click += (s, e) =>
             {
                 OpenServer(server);
-                if (_active?.Server == server) PromptAndConnect(_active, "Połącz z innymi poświadczeniami.");
+                if (_active?.Server == server) PromptAndConnect(_active, L("S.prompt.connectas"));
             };
-            var editItem = new MenuItem { Header = "Edytuj…" };
+            var editItem = new MenuItem { Header = L("S.m.edit") };
             editItem.Click += (s, e) => EditServer(server);
-            var diagItem = new MenuItem { Header = "Diagnostyka…" };
+            var diagItem = new MenuItem { Header = L("S.m.diag") };
             diagItem.Click += (s, e) => DiagnoseServer(server);
-            var exportItem = new MenuItem { Header = "Eksportuj .rdp…" };
+            var exportItem = new MenuItem { Header = L("S.m.exportrdp") };
             exportItem.Click += (s, e) => ExportRdp(server);
-            var delItem = new MenuItem { Header = "Usuń" };
+            var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
+            menu.Items.Add(pinItem);
+            menu.Items.Add(new Separator());
             menu.Items.Add(newWinItem);
             menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(diagItem);
             menu.Items.Add(exportItem);
+            menu.Items.Add(new Separator());
             menu.Items.Add(delItem);
             row.ContextMenu = menu;
 
@@ -614,7 +730,7 @@ namespace RdpManager
             foreach (var kv in _serverRows)
             {
                 bool active = _active != null && _active.Server == kv.Key;
-                kv.Value.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
+                kv.Value.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
                 _serverAccent[kv.Key].Visibility = active ? Visibility.Visible : Visibility.Collapsed;
             }
         }
@@ -654,7 +770,7 @@ namespace RdpManager
                 return;
             }
             ClearDropIndicator();
-            _dropAdorner = new InsertionAdorner(row, (Brush)Resources["Accent"]) { AtBottom = bottom };
+            _dropAdorner = new InsertionAdorner(row, (Brush)TryFindResource("Accent")) { AtBottom = bottom };
             layer.Add(_dropAdorner);
             _dropRow = row;
         }
@@ -672,7 +788,7 @@ namespace RdpManager
         {
             if (server == null || !_serverRows.TryGetValue(server, out var row)) return;
 
-            Color accent = (Resources["Accent"] as SolidColorBrush)?.Color ?? Color.FromRgb(0x29, 0xC5, 0xD6);
+            Color accent = (TryFindResource("Accent") as SolidColorBrush)?.Color ?? Color.FromRgb(0x29, 0xC5, 0xD6);
             var brush = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
             row.Background = brush;
 
@@ -685,7 +801,7 @@ namespace RdpManager
             anim.Completed += (s, e) =>
             {
                 bool active = _active != null && _active.Server == server;
-                row.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
+                row.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
             };
             brush.BeginAnimation(SolidColorBrush.ColorProperty, anim);
         }
@@ -776,10 +892,10 @@ namespace RdpManager
             bool connecting = _active.StatusKind == StatusKind.Connecting;
             OverlaySpinner.Visibility = connecting ? Visibility.Visible : Visibility.Collapsed;
             OverlayReconnect.Visibility = connecting ? Visibility.Collapsed : Visibility.Visible;
-            OverlayReconnect.Content = "Połącz ponownie";
+            OverlayReconnect.Content = L("S.reconnect");
             OverlayTitle.Text = connecting
-                ? "Łączenie z " + _active.Server.Host + "…"
-                : (_active.StatusKind == StatusKind.Error ? "Rozłączono" : "Gotowe do połączenia");
+                ? string.Format(L("S.st.connecting"), _active.Server.Host)
+                : (_active.StatusKind == StatusKind.Error ? L("S.st.disconnectedShort") : L("S.st.ready"));
             OverlayMsg.Text = connecting ? "" : _active.Status;
         }
 
@@ -830,7 +946,7 @@ namespace RdpManager
             });
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = (Brush)Resources["TextPrim"], FontSize = 12.5,
+                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -845,7 +961,7 @@ namespace RdpManager
             content.Children.Add(tabDot);
             var close = new TextBlock
             {
-                Text = "✕", Foreground = (Brush)Resources["TextTer"], FontSize = 12,
+                Text = "✕", Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12,
                 Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand
             };
             close.MouseLeftButtonUp += (s, e) => { e.Handled = true; RequestCloseSession(session); };
@@ -854,7 +970,7 @@ namespace RdpManager
 
             var underline = new Rectangle
             {
-                Height = 2, Fill = (Brush)Resources["Accent"], RadiusX = 1, RadiusY = 1,
+                Height = 2, Fill = (Brush)TryFindResource("Accent"), RadiusX = 1, RadiusY = 1,
                 VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 6, 0),
                 Visibility = Visibility.Collapsed
             };
@@ -864,17 +980,17 @@ namespace RdpManager
             tab.MouseLeftButtonUp += (s, e) => Activate(session);
 
             var tabMenu = new ContextMenu();
-            var tearItem = new MenuItem { Header = "Wyciągnij do osobnego okna" };
+            var tearItem = new MenuItem { Header = L("S.m.tearoff") };
             tearItem.Click += (s, e) => TearOffToWindow(session);
-            var dupItem = new MenuItem { Header = "Duplikuj" };
+            var dupItem = new MenuItem { Header = L("S.m.duplicate") };
             dupItem.Click += (s, e) => DuplicateSession(session);
-            var moveLeft = new MenuItem { Header = "Przesuń w lewo" };
+            var moveLeft = new MenuItem { Header = L("S.m.moveleft") };
             moveLeft.Click += (s, e) => MoveTab(session, -1);
-            var moveRight = new MenuItem { Header = "Przesuń w prawo" };
+            var moveRight = new MenuItem { Header = L("S.m.moveright") };
             moveRight.Click += (s, e) => MoveTab(session, +1);
-            var closeOthers = new MenuItem { Header = "Zamknij pozostałe" };
+            var closeOthers = new MenuItem { Header = L("S.m.closeothers") };
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
-            var closeThis = new MenuItem { Header = "Zamknij" };
+            var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => RequestCloseSession(session);
             tabMenu.Items.Add(tearItem);
             tabMenu.Items.Add(dupItem);
@@ -896,8 +1012,8 @@ namespace RdpManager
             {
                 if (!(s.TabButton is Border b)) continue;
                 bool active = s == _active;
-                b.Background = active ? (Brush)Resources["Panel"] : Brushes.Transparent;
-                b.BorderBrush = active ? (Brush)Resources["Border"] : Brushes.Transparent;
+                b.Background = active ? (Brush)TryFindResource("Panel") : Brushes.Transparent;
+                b.BorderBrush = active ? (Brush)TryFindResource("Border") : Brushes.Transparent;
                 if (_tabUnderline.TryGetValue(s, out var u))
                     u.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
             }
@@ -932,8 +1048,8 @@ namespace RdpManager
             int connected = others.Count(s => s.Connected);
             // Jedno zbiorcze potwierdzenie zamiast dialogu per sesja.
             if (connected > 0 && _settings.ConfirmCloseConnected &&
-                MessageBox.Show("Zamknąć pozostałe sesje? Połączonych: " + connected + ".",
-                    "Zamknij pozostałe", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                MessageBox.Show(string.Format(L("S.msg.closeothers"), connected),
+                    L("S.m.closeothers"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
             foreach (var s in others) CloseSession(s);
         }
@@ -958,7 +1074,7 @@ namespace RdpManager
         private void RequestCloseSession(Session session)
         {
             if (session.Connected && _settings.ConfirmCloseConnected &&
-                MessageBox.Show("Zamknąć połączoną sesję \"" + session.Server.Name + "\"?", "Zamknij sesję",
+                MessageBox.Show(string.Format(L("S.msg.closesession"), session.Server.Name), L("S.msg.closesession.title"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
             CloseSession(session);
@@ -1088,11 +1204,11 @@ namespace RdpManager
                 }
 
                 s.Rdp.Connect();
-                SetSessionStatus(s, "Łączenie z " + s.Server.Host + "…", StatusKind.Connecting);
+                SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
             }
             catch (Exception ex)
             {
-                SetSessionStatus(s, "Wyjątek: " + ex.Message, StatusKind.Error);
+                SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
             }
         }
 
@@ -1118,14 +1234,14 @@ namespace RdpManager
         private void Disconnect_Click(object sender, RoutedEventArgs e)
         {
             if (_active == null) return;
-            try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, "Rozłączanie: " + ex.Message, StatusKind.Error); }
+            try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
         }
 
         private void WireEvents(Session s)
         {
             s.Rdp.OnConnecting += (o, a) =>
             {
-                SetSessionStatus(s, "Łączenie…", StatusKind.Connecting);
+                SetSessionStatus(s, L("S.st.connectingShort"), StatusKind.Connecting);
                 SetTabStatus(s, ServerStatus.Idle);
                 if (s == _active) UpdateCanvas();
             };
@@ -1135,7 +1251,7 @@ namespace RdpManager
                 RecordRecent(s.Server);
                 ConnectionLog.Append("CONNECTED", s.Server);
                 SetTabStatus(s, ServerStatus.Online);
-                SetSessionStatus(s, "● Połączono", StatusKind.Ok);
+                SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             };
             s.Rdp.OnLoginComplete += (o, a) =>
@@ -1157,12 +1273,12 @@ namespace RdpManager
                 // zapisane w Credential Managerze. Ponowne połączenie wymaga wpisania go na nowo.
                 if (!s.Server.SavePassword) s.Password = "";
 
-                string msg = "Rozłączono: " + DescribeDisconnect(s.Rdp, a.discReason);
+                string msg = string.Format(L("S.st.disconnected"), DescribeDisconnect(s.Rdp, a.discReason));
                 if (!wasLoggedIn)
                 {
-                    msg += s.Server.UseWindowsAccount
-                        ? "  Wskazówka: konto Windows może nie mieć dostępu do hosta — odznacz „Konto Windows” i podaj login/hasło."
-                        : "  Wskazówka: sprawdź login, hasło, domenę i dostępność hosta.";
+                    msg += "  " + (s.Server.UseWindowsAccount
+                        ? L("S.st.hint.winauth")
+                        : L("S.st.hint.creds"));
                 }
                 SetSessionStatus(s, msg, StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
@@ -1171,14 +1287,14 @@ namespace RdpManager
             {
                 s.Connected = false;
                 SetTabStatus(s, ServerStatus.Offline);
-                SetSessionStatus(s, "Błąd krytyczny (errorCode " + a.errorCode + ")", StatusKind.Error);
+                SetSessionStatus(s, string.Format(L("S.st.fatal"), a.errorCode), StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             };
             // Fullscreen kontrolki (ścieżka multimon) — tylko komunikaty statusu.
             s.Rdp.OnEnterFullScreenMode += (o, a) =>
-                SetSessionStatus(s, "Pełny ekran (wszystkie monitory) — Ctrl+Alt+Break lub pasek połączenia, by wrócić.", StatusKind.Info);
+                SetSessionStatus(s, L("S.st.multimon"), StatusKind.Info);
             s.Rdp.OnLeaveFullScreenMode += (o, a) =>
-                SetSessionStatus(s, "● Połączono", StatusKind.Ok);
+                SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
         }
 
         private void SetTabStatus(Session s, ServerStatus status)
@@ -1475,7 +1591,7 @@ namespace RdpManager
             FsFlyoutSearch.Text = "";
             BuildFlyoutLists("");
             FsFlyout.Visibility = Visibility.Visible;
-            InnyBtn.Content = "inne połączenia  ▴";
+            InnyBtn.Content = L("S.fs.others.up");
             // Fokus na szukajkę zaraz po wyrenderowaniu popupu (dostępność klawiaturowa).
             FsFlyoutSearch.Dispatcher.BeginInvoke(
                 new Action(() => FsFlyoutSearch.Focus()), DispatcherPriority.Input);
@@ -1484,7 +1600,7 @@ namespace RdpManager
         private void TogglePin_Click(object sender, RoutedEventArgs e)
         {
             _fsPinned = !_fsPinned;
-            PinBtn.Content = _fsPinned ? "📌 przypięte" : "📌 przypnij";
+            PinBtn.Content = _fsPinned ? L("S.fs.pinned") : L("S.fs.pin");
             if (_fsPinned) FsPopup.IsOpen = true;   // przypięty pasek pozostaje widoczny
         }
 
@@ -1501,7 +1617,7 @@ namespace RdpManager
         private void CollapseFlyout()
         {
             FsFlyout.Visibility = Visibility.Collapsed;
-            InnyBtn.Content = "inne połączenia  ▾";
+            InnyBtn.Content = L("S.fs.others");
         }
 
         private void FsFlyoutSearch_TextChanged(object sender, TextChangedEventArgs e)
@@ -1543,7 +1659,7 @@ namespace RdpManager
             {
                 Padding = new Thickness(7, 6, 7, 6),
                 CornerRadius = new CornerRadius(7),
-                Background = isActive ? (Brush)Resources["AccentSoft"] : Brushes.Transparent,
+                Background = isActive ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Thickness(0, 1, 0, 1)
             };
@@ -1567,7 +1683,7 @@ namespace RdpManager
 
             var name = new TextBlock
             {
-                Text = server.Name, Foreground = (Brush)Resources["TextPrim"], FontSize = 12,
+                Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             Grid.SetColumn(name, 1);
@@ -1578,7 +1694,7 @@ namespace RdpManager
             grid.Children.Add(dot);
 
             row.Child = grid;
-            row.MouseEnter += (s, e) => { if (!isActive) row.Background = (Brush)Resources["Elevated"]; };
+            row.MouseEnter += (s, e) => { if (!isActive) row.Background = (Brush)TryFindResource("Elevated"); };
             row.MouseLeave += (s, e) => { if (!isActive) row.Background = Brushes.Transparent; };
             row.MouseLeftButtonUp += (s, e) => { e.Handled = true; onClick(); };
             return row;
@@ -1653,6 +1769,28 @@ namespace RdpManager
 
         // ---------- Pomocnicze ----------
 
+        // Szybkie połączenie: łączy od razu, BEZ zapisywania serwera na liście (sesja tymczasowa).
+        private void QuickConnect_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new InputDialog(L("S.quickConnect"),
+                L("S.prompt.quickconnect.label"), "") { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+
+            var (host, port, user, domain) = RdpUtils.ParseQuickConnect(dlg.Value, _settings.DefaultPort);
+            if (string.IsNullOrWhiteSpace(host)) return;
+
+            var srv = new ServerInfo
+            {
+                Name = host, Host = host, Port = port, Username = user, Domain = domain,
+                Group = "Szybkie", Status = ServerStatus.Offline
+            };
+            srv.Initials = RdpUtils.MakeInitials(srv.Name);
+
+            // Tymczasowy — nie trafia do _vm.Servers ani do JSON; otwieramy sesję i łączymy
+            // (jeśli brak poświadczeń, zapyta o nie prompt).
+            OpenServer(srv, autoConnect: true, forceNew: true);
+        }
+
         private void AddServer_Click(object sender, RoutedEventArgs e)
         {
             var server = new ServerInfo { Group = "Serwery", Status = ServerStatus.Offline, Port = _settings.DefaultPort };
@@ -1671,8 +1809,8 @@ namespace RdpManager
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Title = "Importuj plik .rdp",
-                Filter = "Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp|Wszystkie pliki (*.*)|*.*",
+                Title = L("S.dlg.importrdp.title"),
+                Filter = L("S.dlg.rdp.filterAll"),
                 Multiselect = true
             };
             if (dlg.ShowDialog(this) != true) return;
@@ -1692,8 +1830,8 @@ namespace RdpManager
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Nie udało się zaimportować \"" + System.IO.Path.GetFileName(path) + "\":\n" + ex.Message,
-                        "Import .rdp", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(string.Format(L("S.msg.importrdp.fail"), System.IO.Path.GetFileName(path)) + "\n" + ex.Message,
+                        L("S.msg.importrdp.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
 
@@ -1702,7 +1840,7 @@ namespace RdpManager
                 PersistServers();
                 RenderTree(SearchBox.Text);
                 CheckReachabilityAsync();
-                SetStatus("Zaimportowano serwerów: " + imported, StatusKind.Ok);
+                SetStatus(string.Format(L("S.st.imported"), imported), StatusKind.Ok);
             }
         }
 
@@ -1714,15 +1852,15 @@ namespace RdpManager
             try { entries = MstscHistory.Read(); }
             catch (Exception ex)
             {
-                MessageBox.Show("Nie udało się odczytać historii mstsc:\n" + ex.Message,
-                    "Import z mstsc", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(L("S.msg.mstsc.readfail") + "\n" + ex.Message,
+                    L("S.msg.mstsc.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (entries.Count == 0)
             {
-                MessageBox.Show("Nie znaleziono historii połączeń mstsc w tym profilu Windows.",
-                    "Import z mstsc", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(L("S.msg.mstsc.none"),
+                    L("S.msg.mstsc.title"), MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1762,15 +1900,14 @@ namespace RdpManager
                 PersistServers();
                 RenderTree(SearchBox.Text);
                 CheckReachabilityAsync();
-                SetStatus("Zaimportowano z mstsc: " + added, StatusKind.Ok);
+                SetStatus(string.Format(L("S.st.importedMstsc"), added), StatusKind.Ok);
             }
 
             MessageBox.Show(
-                "Zaimportowano połączeń z mstsc: " + added +
-                (skipped > 0 ? "\nPominięto już istniejące: " + skipped : "") +
-                "\n\nHasła nie są przenoszone (mstsc trzyma je w sejfie Windows pod innym kluczem) — " +
-                "podasz je przy pierwszym połączeniu.",
-                "Import z mstsc", MessageBoxButton.OK,
+                string.Format(L("S.msg.mstsc.summary"), added) +
+                (skipped > 0 ? "\n" + string.Format(L("S.msg.mstsc.skipped"), skipped) : "") +
+                "\n\n" + L("S.msg.mstsc.nopass"),
+                L("S.msg.mstsc.title"), MessageBoxButton.OK,
                 added > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
@@ -1778,8 +1915,8 @@ namespace RdpManager
         {
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
-                Title = "Eksportuj do .rdp",
-                Filter = "Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp",
+                Title = L("S.dlg.exportrdp.title"),
+                Filter = L("S.dlg.rdp.filter"),
                 FileName = MakeSafeFileName(server.Name ?? server.Host ?? "serwer") + ".rdp"
             };
             if (dlg.ShowDialog(this) != true) return;
@@ -1787,12 +1924,12 @@ namespace RdpManager
             try
             {
                 System.IO.File.WriteAllText(dlg.FileName, RdpFile.Serialize(server));
-                SetStatus("Wyeksportowano do " + System.IO.Path.GetFileName(dlg.FileName), StatusKind.Ok);
+                SetStatus(string.Format(L("S.st.exported"), System.IO.Path.GetFileName(dlg.FileName)), StatusKind.Ok);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Nie udało się zapisać pliku:\n" + ex.Message,
-                    "Eksport .rdp", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(L("S.msg.exportrdp.fail") + "\n" + ex.Message,
+                    L("S.msg.exportrdp.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1829,7 +1966,7 @@ namespace RdpManager
 
         private void DeleteServer(ServerInfo server)
         {
-            if (MessageBox.Show("Usunąć serwer \"" + server.Name + "\"?", "Usuń serwer",
+            if (MessageBox.Show(string.Format(L("S.msg.delete"), server.Name), L("S.msg.delete.title"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
 
@@ -1857,9 +1994,9 @@ namespace RdpManager
         {
             switch (group)
             {
-                case "Produkcja": return (Brush)Resources["AvProd"];
-                case "Staging": return (Brush)Resources["AvStaging"];
-                case "Klienci": return (Brush)Resources["AvClient"];
+                case "Produkcja": return (Brush)TryFindResource("AvProd");
+                case "Staging": return (Brush)TryFindResource("AvStaging");
+                case "Klienci": return (Brush)TryFindResource("AvClient");
             }
             var key = group ?? "";
             if (!_avatarCache.TryGetValue(key, out var b))
@@ -1878,13 +2015,13 @@ namespace RdpManager
         {
             switch (group)
             {
-                case "Produkcja": return (Brush)Resources["GdProd"];
-                case "Staging": return (Brush)Resources["GdStaging"];
-                case "Klienci": return (Brush)Resources["GdClient"];
+                case "Produkcja": return (Brush)TryFindResource("GdProd");
+                case "Staging": return (Brush)TryFindResource("GdStaging");
+                case "Klienci": return (Brush)TryFindResource("GdClient");
             }
             return AvatarBrush(group) is LinearGradientBrush g
                 ? new SolidColorBrush(g.GradientStops[0].Color)
-                : (Brush)Resources["GdClient"];
+                : (Brush)TryFindResource("GdClient");
         }
 
         private static int StableHash(string s)
@@ -1898,9 +2035,9 @@ namespace RdpManager
         {
             switch (status)
             {
-                case ServerStatus.Online: return (Brush)Resources["Online"];
-                case ServerStatus.Idle: return (Brush)Resources["Idle"];
-                default: return (Brush)Resources["Offline"];
+                case ServerStatus.Online: return (Brush)TryFindResource("Online");
+                case ServerStatus.Idle: return (Brush)TryFindResource("Idle");
+                default: return (Brush)TryFindResource("Offline");
             }
         }
 
@@ -1940,18 +2077,19 @@ namespace RdpManager
             int port = server.Port;
             if (string.IsNullOrWhiteSpace(host))
             {
-                MessageBox.Show("Serwer nie ma ustawionego hosta.", "Diagnostyka", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(L("S.msg.diag.nohost"), L("S.msg.diag.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            SetStatus("Diagnostyka " + host + ":" + port + "…", StatusKind.Connecting);
+            SetStatus(string.Format(L("S.st.diagnosing"), host, port), StatusKind.Connecting);
             var sw = System.Diagnostics.Stopwatch.StartNew();
             bool ok = await Task.Run(() => Probe(host, port) == ServerStatus.Online);
             sw.Stop();
 
-            string msg = RdpUtils.FormatDiagnostics(host, port, ok, sw.ElapsedMilliseconds);
+            string msg = RdpUtils.FormatDiagnostics(host, port, ok, sw.ElapsedMilliseconds,
+                L("S.diag.open"), L("S.diag.closed"));
             SetStatus(msg, ok ? StatusKind.Ok : StatusKind.Error);
-            MessageBox.Show(msg, "Diagnostyka — " + (server.Name ?? host),
+            MessageBox.Show(msg, string.Format(L("S.msg.diag.titlefmt"), server.Name ?? host),
                 MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
@@ -2007,10 +2145,10 @@ namespace RdpManager
         {
             switch (kind)
             {
-                case StatusKind.Connecting: return (Brush)Resources["Idle"];
-                case StatusKind.Ok: return (Brush)Resources["Online"];
-                case StatusKind.Error: return (Brush)Resources["Danger"];
-                default: return (Brush)Resources["TextSec"];
+                case StatusKind.Connecting: return (Brush)TryFindResource("Idle");
+                case StatusKind.Ok: return (Brush)TryFindResource("Online");
+                case StatusKind.Error: return (Brush)TryFindResource("Danger");
+                default: return (Brush)TryFindResource("TextSec");
             }
         }
     }

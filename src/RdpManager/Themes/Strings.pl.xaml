@@ -1,0 +1,198 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <!-- Teksty PL. Klucze wspólne z Strings.en.xaml; przełączane w runtime przez LocalizationManager. -->
+    <sys:String x:Key="S.nav.dashboard">Pulpit</sys:String>
+    <sys:String x:Key="S.nav.sessions">Połączenia</sys:String>
+    <sys:String x:Key="S.nav.recent">Ostatnie</sys:String>
+    <sys:String x:Key="S.nav.about">O aplikacji</sys:String>
+    <sys:String x:Key="S.nav.settings">Ustawienia</sys:String>
+
+    <sys:String x:Key="S.search">Szukaj serwera…</sys:String>
+    <sys:String x:Key="S.quickConnect">Szybkie połączenie</sys:String>
+    <sys:String x:Key="S.quickConnect.tip">Połącz bez zapisywania — podaj host, host:port, user@host lub DOMENA\user@host</sys:String>
+    <sys:String x:Key="S.addServer">+ Dodaj serwer</sys:String>
+    <sys:String x:Key="S.importRdp">Importuj .rdp</sys:String>
+    <sys:String x:Key="S.importMstsc">Importuj z mstsc</sys:String>
+    <sys:String x:Key="S.importMstsc.tip">Zaciągnij historię połączeń wbudowanego klienta RDP (Windows)</sys:String>
+
+    <sys:String x:Key="S.view.recent">Ostatnie połączenia</sys:String>
+
+    <sys:String x:Key="S.set.iface">Interfejs</sys:String>
+    <sys:String x:Key="S.set.uiscale">Skala interfejsu (%) — także Ctrl + kółko myszy</sys:String>
+    <sys:String x:Key="S.set.bardelay">Opóźnienie paska pełnoekranowego (ms)</sys:String>
+    <sys:String x:Key="S.set.theme">Motyw</sys:String>
+    <sys:String x:Key="S.theme.dark">Ciemny</sys:String>
+    <sys:String x:Key="S.theme.light">Jasny</sys:String>
+    <sys:String x:Key="S.theme.system">Systemowy</sys:String>
+    <sys:String x:Key="S.set.language">Język / Language</sys:String>
+    <sys:String x:Key="S.set.conn">Połączenie</sys:String>
+    <sys:String x:Key="S.set.port">Domyślny port RDP</sys:String>
+    <sys:String x:Key="S.set.colordepth">Domyślna głębia kolorów (bit)</sys:String>
+    <sys:String x:Key="S.set.autoreconnect">Automatycznie wznawiaj zerwane połączenie</sys:String>
+    <sys:String x:Key="S.set.behavior">Zachowanie</sys:String>
+    <sys:String x:Key="S.set.reach">Sprawdzaj osiągalność serwerów w tle</sys:String>
+    <sys:String x:Key="S.set.reachinterval">Interwał sprawdzania (s)</sys:String>
+    <sys:String x:Key="S.set.confirmclose">Pytaj przed zamknięciem połączonej sesji</sys:String>
+    <sys:String x:Key="S.set.connlog">Zapisuj dziennik audytu połączeń (bez haseł)</sys:String>
+    <sys:String x:Key="S.set.data">Dane aplikacji</sys:String>
+    <sys:String x:Key="S.set.openfolder">Otwórz folder</sys:String>
+    <sys:String x:Key="S.set.exportprofile">Eksportuj profil…</sys:String>
+    <sys:String x:Key="S.set.importprofile">Importuj profil…</sys:String>
+    <sys:String x:Key="S.set.backupnote">Kopia zawiera serwery i ustawienia (bez haseł — te zostają w Windows Credential Manager).</sys:String>
+    <sys:String x:Key="S.set.save">Zapisz ustawienia</sys:String>
+
+    <!-- pass 2: pasek połączenia, kanwa, pasek pełnoekranowy -->
+    <sys:String x:Key="S.winauth">Konto Windows</sys:String>
+    <sys:String x:Key="S.pass">Hasło</sys:String>
+    <sys:String x:Key="S.connect">Połącz</sys:String>
+    <sys:String x:Key="S.disconnect">Rozłącz</sys:String>
+    <sys:String x:Key="S.fullscreen">Pełny ekran</sys:String>
+    <sys:String x:Key="S.reconnect">Połącz ponownie</sys:String>
+    <sys:String x:Key="S.connected">● Połączono</sys:String>
+    <sys:String x:Key="S.tip.fullscreen">Pełny ekran (na tym monitorze)</sys:String>
+    <sys:String x:Key="S.tip.minimize">Minimalizuj</sys:String>
+    <sys:String x:Key="S.emptyhint">Wybierz serwer z listy po lewej, aby otworzyć sesję.</sys:String>
+    <sys:String x:Key="S.fs.drag">Przeciągnij, aby przesunąć pasek</sys:String>
+    <sys:String x:Key="S.fs.others">inne połączenia  ▾</sys:String>
+    <sys:String x:Key="S.fs.others.up">inne połączenia  ▴</sys:String>
+    <sys:String x:Key="S.fs.pin">📌 przypnij</sys:String>
+    <sys:String x:Key="S.fs.pinned">📌 przypięte</sys:String>
+    <sys:String x:Key="S.fs.restore">Przywróć okno</sys:String>
+    <sys:String x:Key="S.fs.opensessions">OTWARTE SESJE</sys:String>
+    <sys:String x:Key="S.fs.allservers">WSZYSTKIE SERWERY</sys:String>
+
+    <!-- okno sesji -->
+    <sys:String x:Key="S.dock">Zadokuj do karty</sys:String>
+    <sys:String x:Key="S.dock.tip">Wstaw sesję z powrotem jako kartę w managerze</sys:String>
+
+    <!-- dialog: serwer -->
+    <sys:String x:Key="S.se.title">Serwer</sys:String>
+    <sys:String x:Key="S.se.name">Nazwa</sys:String>
+    <sys:String x:Key="S.se.group">Grupa</sys:String>
+    <sys:String x:Key="S.se.winauth">Logowanie kontem Windows (bez loginu/hasła)</sys:String>
+    <sys:String x:Key="S.se.user">Użytkownik</sys:String>
+    <sys:String x:Key="S.se.domain">Domena</sys:String>
+    <sys:String x:Key="S.se.savepass">Zapisz hasło (Windows Credential Manager)</sys:String>
+    <sys:String x:Key="S.se.redir">Przekierowania</sys:String>
+    <sys:String x:Key="S.se.clipboard">Schowek</sys:String>
+    <sys:String x:Key="S.se.drives">Dyski</sys:String>
+    <sys:String x:Key="S.se.printers">Drukarki</sys:String>
+    <sys:String x:Key="S.se.audio">Dźwięk</sys:String>
+    <sys:String x:Key="S.se.audio0">Odtwarzaj na tym komputerze</sys:String>
+    <sys:String x:Key="S.se.audio1">Nie odtwarzaj</sys:String>
+    <sys:String x:Key="S.se.audio2">Odtwarzaj na serwerze</sys:String>
+    <sys:String x:Key="S.se.authlvl">Weryfikacja serwera</sys:String>
+    <sys:String x:Key="S.se.auth0">Nie sprawdzaj (niezalecane)</sys:String>
+    <sys:String x:Key="S.se.auth1">Wymagaj — odrzuć przy błędzie</sys:String>
+    <sys:String x:Key="S.se.auth2">Ostrzegaj przy błędzie (zalecane)</sys:String>
+    <sys:String x:Key="S.se.gateway">Brama (RD Gateway / jump-host)</sys:String>
+    <sys:String x:Key="S.se.gateway.ph">host bramy — puste = połączenie bezpośrednie</sys:String>
+    <sys:String x:Key="S.se.gwmode">Tryb bramy</sys:String>
+    <sys:String x:Key="S.se.gw0">Nie używaj</sys:String>
+    <sys:String x:Key="S.se.gw1">Zawsze przez bramę</sys:String>
+    <sys:String x:Key="S.se.gw2">Wykryj automatycznie</sys:String>
+
+    <!-- dialog: poświadczenia -->
+    <sys:String x:Key="S.cp.title">Poświadczenia</sys:String>
+    <sys:String x:Key="S.cp.domainopt">Domena (opcjonalnie)</sys:String>
+
+    <!-- wspólne przyciski -->
+    <sys:String x:Key="S.cancel">Anuluj</sys:String>
+    <sys:String x:Key="S.save">Zapisz</sys:String>
+
+    <!-- menu kontekstowe -->
+    <sys:String x:Key="S.m.pin">Przypnij</sys:String>
+    <sys:String x:Key="S.m.unpin">Odepnij</sys:String>
+    <sys:String x:Key="S.m.newwin">Otwórz w nowym oknie</sys:String>
+    <sys:String x:Key="S.m.connectas">Połącz jako…</sys:String>
+    <sys:String x:Key="S.m.edit">Edytuj…</sys:String>
+    <sys:String x:Key="S.m.diag">Diagnostyka…</sys:String>
+    <sys:String x:Key="S.m.exportrdp">Eksportuj .rdp…</sys:String>
+    <sys:String x:Key="S.m.delete">Usuń</sys:String>
+    <sys:String x:Key="S.m.tearoff">Wyciągnij do osobnego okna</sys:String>
+    <sys:String x:Key="S.m.duplicate">Duplikuj</sys:String>
+    <sys:String x:Key="S.m.moveleft">Przesuń w lewo</sys:String>
+    <sys:String x:Key="S.m.moveright">Przesuń w prawo</sys:String>
+    <sys:String x:Key="S.m.closeothers">Zamknij pozostałe</sys:String>
+    <sys:String x:Key="S.m.close">Zamknij</sys:String>
+    <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
+
+    <!-- pass 2b: ulotne komunikaty z code-behind (statusy, dialogi, prompty, diagnostyka) -->
+    <sys:String x:Key="S.st.connecting">Łączenie z {0}…</sys:String>
+    <sys:String x:Key="S.st.connectingShort">Łączenie…</sys:String>
+    <sys:String x:Key="S.st.connected">Połączono</sys:String>
+    <sys:String x:Key="S.st.exception">Wyjątek: {0}</sys:String>
+    <sys:String x:Key="S.st.disconnecting">Rozłączanie: {0}</sys:String>
+    <sys:String x:Key="S.st.fatal">Błąd krytyczny (errorCode {0})</sys:String>
+    <sys:String x:Key="S.st.disconnected">Rozłączono: {0}</sys:String>
+    <sys:String x:Key="S.st.disconnectedShort">Rozłączono</sys:String>
+    <sys:String x:Key="S.st.ready">Gotowe do połączenia</sys:String>
+    <sys:String x:Key="S.st.hint.winauth">Wskazówka: konto Windows może nie mieć dostępu do hosta — odznacz „Konto Windows" i podaj login/hasło.</sys:String>
+    <sys:String x:Key="S.st.hint.creds">Wskazówka: sprawdź login, hasło, domenę i dostępność hosta.</sys:String>
+    <sys:String x:Key="S.st.multimon">Pełny ekran (wszystkie monitory) — Ctrl+Alt+Break lub pasek połączenia, by wrócić.</sys:String>
+    <sys:String x:Key="S.st.diagnosing">Diagnostyka {0}:{1}…</sys:String>
+    <sys:String x:Key="S.st.imported">Zaimportowano serwerów: {0}</sys:String>
+    <sys:String x:Key="S.st.importedMstsc">Zaimportowano z mstsc: {0}</sys:String>
+    <sys:String x:Key="S.st.exported">Wyeksportowano do {0}</sys:String>
+    <sys:String x:Key="S.st.saved">Zapisano ✓</sys:String>
+    <sys:String x:Key="S.st.exportedProfile">Wyeksportowano profil ✓</sys:String>
+
+    <sys:String x:Key="S.dash.servers">Serwery</sys:String>
+    <sys:String x:Key="S.dash.reachable">Osiągalne</sys:String>
+    <sys:String x:Key="S.dash.opensessions">Otwarte sesje</sys:String>
+    <sys:String x:Key="S.dash.recent">Ostatnio używane</sys:String>
+    <sys:String x:Key="S.dash.norecent">Brak ostatnich połączeń.</sys:String>
+
+    <sys:String x:Key="S.group.pinned">PRZYPIĘTE</sys:String>
+
+    <sys:String x:Key="S.prompt.renamegroup.title">Zmień nazwę grupy</sys:String>
+    <sys:String x:Key="S.prompt.renamegroup.label">Nowa nazwa grupy (obecnie: {0})</sys:String>
+    <sys:String x:Key="S.prompt.quickconnect.label">Adres — host, host:port, user@host albo DOMENA\user@host:</sys:String>
+    <sys:String x:Key="S.prompt.connectas">Połącz z innymi poświadczeniami.</sys:String>
+
+    <sys:String x:Key="S.msg.about.desc">Nowoczesny menedżer połączeń RDP (WPF / Fluent).</sys:String>
+    <sys:String x:Key="S.msg.about.datafolder">Folder danych:</sys:String>
+    <sys:String x:Key="S.msg.closeapp">Są aktywne połączenia. Zamknąć aplikację?</sys:String>
+    <sys:String x:Key="S.msg.closeapp.title">Zamknij</sys:String>
+    <sys:String x:Key="S.msg.exportprofile.fail">Nie udało się zapisać profilu:</sys:String>
+    <sys:String x:Key="S.msg.exportprofile.title">Eksport profilu</sys:String>
+    <sys:String x:Key="S.msg.importprofile.bad">Niepoprawny plik profilu:</sys:String>
+    <sys:String x:Key="S.msg.importprofile.empty">Pusty lub niepoprawny plik profilu.</sys:String>
+    <sys:String x:Key="S.msg.importprofile.title">Import profilu</sys:String>
+    <sys:String x:Key="S.msg.importprofile.confirm">Zaimportować profil? Serwerów w pliku: {0} — zastąpi bieżącą listę serwerów i ustawienia.</sys:String>
+    <sys:String x:Key="S.msg.importprofile.confirmSessions">Otwarte sesje ({0}) zostaną zamknięte.</sys:String>
+    <sys:String x:Key="S.msg.closeothers">Zamknąć pozostałe sesje? Połączonych: {0}.</sys:String>
+    <sys:String x:Key="S.msg.closesession">Zamknąć połączoną sesję "{0}"?</sys:String>
+    <sys:String x:Key="S.msg.closesession.title">Zamknij sesję</sys:String>
+    <sys:String x:Key="S.msg.importrdp.fail">Nie udało się zaimportować "{0}":</sys:String>
+    <sys:String x:Key="S.msg.importrdp.title">Import .rdp</sys:String>
+    <sys:String x:Key="S.msg.mstsc.readfail">Nie udało się odczytać historii mstsc:</sys:String>
+    <sys:String x:Key="S.msg.mstsc.title">Import z mstsc</sys:String>
+    <sys:String x:Key="S.msg.mstsc.none">Nie znaleziono historii połączeń mstsc w tym profilu Windows.</sys:String>
+    <sys:String x:Key="S.msg.mstsc.summary">Zaimportowano połączeń z mstsc: {0}</sys:String>
+    <sys:String x:Key="S.msg.mstsc.skipped">Pominięto już istniejące: {0}</sys:String>
+    <sys:String x:Key="S.msg.mstsc.nopass">Hasła nie są przenoszone (mstsc trzyma je w sejfie Windows pod innym kluczem) — podasz je przy pierwszym połączeniu.</sys:String>
+    <sys:String x:Key="S.msg.exportrdp.fail">Nie udało się zapisać pliku:</sys:String>
+    <sys:String x:Key="S.msg.exportrdp.title">Eksport .rdp</sys:String>
+    <sys:String x:Key="S.msg.delete">Usunąć serwer "{0}"?</sys:String>
+    <sys:String x:Key="S.msg.delete.title">Usuń serwer</sys:String>
+    <sys:String x:Key="S.msg.diag.nohost">Serwer nie ma ustawionego hosta.</sys:String>
+    <sys:String x:Key="S.msg.diag.title">Diagnostyka</sys:String>
+    <sys:String x:Key="S.msg.diag.titlefmt">Diagnostyka — {0}</sys:String>
+    <sys:String x:Key="S.diag.open">{0}:{1} — port OTWARTY (odpowiedź w {2} ms).</sys:String>
+    <sys:String x:Key="S.diag.closed">{0}:{1} — BRAK odpowiedzi (port zamknięty, zapora lub host nieosiągalny).</sys:String>
+
+    <sys:String x:Key="S.dlg.exportprofile.title">Eksportuj profil</sys:String>
+    <sys:String x:Key="S.dlg.profile.filter">Profil Waypoint (*.json)|*.json</sys:String>
+    <sys:String x:Key="S.dlg.importprofile.title">Importuj profil</sys:String>
+    <sys:String x:Key="S.dlg.profile.filterAll">Profil Waypoint (*.json)|*.json|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdp.title">Importuj plik .rdp</sys:String>
+    <sys:String x:Key="S.dlg.rdp.filterAll">Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.exportrdp.title">Eksportuj do .rdp</sys:String>
+    <sys:String x:Key="S.dlg.rdp.filter">Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp</sys:String>
+
+    <sys:String x:Key="S.cp.header">Podaj poświadczenia dla {0} ({1}).</sys:String>
+    <sys:String x:Key="S.cp.needuser">Podaj nazwę użytkownika.</sys:String>
+    <sys:String x:Key="S.se.needname">Podaj nazwę i host.</sys:String>
+</ResourceDictionary>

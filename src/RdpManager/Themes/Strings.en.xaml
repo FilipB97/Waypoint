@@ -1,0 +1,198 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <!-- English strings. Same keys as Strings.pl.xaml; swapped at runtime by LocalizationManager. -->
+    <sys:String x:Key="S.nav.dashboard">Dashboard</sys:String>
+    <sys:String x:Key="S.nav.sessions">Sessions</sys:String>
+    <sys:String x:Key="S.nav.recent">Recent</sys:String>
+    <sys:String x:Key="S.nav.about">About</sys:String>
+    <sys:String x:Key="S.nav.settings">Settings</sys:String>
+
+    <sys:String x:Key="S.search">Search servers…</sys:String>
+    <sys:String x:Key="S.quickConnect">Quick connect</sys:String>
+    <sys:String x:Key="S.quickConnect.tip">Connect without saving — enter host, host:port, user@host or DOMAIN\user@host</sys:String>
+    <sys:String x:Key="S.addServer">+ Add server</sys:String>
+    <sys:String x:Key="S.importRdp">Import .rdp</sys:String>
+    <sys:String x:Key="S.importMstsc">Import from mstsc</sys:String>
+    <sys:String x:Key="S.importMstsc.tip">Pull the built-in Windows RDP client's connection history</sys:String>
+
+    <sys:String x:Key="S.view.recent">Recent connections</sys:String>
+
+    <sys:String x:Key="S.set.iface">Interface</sys:String>
+    <sys:String x:Key="S.set.uiscale">UI scale (%) — also Ctrl + mouse wheel</sys:String>
+    <sys:String x:Key="S.set.bardelay">Fullscreen bar delay (ms)</sys:String>
+    <sys:String x:Key="S.set.theme">Theme</sys:String>
+    <sys:String x:Key="S.theme.dark">Dark</sys:String>
+    <sys:String x:Key="S.theme.light">Light</sys:String>
+    <sys:String x:Key="S.theme.system">System</sys:String>
+    <sys:String x:Key="S.set.language">Język / Language</sys:String>
+    <sys:String x:Key="S.set.conn">Connection</sys:String>
+    <sys:String x:Key="S.set.port">Default RDP port</sys:String>
+    <sys:String x:Key="S.set.colordepth">Default color depth (bit)</sys:String>
+    <sys:String x:Key="S.set.autoreconnect">Automatically resume dropped connections</sys:String>
+    <sys:String x:Key="S.set.behavior">Behavior</sys:String>
+    <sys:String x:Key="S.set.reach">Check server reachability in the background</sys:String>
+    <sys:String x:Key="S.set.reachinterval">Check interval (s)</sys:String>
+    <sys:String x:Key="S.set.confirmclose">Ask before closing a connected session</sys:String>
+    <sys:String x:Key="S.set.connlog">Keep a connection audit log (no passwords)</sys:String>
+    <sys:String x:Key="S.set.data">Application data</sys:String>
+    <sys:String x:Key="S.set.openfolder">Open folder</sys:String>
+    <sys:String x:Key="S.set.exportprofile">Export profile…</sys:String>
+    <sys:String x:Key="S.set.importprofile">Import profile…</sys:String>
+    <sys:String x:Key="S.set.backupnote">The backup includes servers and settings (no passwords — those stay in Windows Credential Manager).</sys:String>
+    <sys:String x:Key="S.set.save">Save settings</sys:String>
+
+    <!-- pass 2: connection bar, canvas, fullscreen bar -->
+    <sys:String x:Key="S.winauth">Windows account</sys:String>
+    <sys:String x:Key="S.pass">Password</sys:String>
+    <sys:String x:Key="S.connect">Connect</sys:String>
+    <sys:String x:Key="S.disconnect">Disconnect</sys:String>
+    <sys:String x:Key="S.fullscreen">Full screen</sys:String>
+    <sys:String x:Key="S.reconnect">Reconnect</sys:String>
+    <sys:String x:Key="S.connected">● Connected</sys:String>
+    <sys:String x:Key="S.tip.fullscreen">Full screen (on this monitor)</sys:String>
+    <sys:String x:Key="S.tip.minimize">Minimize</sys:String>
+    <sys:String x:Key="S.emptyhint">Select a server on the left to open a session.</sys:String>
+    <sys:String x:Key="S.fs.drag">Drag to move the bar</sys:String>
+    <sys:String x:Key="S.fs.others">other connections  ▾</sys:String>
+    <sys:String x:Key="S.fs.others.up">other connections  ▴</sys:String>
+    <sys:String x:Key="S.fs.pin">📌 pin</sys:String>
+    <sys:String x:Key="S.fs.pinned">📌 pinned</sys:String>
+    <sys:String x:Key="S.fs.restore">Restore window</sys:String>
+    <sys:String x:Key="S.fs.opensessions">OPEN SESSIONS</sys:String>
+    <sys:String x:Key="S.fs.allservers">ALL SERVERS</sys:String>
+
+    <!-- session window -->
+    <sys:String x:Key="S.dock">Dock to a tab</sys:String>
+    <sys:String x:Key="S.dock.tip">Put the session back as a tab in the manager</sys:String>
+
+    <!-- dialog: server -->
+    <sys:String x:Key="S.se.title">Server</sys:String>
+    <sys:String x:Key="S.se.name">Name</sys:String>
+    <sys:String x:Key="S.se.group">Group</sys:String>
+    <sys:String x:Key="S.se.winauth">Sign in with Windows account (no username/password)</sys:String>
+    <sys:String x:Key="S.se.user">User</sys:String>
+    <sys:String x:Key="S.se.domain">Domain</sys:String>
+    <sys:String x:Key="S.se.savepass">Save password (Windows Credential Manager)</sys:String>
+    <sys:String x:Key="S.se.redir">Redirections</sys:String>
+    <sys:String x:Key="S.se.clipboard">Clipboard</sys:String>
+    <sys:String x:Key="S.se.drives">Drives</sys:String>
+    <sys:String x:Key="S.se.printers">Printers</sys:String>
+    <sys:String x:Key="S.se.audio">Audio</sys:String>
+    <sys:String x:Key="S.se.audio0">Play on this computer</sys:String>
+    <sys:String x:Key="S.se.audio1">Do not play</sys:String>
+    <sys:String x:Key="S.se.audio2">Play on the server</sys:String>
+    <sys:String x:Key="S.se.authlvl">Server verification</sys:String>
+    <sys:String x:Key="S.se.auth0">Don't check (not recommended)</sys:String>
+    <sys:String x:Key="S.se.auth1">Require — reject on failure</sys:String>
+    <sys:String x:Key="S.se.auth2">Warn on failure (recommended)</sys:String>
+    <sys:String x:Key="S.se.gateway">Gateway (RD Gateway / jump host)</sys:String>
+    <sys:String x:Key="S.se.gateway.ph">gateway host — empty = direct connection</sys:String>
+    <sys:String x:Key="S.se.gwmode">Gateway mode</sys:String>
+    <sys:String x:Key="S.se.gw0">Don't use</sys:String>
+    <sys:String x:Key="S.se.gw1">Always via gateway</sys:String>
+    <sys:String x:Key="S.se.gw2">Auto-detect</sys:String>
+
+    <!-- dialog: credentials -->
+    <sys:String x:Key="S.cp.title">Credentials</sys:String>
+    <sys:String x:Key="S.cp.domainopt">Domain (optional)</sys:String>
+
+    <!-- shared buttons -->
+    <sys:String x:Key="S.cancel">Cancel</sys:String>
+    <sys:String x:Key="S.save">Save</sys:String>
+
+    <!-- context menus -->
+    <sys:String x:Key="S.m.pin">Pin</sys:String>
+    <sys:String x:Key="S.m.unpin">Unpin</sys:String>
+    <sys:String x:Key="S.m.newwin">Open in a new window</sys:String>
+    <sys:String x:Key="S.m.connectas">Connect as…</sys:String>
+    <sys:String x:Key="S.m.edit">Edit…</sys:String>
+    <sys:String x:Key="S.m.diag">Diagnostics…</sys:String>
+    <sys:String x:Key="S.m.exportrdp">Export .rdp…</sys:String>
+    <sys:String x:Key="S.m.delete">Delete</sys:String>
+    <sys:String x:Key="S.m.tearoff">Tear off to a window</sys:String>
+    <sys:String x:Key="S.m.duplicate">Duplicate</sys:String>
+    <sys:String x:Key="S.m.moveleft">Move left</sys:String>
+    <sys:String x:Key="S.m.moveright">Move right</sys:String>
+    <sys:String x:Key="S.m.closeothers">Close others</sys:String>
+    <sys:String x:Key="S.m.close">Close</sys:String>
+    <sys:String x:Key="S.m.renamegroup">Rename group…</sys:String>
+
+    <!-- pass 2b: transient code-behind messages (status, dialogs, prompts, diagnostics) -->
+    <sys:String x:Key="S.st.connecting">Connecting to {0}…</sys:String>
+    <sys:String x:Key="S.st.connectingShort">Connecting…</sys:String>
+    <sys:String x:Key="S.st.connected">Connected</sys:String>
+    <sys:String x:Key="S.st.exception">Exception: {0}</sys:String>
+    <sys:String x:Key="S.st.disconnecting">Disconnecting: {0}</sys:String>
+    <sys:String x:Key="S.st.fatal">Fatal error (errorCode {0})</sys:String>
+    <sys:String x:Key="S.st.disconnected">Disconnected: {0}</sys:String>
+    <sys:String x:Key="S.st.disconnectedShort">Disconnected</sys:String>
+    <sys:String x:Key="S.st.ready">Ready to connect</sys:String>
+    <sys:String x:Key="S.st.hint.winauth">Hint: the Windows account may not have access to the host — uncheck "Windows account" and enter a username/password.</sys:String>
+    <sys:String x:Key="S.st.hint.creds">Hint: check the username, password, domain and host availability.</sys:String>
+    <sys:String x:Key="S.st.multimon">Full screen (all monitors) — press Ctrl+Alt+Break or use the connection bar to return.</sys:String>
+    <sys:String x:Key="S.st.diagnosing">Diagnostics {0}:{1}…</sys:String>
+    <sys:String x:Key="S.st.imported">Imported servers: {0}</sys:String>
+    <sys:String x:Key="S.st.importedMstsc">Imported from mstsc: {0}</sys:String>
+    <sys:String x:Key="S.st.exported">Exported to {0}</sys:String>
+    <sys:String x:Key="S.st.saved">Saved ✓</sys:String>
+    <sys:String x:Key="S.st.exportedProfile">Profile exported ✓</sys:String>
+
+    <sys:String x:Key="S.dash.servers">Servers</sys:String>
+    <sys:String x:Key="S.dash.reachable">Reachable</sys:String>
+    <sys:String x:Key="S.dash.opensessions">Open sessions</sys:String>
+    <sys:String x:Key="S.dash.recent">Recently used</sys:String>
+    <sys:String x:Key="S.dash.norecent">No recent connections.</sys:String>
+
+    <sys:String x:Key="S.group.pinned">PINNED</sys:String>
+
+    <sys:String x:Key="S.prompt.renamegroup.title">Rename group</sys:String>
+    <sys:String x:Key="S.prompt.renamegroup.label">New group name (currently: {0})</sys:String>
+    <sys:String x:Key="S.prompt.quickconnect.label">Address — host, host:port, user@host or DOMAIN\user@host:</sys:String>
+    <sys:String x:Key="S.prompt.connectas">Connect with different credentials.</sys:String>
+
+    <sys:String x:Key="S.msg.about.desc">A modern RDP connection manager (WPF / Fluent).</sys:String>
+    <sys:String x:Key="S.msg.about.datafolder">Data folder:</sys:String>
+    <sys:String x:Key="S.msg.closeapp">There are active connections. Close the app?</sys:String>
+    <sys:String x:Key="S.msg.closeapp.title">Close</sys:String>
+    <sys:String x:Key="S.msg.exportprofile.fail">Could not save the profile:</sys:String>
+    <sys:String x:Key="S.msg.exportprofile.title">Export profile</sys:String>
+    <sys:String x:Key="S.msg.importprofile.bad">Invalid profile file:</sys:String>
+    <sys:String x:Key="S.msg.importprofile.empty">Empty or invalid profile file.</sys:String>
+    <sys:String x:Key="S.msg.importprofile.title">Import profile</sys:String>
+    <sys:String x:Key="S.msg.importprofile.confirm">Import profile? Servers in file: {0} — this replaces the current server list and settings.</sys:String>
+    <sys:String x:Key="S.msg.importprofile.confirmSessions">Open sessions ({0}) will be closed.</sys:String>
+    <sys:String x:Key="S.msg.closeothers">Close the other sessions? Connected: {0}.</sys:String>
+    <sys:String x:Key="S.msg.closesession">Close the connected session "{0}"?</sys:String>
+    <sys:String x:Key="S.msg.closesession.title">Close session</sys:String>
+    <sys:String x:Key="S.msg.importrdp.fail">Could not import "{0}":</sys:String>
+    <sys:String x:Key="S.msg.importrdp.title">Import .rdp</sys:String>
+    <sys:String x:Key="S.msg.mstsc.readfail">Could not read mstsc history:</sys:String>
+    <sys:String x:Key="S.msg.mstsc.title">Import from mstsc</sys:String>
+    <sys:String x:Key="S.msg.mstsc.none">No mstsc connection history found in this Windows profile.</sys:String>
+    <sys:String x:Key="S.msg.mstsc.summary">Connections imported from mstsc: {0}</sys:String>
+    <sys:String x:Key="S.msg.mstsc.skipped">Skipped existing: {0}</sys:String>
+    <sys:String x:Key="S.msg.mstsc.nopass">Passwords are not migrated (mstsc keeps them in the Windows vault under a different key) — you'll enter them on first connect.</sys:String>
+    <sys:String x:Key="S.msg.exportrdp.fail">Could not save the file:</sys:String>
+    <sys:String x:Key="S.msg.exportrdp.title">Export .rdp</sys:String>
+    <sys:String x:Key="S.msg.delete">Delete server "{0}"?</sys:String>
+    <sys:String x:Key="S.msg.delete.title">Delete server</sys:String>
+    <sys:String x:Key="S.msg.diag.nohost">The server has no host set.</sys:String>
+    <sys:String x:Key="S.msg.diag.title">Diagnostics</sys:String>
+    <sys:String x:Key="S.msg.diag.titlefmt">Diagnostics — {0}</sys:String>
+    <sys:String x:Key="S.diag.open">{0}:{1} — port OPEN (response in {2} ms).</sys:String>
+    <sys:String x:Key="S.diag.closed">{0}:{1} — NO response (port closed, firewall, or host unreachable).</sys:String>
+
+    <sys:String x:Key="S.dlg.exportprofile.title">Export profile</sys:String>
+    <sys:String x:Key="S.dlg.profile.filter">Waypoint profile (*.json)|*.json</sys:String>
+    <sys:String x:Key="S.dlg.importprofile.title">Import profile</sys:String>
+    <sys:String x:Key="S.dlg.profile.filterAll">Waypoint profile (*.json)|*.json|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdp.title">Import .rdp file</sys:String>
+    <sys:String x:Key="S.dlg.rdp.filterAll">Remote Desktop files (*.rdp)|*.rdp|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.exportrdp.title">Export to .rdp</sys:String>
+    <sys:String x:Key="S.dlg.rdp.filter">Remote Desktop files (*.rdp)|*.rdp</sys:String>
+
+    <sys:String x:Key="S.cp.header">Enter credentials for {0} ({1}).</sys:String>
+    <sys:String x:Key="S.cp.needuser">Enter a username.</sys:String>
+    <sys:String x:Key="S.se.needname">Enter a name and host.</sys:String>
+</ResourceDictionary>

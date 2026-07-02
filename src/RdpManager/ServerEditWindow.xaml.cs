@@ -75,7 +75,7 @@ namespace RdpManager
         {
             if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(HostBox.Text))
             {
-                MessageBox.Show("Podaj nazwę i host.", "Serwer", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LocalizationManager.S("S.se.needname"), LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

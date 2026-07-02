@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Jasna paleta Waypoint. Te same klucze co Palette.Dark; akcenty/statusy/awatary bez zmian
+         (czytelne na obu tłach), zmienione tło/tekst/obramowania i kanwa. -->
+    <SolidColorBrush x:Key="Panel"      Color="#D0FFFFFF"/>
+    <SolidColorBrush x:Key="RailBg"     Color="#E6F2F3F5"/>
+    <SolidColorBrush x:Key="Elevated"   Color="#14000000"/>
+    <SolidColorBrush x:Key="Border"     Color="#22000000"/>
+    <SolidColorBrush x:Key="TextPrim"   Color="#1B1D22"/>
+    <SolidColorBrush x:Key="TextSec"    Color="#565A62"/>
+    <SolidColorBrush x:Key="TextTer"    Color="#888B93"/>
+    <SolidColorBrush x:Key="Accent"     Color="#0E93A3"/>
+    <SolidColorBrush x:Key="AccentSoft" Color="#2229C5D6"/>
+    <SolidColorBrush x:Key="Online"     Color="#1FA871"/>
+    <SolidColorBrush x:Key="Idle"       Color="#C9852B"/>
+    <SolidColorBrush x:Key="Offline"    Color="#9CA0A8"/>
+    <SolidColorBrush x:Key="Danger"     Color="#D23A34"/>
+    <SolidColorBrush x:Key="GdProd"     Color="#7C6CFB"/>
+    <SolidColorBrush x:Key="GdStaging"  Color="#D98F2E"/>
+    <SolidColorBrush x:Key="GdClient"   Color="#1F8B94"/>
+
+    <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
+
+    <LinearGradientBrush x:Key="AvProd" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#7C6CFB" Offset="0"/><GradientStop Color="#4F3FD1" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="AvStaging" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFB454" Offset="0"/><GradientStop Color="#D98F2E" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="AvClient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#36C4CF" Offset="0"/><GradientStop Color="#1F8B94" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="LogoBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#29C5D6" Offset="0"/><GradientStop Color="#1A8A96" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CanvasBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#EEF0F3" Offset="0"/><GradientStop Color="#DEE2E8" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Canvas" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#EEF0F3" Offset="0"/><GradientStop Color="#DEE2E8" Offset="1"/>
+    </LinearGradientBrush>
+</ResourceDictionary>

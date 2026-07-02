@@ -13,6 +13,12 @@ namespace RdpManager
         /// <summary>Skala interfejsu (zoom Ctrl+kółko), 1.0 = 100%.</summary>
         public double UiScale { get; set; } = 1.0;
 
+        /// <summary>Motyw interfejsu: „Dark" | „Light" | „System".</summary>
+        public string Theme { get; set; } = "Dark";
+
+        /// <summary>Język interfejsu: „pl" | „en".</summary>
+        public string Language { get; set; } = "pl";
+
         /// <summary>Domyślne ustawienia połączeń RDP.</summary>
         public bool AutoReconnect { get; set; } = true;
         public int ColorDepth { get; set; } = 32;
@@ -25,5 +31,8 @@ namespace RdpManager
 
         /// <summary>Id serwerów w kolejności ostatnich połączeń (najnowsze pierwsze).</summary>
         public List<string> RecentIds { get; set; } = new List<string>();
+
+        /// <summary>Nazwy grup zwiniętych w drzewie (klucz „__pinned__" = sekcja Przypięte).</summary>
+        public List<string> CollapsedGroups { get; set; } = new List<string>();
     }
 }

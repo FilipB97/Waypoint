@@ -30,6 +30,9 @@ namespace RdpManager.Models
         /// <summary>Czy hasło ma być zapisane w Windows Credential Manager.</summary>
         public bool SavePassword { get; set; }
 
+        /// <summary>Ulubiony / przypięty — pokazywany w sekcji „Przypięte" na górze listy.</summary>
+        public bool Pinned { get; set; }
+
         // Przekierowania zasobów lokalnych do sesji.
         public bool RedirectClipboard { get; set; } = true;
         public bool RedirectDrives { get; set; }
