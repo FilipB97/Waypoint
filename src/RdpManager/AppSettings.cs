@@ -13,6 +13,9 @@ namespace RdpManager
         /// <summary>Skala interfejsu (zoom Ctrl+kółko), 1.0 = 100%.</summary>
         public double UiScale { get; set; } = 1.0;
 
+        /// <summary>Motyw interfejsu: „Dark" | „Light" | „System".</summary>
+        public string Theme { get; set; } = "Dark";
+
         /// <summary>Domyślne ustawienia połączeń RDP.</summary>
         public bool AutoReconnect { get; set; } = true;
         public int ColorDepth { get; set; } = 32;

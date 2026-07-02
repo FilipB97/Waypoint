@@ -149,8 +149,8 @@ namespace RdpManager
 
         private void SetNav(Button b, Wpf.Ui.Controls.SymbolIcon ico, bool active)
         {
-            b.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
-            ico.Foreground = active ? (Brush)Resources["Accent"] : (Brush)Resources["TextTer"];
+            b.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+            ico.Foreground = active ? (Brush)TryFindResource("Accent") : (Brush)TryFindResource("TextTer");
         }
 
         private void Avatar_Click(object sender, RoutedEventArgs e)
@@ -208,6 +208,7 @@ namespace RdpManager
         {
             SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
+            SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
             SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
             SetAutoReconnect.IsChecked = _settings.AutoReconnect;
@@ -230,6 +231,7 @@ namespace RdpManager
             _settings.ReachabilityIntervalSec = int.TryParse(SetReachInterval.Text.Trim(), out var r) ? Math.Clamp(r, 5, 3600) : 30;
             _settings.ConfirmCloseConnected = SetConfirmClose.IsChecked == true;
             _settings.ConnectionLogEnabled = SetConnLog.IsChecked == true;
+            _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
 
             SettingsStore.Save(_settings);
             ApplySettings();
@@ -258,6 +260,8 @@ namespace RdpManager
             {
                 _reachTimer.Stop();
             }
+
+            ThemeManager.Apply(_settings.Theme);
         }
 
         private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
@@ -362,7 +366,7 @@ namespace RdpManager
                 RecentPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => OpenServer(s, true)));
             }
             if (!any)
-                RecentPanel.Children.Add(new TextBlock { Text = "Brak ostatnich połączeń.", Foreground = (Brush)Resources["TextTer"] });
+                RecentPanel.Children.Add(new TextBlock { Text = "Brak ostatnich połączeń.", Foreground = (Brush)TryFindResource("TextTer") });
         }
 
         private void BuildDashboard()
@@ -381,7 +385,7 @@ namespace RdpManager
 
             DashboardPanel.Children.Add(new TextBlock
             {
-                Text = "Ostatnio używane", Foreground = (Brush)Resources["TextSec"],
+                Text = "Ostatnio używane", Foreground = (Brush)TryFindResource("TextSec"),
                 FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8)
             });
 
@@ -393,19 +397,19 @@ namespace RdpManager
                 if (++shown >= 5) break;
             }
             if (shown == 0)
-                DashboardPanel.Children.Add(new TextBlock { Text = "Brak historii.", Foreground = (Brush)Resources["TextTer"] });
+                DashboardPanel.Children.Add(new TextBlock { Text = "Brak historii.", Foreground = (Brush)TryFindResource("TextTer") });
         }
 
         private FrameworkElement StatCard(string label, string value)
         {
             var card = new Border
             {
-                Background = (Brush)Resources["Panel"], BorderBrush = (Brush)Resources["Border"], BorderThickness = new Thickness(1),
+                Background = (Brush)TryFindResource("Panel"), BorderBrush = (Brush)TryFindResource("Border"), BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(10), Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
             };
             var sp = new StackPanel();
-            sp.Children.Add(new TextBlock { Text = value, Foreground = (Brush)Resources["Accent"], FontSize = 26, FontWeight = FontWeights.Bold });
-            sp.Children.Add(new TextBlock { Text = label, Foreground = (Brush)Resources["TextSec"], FontSize = 12 });
+            sp.Children.Add(new TextBlock { Text = value, Foreground = (Brush)TryFindResource("Accent"), FontSize = 26, FontWeight = FontWeights.Bold });
+            sp.Children.Add(new TextBlock { Text = label, Foreground = (Brush)TryFindResource("TextSec"), FontSize = 12 });
             card.Child = sp;
             return card;
         }
@@ -491,14 +495,14 @@ namespace RdpManager
             sp.Children.Add(new TextBlock
             {
                 Text = collapsed ? "▸" : "▾",
-                Foreground = (Brush)Resources["TextTer"], FontSize = 10, Width = 12,
+                Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10, Width = 12,
                 VerticalAlignment = VerticalAlignment.Center
             });
 
             if (isPinned)
                 sp.Children.Add(new TextBlock
                 {
-                    Text = "★", Foreground = (Brush)Resources["Idle"], FontSize = 11,
+                    Text = "★", Foreground = (Brush)TryFindResource("Idle"), FontSize = 11,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
             else
@@ -511,7 +515,7 @@ namespace RdpManager
             sp.Children.Add(new TextBlock
             {
                 Text = (isPinned ? "PRZYPIĘTE" : name.ToUpperInvariant()) + "  ·  " + count,
-                Foreground = (Brush)Resources["TextSec"],
+                Foreground = (Brush)TryFindResource("TextSec"),
                 FontSize = 11.5, FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
             });
@@ -591,7 +595,7 @@ namespace RdpManager
 
             var accent = new Rectangle
             {
-                Width = 3, RadiusX = 1.5, RadiusY = 1.5, Fill = (Brush)Resources["Accent"],
+                Width = 3, RadiusX = 1.5, RadiusY = 1.5, Fill = (Brush)TryFindResource("Accent"),
                 VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(0, 2, 0, 2),
                 Visibility = Visibility.Collapsed
             };
@@ -612,11 +616,11 @@ namespace RdpManager
             grid.Children.Add(avatar);
 
             var meta = new StackPanel { Margin = new Thickness(9, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = (Brush)Resources["TextPrim"], FontSize = 12.5 });
+            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5 });
             meta.Children.Add(new TextBlock
             {
-                Text = server.Host, Foreground = (Brush)Resources["TextTer"], FontSize = 10.5,
-                FontFamily = (FontFamily)Resources["Mono"], TextTrimming = TextTrimming.CharacterEllipsis
+                Text = server.Host, Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10.5,
+                FontFamily = (FontFamily)TryFindResource("Mono"), TextTrimming = TextTrimming.CharacterEllipsis
             });
             Grid.SetColumn(meta, 2);
             grid.Children.Add(meta);
@@ -632,7 +636,7 @@ namespace RdpManager
             if (server.Pinned)
                 right.Children.Add(new TextBlock
                 {
-                    Text = "★", Foreground = (Brush)Resources["Idle"], FontSize = 10,
+                    Text = "★", Foreground = (Brush)TryFindResource("Idle"), FontSize = 10,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
             right.Children.Add(status);
@@ -641,7 +645,7 @@ namespace RdpManager
 
             row.Child = grid;
 
-            row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)Resources["Elevated"]; };
+            row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
             row.MouseLeave += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
 
             // Drag&drop: przeciągnięcie zmienia kolejność (a upuszczenie na inną grupę przenosi do niej).
@@ -721,7 +725,7 @@ namespace RdpManager
             foreach (var kv in _serverRows)
             {
                 bool active = _active != null && _active.Server == kv.Key;
-                kv.Value.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
+                kv.Value.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
                 _serverAccent[kv.Key].Visibility = active ? Visibility.Visible : Visibility.Collapsed;
             }
         }
@@ -761,7 +765,7 @@ namespace RdpManager
                 return;
             }
             ClearDropIndicator();
-            _dropAdorner = new InsertionAdorner(row, (Brush)Resources["Accent"]) { AtBottom = bottom };
+            _dropAdorner = new InsertionAdorner(row, (Brush)TryFindResource("Accent")) { AtBottom = bottom };
             layer.Add(_dropAdorner);
             _dropRow = row;
         }
@@ -779,7 +783,7 @@ namespace RdpManager
         {
             if (server == null || !_serverRows.TryGetValue(server, out var row)) return;
 
-            Color accent = (Resources["Accent"] as SolidColorBrush)?.Color ?? Color.FromRgb(0x29, 0xC5, 0xD6);
+            Color accent = (TryFindResource("Accent") as SolidColorBrush)?.Color ?? Color.FromRgb(0x29, 0xC5, 0xD6);
             var brush = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
             row.Background = brush;
 
@@ -792,7 +796,7 @@ namespace RdpManager
             anim.Completed += (s, e) =>
             {
                 bool active = _active != null && _active.Server == server;
-                row.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
+                row.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
             };
             brush.BeginAnimation(SolidColorBrush.ColorProperty, anim);
         }
@@ -937,7 +941,7 @@ namespace RdpManager
             });
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = (Brush)Resources["TextPrim"], FontSize = 12.5,
+                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -952,7 +956,7 @@ namespace RdpManager
             content.Children.Add(tabDot);
             var close = new TextBlock
             {
-                Text = "✕", Foreground = (Brush)Resources["TextTer"], FontSize = 12,
+                Text = "✕", Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12,
                 Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand
             };
             close.MouseLeftButtonUp += (s, e) => { e.Handled = true; RequestCloseSession(session); };
@@ -961,7 +965,7 @@ namespace RdpManager
 
             var underline = new Rectangle
             {
-                Height = 2, Fill = (Brush)Resources["Accent"], RadiusX = 1, RadiusY = 1,
+                Height = 2, Fill = (Brush)TryFindResource("Accent"), RadiusX = 1, RadiusY = 1,
                 VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 6, 0),
                 Visibility = Visibility.Collapsed
             };
@@ -1003,8 +1007,8 @@ namespace RdpManager
             {
                 if (!(s.TabButton is Border b)) continue;
                 bool active = s == _active;
-                b.Background = active ? (Brush)Resources["Panel"] : Brushes.Transparent;
-                b.BorderBrush = active ? (Brush)Resources["Border"] : Brushes.Transparent;
+                b.Background = active ? (Brush)TryFindResource("Panel") : Brushes.Transparent;
+                b.BorderBrush = active ? (Brush)TryFindResource("Border") : Brushes.Transparent;
                 if (_tabUnderline.TryGetValue(s, out var u))
                     u.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
             }
@@ -1650,7 +1654,7 @@ namespace RdpManager
             {
                 Padding = new Thickness(7, 6, 7, 6),
                 CornerRadius = new CornerRadius(7),
-                Background = isActive ? (Brush)Resources["AccentSoft"] : Brushes.Transparent,
+                Background = isActive ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Thickness(0, 1, 0, 1)
             };
@@ -1674,7 +1678,7 @@ namespace RdpManager
 
             var name = new TextBlock
             {
-                Text = server.Name, Foreground = (Brush)Resources["TextPrim"], FontSize = 12,
+                Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             Grid.SetColumn(name, 1);
@@ -1685,7 +1689,7 @@ namespace RdpManager
             grid.Children.Add(dot);
 
             row.Child = grid;
-            row.MouseEnter += (s, e) => { if (!isActive) row.Background = (Brush)Resources["Elevated"]; };
+            row.MouseEnter += (s, e) => { if (!isActive) row.Background = (Brush)TryFindResource("Elevated"); };
             row.MouseLeave += (s, e) => { if (!isActive) row.Background = Brushes.Transparent; };
             row.MouseLeftButtonUp += (s, e) => { e.Handled = true; onClick(); };
             return row;
@@ -1986,9 +1990,9 @@ namespace RdpManager
         {
             switch (group)
             {
-                case "Produkcja": return (Brush)Resources["AvProd"];
-                case "Staging": return (Brush)Resources["AvStaging"];
-                case "Klienci": return (Brush)Resources["AvClient"];
+                case "Produkcja": return (Brush)TryFindResource("AvProd");
+                case "Staging": return (Brush)TryFindResource("AvStaging");
+                case "Klienci": return (Brush)TryFindResource("AvClient");
             }
             var key = group ?? "";
             if (!_avatarCache.TryGetValue(key, out var b))
@@ -2007,13 +2011,13 @@ namespace RdpManager
         {
             switch (group)
             {
-                case "Produkcja": return (Brush)Resources["GdProd"];
-                case "Staging": return (Brush)Resources["GdStaging"];
-                case "Klienci": return (Brush)Resources["GdClient"];
+                case "Produkcja": return (Brush)TryFindResource("GdProd");
+                case "Staging": return (Brush)TryFindResource("GdStaging");
+                case "Klienci": return (Brush)TryFindResource("GdClient");
             }
             return AvatarBrush(group) is LinearGradientBrush g
                 ? new SolidColorBrush(g.GradientStops[0].Color)
-                : (Brush)Resources["GdClient"];
+                : (Brush)TryFindResource("GdClient");
         }
 
         private static int StableHash(string s)
@@ -2027,9 +2031,9 @@ namespace RdpManager
         {
             switch (status)
             {
-                case ServerStatus.Online: return (Brush)Resources["Online"];
-                case ServerStatus.Idle: return (Brush)Resources["Idle"];
-                default: return (Brush)Resources["Offline"];
+                case ServerStatus.Online: return (Brush)TryFindResource("Online");
+                case ServerStatus.Idle: return (Brush)TryFindResource("Idle");
+                default: return (Brush)TryFindResource("Offline");
             }
         }
 
@@ -2136,10 +2140,10 @@ namespace RdpManager
         {
             switch (kind)
             {
-                case StatusKind.Connecting: return (Brush)Resources["Idle"];
-                case StatusKind.Ok: return (Brush)Resources["Online"];
-                case StatusKind.Error: return (Brush)Resources["Danger"];
-                default: return (Brush)Resources["TextSec"];
+                case StatusKind.Connecting: return (Brush)TryFindResource("Idle");
+                case StatusKind.Ok: return (Brush)TryFindResource("Online");
+                case StatusKind.Error: return (Brush)TryFindResource("Danger");
+                default: return (Brush)TryFindResource("TextSec");
             }
         }
     }

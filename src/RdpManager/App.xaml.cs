@@ -22,6 +22,9 @@ namespace RdpManager
             };
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
                 LogCrash("AppDomain", args.ExceptionObject as Exception);
+
+            // Zastosuj zapisany motyw ZANIM powstanie okno (bez mignięcia).
+            try { ThemeManager.Apply(SettingsStore.Load().Theme); } catch { }
         }
 
         private static void LogCrash(string source, Exception ex)

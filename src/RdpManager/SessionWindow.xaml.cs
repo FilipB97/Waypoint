@@ -258,10 +258,10 @@ namespace RdpManager
         {
             switch (kind)
             {
-                case StatusKind.Connecting: return (Brush)Resources["Idle"];
-                case StatusKind.Ok: return (Brush)Resources["Online"];
-                case StatusKind.Error: return (Brush)Resources["Danger"];
-                default: return (Brush)Resources["TextSec"];
+                case StatusKind.Connecting: return (Brush)TryFindResource("Idle");
+                case StatusKind.Ok: return (Brush)TryFindResource("Online");
+                case StatusKind.Error: return (Brush)TryFindResource("Danger");
+                default: return (Brush)TryFindResource("TextSec");
             }
         }
 
