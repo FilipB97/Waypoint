@@ -46,6 +46,12 @@ namespace RdpManager.Models
         /// </summary>
         public int AuthenticationLevel { get; set; } = 2;
 
+        /// <summary>
+        /// Pełny ekran na wszystkich monitorach (mstsc „use multimon"). EKSPERYMENTALNE:
+        /// aktywne tylko, gdy system ma więcej niż jeden monitor — na jednym zachowanie bez zmian.
+        /// </summary>
+        public bool UseAllMonitors { get; set; }
+
         /// <summary>Host bramy RD Gateway / jump-hosta (puste = połączenie bezpośrednie).</summary>
         public string GatewayHostname { get; set; } = "";
 

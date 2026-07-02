@@ -48,7 +48,8 @@ namespace RdpManager.Core
             {
                 var (host, port) = SplitHostPort(addr.Trim());
                 s.Host = host;
-                if (port.HasValue) s.Port = port.Value;
+                // Port spoza 1..65535 ignorujemy (zostaje domyślny 3389) — plik .rdp bywa obcy.
+                if (port.HasValue && port.Value >= 1 && port.Value <= 65535) s.Port = port.Value;
             }
 
             if (map.TryGetValue("username", out var user) && !string.IsNullOrWhiteSpace(user))
@@ -66,10 +67,11 @@ namespace RdpManager.Core
                 s.RedirectDrives = !string.IsNullOrWhiteSpace(drv);
             if (TryGetInt(map, "audiomode", out var audio)) s.AudioMode = Clamp(audio, 0, 2);
             if (TryGetInt(map, "authentication level", out var auth)) s.AuthenticationLevel = Clamp(auth, 0, 2);
+            if (TryGetInt(map, "use multimon", out var mm)) s.UseAllMonitors = mm != 0;
 
             if (map.TryGetValue("gatewayhostname", out var gw) && !string.IsNullOrWhiteSpace(gw))
                 s.GatewayHostname = gw.Trim();
-            if (TryGetInt(map, "gatewayusagemethod", out var gwm)) s.GatewayUsageMethod = gwm;
+            if (TryGetInt(map, "gatewayusagemethod", out var gwm)) s.GatewayUsageMethod = Clamp(gwm, 0, 2);
 
             // Nazwa: z hosta, jeśli plik jej nie niesie (mstsc nie zapisuje przyjaznej nazwy).
             s.Name = string.IsNullOrWhiteSpace(s.Host) ? "Zaimportowany" : s.Host;
@@ -98,6 +100,7 @@ namespace RdpManager.Core
             sb.Append("drivestoredirect:s:").Append(s.RedirectDrives ? "*" : "").Append("\r\n");
             sb.Append("audiomode:i:").Append(Clamp(s.AudioMode, 0, 2).ToString(CultureInfo.InvariantCulture)).Append("\r\n");
             sb.Append("authentication level:i:").Append(Clamp(s.AuthenticationLevel, 0, 2).ToString(CultureInfo.InvariantCulture)).Append("\r\n");
+            sb.Append("use multimon:i:").Append(s.UseAllMonitors ? "1" : "0").Append("\r\n");
 
             if (!string.IsNullOrWhiteSpace(s.GatewayHostname))
             {

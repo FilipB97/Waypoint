@@ -36,6 +36,28 @@ namespace RdpManager
             EdGatewayUsage.SelectedIndex = Math.Clamp(server.GatewayUsageMethod, 0, 2);
 
             ApplyWinAuthState();
+            Loaded += (s, e) => ClampToScreen();
+        }
+
+        /// <summary>
+        /// Ogranicza wysokość okna do obszaru roboczego monitora, na którym stoi (DPI-poprawnie),
+        /// żeby stopka z „Zapisz" nigdy nie wypadła poza ekran — treść wtedy się przewija.
+        /// </summary>
+        private void ClampToScreen()
+        {
+            try
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                var wa = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea;
+                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
+                double waTop = wa.Top / dpi.DpiScaleY;
+                MaxHeight = wa.Height / dpi.DpiScaleY - 16;
+                if (Top < waTop + 8) Top = waTop + 8;
+            }
+            catch
+            {
+                MaxHeight = SystemParameters.WorkArea.Height - 16;
+            }
         }
 
         private void WinAuth_Changed(object sender, RoutedEventArgs e) => ApplyWinAuthState();

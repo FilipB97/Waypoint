@@ -113,5 +113,44 @@ namespace RdpManager.Tests
             Assert.Contains("full address:s:h\r\n", text);   // bez :3389
             Assert.DoesNotContain("gatewayhostname", text);
         }
+
+        [Theory]
+        [InlineData("full address:s:h:0\r\n")]        // port 0
+        [InlineData("full address:s:h:-5\r\n")]       // ujemny
+        [InlineData("full address:s:h:999999\r\n")]   // > 65535
+        public void Parse_IgnoresOutOfRangePorts(string content)
+        {
+            var s = RdpFile.Parse(content);
+            Assert.Equal("h", s.Host);
+            Assert.Equal(3389, s.Port);   // zostaje bezpieczny domyślny
+        }
+
+        [Fact]
+        public void Parse_ClampsGatewayUsageMethod()
+        {
+            var s = RdpFile.Parse("full address:s:h\r\ngatewayhostname:s:gw\r\ngatewayusagemethod:i:99\r\n");
+            Assert.Equal(2, s.GatewayUsageMethod);
+        }
+
+        [Theory]
+        [InlineData("use multimon:i:1", true)]
+        [InlineData("use multimon:i:0", false)]
+        [InlineData("use multimon:i:garbage", false)]   // niepoprawna wartość -> domyślne false
+        [InlineData("", false)]                          // brak klucza -> domyślne false
+        public void Parse_MapsUseMultimon(string line, bool expected)
+        {
+            var s = RdpFile.Parse("full address:s:h\r\n" + line + "\r\n");
+            Assert.Equal(expected, s.UseAllMonitors);
+        }
+
+        [Fact]
+        public void SerializeThenParse_RoundTripsUseMultimon()
+        {
+            var original = new ServerInfo { Host = "h", UseAllMonitors = true };
+            Assert.True(RdpFile.Parse(RdpFile.Serialize(original)).UseAllMonitors);
+
+            original.UseAllMonitors = false;
+            Assert.False(RdpFile.Parse(RdpFile.Serialize(original)).UseAllMonitors);
+        }
     }
 }

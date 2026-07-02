@@ -72,18 +72,33 @@ namespace RdpManager.Core
             return d + " (kod " + reason + "/" + ext + ")";
         }
 
-        /// <summary>Jedna linia dziennika połączeń (audyt). Znacznik czasu podaje wołający (testowalne).</summary>
+        /// <summary>
+        /// Jedna linia dziennika połączeń (audyt). Znacznik czasu podaje wołający (testowalne).
+        /// Pola pochodzące od użytkownika są oczyszczane ze znaków sterujących — nazwa serwera
+        /// z „\n" nie może sfałszować kolejnych linii logu.
+        /// </summary>
         public static string FormatConnectionLog(DateTime ts, string ev, ServerInfo s)
         {
             string user = s == null ? "-"
                 : s.UseWindowsAccount ? "(konto Windows)"
                 : string.IsNullOrEmpty(s.Username) ? "-"
                 : string.IsNullOrEmpty(s.Domain) ? s.Username : s.Domain + "\\" + s.Username;
-            string name = s?.Name ?? "-";
-            string host = s?.Host ?? "-";
+            string name = SanitizeLogField(s?.Name);
+            string host = SanitizeLogField(s?.Host);
+            user = SanitizeLogField(user);
             int port = s?.Port ?? 0;
             return string.Format(CultureInfo.InvariantCulture,
                 "{0:yyyy-MM-dd HH:mm:ss}  {1,-12} {2} ({3}:{4}) user={5}", ts, ev, name, host, port, user);
+        }
+
+        /// <summary>Zastępuje znaki sterujące (w tym CR/LF) spacją; puste pole -&gt; "-".</summary>
+        internal static string SanitizeLogField(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "-";
+            var chars = value.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+                if (char.IsControl(chars[i])) chars[i] = ' ';
+            return new string(chars);
         }
 
         /// <summary>Czytelny wynik diagnostyki osiągalności portu RDP.</summary>
