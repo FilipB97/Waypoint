@@ -6,7 +6,7 @@
         WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica"
         Icon="pack://application:,,,/Assets/app.ico"
-        Loaded="Window_Loaded" Closing="Window_Closing" KeyDown="Window_KeyDown">
+        Loaded="Window_Loaded" Closing="Window_Closing" KeyDown="Window_KeyDown" StateChanged="Window_StateChanged">
 
     <!-- Kolory żyją w Themes/Palette.{Dark,Light}.xaml (App), przełączane przez ThemeManager. -->
     <Window.Resources>

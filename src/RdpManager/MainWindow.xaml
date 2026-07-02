@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Waypoint" Width="1180" Height="720" MinWidth="900" MinHeight="560"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterScreen"
@@ -201,7 +202,10 @@
                 </Grid.RowDefinitions>
 
                 <!-- tab strip (built in code) -->
-                <Border x:Name="TabStripHost" Grid.Row="0" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
+                <!-- IsHitTestVisibleInChrome: w trybie skupienia titlebar znika, a pasek kart wjeżdża
+                     w strefę caption WindowChrome — bez tego kliknięcia w karty przeciągałyby okno. -->
+                <Border x:Name="TabStripHost" Grid.Row="0" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -211,11 +215,21 @@
                                       PreviewMouseWheel="TabScroller_PreviewMouseWheel">
                             <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,8,8,0"/>
                         </ScrollViewer>
-                        <!-- W trybie skupienia (zmaksymalizowane) pasek stanu znika, więc pełny ekran jest tu. -->
+                        <!-- Tryb skupienia (zmaksymalizowane): titlebar + pasek stanu znikają, więc pełny ekran
+                             i przyciski okna (minimalizuj / przywróć / zamknij) mieszkają tu, na pasku kart. -->
                         <StackPanel x:Name="FocusControls" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
-                                    Margin="4,0,8,0" Visibility="Collapsed">
+                                    Margin="4,0,6,0" Visibility="Collapsed">
                             <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
                                 <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                            </Button>
+                            <Button Style="{DynamicResource IconBtn}" Click="FocusMinimize_Click" ToolTip="{DynamicResource S.tip.minimize}">
+                                <TextBlock Text="&#x2212;" FontSize="15" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Style="{DynamicResource IconBtn}" Click="FocusRestore_Click" ToolTip="{DynamicResource S.fs.restore}">
+                                <TextBlock Text="&#x2750;" FontSize="13" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Style="{DynamicResource IconBtn}" Click="FocusClose_Click" ToolTip="{DynamicResource S.m.close}">
+                                <TextBlock Text="&#x2715;" FontSize="13" Foreground="{DynamicResource Danger}" VerticalAlignment="Center"/>
                             </Button>
                         </StackPanel>
                     </Grid>

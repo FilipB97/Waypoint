@@ -165,11 +165,17 @@ namespace RdpManager
                              && _active != null
                              && SessionsView.Visibility == Visibility.Visible;
             var vis = immersive ? Visibility.Collapsed : Visibility.Visible;
+            AppTitleBar.Visibility = vis;      // „dosłownie jak fullscreen" — zostaje tylko pasek kart + pulpit
             Rail.Visibility = vis;
             Sidebar.Visibility = vis;
             SessionToolbar.Visibility = vis;   // pasek połączenia/stanu znika w trybie skupienia
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
         }
+
+        // Przyciski okna na pasku kart (widoczne w trybie skupienia, bo titlebar jest wtedy ukryty).
+        private void FocusMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+        private void FocusRestore_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Normal;
+        private void FocusClose_Click(object sender, RoutedEventArgs e) => Close();
 
         private void SetNav(Button b, Wpf.Ui.Controls.SymbolIcon ico, bool active)
         {
