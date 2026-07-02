@@ -199,7 +199,9 @@
                     </ui:TextBox>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8,0">
-                        <StackPanel x:Name="ServerTree"/>
+                        <AdornerDecorator>
+                            <StackPanel x:Name="ServerTree"/>
+                        </AdornerDecorator>
                     </ScrollViewer>
 
                     <Border Grid.Row="2" BorderBrush="{StaticResource Border}" BorderThickness="0,1,0,0" Padding="10">
@@ -219,7 +221,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="6"/>
+                    <RowDefinition x:Name="SessionHotZoneRow" Height="6"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -269,7 +271,7 @@
                                            Foreground="{StaticResource TextTer}" Margin="14,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button Style="{StaticResource IconBtn}" Click="Fullscreen_Click" ToolTip="Pełny ekran">
+                                <Button Style="{StaticResource IconBtn}" Click="Fullscreen_Click" ToolTip="Pełny ekran (na tym monitorze)">
                                     <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{StaticResource TextTer}"/>
                                 </Button>
                                 <Button Style="{StaticResource IconBtn}" Click="Disconnect_Click" ToolTip="Rozłącz">
@@ -297,7 +299,7 @@
                             <TextBlock x:Name="OverlayMsg" Foreground="{StaticResource TextSec}" HorizontalAlignment="Center"
                                        TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             <ui:Button x:Name="OverlayReconnect" Content="Połącz ponownie" Appearance="Primary"
-                                       Click="Connect_Click" HorizontalAlignment="Center" Margin="0,18,0,0" Visibility="Collapsed"/>
+                                       Click="OverlayAction_Click" HorizontalAlignment="Center" Margin="0,18,0,0" Visibility="Collapsed"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -401,6 +403,17 @@
                 </Border.Effect>
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
+                        <Thumb x:Name="FsBarThumb" Width="20" Cursor="SizeWE" DragDelta="FsBarThumb_DragDelta"
+                               Margin="0,0,10,0" ToolTip="Przeciągnij, aby przesunąć pasek">
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border Background="Transparent">
+                                        <TextBlock Text="⠿" FontSize="15" Foreground="{StaticResource TextTer}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
                         <TextBlock x:Name="FsName" Text="—" Foreground="{StaticResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         <Border Width="1" Background="{StaticResource Border}" Margin="12,2"/>
                         <ui:Button x:Name="InnyBtn" Content="inne połączenia  ▾" Appearance="Secondary" Click="ToggleFlyout_Click"/>

@@ -52,6 +52,40 @@ namespace RdpManager
         /// <summary>Wołać z OnLoginComplete/OnConnected — pierwszy legalny moment na resize.</summary>
         public void ApplyInitial() => Kick();
 
+        /// <summary>
+        /// Ustawia rozdzielczość sesji DOKŁADNIE na podane piksele fizyczne, z pominięciem pomiaru
+        /// hosta (DIP×DPI). Używane przy wejściu w pełny ekran, gdzie znamy natywny rozmiar monitora
+        /// z GetMonitorInfo — bez tego przeliczanie DIP→piksele bywa błędne, gdy DPI monitora docelowego
+        /// dochodzi z opóźnieniem (rozjazd skalowania po przeniesieniu na inny ekran).
+        /// </summary>
+        public void ApplyExact(int physW, int physH)
+        {
+            if (_disposed) return;
+
+            physW = RdpUtils.NormalizeDim(physW);
+            physH = RdpUtils.NormalizeDim(physH);
+            if (physW < MinDim || physH < MinDim) return;
+
+            var rdp = _session.Rdp;
+            if (rdp == null) return;
+
+            bool live;
+            try { live = _session.Connected && rdp.Connected == 1; }
+            catch (InvalidComObjectException) { return; }
+            catch (COMException) { return; }
+            if (!live) return;
+
+            _debounce.Stop();   // ubijemy ewentualny wyścig ze ścieżką SizeChanged
+            try
+            {
+                rdp.UpdateSessionDisplaySettings((uint)physW, (uint)physH, 0u, 0u, 0u, 100u, 100u);
+                TrySetSmartSizing(rdp, false);
+                _lastW = physW; _lastH = physH;
+            }
+            catch (COMException) { TrySetSmartSizing(rdp, true); }
+            catch (InvalidComObjectException) { }
+        }
+
         private void OnHostSizeChanged(object sender, SizeChangedEventArgs e) => Kick();
         private void OnChildResize(object sender, EventArgs e) => Kick();
 

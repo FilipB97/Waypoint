@@ -25,6 +25,26 @@ namespace RdpManager
             DomainBox.Text = server.Domain ?? "";
             PassBox.Password = currentPassword ?? "";
             SavePassCheck.IsChecked = server.SavePassword;
+
+            Loaded += (s, e) => ClampToScreen();
+        }
+
+        /// <summary>Jak w ServerEditWindow: stopka zawsze na ekranie, treść się przewija.</summary>
+        private void ClampToScreen()
+        {
+            try
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                var wa = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea;
+                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
+                double waTop = wa.Top / dpi.DpiScaleY;
+                MaxHeight = wa.Height / dpi.DpiScaleY - 16;
+                if (Top < waTop + 8) Top = waTop + 8;
+            }
+            catch
+            {
+                MaxHeight = SystemParameters.WorkArea.Height - 16;
+            }
         }
 
         private void Ok_Click(object sender, RoutedEventArgs e)

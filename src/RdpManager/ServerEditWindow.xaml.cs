@@ -32,11 +32,32 @@ namespace RdpManager
             EdPrinters.IsChecked = server.RedirectPrinters;
             EdAudio.SelectedIndex = Math.Clamp(server.AudioMode, 0, 2);
             EdAuthLevel.SelectedIndex = Math.Clamp(server.AuthenticationLevel, 0, 2);
-            EdMultimon.IsChecked = server.UseAllMonitors;
             GatewayHostBox.Text = server.GatewayHostname ?? "";
             EdGatewayUsage.SelectedIndex = Math.Clamp(server.GatewayUsageMethod, 0, 2);
 
             ApplyWinAuthState();
+            Loaded += (s, e) => ClampToScreen();
+        }
+
+        /// <summary>
+        /// Ogranicza wysokość okna do obszaru roboczego monitora, na którym stoi (DPI-poprawnie),
+        /// żeby stopka z „Zapisz" nigdy nie wypadła poza ekran — treść wtedy się przewija.
+        /// </summary>
+        private void ClampToScreen()
+        {
+            try
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                var wa = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea;
+                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
+                double waTop = wa.Top / dpi.DpiScaleY;
+                MaxHeight = wa.Height / dpi.DpiScaleY - 16;
+                if (Top < waTop + 8) Top = waTop + 8;
+            }
+            catch
+            {
+                MaxHeight = SystemParameters.WorkArea.Height - 16;
+            }
         }
 
         private void WinAuth_Changed(object sender, RoutedEventArgs e) => ApplyWinAuthState();
@@ -72,7 +93,6 @@ namespace RdpManager
             _server.RedirectPrinters = EdPrinters.IsChecked == true;
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
             _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;
-            _server.UseAllMonitors = EdMultimon.IsChecked == true;
             _server.GatewayHostname = GatewayHostBox.Text.Trim();
             _server.GatewayUsageMethod = EdGatewayUsage.SelectedIndex < 0 ? 0 : EdGatewayUsage.SelectedIndex;
 

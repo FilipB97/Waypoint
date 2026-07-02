@@ -4,19 +4,22 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="Serwer" Width="440" SizeToContent="Height"
         Icon="pack://application:,,,/Assets/app.ico"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        MinWidth="440" MinHeight="360"
         ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <ui:TitleBar x:Name="DlgTitleBar" Grid.Row="0" Title="Serwer"/>
 
-        <Grid Grid.Row="1" Margin="18,8,18,8">
+        <!-- Treść przewija się; stopka z przyciskami jest ZAWSZE widoczna (małe okna / niskie ekrany). -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="18,8,18,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -46,8 +49,10 @@
             <TextBlock Grid.Row="3" Grid.Column="0" Text="Grupa" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="GroupBox" Grid.Row="3" Grid.Column="1" Margin="0,6"/>
 
-            <CheckBox x:Name="WinAuthCheck" Grid.Row="4" Grid.Column="1" Content="Logowanie kontem Windows (bez loginu/hasła)"
-                      Margin="0,8" Checked="WinAuth_Changed" Unchecked="WinAuth_Changed"/>
+            <CheckBox x:Name="WinAuthCheck" Grid.Row="4" Grid.Column="1" Margin="0,8"
+                      Checked="WinAuth_Changed" Unchecked="WinAuth_Changed">
+                <TextBlock Text="Logowanie kontem Windows (bez loginu/hasła)" TextWrapping="Wrap"/>
+            </CheckBox>
 
             <TextBlock Grid.Row="5" Grid.Column="0" Text="Użytkownik" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="UserBox" Grid.Row="5" Grid.Column="1" Margin="0,6"/>
@@ -58,7 +63,9 @@
             <TextBlock Grid.Row="7" Grid.Column="0" Text="Hasło" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <StackPanel Grid.Row="7" Grid.Column="1" Margin="0,6">
                 <PasswordBox x:Name="PassBox" VerticalContentAlignment="Center"/>
-                <CheckBox x:Name="SavePassCheck" Content="Zapisz hasło (Windows Credential Manager)" Margin="0,6,0,0"/>
+                <CheckBox x:Name="SavePassCheck" Margin="0,6,0,0">
+                    <TextBlock Text="Zapisz hasło (Windows Credential Manager)" TextWrapping="Wrap"/>
+                </CheckBox>
             </StackPanel>
 
             <TextBlock Grid.Row="8" Grid.ColumnSpan="2" Text="Przekierowania" FontWeight="SemiBold" Margin="0,16,0,6"/>
@@ -85,9 +92,6 @@
                     </ComboBox>
                 </StackPanel>
 
-                <CheckBox x:Name="EdMultimon" Content="Użyj wszystkich monitorów w pełnym ekranie (eksperymentalne)"
-                          Margin="0,10,0,0"/>
-
                 <TextBlock Text="Brama (RD Gateway / jump-host)" FontWeight="SemiBold" Margin="0,16,0,6"/>
                 <ui:TextBox x:Name="GatewayHostBox" PlaceholderText="host bramy — puste = połączenie bezpośrednie"/>
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
@@ -100,6 +104,7 @@
                 </StackPanel>
             </StackPanel>
         </Grid>
+        </ScrollViewer>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,4,18,16">
             <ui:Button Content="Anuluj" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="90"/>

@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Forms.Integration;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using AxMSTSCLib;
@@ -58,6 +60,18 @@ namespace RdpManager
         private double _prevScale = 1.0;
         private bool _isFullscreen;
         private bool _fsPinned;   // pasek pełnoekranowy „przypięty" (bez auto-chowania)
+        private double _fsBarOffset;   // przesunięcie paska od środka (przeciąganie w poziomie)
+        private System.Windows.Forms.Screen _fsTargetScreen;   // monitor docelowy pełnego ekranu (null = bieżący)
+
+        // Drag&drop kolejności serwerów w drzewie.
+        private Point _dragStartPoint;
+        private ServerInfo _dragCandidate;
+        private bool _didDrag;
+        private InsertionAdorner _dropAdorner;   // linia „tu wyląduje" na krawędzi wiersza
+        private Border _dropRow;                  // wiersz, do którego przypięty jest adorner
+
+        // Otwarte, samodzielne okna sesji (model wielookienny).
+        private readonly System.Collections.Generic.List<SessionWindow> _sessionWindows = new System.Collections.Generic.List<SessionWindow>();
 
         // Opóźnienie pojawienia się paska pełnoekranowego (jak w mstsc) + polling pozycji kursora.
         private DispatcherTimer _fsBarDelay;
@@ -165,7 +179,8 @@ namespace RdpManager
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (_settings.ConfirmCloseConnected && _sessions.Any(s => s.Connected) &&
+            if (_settings.ConfirmCloseConnected &&
+                (_sessions.Any(s => s.Connected) || _sessionWindows.Any(w => w.IsConnected)) &&
                 MessageBox.Show("Są aktywne połączenia. Zamknąć aplikację?", "Zamknij",
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             {
@@ -178,6 +193,10 @@ namespace RdpManager
                 try { s.Resizer?.Dispose(); } catch { }
                 try { s.Rdp.Disconnect(); } catch { }
                 try { s.Host.Dispose(); } catch { }
+            }
+            foreach (var w in _sessionWindows.ToList())
+            {
+                try { w.Close(); } catch { }
             }
         }
 
@@ -350,7 +369,7 @@ namespace RdpManager
 
             int total = _vm.Total;
             int online = _vm.OnlineCount;
-            int open = _sessions.Count;
+            int open = _sessions.Count + _sessionWindows.Count;
 
             var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 22) };
             cards.Children.Add(StatCard("Serwery", total.ToString()));
@@ -389,11 +408,21 @@ namespace RdpManager
             return card;
         }
 
-        // Wyśrodkuj pasek u samej góry względem celu (HotZone rozciąga się na całą szerokość obszaru).
+        // Pasek u samej góry: domyślnie wyśrodkowany, ale można go przeciągać w poziomie (_fsBarOffset).
         private CustomPopupPlacement[] PlaceFsPopup(Size popupSize, Size targetSize, Point offset)
         {
-            double x = (targetSize.Width - popupSize.Width) / 2.0;
-            return new[] { new CustomPopupPlacement(new Point(x, 0), PopupPrimaryAxis.Horizontal) };
+            double free = Math.Max(0, targetSize.Width - popupSize.Width);
+            double x = free / 2.0 + _fsBarOffset;
+            if (x < 0) x = 0;
+            if (x > free) x = free;
+            return new[] { new CustomPopupPlacement(new Point(x, 0), PopupPrimaryAxis.None) };
+        }
+
+        private void FsBarThumb_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+        {
+            _fsBarOffset += e.HorizontalChange;
+            // Wymuś ponowne przeliczenie pozycji popupu (bez zmiany netto offsetu).
+            if (FsPopup.IsOpen) { FsPopup.HorizontalOffset += 0.01; FsPopup.HorizontalOffset -= 0.01; }
         }
 
         // ---------- Drzewo serwerów ----------
@@ -513,9 +542,47 @@ namespace RdpManager
 
             row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)Resources["Elevated"]; };
             row.MouseLeave += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
-            row.MouseLeftButtonUp += (s, e) => OpenServer(server, true);
+
+            // Drag&drop: przeciągnięcie zmienia kolejność (a upuszczenie na inną grupę przenosi do niej).
+            row.AllowDrop = true;
+            row.PreviewMouseLeftButtonDown += (s, e) => { _dragStartPoint = e.GetPosition(null); _dragCandidate = server; _didDrag = false; };
+            row.PreviewMouseMove += (s, e) =>
+            {
+                if (e.LeftButton != MouseButtonState.Pressed || _dragCandidate == null) return;
+                var pos = e.GetPosition(null);
+                if (Math.Abs(pos.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                    Math.Abs(pos.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+                _didDrag = true;
+                row.Opacity = 0.4;   // wizualnie „podnieś" przeciągany wiersz
+                try { DragDrop.DoDragDrop(row, _dragCandidate, DragDropEffects.Move); }
+                catch { }
+                finally { row.Opacity = 1.0; ClearDropIndicator(); _dragCandidate = null; }
+            };
+            row.DragOver += (s, e) =>
+            {
+                e.Effects = DragDropEffects.Move;
+                e.Handled = true;
+                var dragged = e.Data.GetData(typeof(ServerInfo)) as ServerInfo;
+                if (dragged == null || dragged == server) { ClearDropIndicator(); return; }
+                bool bottom = e.GetPosition(row).Y > row.ActualHeight / 2;
+                ShowDropIndicator(row, bottom);
+            };
+            row.Drop += (s, e) =>
+            {
+                ClearDropIndicator();
+                bool bottom = e.GetPosition(row).Y > row.ActualHeight / 2;
+                ReorderServer(e.Data.GetData(typeof(ServerInfo)) as ServerInfo, server, bottom);
+                e.Handled = true;
+            };
+            row.MouseLeftButtonUp += (s, e) =>
+            {
+                if (_didDrag) { _didDrag = false; return; }   // to było przeciąganie, nie klik
+                OpenServer(server, true);
+            };
 
             var menu = new ContextMenu();
+            var newWinItem = new MenuItem { Header = "Otwórz w nowym oknie" };
+            newWinItem.Click += (s, e) => OpenInNewWindow(server);
             var connectAsItem = new MenuItem { Header = "Połącz jako…" };
             connectAsItem.Click += (s, e) =>
             {
@@ -530,6 +597,7 @@ namespace RdpManager
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = "Usuń" };
             delItem.Click += (s, e) => DeleteServer(server);
+            menu.Items.Add(newWinItem);
             menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(diagItem);
@@ -550,6 +618,77 @@ namespace RdpManager
                 kv.Value.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
                 _serverAccent[kv.Key].Visibility = active ? Visibility.Visible : Visibility.Collapsed;
             }
+        }
+
+        /// <summary>Zmienia kolejność serwerów (drag&drop): wstawia <paramref name="dragged"/> przed albo
+        /// za <paramref name="target"/> (zależnie od <paramref name="after"/> = połowa wiersza, na którą
+        /// upuszczono); upuszczenie na inną grupę przenosi serwer do tej grupy.</summary>
+        private void ReorderServer(ServerInfo dragged, ServerInfo target, bool after = false)
+        {
+            if (dragged == null || target == null || dragged == target) return;
+            int from = _vm.Servers.IndexOf(dragged);
+            int to = _vm.Servers.IndexOf(target);
+            if (from < 0 || to < 0) return;
+
+            dragged.Group = target.Group;   // upuszczenie na inną grupę = przeniesienie do niej
+
+            // Docelowy indeks po usunięciu z „from": przed/za wskazanym wierszem.
+            if (after && from > to) to += 1;
+            else if (!after && from < to) to -= 1;
+            to = Math.Max(0, Math.Min(to, _vm.Servers.Count - 1));
+
+            _vm.Servers.Move(from, to);
+            PersistServers();
+            RenderTree(SearchBox.Text);
+            FlashRow(dragged);   // podświetl, gdzie wylądował
+        }
+
+        // Pokazuje/aktualizuje linię wskazującą miejsce upuszczenia na krawędzi wiersza.
+        private void ShowDropIndicator(Border row, bool bottom)
+        {
+            var layer = AdornerLayer.GetAdornerLayer(row);
+            if (layer == null) { ClearDropIndicator(); return; }
+
+            if (_dropRow == row && _dropAdorner != null)
+            {
+                if (_dropAdorner.AtBottom != bottom) { _dropAdorner.AtBottom = bottom; _dropAdorner.InvalidateVisual(); }
+                return;
+            }
+            ClearDropIndicator();
+            _dropAdorner = new InsertionAdorner(row, (Brush)Resources["Accent"]) { AtBottom = bottom };
+            layer.Add(_dropAdorner);
+            _dropRow = row;
+        }
+
+        private void ClearDropIndicator()
+        {
+            if (_dropAdorner != null && _dropRow != null)
+                AdornerLayer.GetAdornerLayer(_dropRow)?.Remove(_dropAdorner);
+            _dropAdorner = null;
+            _dropRow = null;
+        }
+
+        // Krótkie podświetlenie wiersza (akcent → zanik) po zmianie kolejności — żeby oko złapało, gdzie wylądował.
+        private void FlashRow(ServerInfo server)
+        {
+            if (server == null || !_serverRows.TryGetValue(server, out var row)) return;
+
+            Color accent = (Resources["Accent"] as SolidColorBrush)?.Color ?? Color.FromRgb(0x29, 0xC5, 0xD6);
+            var brush = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
+            row.Background = brush;
+
+            var anim = new ColorAnimation
+            {
+                To = Color.FromArgb(0x00, accent.R, accent.G, accent.B),
+                Duration = TimeSpan.FromMilliseconds(700),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            anim.Completed += (s, e) =>
+            {
+                bool active = _active != null && _active.Server == server;
+                row.Background = active ? (Brush)Resources["AccentSoft"] : Brushes.Transparent;
+            };
+            brush.BeginAnimation(SolidColorBrush.ColorProperty, anim);
         }
 
         // ---------- Otwieranie / przełączanie sesji ----------
@@ -622,7 +761,13 @@ namespace RdpManager
             foreach (var s in _sessions)
                 s.Host.Visibility = (s == _active && s.Connected) ? Visibility.Visible : Visibility.Collapsed;
 
-            if (!has || _active.Connected)
+            if (!has)
+            {
+                SessionOverlay.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            if (_active.Connected)
             {
                 SessionOverlay.Visibility = Visibility.Collapsed;
                 return;
@@ -632,10 +777,16 @@ namespace RdpManager
             bool connecting = _active.StatusKind == StatusKind.Connecting;
             OverlaySpinner.Visibility = connecting ? Visibility.Visible : Visibility.Collapsed;
             OverlayReconnect.Visibility = connecting ? Visibility.Collapsed : Visibility.Visible;
+            OverlayReconnect.Content = "Połącz ponownie";
             OverlayTitle.Text = connecting
                 ? "Łączenie z " + _active.Server.Host + "…"
                 : (_active.StatusKind == StatusKind.Error ? "Rozłączono" : "Gotowe do połączenia");
             OverlayMsg.Text = connecting ? "" : _active.Status;
+        }
+
+        private void OverlayAction_Click(object sender, RoutedEventArgs e)
+        {
+            if (_active != null) Connect_Click(sender, e);
         }
 
         private void LoadToolbar(Session s)
@@ -714,6 +865,8 @@ namespace RdpManager
             tab.MouseLeftButtonUp += (s, e) => Activate(session);
 
             var tabMenu = new ContextMenu();
+            var tearItem = new MenuItem { Header = "Wyciągnij do osobnego okna" };
+            tearItem.Click += (s, e) => TearOffToWindow(session);
             var dupItem = new MenuItem { Header = "Duplikuj" };
             dupItem.Click += (s, e) => DuplicateSession(session);
             var moveLeft = new MenuItem { Header = "Przesuń w lewo" };
@@ -724,7 +877,9 @@ namespace RdpManager
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = "Zamknij" };
             closeThis.Click += (s, e) => RequestCloseSession(session);
+            tabMenu.Items.Add(tearItem);
             tabMenu.Items.Add(dupItem);
+            tabMenu.Items.Add(new Separator());
             tabMenu.Items.Add(moveLeft);
             tabMenu.Items.Add(moveRight);
             tabMenu.Items.Add(new Separator());
@@ -910,13 +1065,11 @@ namespace RdpManager
                 adv.AudioRedirectionMode = (uint)Math.Clamp(s.Server.AudioMode, 0, 2);
                 try { s.Rdp.SecuredSettings2.KeyboardHookMode = 2; } catch { }  // Alt+Tab/Win -> zdalna w pełnym ekranie
 
-                // Multi-monitor (eksperymentalne): tylko przy >1 monitorze — na jednym bez zmian.
-                // UseMultimon żyje na IMsRdpClientNonScriptable5 (nie na IMsRdpClient9).
-                try
-                {
-                    ((IMsRdpClientNonScriptable5)s.Rdp.GetOcx()).UseMultimon =
-                        s.Server.UseAllMonitors && MonitorCount() > 1;
-                }
+                // Multi-monitor realizujemy przez rozpięcie NASZEGO okna na wirtualny pulpit
+                // (span, w EnterFullscreen) — pełny ekran kontrolki (FullScreen + UseMultimon)
+                // crashuje w WindowsFormsHost (SEH w DispatchMessage, 2026-07-02). UseMultimon
+                // trzymamy na false, żeby Ctrl+Alt+Break nie wszedł w tę ścieżkę przypadkiem.
+                try { ((IMsRdpClientNonScriptable5)s.Rdp.GetOcx()).UseMultimon = false; }
                 catch { /* starsza kontrolka bez multimon — pomijamy */ }
 
                 ApplyGateway(s);
@@ -1073,22 +1226,53 @@ namespace RdpManager
 
         // ---------- Pełny ekran ----------
 
+        // Otwiera serwer w OSOBNYM oknie sesji (model jak mstsc — kontrolka żyje w tym oknie na stałe).
+        // Domyślne otwieranie idzie do zakładki w oknie głównym; to jest opcja na drugi monitor.
+        // password != null → przenosimy hasło z zakładki przy „wyciąganiu" (bez ponownego pytania).
+        private void OpenInNewWindow(ServerInfo server, string password = null)
+        {
+            if (server == null) return;
+            RecordRecent(server);
+            string pw = password ?? "";
+            if (string.IsNullOrEmpty(pw) && server.SavePassword) CredentialStore.TryRead(server.CredTarget, out pw);
+            var win = new SessionWindow(server, _settings, pw, PersistServers, DockSessionFromWindow);
+            _sessionWindows.Add(win);
+            win.Closed += (s, e) => _sessionWindows.Remove(win);
+            win.Show();
+            win.Activate();
+        }
+
+        /// <summary>„Wyciąga" zakładkę do osobnego okna: zamyka kartę i otwiera okno sesji tego serwera
+        /// (RDP łączy ponownie — wraca do tej samej sesji po stronie serwera). Przenosi hasło z pamięci.</summary>
+        private void TearOffToWindow(Session s)
+        {
+            if (s == null) return;
+            var server = s.Server;
+            var pw = s.Password;
+            CloseSession(s);
+            OpenInNewWindow(server, pw);
+        }
+
+        /// <summary>„Dokuje" okno sesji z powrotem jako kartę w managerze (callback wołany z SessionWindow):
+        /// otwiera nową kartę tego serwera i łączy (reconnect wznawia sesję serwera). Hasło przeniesione z okna.</summary>
+        private void DockSessionFromWindow(ServerInfo server, string password)
+        {
+            OpenServer(server, autoConnect: false, forceNew: true);
+            if (_active != null && _active.Server == server)
+            {
+                _active.Password = password;
+                ConnectSession(_active);
+            }
+            if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+            Activate();   // Window.Activate — wysuń manager na wierzch
+        }
+
         private void Fullscreen_Click(object sender, RoutedEventArgs e) => ToggleFullscreen();
 
-        private void ToggleFullscreen()
+        private void ToggleFullscreen(System.Windows.Forms.Screen target = null)
         {
             if (_active == null && !_isFullscreen) return;
-
-            // Multi-monitor (eksperymentalne): połączona sesja z UseAllMonitors przy >1 monitorze
-            // używa pełnego ekranu KONTROLKI (sama spina monitory i ma własny pasek połączenia).
-            // Na jednym monitorze warunek nigdy nie zachodzi — ścieżka okna bez zmian.
-            if (!_isFullscreen && _active != null && _active.Connected &&
-                _active.Server.UseAllMonitors && MonitorCount() > 1)
-            {
-                try { _active.Rdp.FullScreen = true; return; } catch { /* fallback niżej */ }
-            }
-
-            if (!_isFullscreen) EnterFullscreen();
+            if (!_isFullscreen) { _fsTargetScreen = target; EnterFullscreen(); }
             else ExitFullscreen();
         }
 
@@ -1107,24 +1291,37 @@ namespace RdpManager
             Sidebar.Visibility = Visibility.Collapsed;
             TabStripHost.Visibility = Visibility.Collapsed;
             SessionToolbar.Visibility = Visibility.Collapsed;
+            SessionHotZoneRow.Height = new GridLength(0);   // host wypełnia CAŁY monitor → rozdzielczość 1:1
 
             WindowState = WindowState.Normal;   // trzeba być Normal, żeby ręcznie ustawić granice
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.NoResize;
 
-            // Cały prostokąt monitora (rcMonitor, NIE rcWork) => zakrywa pasek zadań; Topmost trzyma nad nim.
-            if (TryGetMonitorRectDip(out Rect r))
-            {
-                Left = r.Left; Top = r.Top; Width = r.Width; Height = r.Height;
-                Topmost = true;
-            }
-            else
-            {
-                WindowState = WindowState.Maximized;   // awaryjnie (bez zakrycia paska)
-            }
+            // Pozycjonujemy w pikselach fizycznych na wybranym monitorze (_fsTargetScreen) albo bieżącym.
+            // SetWindowPos jest poprawny także między monitorami o różnym DPI; zakrywa pasek zadań.
+            var hwnd = new WindowInteropHelper(this).Handle;
+            var screen = _fsTargetScreen ?? System.Windows.Forms.Screen.FromHandle(hwnd);
+            var b = screen.Bounds;
+            SetWindowPos(hwnd, IntPtr.Zero, b.Left, b.Top, b.Width, b.Height, SWP_SHOWWINDOW);
+            Topmost = true;
 
             _isFullscreen = true;
             _fsCursorPoll.Start();
+
+            // Rozdzielczość dokładnie = natywne piksele monitora (jak w oknie sesji) — deterministycznie, bez wyścigu DPI.
+            IntPtr mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
+            if (GetMonitorInfo(mon, ref mi))
+            {
+                _fsMonRect = mi.rcMonitor;
+                int pw = mi.rcMonitor.right - mi.rcMonitor.left, ph = mi.rcMonitor.bottom - mi.rcMonitor.top;
+                var sess = _active;
+                Dispatcher.BeginInvoke(new Action(() => { if (_isFullscreen) sess?.Resizer?.ApplyExact(pw, ph); }), DispatcherPriority.Background);
+            }
+            else
+            {
+                _fsMonRect = new RECT { left = b.Left, top = b.Top, right = b.Right, bottom = b.Bottom };
+            }
         }
 
         private void ExitFullscreen()
@@ -1143,6 +1340,7 @@ namespace RdpManager
             Sidebar.Visibility = Visibility.Visible;
             TabStripHost.Visibility = Visibility.Visible;
             SessionToolbar.Visibility = Visibility.Visible;
+            SessionHotZoneRow.Height = new GridLength(6);
 
             FsPopup.IsOpen = false;
             _isFullscreen = false;
@@ -1150,24 +1348,40 @@ namespace RdpManager
             PinBtn.Content = "📌 przypnij";
         }
 
-        /// <summary>Pełny prostokąt monitora, na którym jest okno, przeliczony na DIP.</summary>
-        private bool TryGetMonitorRectDip(out Rect rect)
+        /// <summary>
+        /// Prostokąt pełnego ekranu w DIP: bieżący monitor albo — przy span — cały wirtualny
+        /// pulpit (wszystkie monitory). Zapisuje też prostokąt w pikselach do pollingu krawędzi.
+        /// </summary>
+        private bool TryGetFullscreenRectDip(bool allMonitors, out Rect rect)
         {
             rect = default;
             IntPtr hwnd = new WindowInteropHelper(this).Handle;
             if (hwnd == IntPtr.Zero) return false;
 
-            IntPtr mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-            var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
-            if (!GetMonitorInfo(mon, ref mi)) return false;
-            _fsMonRect = mi.rcMonitor;   // piksele fizyczne — do pollingu górnej krawędzi
+            RECT r;
+            if (allMonitors)
+            {
+                r.left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+                r.top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+                r.right = r.left + GetSystemMetrics(SM_CXVIRTUALSCREEN);
+                r.bottom = r.top + GetSystemMetrics(SM_CYVIRTUALSCREEN);
+                if (r.right <= r.left || r.bottom <= r.top) return false;
+            }
+            else
+            {
+                IntPtr mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
+                if (!GetMonitorInfo(mon, ref mi)) return false;
+                r = mi.rcMonitor;
+            }
+            _fsMonRect = r;   // piksele — do pollingu górnej krawędzi (działa też dla span)
 
             var src = PresentationSource.FromVisual(this);
             if (src?.CompositionTarget == null) return false;
             Matrix toDip = src.CompositionTarget.TransformFromDevice;
 
-            Point tl = toDip.Transform(new Point(mi.rcMonitor.left, mi.rcMonitor.top));
-            Point br = toDip.Transform(new Point(mi.rcMonitor.right, mi.rcMonitor.bottom));
+            Point tl = toDip.Transform(new Point(r.left, r.top));
+            Point br = toDip.Transform(new Point(r.right, r.bottom));
             rect = new Rect(tl, br);
             return true;
         }
@@ -1180,6 +1394,16 @@ namespace RdpManager
         }
 
         private const int MONITOR_DEFAULTTONEAREST = 0x2;
+        private const int SM_XVIRTUALSCREEN = 76, SM_YVIRTUALSCREEN = 77,
+                          SM_CXVIRTUALSCREEN = 78, SM_CYVIRTUALSCREEN = 79;
+
+        private const uint SWP_SHOWWINDOW = 0x0040;
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
 
         [DllImport("user32.dll")]
         private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int dwFlags);
