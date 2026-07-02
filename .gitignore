@@ -5,6 +5,7 @@
 [Ll]og/
 [Ll]ogs/
 dist/
+publish/
 
 # .NET / MSBuild
 *.user

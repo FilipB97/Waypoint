@@ -68,6 +68,15 @@ dotnet publish src/RdpManager/RdpManager.csproj -c Release -r win-x64 --self-con
 # -> src/RdpManager/bin/Release/net8.0-windows/win-x64/publish/Waypoint.exe
 ```
 
+Or use the helper script (tests, then single-file publish to `dist/`):
+
+```powershell
+.\scripts\release.ps1                        # build only -> dist\Waypoint-<version>-win-x64.exe
+.\scripts\release.ps1 -Version 1.1.0 -Publish  # build + tag v1.1.0 + push (the Release workflow publishes it)
+```
+
+(Double-click `scripts\release.cmd` for a guided prompt.)
+
 ## Tests
 
 ```powershell
