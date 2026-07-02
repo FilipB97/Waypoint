@@ -10,7 +10,7 @@ Remote Desktop Connection (`mstsc.exe`).
 ## Download
 
 Grab the latest **`Waypoint-<version>-win-x64.exe`** from the
-[Releases](https://github.com/FilipB97/RemoteDesktopManager/releases) page and run it —
+[Releases](https://github.com/FilipB97/Waypoint/releases) page and run it —
 it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 
 > Not code-signed yet, so SmartScreen may warn on first run: *More info → Run anyway*.
