@@ -198,7 +198,31 @@
     <sys:String x:Key="S.dlg.exportrdp.title">Eksportuj do .rdp</sys:String>
     <sys:String x:Key="S.dlg.rdp.filter">Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp</sys:String>
 
+    <!-- import z innych menedżerów -->
+    <sys:String x:Key="S.import">Importuj…</sys:String>
+    <sys:String x:Key="S.import.mstsc">Z mstsc (historia)</sys:String>
+    <sys:String x:Key="S.import.rdpfile">Plik .rdp…</sys:String>
+    <sys:String x:Key="S.import.mrng">mRemoteNG (confCons.xml)…</sys:String>
+    <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
+    <sys:String x:Key="S.dlg.importmrng.title">Importuj z mRemoteNG</sys:String>
+    <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdg.title">Importuj z RDCMan</sys:String>
+    <sys:String x:Key="S.dlg.rdg.filter">RDCMan (*.rdg)|*.rdg|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.msg.import.unsupported">Pominięto nieobsługiwane protokoły: {0}</sys:String>
+    <sys:String x:Key="S.msg.import.nopass">Hasła nie są przenoszone — podasz je przy pierwszym połączeniu.</sys:String>
+
     <sys:String x:Key="S.ssh.nowebview">Terminal SSH wymaga składnika WebView2 Runtime (wbudowany w Windows 11; na starszych systemach doinstaluj go ze strony Microsoft).</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.title">Klucz hosta SSH</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.new">Pierwsze połączenie z {0}.
+Odcisk klucza hosta:
+{1}
+
+Zaufać i zapamiętać ten klucz?</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.changed">UWAGA: klucz hosta {0} ZMIENIŁ SIĘ!
+Nowy odcisk:
+{1}
+
+To może oznaczać atak (podszywanie się pod serwer) albo reinstalację serwera. Kontynuować i zapisać nowy klucz?</sys:String>
 
     <sys:String x:Key="S.cp.header">Podaj poświadczenia dla {0} ({1}).</sys:String>
     <sys:String x:Key="S.cp.needuser">Podaj nazwę użytkownika.</sys:String>

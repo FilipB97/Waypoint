@@ -181,11 +181,19 @@
                                        ToolTip="{DynamicResource S.quickConnect.tip}"/>
                             <ui:Button Content="{DynamicResource S.addServer}" HorizontalAlignment="Stretch"
                                        Appearance="Secondary" Margin="0,6,0,0" Click="AddServer_Click"/>
-                            <ui:Button Content="{DynamicResource S.importRdp}" HorizontalAlignment="Stretch"
-                                       Appearance="Secondary" Margin="0,6,0,0" Click="ImportRdp_Click"/>
-                            <ui:Button Content="{DynamicResource S.importMstsc}" HorizontalAlignment="Stretch"
-                                       Appearance="Secondary" Margin="0,6,0,0" Click="ImportMstsc_Click"
-                                       ToolTip="{DynamicResource S.importMstsc.tip}"/>
+                            <!-- Jeden przycisk importu z menu źródeł (mstsc / .rdp / mRemoteNG / RDCMan). -->
+                            <ui:Button Content="{DynamicResource S.import}" HorizontalAlignment="Stretch"
+                                       Appearance="Secondary" Margin="0,6,0,0" Click="ImportMenu_Click">
+                                <ui:Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{DynamicResource S.import.mstsc}" Click="ImportMstsc_Click"
+                                                  ToolTip="{DynamicResource S.importMstsc.tip}"/>
+                                        <MenuItem Header="{DynamicResource S.import.rdpfile}" Click="ImportRdp_Click"/>
+                                        <MenuItem Header="{DynamicResource S.import.mrng}" Click="ImportMrng_Click"/>
+                                        <MenuItem Header="{DynamicResource S.import.rdcman}" Click="ImportRdg_Click"/>
+                                    </ContextMenu>
+                                </ui:Button.ContextMenu>
+                            </ui:Button>
                         </StackPanel>
                     </Border>
                 </Grid>

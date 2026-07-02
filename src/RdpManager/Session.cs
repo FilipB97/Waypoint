@@ -29,7 +29,7 @@ namespace RdpManager
         /// <summary>Czy sesja doszła do pełnego zalogowania (odróżnia błąd połączenia od zwykłego rozłączenia).</summary>
         public bool LoggedIn { get; set; }
 
-        public string Status { get; set; } = "Rozłączony";
+        public string Status { get; set; } = LocalizationManager.S("S.st.disconnectedShort");
         public StatusKind StatusKind { get; set; } = StatusKind.Info;
 
         /// <summary>Hasło — wyłącznie w pamięci, na czas życia sesji. Nigdzie nie zapisywane.</summary>

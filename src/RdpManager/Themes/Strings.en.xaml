@@ -198,7 +198,31 @@
     <sys:String x:Key="S.dlg.exportrdp.title">Export to .rdp</sys:String>
     <sys:String x:Key="S.dlg.rdp.filter">Remote Desktop files (*.rdp)|*.rdp</sys:String>
 
+    <!-- import from other managers -->
+    <sys:String x:Key="S.import">Import…</sys:String>
+    <sys:String x:Key="S.import.mstsc">From mstsc (history)</sys:String>
+    <sys:String x:Key="S.import.rdpfile">.rdp file…</sys:String>
+    <sys:String x:Key="S.import.mrng">mRemoteNG (confCons.xml)…</sys:String>
+    <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
+    <sys:String x:Key="S.dlg.importmrng.title">Import from mRemoteNG</sys:String>
+    <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdg.title">Import from RDCMan</sys:String>
+    <sys:String x:Key="S.dlg.rdg.filter">RDCMan (*.rdg)|*.rdg|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.msg.import.unsupported">Skipped unsupported protocols: {0}</sys:String>
+    <sys:String x:Key="S.msg.import.nopass">Passwords are not migrated — you'll enter them on first connect.</sys:String>
+
     <sys:String x:Key="S.ssh.nowebview">The SSH terminal requires the WebView2 Runtime (built into Windows 11; on older systems install it from Microsoft).</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.title">SSH host key</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.new">First connection to {0}.
+Host key fingerprint:
+{1}
+
+Trust and remember this key?</sys:String>
+    <sys:String x:Key="S.ssh.hostkey.changed">WARNING: the host key for {0} HAS CHANGED!
+New fingerprint:
+{1}
+
+This may indicate an attack (server spoofing) or a server reinstall. Continue and save the new key?</sys:String>
 
     <sys:String x:Key="S.cp.header">Enter credentials for {0} ({1}).</sys:String>
     <sys:String x:Key="S.cp.needuser">Enter a username.</sys:String>

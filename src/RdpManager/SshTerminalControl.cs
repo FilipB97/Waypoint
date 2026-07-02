@@ -11,6 +11,7 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using Renci.SshNet;
 using Renci.SshNet.Common;
+using RdpManager.Core;
 using RdpManager.Models;
 
 namespace RdpManager
@@ -35,6 +36,16 @@ namespace RdpManager
         public event Action Connected;
         /// <summary>Rozłączono; parametr = opis powodu (może być null). Wątek roboczy.</summary>
         public event Action<string> Disconnected;
+
+        /// <summary>
+        /// Pytanie o zaufanie kluczowi hosta: (host:port, odcisk, czyZmianaKlucza) → true = ufaj.
+        /// Wołane z wątku SSH — obsługa musi zmarshalować się na UI (Dispatcher.Invoke).
+        /// Bez subskrybenta: nowy klucz = ufaj (TOFU), zmieniony = odrzuć.
+        /// </summary>
+        public Func<string, string, bool, bool> TrustHostKey;
+
+        private string _hostKeyHost;
+        private int _hostKeyPort;
 
         public SshTerminalControl()
         {
@@ -107,6 +118,24 @@ namespace RdpManager
                     case "size": // zmiana rozmiaru okna → window-change do PTY (jeśli ta wersja SSH.NET je wystawia)
                         TryResizePty(root.GetProperty("c").GetInt32(), root.GetProperty("r").GetInt32());
                         break;
+                    case "copy": // zaznaczenie / Ctrl+Shift+C → schowek Windows
+                        var sel = root.GetProperty("d").GetString();
+                        if (!string.IsNullOrEmpty(sel))
+                            Dispatcher.BeginInvoke(new Action(() => { try { Clipboard.SetText(sel); } catch { } }));
+                        break;
+                    case "paste": // Ctrl+Shift+V → tekst ze schowka do terminala (JSON = kanał sterujący)
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            try
+                            {
+                                string txt = Clipboard.GetText();
+                                if (!string.IsNullOrEmpty(txt) && !_disposed)
+                                    _web.CoreWebView2?.PostWebMessageAsJson(
+                                        JsonSerializer.Serialize(new { t = "paste", d = txt }));
+                            }
+                            catch { }
+                        }));
+                        break;
                 }
             }
             catch { /* uszkodzona wiadomość — ignoruj */ }
@@ -140,7 +169,9 @@ namespace RdpManager
                 if (methods.Count == 0)
                     methods.Add(new NoneAuthenticationMethod(server.Username));
 
-                var ci = new ConnectionInfo(server.Host, server.Port > 0 ? server.Port : 22,
+                _hostKeyHost = server.Host;
+                _hostKeyPort = server.Port > 0 ? server.Port : 22;
+                var ci = new ConnectionInfo(server.Host, _hostKeyPort,
                                             server.Username, methods.ToArray())
                 {
                     Timeout = TimeSpan.FromSeconds(15),
@@ -148,8 +179,8 @@ namespace RdpManager
                 };
 
                 var client = new SshClient(ci);
-                // MVP: akceptujemy klucz hosta bez weryfikacji (do zrobienia: odcisk + known_hosts).
-                client.HostKeyReceived += (o, e) => e.CanTrust = true;
+                client.KeepAliveInterval = TimeSpan.FromSeconds(30);   // NAT/zapory ubijają bezczynne sesje
+                client.HostKeyReceived += OnHostKey;
                 client.ErrorOccurred += (o, e) => RaiseDisconnected(e.Exception?.Message);
                 client.Connect();
 
@@ -162,6 +193,29 @@ namespace RdpManager
                 _shell = shell;
                 Connected?.Invoke();
             });
+        }
+
+        // TOFU: znany klucz → OK; nowy → pytanie (domyślnie ufaj); ZMIENIONY → pytanie z ostrzeżeniem (domyślnie odrzuć).
+        private void OnHostKey(object sender, HostKeyEventArgs e)
+        {
+            try
+            {
+                string fp = KnownHosts.Fingerprint(e.HostKey);
+                var store = KnownHosts.Load(SettingsStore.Dir);
+                var status = KnownHosts.Check(store, _hostKeyHost, _hostKeyPort, fp);
+                if (status == KnownHosts.Status.Match) { e.CanTrust = true; return; }
+
+                bool changed = status == KnownHosts.Status.Mismatch;
+                var ask = TrustHostKey;
+                bool trust = ask != null ? ask(_hostKeyHost + ":" + _hostKeyPort, fp, changed) : !changed;
+                if (trust)
+                {
+                    store[KnownHosts.EntryKey(_hostKeyHost, _hostKeyPort)] = fp;
+                    KnownHosts.Save(SettingsStore.Dir, store);
+                }
+                e.CanTrust = trust;
+            }
+            catch { e.CanTrust = false; }   // wątpliwość = odmowa (bezpieczny domyślny)
         }
 
         private void OnShellData(object sender, ShellDataEventArgs e)
@@ -192,18 +246,22 @@ namespace RdpManager
             Task.Run(() => { try { c?.Disconnect(); } catch { } });
         }
 
-        // window-change: SSH.NET nie wystawia stabilnego publicznego API — użyj przez refleksję, jeśli jest.
+        // window-change do PTY — pełnoekranowe aplikacje (htop, vim) dostają nowy rozmiar.
+        // SSH.NET nie wystawia tego publicznie (metoda żyje na wewnętrznym kanale ShellStream),
+        // więc wołamy przez refleksję; brak/zmiana API = cichy brak resize'u, nic się nie psuje.
         private void TryResizePty(int cols, int rows)
         {
             var sh = _shell;
             if (sh == null) return;
             try
             {
-                var m = sh.GetType().GetMethod("SendWindowChangeRequest",
-                    new[] { typeof(uint), typeof(uint), typeof(uint), typeof(uint) });
-                m?.Invoke(sh, new object[] { (uint)Math.Max(cols, 10), (uint)Math.Max(rows, 5), 0u, 0u });
+                var ch = sh.GetType()
+                    .GetField("_channel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    ?.GetValue(sh);
+                var m = ch?.GetType().GetMethod("SendWindowChangeRequest");
+                m?.Invoke(ch, new object[] { (uint)Math.Max(cols, 10), (uint)Math.Max(rows, 5), 0u, 0u });
             }
-            catch { /* brak API w tej wersji — terminal działa dalej ze starym rozmiarem PTY */ }
+            catch { /* shell w trakcie zamykania albo inna wersja SSH.NET */ }
         }
 
         // ---------- Wyjście do terminala ----------
@@ -285,7 +343,45 @@ term.loadAddon(fit);
 term.open(document.getElementById('t'));
 fit.fit();
 term.onData(d => window.chrome.webview.postMessage({ t:'in', d:d }));
-window.chrome.webview.addEventListener('message', e => term.write(e.data));
+// Kanały z C#: PostWebMessageAsString = wyjście terminala; PostWebMessageAsJson = sterowanie (paste).
+window.chrome.webview.addEventListener('message', e => {
+  if (typeof e.data === 'string') term.write(e.data);
+  else if (e.data && e.data.t === 'paste') term.paste(e.data.d || '');
+});
+// Ctrl+Shift+C/V = kopiuj/wklej (zwykłe Ctrl+C musi zostać SIGINT-em).
+term.attachCustomKeyEventHandler(ev => {
+  if (ev.type !== 'keydown') return true;
+  if (ev.ctrlKey && ev.shiftKey && ev.code === 'KeyC') {
+    const s = term.getSelection();
+    if (s) window.chrome.webview.postMessage({ t:'copy', d:s });
+    return false;
+  }
+  if (ev.ctrlKey && ev.shiftKey && ev.code === 'KeyV') {
+    window.chrome.webview.postMessage({ t:'paste' });
+    return false;
+  }
+  return true;
+});
+// Kopiowanie samym zaznaczeniem (styl PuTTY), z małym opóźnieniem.
+let selT = null;
+term.onSelectionChange(() => {
+  clearTimeout(selT);
+  selT = setTimeout(() => {
+    const s = term.getSelection();
+    if (s) window.chrome.webview.postMessage({ t:'copy', d:s });
+  }, 250);
+});
+// Ctrl+kółko = rozmiar czcionki terminala (8-24).
+document.addEventListener('wheel', ev => {
+  if (!ev.ctrlKey) return;
+  ev.preventDefault();
+  const fs = Math.min(24, Math.max(8, term.options.fontSize + (ev.deltaY < 0 ? 1 : -1)));
+  if (fs !== term.options.fontSize) {
+    term.options.fontSize = fs;
+    fit.fit();
+    window.chrome.webview.postMessage({ t:'size', c:term.cols, r:term.rows });
+  }
+}, { passive: false });
 let rt = null;
 window.addEventListener('resize', () => {
   clearTimeout(rt);

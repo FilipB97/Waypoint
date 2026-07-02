@@ -1,14 +1,34 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 
 namespace RdpManager
 {
     public partial class App : Application
     {
+        // Trzymane przez cały czas życia procesu — zwolnienie mutexa = wpuszczenie drugiej instancji.
+        private static Mutex _singleInstance;
+
+        [DllImport("user32.dll")] private static extern IntPtr FindWindow(string className, string windowName);
+        [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        private const int SW_RESTORE = 9;
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Jedna instancja: dwa procesy nadpisywałyby sobie servers.json/settings.json (ostatni wygrywa).
+            _singleInstance = new Mutex(true, "Waypoint.SingleInstance", out bool firstInstance);
+            if (!firstInstance)
+            {
+                var hwnd = FindWindow(null, "Waypoint");
+                if (hwnd != IntPtr.Zero) { ShowWindow(hwnd, SW_RESTORE); SetForegroundWindow(hwnd); }
+                Shutdown();
+                return;
+            }
 
             // Kontrolka ActiveX (mstscax) potrafi rzucić natywnym wyjątkiem ASYNCHRONICZNIE,
             // w pętli komunikatów (SEHException w DispatchMessage) — np. przy zmianach trybu

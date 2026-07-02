@@ -207,7 +207,20 @@ namespace RdpManager
             RootScale.ScaleX = RootScale.ScaleY = scale;
             if (SettingsView.Visibility == Visibility.Visible)
                 SetUiScale.Text = ((int)Math.Round(scale * 100)).ToString();
-            SettingsStore.Save(_settings);
+            QueueSettingsSave();   // kółko myszy potrafi sypnąć dziesiątkami zdarzeń — nie pisz pliku co tick
+        }
+
+        private DispatcherTimer _settingsSaveTimer;
+
+        private void QueueSettingsSave()
+        {
+            if (_settingsSaveTimer == null)
+            {
+                _settingsSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+                _settingsSaveTimer.Tick += (s, e) => { _settingsSaveTimer.Stop(); SettingsStore.Save(_settings); };
+            }
+            _settingsSaveTimer.Stop();
+            _settingsSaveTimer.Start();
         }
 
         private void Window_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
@@ -226,6 +239,13 @@ namespace RdpManager
             {
                 e.Cancel = true;
                 return;
+            }
+
+            // Dograj odroczony zapis ustawień (debounce zoomu), zanim aplikacja zniknie.
+            if (_settingsSaveTimer != null && _settingsSaveTimer.IsEnabled)
+            {
+                _settingsSaveTimer.Stop();
+                SettingsStore.Save(_settings);
             }
 
             foreach (var s in _sessions)
@@ -665,7 +685,7 @@ namespace RdpManager
             meta.Children.Add(new TextBlock { Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5 });
             meta.Children.Add(new TextBlock
             {
-                Text = server.Host, Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10.5,
+                Text = DisplayHost(server), Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10.5,
                 FontFamily = (FontFamily)TryFindResource("Mono"), TextTrimming = TextTrimming.CharacterEllipsis
             });
             Grid.SetColumn(meta, 2);
@@ -878,6 +898,13 @@ namespace RdpManager
             {
                 // SSH: terminal (WebView2 + xterm.js) zamiast kontrolki RDP; reszta cyklu życia wspólna.
                 var term = new SshTerminalControl();
+                // TOFU: pytanie o klucz hosta przychodzi z wątku SSH — pokaż dialog na wątku UI.
+                term.TrustHostKey = (hostPort, fp, changed) => (bool)Dispatcher.Invoke(new Func<bool>(() =>
+                    MessageBox.Show(this,
+                        string.Format(L(changed ? "S.ssh.hostkey.changed" : "S.ssh.hostkey.new"), hostPort, fp),
+                        L("S.ssh.hostkey.title"), MessageBoxButton.YesNo,
+                        changed ? MessageBoxImage.Warning : MessageBoxImage.Question,
+                        changed ? MessageBoxResult.No : MessageBoxResult.Yes) == MessageBoxResult.Yes));
                 SessionContainer.Children.Add(term);
                 session = new Session(server, term);
                 WireSshEvents(session);
@@ -971,7 +998,11 @@ namespace RdpManager
 
         private void OverlayAction_Click(object sender, RoutedEventArgs e)
         {
-            if (_active != null) Connect_Click(sender, e);
+            // Nie przez Connect_Click: pasek z hasłem bywa ukryty (tryb skupienia) — działaj na modelu
+            // sesji i dopytaj dialogiem, gdy brakuje poświadczeń.
+            if (_active == null) return;
+            if (CanAuto(_active)) ConnectSession(_active);
+            else PromptAndConnect(_active, null);
         }
 
         private void LoadToolbar(Session s)
@@ -1025,7 +1056,7 @@ namespace RdpManager
             // Adres na karcie (pasek stanu z adresem znika w trybie skupienia).
             content.Children.Add(new TextBlock
             {
-                Text = session.Server.Host, Foreground = (Brush)TryFindResource("TextTer"),
+                Text = DisplayHost(session.Server), Foreground = (Brush)TryFindResource("TextTer"),
                 FontFamily = (System.Windows.Media.FontFamily)TryFindResource("Mono"), FontSize = 10.5,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 1, 0, 0)
             });
@@ -1055,7 +1086,43 @@ namespace RdpManager
             grid.Children.Add(underline);
 
             tab.Child = grid;
-            tab.MouseLeftButtonUp += (s, e) => Activate(session);
+            tab.MouseLeftButtonUp += (s, e) =>
+            {
+                if (_tabDidDrag) { _tabDidDrag = false; return; }   // to było przeciąganie, nie klik
+                Activate(session);
+            };
+            // Środkowy klik zamyka kartę (standard z przeglądarek).
+            tab.MouseDown += (s, e) =>
+            {
+                if (e.ChangedButton == MouseButton.Middle) { RequestCloseSession(session); e.Handled = true; }
+            };
+
+            // Drag&drop kart: przeciągnięcie zmienia kolejność (upuszczenie na lewą/prawą połowę celu).
+            tab.AllowDrop = true;
+            tab.PreviewMouseLeftButtonDown += (s, e) => { _tabDragStart = e.GetPosition(null); _tabDragSession = session; _tabDidDrag = false; };
+            tab.PreviewMouseMove += (s, e) =>
+            {
+                if (e.LeftButton != MouseButtonState.Pressed || _tabDragSession != session) return;
+                var pos = e.GetPosition(null);
+                if (Math.Abs(pos.X - _tabDragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                    Math.Abs(pos.Y - _tabDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+                _tabDidDrag = true;
+                tab.Opacity = 0.5;
+                try { DragDrop.DoDragDrop(tab, session, DragDropEffects.Move); }
+                catch { }
+                finally { tab.Opacity = 1.0; _tabDragSession = null; }
+            };
+            tab.DragOver += (s, e) =>
+            {
+                if (e.Data.GetData(typeof(Session)) is Session) { e.Effects = DragDropEffects.Move; e.Handled = true; }
+            };
+            tab.Drop += (s, e) =>
+            {
+                var dragged = e.Data.GetData(typeof(Session)) as Session;
+                if (dragged == null || dragged == session) return;
+                MoveTabTo(dragged, session, after: e.GetPosition(tab).X > tab.ActualWidth / 2);
+                e.Handled = true;
+            };
 
             var tabMenu = new ContextMenu();
             var tearItem = new MenuItem { Header = L("S.m.tearoff") };
@@ -1134,6 +1201,27 @@ namespace RdpManager
 
         /// <summary>Otwiera drugą, niezależną sesję do tego samego serwera (osobna zakładka).</summary>
         private void DuplicateSession(Session s) => OpenServer(s.Server, autoConnect: true, forceNew: true);
+
+        private Point _tabDragStart;
+        private Session _tabDragSession;
+        private bool _tabDidDrag;
+
+        /// <summary>Wstawia przeciąganą zakładkę przed/za <paramref name="target"/> (drag&amp;drop w pasku).</summary>
+        private void MoveTabTo(Session dragged, Session target, bool after)
+        {
+            int from = _sessions.IndexOf(dragged);
+            if (from < 0 || _sessions.IndexOf(target) < 0) return;
+            _sessions.RemoveAt(from);
+            int to = _sessions.IndexOf(target) + (after ? 1 : 0);
+            _sessions.Insert(to, dragged);
+            TabStrip.Children.Remove(dragged.TabButton);
+            TabStrip.Children.Insert(to, dragged.TabButton);
+            RefreshTabTitles();   // numeracja duplikatów (#2) podąża za kolejnością
+        }
+
+        /// <summary>Adres do wyświetlenia — SSH z prefiksem, żeby od razu odróżnić protokół.</summary>
+        private static string DisplayHost(ServerInfo s)
+            => (s.Protocol == RemoteProtocol.Ssh ? "ssh://" : "") + s.Host;
 
         /// <summary>Przesuwa zakładkę w pasku o <paramref name="dir"/> (-1 w lewo, +1 w prawo).</summary>
         private void MoveTab(Session s, int dir)
@@ -1963,6 +2051,70 @@ namespace RdpManager
                 RenderTree(SearchBox.Text);
                 CheckReachabilityAsync();
             }
+        }
+
+        // Przycisk „Importuj…" rozwija menu źródeł (mstsc / .rdp / mRemoteNG / RDCMan).
+        private void ImportMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button b && b.ContextMenu != null)
+            {
+                b.ContextMenu.PlacementTarget = b;
+                b.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                b.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void ImportMrng_Click(object sender, RoutedEventArgs e)
+            => ImportExternal(L("S.dlg.importmrng.title"), L("S.dlg.mrng.filter"),
+                text => ExternalImport.ParseMRemoteNg(text));
+
+        private void ImportRdg_Click(object sender, RoutedEventArgs e)
+            => ImportExternal(L("S.dlg.importrdg.title"), L("S.dlg.rdg.filter"),
+                text => ExternalImport.ParseRdcMan(text, _settings.DefaultPort));
+
+        // Wspólny przebieg importu z innego menedżera: plik → parser → dedup po host:port → zapis.
+        // Hasła nie są przenoszone (mRemoteNG/RDCMan szyfrują je własnymi kluczami).
+        private void ImportExternal(string title, string filter, Func<string, ExternalImport.Result> parse)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = title, Filter = filter };
+            if (dlg.ShowDialog(this) != true) return;
+
+            ExternalImport.Result result;
+            try { result = parse(System.IO.File.ReadAllText(dlg.FileName)); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    string.Format(L("S.msg.importrdp.fail"), System.IO.Path.GetFileName(dlg.FileName)) + "\n" + ex.Message,
+                    title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var existing = new HashSet<string>(
+                _vm.Servers.Select(s => (s.Host ?? "") + ":" + s.Port), StringComparer.OrdinalIgnoreCase);
+            int added = 0, skipped = 0;
+            foreach (var srv in result.Servers)
+            {
+                if (!existing.Add(srv.Host + ":" + srv.Port)) { skipped++; continue; }
+                _vm.Add(srv);
+                added++;
+            }
+
+            if (added > 0)
+            {
+                PersistServers();
+                RenderTree(SearchBox.Text);
+                CheckReachabilityAsync();
+                SetStatus(string.Format(L("S.st.imported"), added), StatusKind.Ok);
+            }
+
+            MessageBox.Show(
+                string.Format(L("S.st.imported"), added)
+                + (skipped > 0 ? "\n" + string.Format(L("S.msg.mstsc.skipped"), skipped) : "")
+                + (result.UnsupportedProtocol > 0
+                    ? "\n" + string.Format(L("S.msg.import.unsupported"), result.UnsupportedProtocol) : "")
+                + "\n\n" + L("S.msg.import.nopass"),
+                title, MessageBoxButton.OK,
+                added > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
         private void ImportRdp_Click(object sender, RoutedEventArgs e)
