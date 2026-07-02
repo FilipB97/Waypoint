@@ -37,6 +37,23 @@ namespace RdpManager.Tests
         }
 
         [Theory]
+        [InlineData("10.0.0.5", "10.0.0.5", 3389, "", "")]
+        [InlineData("10.0.0.5:3390", "10.0.0.5", 3390, "", "")]
+        [InlineData("adam@srv1", "srv1", 3389, "adam", "")]
+        [InlineData("adam@srv1:3390", "srv1", 3390, "adam", "")]
+        [InlineData("CORP\\adam@srv1", "srv1", 3389, "adam", "CORP")]
+        [InlineData("  CORP\\adam@srv1:3390  ", "srv1", 3390, "adam", "CORP")]
+        [InlineData("", "", 3389, "", "")]
+        public void ParseQuickConnect_ParsesAllForms(string input, string expHost, int expPort, string expUser, string expDomain)
+        {
+            var (host, port, user, domain) = RdpUtils.ParseQuickConnect(input, 3389);
+            Assert.Equal(expHost, host);
+            Assert.Equal(expPort, port);
+            Assert.Equal(expUser, user);
+            Assert.Equal(expDomain, domain);
+        }
+
+        [Theory]
         [InlineData(100, 200)]   // poniżej minimum
         [InlineData(199, 200)]
         [InlineData(200, 200)]

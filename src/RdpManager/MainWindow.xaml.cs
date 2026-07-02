@@ -1760,6 +1760,28 @@ namespace RdpManager
 
         // ---------- Pomocnicze ----------
 
+        // Szybkie połączenie: łączy od razu, BEZ zapisywania serwera na liście (sesja tymczasowa).
+        private void QuickConnect_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new InputDialog("Szybkie połączenie",
+                "Adres — host, host:port, user@host albo DOMENA\\user@host:", "") { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+
+            var (host, port, user, domain) = RdpUtils.ParseQuickConnect(dlg.Value, _settings.DefaultPort);
+            if (string.IsNullOrWhiteSpace(host)) return;
+
+            var srv = new ServerInfo
+            {
+                Name = host, Host = host, Port = port, Username = user, Domain = domain,
+                Group = "Szybkie", Status = ServerStatus.Offline
+            };
+            srv.Initials = RdpUtils.MakeInitials(srv.Name);
+
+            // Tymczasowy — nie trafia do _vm.Servers ani do JSON; otwieramy sesję i łączymy
+            // (jeśli brak poświadczeń, zapyta o nie prompt).
+            OpenServer(srv, autoConnect: true, forceNew: true);
+        }
+
         private void AddServer_Click(object sender, RoutedEventArgs e)
         {
             var server = new ServerInfo { Group = "Serwery", Status = ServerStatus.Offline, Port = _settings.DefaultPort };

@@ -206,8 +206,11 @@
 
                     <Border Grid.Row="2" BorderBrush="{StaticResource Border}" BorderThickness="0,1,0,0" Padding="10">
                         <StackPanel>
+                            <ui:Button Content="Szybkie połączenie" HorizontalAlignment="Stretch"
+                                       Appearance="Primary" Click="QuickConnect_Click"
+                                       ToolTip="Połącz bez zapisywania — podaj host, host:port, user@host lub DOMENA\user@host"/>
                             <ui:Button Content="+ Dodaj serwer" HorizontalAlignment="Stretch"
-                                       Appearance="Secondary" Click="AddServer_Click"/>
+                                       Appearance="Secondary" Margin="0,6,0,0" Click="AddServer_Click"/>
                             <ui:Button Content="Importuj .rdp" HorizontalAlignment="Stretch"
                                        Appearance="Secondary" Margin="0,6,0,0" Click="ImportRdp_Click"/>
                             <ui:Button Content="Importuj z mstsc" HorizontalAlignment="Stretch"
