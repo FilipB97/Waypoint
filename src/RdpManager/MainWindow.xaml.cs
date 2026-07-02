@@ -230,6 +230,7 @@ namespace RdpManager
 
             foreach (var s in _sessions)
             {
+                if (s.IsSsh) { try { s.Ssh.DisposeTerminal(); } catch { } continue; }
                 try { s.Resizer?.Dispose(); } catch { }
                 try { s.Rdp.Disconnect(); } catch { }
                 try { s.Host.Dispose(); } catch { }
@@ -749,13 +750,14 @@ namespace RdpManager
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
+            bool ssh = server.Protocol == RemoteProtocol.Ssh;
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
-            menu.Items.Add(newWinItem);
+            if (!ssh) menu.Items.Add(newWinItem);      // osobne okno sesji jest RDP-owe
             menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(diagItem);
-            menu.Items.Add(exportItem);
+            if (!ssh) menu.Items.Add(exportItem);      // .rdp nie ma sensu dla SSH
             menu.Items.Add(new Separator());
             menu.Items.Add(delItem);
             row.ContextMenu = menu;
@@ -852,7 +854,8 @@ namespace RdpManager
         // albo od razu osobne okno — zależnie od ustawienia OpenInNewWindowByDefault.
         private void LaunchServer(ServerInfo server, bool autoConnect, bool forceNew = false)
         {
-            if (_settings.OpenInNewWindowByDefault) OpenInNewWindow(server);
+            // SSH zawsze jako karta — osobne okno sesji (SessionWindow) jest RDP-owe.
+            if (_settings.OpenInNewWindowByDefault && server.Protocol != RemoteProtocol.Ssh) OpenInNewWindow(server);
             else OpenServer(server, autoConnect, forceNew);
         }
 
@@ -870,23 +873,35 @@ namespace RdpManager
                 }
             }
 
-            var rdp = new AxMsRdpClient11NotSafeForScripting();
-            var host = new WindowsFormsHost();
+            Session session;
+            if (server.Protocol == RemoteProtocol.Ssh)
+            {
+                // SSH: terminal (WebView2 + xterm.js) zamiast kontrolki RDP; reszta cyklu życia wspólna.
+                var term = new SshTerminalControl();
+                SessionContainer.Children.Add(term);
+                session = new Session(server, term);
+                WireSshEvents(session);
+            }
+            else
+            {
+                var rdp = new AxMsRdpClient11NotSafeForScripting();
+                var host = new WindowsFormsHost();
 
-            ((ISupportInitialize)rdp).BeginInit();
-            rdp.Dock = System.Windows.Forms.DockStyle.Fill;
-            host.Child = rdp;
-            ((ISupportInitialize)rdp).EndInit();
+                ((ISupportInitialize)rdp).BeginInit();
+                rdp.Dock = System.Windows.Forms.DockStyle.Fill;
+                host.Child = rdp;
+                ((ISupportInitialize)rdp).EndInit();
 
-            SessionContainer.Children.Add(host);
-            host.UpdateLayout();
-            try { ((System.Windows.Forms.Control)rdp).CreateControl(); } catch { }  // wymuś utworzenie kontrolki ActiveX
+                SessionContainer.Children.Add(host);
+                host.UpdateLayout();
+                try { ((System.Windows.Forms.Control)rdp).CreateControl(); } catch { }  // wymuś utworzenie kontrolki ActiveX
 
-            var session = new Session(server, rdp, host);
+                session = new Session(server, rdp, host);
+                session.Resizer = new RdpDynamicResolution(session, host);
+                WireEvents(session);
+            }
             if (server.SavePassword && CredentialStore.TryRead(server.CredTarget, out var savedPw))
                 session.Password = savedPw;
-            session.Resizer = new RdpDynamicResolution(session, host);
-            WireEvents(session);
 
             _sessions.Add(session);
             session.TabButton = BuildTab(session);
@@ -897,7 +912,11 @@ namespace RdpManager
             if (autoConnect) BeginConnect(session);
         }
 
-        private static bool CanAuto(Session s) => s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
+        private static bool CanAuto(Session s) =>
+            s.Server.Protocol == RemoteProtocol.Ssh
+                ? !string.IsNullOrWhiteSpace(s.Server.Username)
+                  && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath))
+                : s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
 
         private void Activate(Session session)
         {
@@ -922,8 +941,9 @@ namespace RdpManager
             bool has = _active != null;
             EmptyHint.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
 
+            // SSH: terminal widoczny od razu (statusy łączenia pisze do siebie, jak prawdziwy klient ssh).
             foreach (var s in _sessions)
-                s.Host.Visibility = (s == _active && s.Connected) ? Visibility.Visible : Visibility.Collapsed;
+                s.View.Visibility = (s == _active && (s.Connected || s.IsSsh)) ? Visibility.Visible : Visibility.Collapsed;
 
             if (!has)
             {
@@ -931,7 +951,8 @@ namespace RdpManager
                 return;
             }
 
-            if (_active.Connected)
+            // Nakładka nie dla SSH — terminal (HWND) i tak by ją zakrył; komunikaty idą do terminala.
+            if (_active.Connected || _active.IsSsh)
             {
                 SessionOverlay.Visibility = Visibility.Collapsed;
                 return;
@@ -959,6 +980,7 @@ namespace RdpManager
             CfAvatarText.Text = s.Server.Initials;
             CfName.Text = s.Server.Name;
             CfHost.Text = s.Server.Host + ":" + s.Server.Port;
+            WinAuthCheck.Visibility = s.IsSsh ? Visibility.Collapsed : Visibility.Visible;   // SSH nie ma konta Windows
             WinAuthCheck.IsChecked = s.Server.UseWindowsAccount;
             PassBox.Password = s.Password ?? "";
             UpdatePassVisibility();
@@ -1048,7 +1070,7 @@ namespace RdpManager
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => RequestCloseSession(session);
-            tabMenu.Items.Add(tearItem);
+            if (!session.IsSsh) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
             tabMenu.Items.Add(dupItem);
             tabMenu.Items.Add(new Separator());
             tabMenu.Items.Add(moveLeft);
@@ -1138,11 +1160,19 @@ namespace RdpManager
 
         private void CloseSession(Session session)
         {
-            try { session.Rdp.Disconnect(); } catch { /* nie połączona */ }
-            session.Resizer?.Dispose();
+            if (session.IsSsh)
+            {
+                try { session.Ssh.DisposeTerminal(); } catch { }
+                SessionContainer.Children.Remove(session.Ssh);
+            }
+            else
+            {
+                try { session.Rdp.Disconnect(); } catch { /* nie połączona */ }
+                session.Resizer?.Dispose();
 
-            SessionContainer.Children.Remove(session.Host);
-            try { session.Host.Dispose(); } catch { }   // zwalnia hosta i kontrolkę ActiveX (HWND)
+                SessionContainer.Children.Remove(session.Host);
+                try { session.Host.Dispose(); } catch { }   // zwalnia hosta i kontrolkę ActiveX (HWND)
+            }
             TabStrip.Children.Remove(session.TabButton);
             _tabUnderline.Remove(session);
             _tabStatus.Remove(session);
@@ -1218,6 +1248,8 @@ namespace RdpManager
         /// <summary>Łączy sesję na podstawie jej modelu (bez odczytu z formularza) — używane też z flyoutu.</summary>
         private void ConnectSession(Session s)
         {
+            if (s.IsSsh) { ConnectSsh(s); return; }
+
             try { s.Rdp.Disconnect(); } catch { /* nie połączona */ }
             s.LoggedIn = false;
 
@@ -1291,7 +1323,76 @@ namespace RdpManager
         private void Disconnect_Click(object sender, RoutedEventArgs e)
         {
             if (_active == null) return;
+            if (_active.IsSsh) { _active.Ssh.Disconnect(); return; }
             try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
+        }
+
+        // ---------- SSH ----------
+
+        /// <summary>Łączy sesję SSH: inicjalizuje terminal (WebView2 + xterm) i loguje w tle (SSH.NET).</summary>
+        private async void ConnectSsh(Session s)
+        {
+            // SSH wymaga loginu (nie ma odpowiednika konta Windows) — dopytaj, jeśli brak.
+            if (string.IsNullOrWhiteSpace(s.Server.Username)) { PromptAndConnect(s, null); return; }
+            try
+            {
+                SetTabStatus(s, ServerStatus.Idle);
+                SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
+                if (s == _active) UpdateCanvas();
+
+                var (cols, rows) = await s.Ssh.InitAsync();
+                s.Ssh.WriteLocal("\x1b[90m" + string.Format(L("S.st.connecting"),
+                    s.Server.Username + "@" + s.Server.Host + ":" + s.Server.Port) + "\x1b[0m\r\n");
+                await s.Ssh.ConnectAsync(s.Server, s.Password, cols, rows);
+            }
+            catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException)
+            {
+                SetTabStatus(s, ServerStatus.Offline);
+                SetSessionStatus(s, L("S.ssh.nowebview"), StatusKind.Error);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
+            }
+            catch (Renci.SshNet.Common.SshAuthenticationException ex)
+            {
+                SetTabStatus(s, ServerStatus.Offline);
+                s.Ssh.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
+                SetSessionStatus(s, ex.Message + "  " + L("S.st.hint.creds"), StatusKind.Error);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
+            }
+            catch (Exception ex)
+            {
+                SetTabStatus(s, ServerStatus.Offline);
+                s.Ssh.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
+                SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
+            }
+        }
+
+        /// <summary>Zdarzenia terminala SSH → stan sesji/karty (marshalowane na wątek UI).</summary>
+        private void WireSshEvents(Session s)
+        {
+            s.Ssh.Connected += () => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                s.Connected = true;
+                RecordRecent(s.Server);
+                ConnectionLog.Append("CONNECTED", s.Server);
+                SetTabStatus(s, ServerStatus.Online);
+                SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); s.Ssh.FocusTerminal(); }
+            }));
+            s.Ssh.Disconnected += reason => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                bool was = s.Connected;
+                s.Connected = false;
+                SetTabStatus(s, ServerStatus.Offline);
+                ConnectionLog.Append(was ? "DISCONNECTED" : "FAILED", s.Server);
+                if (!s.Server.SavePassword) s.Password = "";   // jak przy RDP: hasło nie zostaje w pamięci
+
+                string msg = string.Format(L("S.st.disconnected"),
+                    string.IsNullOrWhiteSpace(reason) ? "ssh" : reason);
+                s.Ssh.WriteLocal("\r\n\x1b[91m" + msg + "\x1b[0m\r\n");
+                SetSessionStatus(s, msg, StatusKind.Error);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
+            }));
         }
 
         private void WireEvents(Session s)

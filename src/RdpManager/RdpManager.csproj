@@ -21,6 +21,9 @@
   <ItemGroup>
     <None Remove="Assets\app.ico" />
     <Resource Include="Assets\app.ico" />
+    <!-- xterm.js dla terminala SSH — osadzone w exe, wstrzykiwane inline do WebView2 (offline, bez CDN). -->
+    <None Remove="Assets\xterm\**" />
+    <Resource Include="Assets\xterm\**" />
   </ItemGroup>
 
   <ItemGroup>

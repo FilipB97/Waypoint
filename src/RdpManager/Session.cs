@@ -16,6 +16,13 @@ namespace RdpManager
         public AxMsRdpClient11NotSafeForScripting Rdp { get; }
         public WindowsFormsHost Host { get; }
 
+        /// <summary>Terminal SSH (WebView2 + xterm.js) — null dla sesji RDP.</summary>
+        public SshTerminalControl Ssh { get; }
+        public bool IsSsh => Ssh != null;
+
+        /// <summary>Element wizualny sesji w kontenerze (host RDP albo terminal SSH).</summary>
+        public FrameworkElement View => IsSsh ? (FrameworkElement)Ssh : Host;
+
         public FrameworkElement TabButton { get; set; }
         public bool Connected { get; set; }
 
@@ -36,6 +43,13 @@ namespace RdpManager
             Server = server;
             Rdp = rdp;
             Host = host;
+        }
+
+        /// <summary>Sesja SSH — zamiast kontrolki RDP żyje terminal.</summary>
+        public Session(ServerInfo server, SshTerminalControl ssh)
+        {
+            Server = server;
+            Ssh = ssh;
         }
     }
 

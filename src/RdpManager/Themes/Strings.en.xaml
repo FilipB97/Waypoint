@@ -198,6 +198,8 @@
     <sys:String x:Key="S.dlg.exportrdp.title">Export to .rdp</sys:String>
     <sys:String x:Key="S.dlg.rdp.filter">Remote Desktop files (*.rdp)|*.rdp</sys:String>
 
+    <sys:String x:Key="S.ssh.nowebview">The SSH terminal requires the WebView2 Runtime (built into Windows 11; on older systems install it from Microsoft).</sys:String>
+
     <sys:String x:Key="S.cp.header">Enter credentials for {0} ({1}).</sys:String>
     <sys:String x:Key="S.cp.needuser">Enter a username.</sys:String>
     <sys:String x:Key="S.se.needname">Enter a name and host.</sys:String>
