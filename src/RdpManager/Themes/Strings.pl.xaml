@@ -35,6 +35,8 @@
     <sys:String x:Key="S.set.reachinterval">Interwał sprawdzania (s)</sys:String>
     <sys:String x:Key="S.set.confirmclose">Pytaj przed zamknięciem połączonej sesji</sys:String>
     <sys:String x:Key="S.set.connlog">Zapisuj dziennik audytu połączeń (bez haseł)</sys:String>
+    <sys:String x:Key="S.set.opennewwin">Otwieraj połączenia w osobnym oknie</sys:String>
+    <sys:String x:Key="S.set.immersive">Tryb skupienia po zmaksymalizowaniu (ukryj panel boczny)</sys:String>
     <sys:String x:Key="S.set.data">Dane aplikacji</sys:String>
     <sys:String x:Key="S.set.openfolder">Otwórz folder</sys:String>
     <sys:String x:Key="S.set.exportprofile">Eksportuj profil…</sys:String>

@@ -9,7 +9,7 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         WindowCornerPreference="Round"
-        Loaded="Window_Loaded" KeyDown="Window_KeyDown" PreviewMouseWheel="Window_PreviewMouseWheel" Closing="Window_Closing">
+        Loaded="Window_Loaded" KeyDown="Window_KeyDown" PreviewMouseWheel="Window_PreviewMouseWheel" Closing="Window_Closing" StateChanged="Window_StateChanged">
 
     <Window.Resources>
         <!-- Kolory / pędzle / gradienty / font żyją w Themes/Palette.{Dark,Light}.xaml
@@ -349,6 +349,8 @@
                             <ui:TextBox x:Name="SetReachInterval" Width="120" HorizontalAlignment="Left"/>
                             <CheckBox x:Name="SetConfirmClose" Content="{DynamicResource S.set.confirmclose}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
                             <CheckBox x:Name="SetConnLog" Content="{DynamicResource S.set.connlog}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
+                            <CheckBox x:Name="SetOpenNewWindow" Content="{DynamicResource S.set.opennewwin}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
+                            <CheckBox x:Name="SetImmersive" Content="{DynamicResource S.set.immersive}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                         </StackPanel>
                     </Border>
 

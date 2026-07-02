@@ -35,6 +35,8 @@
     <sys:String x:Key="S.set.reachinterval">Check interval (s)</sys:String>
     <sys:String x:Key="S.set.confirmclose">Ask before closing a connected session</sys:String>
     <sys:String x:Key="S.set.connlog">Keep a connection audit log (no passwords)</sys:String>
+    <sys:String x:Key="S.set.opennewwin">Open connections in a separate window</sys:String>
+    <sys:String x:Key="S.set.immersive">Focus mode when maximized (hide the side panel)</sys:String>
     <sys:String x:Key="S.set.data">Application data</sys:String>
     <sys:String x:Key="S.set.openfolder">Open folder</sys:String>
     <sys:String x:Key="S.set.exportprofile">Export profile…</sys:String>

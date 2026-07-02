@@ -148,6 +148,25 @@ namespace RdpManager
             if (view == "Dashboard") BuildDashboard();
             else if (view == "Recent") BuildRecent();
             else if (view == "Settings") LoadSettingsForm();
+
+            UpdateImmersive();
+        }
+
+        private void Window_StateChanged(object sender, System.EventArgs e) => UpdateImmersive();
+
+        // Tryb skupienia: po zmaksymalizowaniu (i gdy jest aktywna sesja w widoku Połączenia) chowa
+        // panel boczny (rail + lista serwerów) — zostają tylko karty + połączenie, do szybkiego
+        // przełączania. Przywrócenie okna (un-maximize) = pełny UI z powrotem. W pełnym ekranie nie działa.
+        private void UpdateImmersive()
+        {
+            if (_settings == null || _isFullscreen) return;
+            bool immersive = _settings.ImmersiveOnMaximize
+                             && WindowState == WindowState.Maximized
+                             && _active != null
+                             && SessionsView.Visibility == Visibility.Visible;
+            var vis = immersive ? Visibility.Collapsed : Visibility.Visible;
+            Rail.Visibility = vis;
+            Sidebar.Visibility = vis;
         }
 
         private void SetNav(Button b, Wpf.Ui.Controls.SymbolIcon ico, bool active)
@@ -220,6 +239,8 @@ namespace RdpManager
             SetReachInterval.Text = _settings.ReachabilityIntervalSec.ToString();
             SetConfirmClose.IsChecked = _settings.ConfirmCloseConnected;
             SetConnLog.IsChecked = _settings.ConnectionLogEnabled;
+            SetOpenNewWindow.IsChecked = _settings.OpenInNewWindowByDefault;
+            SetImmersive.IsChecked = _settings.ImmersiveOnMaximize;
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
         }
@@ -235,6 +256,8 @@ namespace RdpManager
             _settings.ReachabilityIntervalSec = int.TryParse(SetReachInterval.Text.Trim(), out var r) ? Math.Clamp(r, 5, 3600) : 30;
             _settings.ConfirmCloseConnected = SetConfirmClose.IsChecked == true;
             _settings.ConnectionLogEnabled = SetConnLog.IsChecked == true;
+            _settings.OpenInNewWindowByDefault = SetOpenNewWindow.IsChecked == true;
+            _settings.ImmersiveOnMaximize = SetImmersive.IsChecked == true;
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
@@ -268,6 +291,7 @@ namespace RdpManager
 
             ThemeManager.Apply(_settings.Theme);
             LocalizationManager.Apply(_settings.Language);
+            UpdateImmersive();
         }
 
         private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
@@ -368,7 +392,7 @@ namespace RdpManager
             {
                 any = true;
                 var s = srv;
-                RecentPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => OpenServer(s, true)));
+                RecentPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => LaunchServer(s, true)));
             }
             if (!any)
                 RecentPanel.Children.Add(new TextBlock { Text = L("S.dash.norecent"), Foreground = (Brush)TryFindResource("TextTer") });
@@ -398,7 +422,7 @@ namespace RdpManager
             foreach (var srv in _vm.RecentServers())
             {
                 var s = srv;
-                DashboardPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => OpenServer(s, true)));
+                DashboardPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => LaunchServer(s, true)));
                 if (++shown >= 5) break;
             }
             if (shown == 0)
@@ -687,7 +711,7 @@ namespace RdpManager
             row.MouseLeftButtonUp += (s, e) =>
             {
                 if (_didDrag) { _didDrag = false; return; }   // to było przeciąganie, nie klik
-                OpenServer(server, true);
+                LaunchServer(server, true);
             };
 
             var menu = new ContextMenu();
@@ -808,6 +832,14 @@ namespace RdpManager
 
         // ---------- Otwieranie / przełączanie sesji ----------
 
+        // Klik „otwórz serwer" (drzewo / ostatnie / pulpit / szybkie połączenie): karta w managerze
+        // albo od razu osobne okno — zależnie od ustawienia OpenInNewWindowByDefault.
+        private void LaunchServer(ServerInfo server, bool autoConnect, bool forceNew = false)
+        {
+            if (_settings.OpenInNewWindowByDefault) OpenInNewWindow(server);
+            else OpenServer(server, autoConnect, forceNew);
+        }
+
         private void OpenServer(ServerInfo server, bool autoConnect = false, bool forceNew = false)
         {
             ShowView("Sessions");   // kontrolka RDP musi powstać przy widocznym widoku sesji
@@ -862,6 +894,7 @@ namespace RdpManager
             UpdateCanvas();
             SetStatus(session.Status, session.StatusKind);
             FsName.Text = session.Server.Name + " · " + session.Server.Host;
+            UpdateImmersive();
         }
 
         /// <summary>
@@ -1107,6 +1140,7 @@ namespace RdpManager
                     SetStatus("—", StatusKind.Info);
                 }
             }
+            UpdateImmersive();
         }
 
         // ---------- Połączenie ----------
@@ -1400,6 +1434,7 @@ namespace RdpManager
             _prevLeft = Left; _prevTop = Top; _prevWidth = Width; _prevHeight = Height;
             _prevScale = RootScale.ScaleX;
             RootScale.ScaleX = RootScale.ScaleY = 1.0;   // zdalny pulpit ostro 1:1 w pełnym ekranie
+            _isFullscreen = true;   // wcześnie: StateChanged w trakcie przełączania nie ruszy trybu skupienia
 
             AppTitleBar.Visibility = Visibility.Collapsed;
             Rail.Visibility = Visibility.Collapsed;
@@ -1420,7 +1455,6 @@ namespace RdpManager
             SetWindowPos(hwnd, IntPtr.Zero, b.Left, b.Top, b.Width, b.Height, SWP_SHOWWINDOW);
             Topmost = true;
 
-            _isFullscreen = true;
             _fsCursorPoll.Start();
 
             // Rozdzielczość dokładnie = natywne piksele monitora (jak w oknie sesji) — deterministycznie, bez wyścigu DPI.
@@ -1460,7 +1494,8 @@ namespace RdpManager
             FsPopup.IsOpen = false;
             _isFullscreen = false;
             _fsPinned = false;
-            PinBtn.Content = "📌 przypnij";
+            PinBtn.Content = L("S.fs.pin");
+            UpdateImmersive();
         }
 
         /// <summary>
@@ -1788,7 +1823,7 @@ namespace RdpManager
 
             // Tymczasowy — nie trafia do _vm.Servers ani do JSON; otwieramy sesję i łączymy
             // (jeśli brak poświadczeń, zapyta o nie prompt).
-            OpenServer(srv, autoConnect: true, forceNew: true);
+            LaunchServer(srv, autoConnect: true, forceNew: true);
         }
 
         private void AddServer_Click(object sender, RoutedEventArgs e)
