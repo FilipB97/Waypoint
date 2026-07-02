@@ -68,6 +68,10 @@
 
     <!-- dialog: serwer -->
     <sys:String x:Key="S.se.title">Serwer</sys:String>
+    <sys:String x:Key="S.se.protocol">Protokół</sys:String>
+    <sys:String x:Key="S.se.keypath">Klucz prywatny (opcjonalnie)</sys:String>
+    <sys:String x:Key="S.se.keypath.ph">ścieżka do pliku klucza — puste = tylko hasło</sys:String>
+    <sys:String x:Key="S.se.browse">Przeglądaj…</sys:String>
     <sys:String x:Key="S.se.name">Nazwa</sys:String>
     <sys:String x:Key="S.se.group">Grupa</sys:String>
     <sys:String x:Key="S.se.winauth">Logowanie kontem Windows (bez loginu/hasła)</sys:String>

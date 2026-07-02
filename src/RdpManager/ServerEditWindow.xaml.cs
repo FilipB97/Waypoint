@@ -8,6 +8,7 @@ namespace RdpManager
     public partial class ServerEditWindow
     {
         private readonly ServerInfo _server;
+        private bool _initializing;
 
         /// <summary>Hasło wpisane w oknie (do zapisania w Credential Manager przez wołającego).</summary>
         public string EnteredPassword { get; private set; } = "";
@@ -35,7 +36,13 @@ namespace RdpManager
             GatewayHostBox.Text = server.GatewayHostname ?? "";
             EdGatewayUsage.SelectedIndex = Math.Clamp(server.GatewayUsageMethod, 0, 2);
 
+            _initializing = true;
+            ProtocolCombo.SelectedIndex = server.Protocol == RemoteProtocol.Ssh ? 1 : 0;
+            KeyPathBox.Text = server.PrivateKeyPath ?? "";
             ApplyWinAuthState();
+            ApplyProtocolState();
+            _initializing = false;
+
             Loaded += (s, e) => ClampToScreen();
         }
 
@@ -71,6 +78,35 @@ namespace RdpManager
             SavePassCheck.IsEnabled = !win;
         }
 
+        private void Protocol_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (_initializing) return;
+            // Podmień domyślny port przy zmianie protokołu, o ile użytkownik nie ustawił własnego.
+            string port = PortBox.Text.Trim();
+            if (ProtocolCombo.SelectedIndex == 1 && (port == "3389" || port == "")) PortBox.Text = "22";
+            else if (ProtocolCombo.SelectedIndex == 0 && port == "22") PortBox.Text = "3389";
+            ApplyProtocolState();
+        }
+
+        // SSH: chowa pola RDP-only (konto Windows, domena, przekierowania, brama) i pokazuje pole klucza.
+        private void ApplyProtocolState()
+        {
+            bool ssh = ProtocolCombo.SelectedIndex == 1;
+            var rdpOnly = ssh ? Visibility.Collapsed : Visibility.Visible;
+            WinAuthCheck.Visibility = rdpOnly;
+            DomainLabel.Visibility = rdpOnly;
+            DomainBox.Visibility = rdpOnly;
+            RedirHeader.Visibility = rdpOnly;
+            RdpOptionsPanel.Visibility = rdpOnly;
+            KeyPathPanel.Visibility = ssh ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void BrowseKey_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = LocalizationManager.S("S.se.keypath") };
+            if (dlg.ShowDialog(this) == true) KeyPathBox.Text = dlg.FileName;
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(HostBox.Text))
@@ -79,13 +115,17 @@ namespace RdpManager
                 return;
             }
 
+            bool ssh = ProtocolCombo.SelectedIndex == 1;
+            _server.Protocol = ssh ? RemoteProtocol.Ssh : RemoteProtocol.Rdp;
+            _server.PrivateKeyPath = ssh ? KeyPathBox.Text.Trim() : "";
+
             _server.Name = NameBox.Text.Trim();
             _server.Host = HostBox.Text.Trim();
-            _server.Port = int.TryParse(PortBox.Text.Trim(), out var p) ? p : 3389;
+            _server.Port = int.TryParse(PortBox.Text.Trim(), out var p) ? p : (ssh ? 22 : 3389);
             _server.Group = string.IsNullOrWhiteSpace(GroupBox.Text) ? "Serwery" : GroupBox.Text.Trim();
-            _server.UseWindowsAccount = WinAuthCheck.IsChecked == true;
+            _server.UseWindowsAccount = !ssh && WinAuthCheck.IsChecked == true;
             _server.Username = _server.UseWindowsAccount ? "" : UserBox.Text.Trim();
-            _server.Domain = _server.UseWindowsAccount ? "" : DomainBox.Text.Trim();
+            _server.Domain = (ssh || _server.UseWindowsAccount) ? "" : DomainBox.Text.Trim();
             _server.SavePassword = !_server.UseWindowsAccount && SavePassCheck.IsChecked == true;
 
             _server.RedirectClipboard = EdClipboard.IsChecked == true;

@@ -68,6 +68,10 @@
 
     <!-- dialog: server -->
     <sys:String x:Key="S.se.title">Server</sys:String>
+    <sys:String x:Key="S.se.protocol">Protocol</sys:String>
+    <sys:String x:Key="S.se.keypath">Private key (optional)</sys:String>
+    <sys:String x:Key="S.se.keypath.ph">path to key file — empty = password only</sys:String>
+    <sys:String x:Key="S.se.browse">Browse…</sys:String>
     <sys:String x:Key="S.se.name">Name</sys:String>
     <sys:String x:Key="S.se.group">Group</sys:String>
     <sys:String x:Key="S.se.winauth">Sign in with Windows account (no username/password)</sys:String>
