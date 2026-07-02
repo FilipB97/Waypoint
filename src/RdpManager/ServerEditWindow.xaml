@@ -25,6 +25,8 @@
             <ComboBox x:Name="ProtocolCombo" Width="140" SelectionChanged="Protocol_Changed">
                 <ComboBoxItem Content="RDP"/>
                 <ComboBoxItem Content="SSH"/>
+                <ComboBoxItem Content="Telnet"/>
+                <ComboBoxItem Content="Serial (COM)"/>
             </ComboBox>
         </StackPanel>
         <Grid>
@@ -48,10 +50,10 @@
             <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource S.se.name}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="NameBox" Grid.Row="0" Grid.Column="1" Margin="0,6"/>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="Host" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock x:Name="HostLabel" Grid.Row="1" Grid.Column="0" Text="Host" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="HostBox" Grid.Row="1" Grid.Column="1" Margin="0,6"/>
 
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="Port" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock x:Name="PortLabel" Grid.Row="2" Grid.Column="0" Text="Port" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="PortBox" Grid.Row="2" Grid.Column="1" Text="3389" Margin="0,6" HorizontalAlignment="Left" Width="90"/>
 
             <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource S.se.group}" VerticalAlignment="Center" Margin="0,6,12,6"/>
@@ -62,14 +64,14 @@
                 <TextBlock Text="{DynamicResource S.se.winauth}" TextWrapping="Wrap"/>
             </CheckBox>
 
-            <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource S.se.user}" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock x:Name="UserLabel" Grid.Row="5" Grid.Column="0" Text="{DynamicResource S.se.user}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="UserBox" Grid.Row="5" Grid.Column="1" Margin="0,6"/>
 
             <TextBlock x:Name="DomainLabel" Grid.Row="6" Grid.Column="0" Text="{DynamicResource S.se.domain}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="DomainBox" Grid.Row="6" Grid.Column="1" Margin="0,6"/>
 
-            <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource S.pass}" VerticalAlignment="Center" Margin="0,6,12,6"/>
-            <StackPanel Grid.Row="7" Grid.Column="1" Margin="0,6">
+            <TextBlock x:Name="PassLabel" Grid.Row="7" Grid.Column="0" Text="{DynamicResource S.pass}" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <StackPanel x:Name="PassPanel" Grid.Row="7" Grid.Column="1" Margin="0,6">
                 <PasswordBox x:Name="PassBox" VerticalContentAlignment="Center"/>
                 <CheckBox x:Name="SavePassCheck" Margin="0,6,0,0">
                     <TextBlock Text="{DynamicResource S.se.savepass}" TextWrapping="Wrap"/>

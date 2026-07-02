@@ -40,7 +40,10 @@ namespace RdpManager
             EdGatewayUsage.SelectedIndex = Math.Clamp(server.GatewayUsageMethod, 0, 2);
 
             _initializing = true;
-            ProtocolCombo.SelectedIndex = server.Protocol == RemoteProtocol.Ssh ? 1 : 0;
+            ProtocolCombo.SelectedIndex =
+                server.Protocol == RemoteProtocol.Ssh ? 1 :
+                server.Protocol == RemoteProtocol.Telnet ? 2 :
+                server.Protocol == RemoteProtocol.Serial ? 3 : 0;
             KeyPathBox.Text = server.PrivateKeyPath ?? "";
             TunnelsBox.Text = server.Tunnels == null ? "" : string.Join(Environment.NewLine, server.Tunnels);
             ApplyWinAuthState();
@@ -87,22 +90,40 @@ namespace RdpManager
             if (_initializing) return;
             // Podmień domyślny port przy zmianie protokołu, o ile użytkownik nie ustawił własnego.
             string port = PortBox.Text.Trim();
-            if (ProtocolCombo.SelectedIndex == 1 && (port == "3389" || port == "")) PortBox.Text = "22";
-            else if (ProtocolCombo.SelectedIndex == 0 && port == "22") PortBox.Text = "3389";
+            bool isDefault = port == "" || port == "3389" || port == "22" || port == "23" || port == "115200";
+            if (isDefault) PortBox.Text = DefaultPortFor(ProtocolCombo.SelectedIndex).ToString();
             ApplyProtocolState();
         }
 
-        // SSH: chowa pola RDP-only (konto Windows, domena, przekierowania, brama) i pokazuje pole klucza.
+        private static int DefaultPortFor(int protocolIndex)
+            => protocolIndex == 1 ? 22 : protocolIndex == 2 ? 23 : protocolIndex == 3 ? 115200 : 3389;
+
+        // Widoczność pól zależnie od protokołu: RDP = wszystko; SSH = poświadczenia + klucz + tunele;
+        // Telnet/Serial = bez poświadczeń (logowanie dzieje się w terminalu). Serial: Host=COM, Port=baud.
         private void ApplyProtocolState()
         {
-            bool ssh = ProtocolCombo.SelectedIndex == 1;
-            var rdpOnly = ssh ? Visibility.Collapsed : Visibility.Visible;
-            WinAuthCheck.Visibility = rdpOnly;
-            DomainLabel.Visibility = rdpOnly;
-            DomainBox.Visibility = rdpOnly;
-            RedirHeader.Visibility = rdpOnly;
-            RdpOptionsPanel.Visibility = rdpOnly;
+            int idx = ProtocolCombo.SelectedIndex;
+            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3;
+            bool creds = rdp || ssh;
+
+            var rdpVis = rdp ? Visibility.Visible : Visibility.Collapsed;
+            WinAuthCheck.Visibility = rdpVis;
+            DomainLabel.Visibility = rdpVis;
+            DomainBox.Visibility = rdpVis;
+            RedirHeader.Visibility = rdpVis;
+            RdpOptionsPanel.Visibility = rdpVis;
+
             KeyPathPanel.Visibility = ssh ? Visibility.Visible : Visibility.Collapsed;
+
+            var credsVis = creds ? Visibility.Visible : Visibility.Collapsed;
+            UserLabel.Visibility = credsVis;
+            UserBox.Visibility = credsVis;
+            PassLabel.Visibility = credsVis;
+            PassPanel.Visibility = credsVis;
+
+            HostLabel.Text = serial ? LocalizationManager.S("S.se.comport") : "Host";
+            PortLabel.Text = serial ? LocalizationManager.S("S.se.baud") : "Port";
+            HostBox.PlaceholderText = serial ? "COM3" : "";
         }
 
         private void BrowseKey_Click(object sender, RoutedEventArgs e)
@@ -119,7 +140,14 @@ namespace RdpManager
                 return;
             }
 
-            bool ssh = ProtocolCombo.SelectedIndex == 1;
+            int idx = ProtocolCombo.SelectedIndex;
+            var protocol = idx == 1 ? RemoteProtocol.Ssh
+                         : idx == 2 ? RemoteProtocol.Telnet
+                         : idx == 3 ? RemoteProtocol.Serial
+                         : RemoteProtocol.Rdp;
+            bool ssh = protocol == RemoteProtocol.Ssh;
+            bool rdp = protocol == RemoteProtocol.Rdp;
+            bool creds = rdp || ssh;   // Telnet/Serial logują się w terminalu — bez poświadczeń w modelu
 
             // Tunele i MAC: waliduj PRZED zapisem czegokolwiek (błąd = nic się nie zmienia).
             var tunnels = TunnelSpec.ParseAll(TunnelsBox.Text, out string badTunnel);
@@ -137,23 +165,23 @@ namespace RdpManager
                 return;
             }
 
-            _server.Protocol = ssh ? RemoteProtocol.Ssh : RemoteProtocol.Rdp;
+            _server.Protocol = protocol;
             _server.PrivateKeyPath = ssh ? KeyPathBox.Text.Trim() : "";
             _server.Tunnels = ssh ? tunnels : new List<string>();
 
             _server.Name = NameBox.Text.Trim();
             _server.Host = HostBox.Text.Trim();
-            _server.Port = int.TryParse(PortBox.Text.Trim(), out var p) ? p : (ssh ? 22 : 3389);
+            _server.Port = int.TryParse(PortBox.Text.Trim(), out var p) ? p : DefaultPortFor(idx);
             _server.Group = string.IsNullOrWhiteSpace(GroupBox.Text) ? "Serwery" : GroupBox.Text.Trim();
-            _server.UseWindowsAccount = !ssh && WinAuthCheck.IsChecked == true;
-            _server.Username = _server.UseWindowsAccount ? "" : UserBox.Text.Trim();
-            _server.Domain = (ssh || _server.UseWindowsAccount) ? "" : DomainBox.Text.Trim();
-            _server.SavePassword = !_server.UseWindowsAccount && SavePassCheck.IsChecked == true;
+            _server.UseWindowsAccount = rdp && WinAuthCheck.IsChecked == true;
+            _server.Username = (!creds || _server.UseWindowsAccount) ? "" : UserBox.Text.Trim();
+            _server.Domain = (rdp && !_server.UseWindowsAccount) ? DomainBox.Text.Trim() : "";
+            _server.SavePassword = creds && !_server.UseWindowsAccount && SavePassCheck.IsChecked == true;
 
             _server.RedirectClipboard = EdClipboard.IsChecked == true;
             _server.RedirectDrives = EdDrives.IsChecked == true;
             _server.RedirectPrinters = EdPrinters.IsChecked == true;
-            _server.AdminSession = !ssh && EdAdmin.IsChecked == true;
+            _server.AdminSession = rdp && EdAdmin.IsChecked == true;
             _server.MacAddress = macText;
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
             _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;
@@ -163,7 +191,7 @@ namespace RdpManager
             if (string.IsNullOrWhiteSpace(_server.Initials))
                 _server.Initials = RdpUtils.MakeInitials(_server.Name);
 
-            EnteredPassword = _server.UseWindowsAccount ? "" : PassBox.Password;
+            EnteredPassword = (creds && !_server.UseWindowsAccount) ? PassBox.Password : "";
             DialogResult = true;
         }
 

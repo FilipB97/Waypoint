@@ -367,7 +367,7 @@ namespace RdpManager
 
             foreach (var s in _sessions)
             {
-                if (s.IsSsh) { try { s.Ssh.DisposeTerminal(); } catch { } continue; }
+                if (s.IsTerm) { try { s.Term.DisposeTerminal(); } catch { } continue; }
                 try { s.Resizer?.Dispose(); } catch { }
                 try { s.Rdp.Disconnect(); } catch { }
                 try { s.Host.Dispose(); } catch { }
@@ -901,15 +901,15 @@ namespace RdpManager
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
-            bool ssh = server.Protocol == RemoteProtocol.Ssh;
+            bool rdp = server.Protocol == RemoteProtocol.Rdp;
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
-            if (!ssh) menu.Items.Add(newWinItem);      // osobne okno sesji jest RDP-owe
-            menu.Items.Add(connectAsItem);
+            if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
+            if (rdp || server.Protocol == RemoteProtocol.Ssh) menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
-            menu.Items.Add(diagItem);
+            if (server.Protocol != RemoteProtocol.Serial) menu.Items.Add(diagItem);   // sonda TCP — nie dla COM
             menu.Items.Add(wolItem);
-            if (!ssh) menu.Items.Add(exportItem);      // .rdp nie ma sensu dla SSH
+            if (rdp) menu.Items.Add(exportItem);       // .rdp ma sens tylko dla RDP
             menu.Items.Add(new Separator());
             menu.Items.Add(delItem);
             row.ContextMenu = menu;
@@ -1006,8 +1006,8 @@ namespace RdpManager
         // albo od razu osobne okno — zależnie od ustawienia OpenInNewWindowByDefault.
         private void LaunchServer(ServerInfo server, bool autoConnect, bool forceNew = false)
         {
-            // SSH zawsze jako karta — osobne okno sesji (SessionWindow) jest RDP-owe.
-            if (_settings.OpenInNewWindowByDefault && server.Protocol != RemoteProtocol.Ssh) OpenInNewWindow(server);
+            // Terminale zawsze jako karta — osobne okno sesji (SessionWindow) jest RDP-owe.
+            if (_settings.OpenInNewWindowByDefault && server.Protocol == RemoteProtocol.Rdp) OpenInNewWindow(server);
             else OpenServer(server, autoConnect, forceNew);
         }
 
@@ -1026,7 +1026,21 @@ namespace RdpManager
             }
 
             Session session;
-            if (server.Protocol == RemoteProtocol.Ssh)
+            if (server.Protocol == RemoteProtocol.Telnet)
+            {
+                var term = new TelnetTerminalControl();
+                SessionContainer.Children.Add(term);
+                session = new Session(server, term);
+                WireTermEvents(session);
+            }
+            else if (server.Protocol == RemoteProtocol.Serial)
+            {
+                var term = new SerialTerminalControl();
+                SessionContainer.Children.Add(term);
+                session = new Session(server, term);
+                WireTermEvents(session);
+            }
+            else if (server.Protocol == RemoteProtocol.Ssh)
             {
                 // SSH: terminal (WebView2 + xterm.js) zamiast kontrolki RDP; reszta cyklu życia wspólna.
                 var term = new SshTerminalControl();
@@ -1047,7 +1061,7 @@ namespace RdpManager
                 }));
                 SessionContainer.Children.Add(term);
                 session = new Session(server, term);
-                WireSshEvents(session);
+                WireTermEvents(session);
             }
             else
             {
@@ -1079,11 +1093,20 @@ namespace RdpManager
             if (autoConnect) BeginConnect(session);
         }
 
-        private static bool CanAuto(Session s) =>
-            s.Server.Protocol == RemoteProtocol.Ssh
-                ? !string.IsNullOrWhiteSpace(s.Server.Username)
-                  && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath))
-                : s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
+        private static bool CanAuto(Session s)
+        {
+            switch (s.Server.Protocol)
+            {
+                case RemoteProtocol.Telnet:
+                case RemoteProtocol.Serial:
+                    return true;   // logowanie (jeśli jest) dzieje się w terminalu
+                case RemoteProtocol.Ssh:
+                    return !string.IsNullOrWhiteSpace(s.Server.Username)
+                           && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath));
+                default:
+                    return s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
+            }
+        }
 
         private void Activate(Session session)
         {
@@ -1108,9 +1131,9 @@ namespace RdpManager
             bool has = _active != null;
             EmptyHint.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
 
-            // SSH: terminal widoczny od razu (statusy łączenia pisze do siebie, jak prawdziwy klient ssh).
+            // Terminale (SSH/Telnet/Serial): widoczne od razu — statusy łączenia piszą do siebie.
             foreach (var s in _sessions)
-                s.View.Visibility = (s == _active && (s.Connected || s.IsSsh)) ? Visibility.Visible : Visibility.Collapsed;
+                s.View.Visibility = (s == _active && (s.Connected || s.IsTerm)) ? Visibility.Visible : Visibility.Collapsed;
 
             if (!has)
             {
@@ -1118,8 +1141,8 @@ namespace RdpManager
                 return;
             }
 
-            // Nakładka nie dla SSH — terminal (HWND) i tak by ją zakrył; komunikaty idą do terminala.
-            if (_active.Connected || _active.IsSsh)
+            // Nakładka nie dla terminali — ich HWND i tak by ją zakrył; komunikaty idą do terminala.
+            if (_active.Connected || _active.IsTerm)
             {
                 SessionOverlay.Visibility = Visibility.Collapsed;
                 return;
@@ -1151,7 +1174,8 @@ namespace RdpManager
             CfAvatarText.Text = s.Server.Initials;
             CfName.Text = s.Server.Name;
             CfHost.Text = s.Server.Host + ":" + s.Server.Port;
-            WinAuthCheck.Visibility = s.IsSsh ? Visibility.Collapsed : Visibility.Visible;   // SSH nie ma konta Windows
+            // Konto Windows tylko dla RDP; Telnet/Serial nie mają pól poświadczeń w ogóle.
+            WinAuthCheck.Visibility = s.Server.Protocol == RemoteProtocol.Rdp ? Visibility.Visible : Visibility.Collapsed;
             WinAuthCheck.IsChecked = s.Server.UseWindowsAccount;
             PassBox.Password = s.Password ?? "";
             UpdatePassVisibility();
@@ -1277,7 +1301,7 @@ namespace RdpManager
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => RequestCloseSession(session);
-            if (!session.IsSsh) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
+            if (!session.IsTerm) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
             tabMenu.Items.Add(dupItem);
             tabMenu.Items.Add(new Separator());
             tabMenu.Items.Add(moveLeft);
@@ -1359,9 +1383,17 @@ namespace RdpManager
             RefreshTabTitles();   // numeracja duplikatów (#2) podąża za kolejnością
         }
 
-        /// <summary>Adres do wyświetlenia — SSH z prefiksem, żeby od razu odróżnić protokół.</summary>
+        /// <summary>Adres do wyświetlenia — z prefiksem protokołu, żeby odróżnić na pierwszy rzut oka.</summary>
         private static string DisplayHost(ServerInfo s)
-            => (s.Protocol == RemoteProtocol.Ssh ? "ssh://" : "") + s.Host;
+        {
+            switch (s.Protocol)
+            {
+                case RemoteProtocol.Ssh: return "ssh://" + s.Host;
+                case RemoteProtocol.Telnet: return "telnet://" + s.Host;
+                case RemoteProtocol.Serial: return s.Host + " @" + s.Port;   // COM3 @115200
+                default: return s.Host;
+            }
+        }
 
         /// <summary>Przesuwa zakładkę w pasku o <paramref name="dir"/> (-1 w lewo, +1 w prawo).</summary>
         private void MoveTab(Session s, int dir)
@@ -1388,10 +1420,10 @@ namespace RdpManager
 
         private void CloseSession(Session session)
         {
-            if (session.IsSsh)
+            if (session.IsTerm)
             {
-                try { session.Ssh.DisposeTerminal(); } catch { }
-                SessionContainer.Children.Remove(session.Ssh);
+                try { session.Term.DisposeTerminal(); } catch { }
+                SessionContainer.Children.Remove(session.Term);
             }
             else
             {
@@ -1476,7 +1508,7 @@ namespace RdpManager
         /// <summary>Łączy sesję na podstawie jej modelu (bez odczytu z formularza) — używane też z flyoutu.</summary>
         private void ConnectSession(Session s)
         {
-            if (s.IsSsh) { ConnectSsh(s); return; }
+            if (s.IsTerm) { ConnectTerm(s); return; }
 
             try { s.Rdp.Disconnect(); } catch { /* nie połączona */ }
             s.LoggedIn = false;
@@ -1558,27 +1590,41 @@ namespace RdpManager
         private void Disconnect_Click(object sender, RoutedEventArgs e)
         {
             if (_active == null) return;
-            if (_active.IsSsh) { _active.Ssh.Disconnect(); return; }
+            if (_active.IsTerm) { _active.Term.Disconnect(); return; }
             try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
         }
 
         // ---------- SSH ----------
 
-        /// <summary>Łączy sesję SSH: inicjalizuje terminal (WebView2 + xterm) i loguje w tle (SSH.NET).</summary>
-        private async void ConnectSsh(Session s)
+        /// <summary>Łączy sesję terminalową (SSH/Telnet/Serial): inicjalizuje xterm i transport w tle.</summary>
+        private async void ConnectTerm(Session s)
         {
             // SSH wymaga loginu (nie ma odpowiednika konta Windows) — dopytaj, jeśli brak.
-            if (string.IsNullOrWhiteSpace(s.Server.Username)) { PromptAndConnect(s, null); return; }
+            if (s.IsSsh && string.IsNullOrWhiteSpace(s.Server.Username)) { PromptAndConnect(s, null); return; }
             try
             {
                 SetTabStatus(s, ServerStatus.Idle);
                 SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
                 if (s == _active) UpdateCanvas();
 
-                var (cols, rows) = await s.Ssh.InitAsync();
-                s.Ssh.WriteLocal("\x1b[90m" + string.Format(L("S.st.connecting"),
-                    s.Server.Username + "@" + s.Server.Host + ":" + s.Server.Port) + "\x1b[0m\r\n");
-                await s.Ssh.ConnectAsync(s.Server, s.Password, cols, rows);
+                var (cols, rows) = await s.Term.InitAsync();
+                string target = s.IsSsh
+                    ? s.Server.Username + "@" + s.Server.Host + ":" + s.Server.Port
+                    : s.Server.Host + (s.Server.Protocol == RemoteProtocol.Serial ? " @" + s.Server.Port : ":" + s.Server.Port);
+                s.Term.WriteLocal("\x1b[90m" + string.Format(L("S.st.connecting"), target) + "\x1b[0m\r\n");
+
+                switch (s.Server.Protocol)
+                {
+                    case RemoteProtocol.Telnet:
+                        await ((TelnetTerminalControl)s.Term).ConnectAsync(s.Server.Host, s.Server.Port);
+                        break;
+                    case RemoteProtocol.Serial:
+                        await ((SerialTerminalControl)s.Term).ConnectAsync(s.Server.Host, s.Server.Port);
+                        break;
+                    default:
+                        await s.Ssh.ConnectAsync(s.Server, s.Password, cols, rows);
+                        break;
+                }
             }
             catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException)
             {
@@ -1589,36 +1635,37 @@ namespace RdpManager
             catch (Renci.SshNet.Common.SshAuthenticationException ex)
             {
                 SetTabStatus(s, ServerStatus.Offline);
-                s.Ssh.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
+                s.Term.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
                 SetSessionStatus(s, ex.Message + "  " + L("S.st.hint.creds"), StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             }
             catch (Exception ex)
             {
                 SetTabStatus(s, ServerStatus.Offline);
-                s.Ssh.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
+                s.Term.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
                 SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             }
         }
 
-        /// <summary>Zdarzenia terminala SSH → stan sesji/karty (marshalowane na wątek UI).</summary>
-        private void WireSshEvents(Session s)
+        /// <summary>Zdarzenia terminala (SSH/Telnet/Serial) → stan sesji/karty (marshalowane na wątek UI).</summary>
+        private void WireTermEvents(Session s)
         {
-            s.Ssh.Connected += () => Dispatcher.BeginInvoke(new Action(() =>
+            s.Term.Connected += () => Dispatcher.BeginInvoke(new Action(() =>
             {
                 s.Connected = true;
                 RecordRecent(s.Server);
                 ConnectionLog.Append("CONNECTED", s.Server);
                 SetTabStatus(s, ServerStatus.Online);
                 SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); s.Ssh.FocusTerminal(); }
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); s.Term.FocusTerminal(); }
             }));
-            s.Ssh.TunnelStatus += (spec, ok, err) => Dispatcher.BeginInvoke(new Action(() =>
-                s.Ssh.WriteLocal(ok
-                    ? "\x1b[92m" + string.Format(L("S.ssh.tunnel.up"), spec) + "\x1b[0m\r\n"
-                    : "\x1b[91m" + string.Format(L("S.ssh.tunnel.fail"), spec, err) + "\x1b[0m\r\n")));
-            s.Ssh.Disconnected += reason => Dispatcher.BeginInvoke(new Action(() =>
+            if (s.Ssh != null)
+                s.Ssh.TunnelStatus += (spec, ok, err) => Dispatcher.BeginInvoke(new Action(() =>
+                    s.Term.WriteLocal(ok
+                        ? "\x1b[92m" + string.Format(L("S.ssh.tunnel.up"), spec) + "\x1b[0m\r\n"
+                        : "\x1b[91m" + string.Format(L("S.ssh.tunnel.fail"), spec, err) + "\x1b[0m\r\n")));
+            s.Term.Disconnected += reason => Dispatcher.BeginInvoke(new Action(() =>
             {
                 bool was = s.Connected;
                 s.Connected = false;
@@ -1627,8 +1674,8 @@ namespace RdpManager
                 if (!s.Server.SavePassword) s.Password = "";   // jak przy RDP: hasło nie zostaje w pamięci
 
                 string msg = string.Format(L("S.st.disconnected"),
-                    string.IsNullOrWhiteSpace(reason) ? "ssh" : reason);
-                s.Ssh.WriteLocal("\r\n\x1b[91m" + msg + "\x1b[0m\r\n");
+                    string.IsNullOrWhiteSpace(reason) ? s.Server.Protocol.ToString().ToLowerInvariant() : reason);
+                s.Term.WriteLocal("\r\n\x1b[91m" + msg + "\x1b[0m\r\n");
                 SetSessionStatus(s, msg, StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             }));
@@ -1703,9 +1750,14 @@ namespace RdpManager
 
         private void WinAuth_Changed(object sender, RoutedEventArgs e) => UpdatePassVisibility();
 
+        private bool ActiveHasNoCreds()
+            => _active != null && (_active.Server.Protocol == RemoteProtocol.Telnet
+                                   || _active.Server.Protocol == RemoteProtocol.Serial);
+
         private void UpdatePassVisibility()
         {
-            CfPassGroup.Visibility = WinAuthCheck.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+            CfPassGroup.Visibility = (ActiveHasNoCreds() || WinAuthCheck.IsChecked == true)
+                ? Visibility.Collapsed : Visibility.Visible;
         }
 
         // ---------- Pasek sesji: dwa stany ----------
@@ -2521,7 +2573,9 @@ namespace RdpManager
             {
                 var servers = _vm.Servers.ToList();
                 var results = await Task.WhenAll(servers.Select(srv =>
-                    Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv, Probe(srv.Host, srv.Port)))));
+                    Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv,
+                        // Serial: Host to port COM — sonda TCP nie ma sensu, zostaw bieżący status.
+                        srv.Protocol == RemoteProtocol.Serial ? srv.Status : Probe(srv.Host, srv.Port)))));
 
                 foreach (var kv in results)
                 {
