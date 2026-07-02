@@ -20,6 +20,23 @@ namespace RdpManager.Tests
         }
 
         [Theory]
+        [InlineData("10.10.15.17", "10.10.15.17", 3389)]            // sam host -> port domyślny
+        [InlineData("10.10.15.17:3390", "10.10.15.17", 3390)]       // host:port
+        [InlineData("host.example.com:52000", "host.example.com", 52000)]
+        [InlineData("  server1  ", "server1", 3389)]                // trymowanie
+        [InlineData("host:0", "host:0", 3389)]                      // port poza zakresem -> całość jako host
+        [InlineData("host:99999", "host:99999", 3389)]              // port za duży -> całość jako host
+        [InlineData("host:abc", "host:abc", 3389)]                  // nie-liczba -> całość jako host
+        [InlineData("fe80::1", "fe80::1", 3389)]                    // wiele ':' (IPv6) -> nie dzielimy
+        [InlineData("", "", 3389)]
+        public void SplitHostPort_ParsesHostAndPort(string input, string expHost, int expPort)
+        {
+            var (host, port) = RdpUtils.SplitHostPort(input, 3389);
+            Assert.Equal(expHost, host);
+            Assert.Equal(expPort, port);
+        }
+
+        [Theory]
         [InlineData(100, 200)]   // poniżej minimum
         [InlineData(199, 200)]
         [InlineData(200, 200)]
