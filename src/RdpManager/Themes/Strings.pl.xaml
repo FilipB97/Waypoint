@@ -39,6 +39,10 @@
     <sys:String x:Key="S.set.immersive">Tryb skupienia po zmaksymalizowaniu (ukryj panel boczny)</sys:String>
     <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje przy starcie</sys:String>
     <sys:String x:Key="S.update.available">Nowa wersja {0} — pobierz</sys:String>
+    <sys:String x:Key="S.set.traymin">Minimalizuj do zasobnika systemowego</sys:String>
+    <sys:String x:Key="S.set.hotkey">Globalny skrót szybkiego połączenia (Ctrl+Alt+Q)</sys:String>
+    <sys:String x:Key="S.tray.show">Pokaż Waypoint</sys:String>
+    <sys:String x:Key="S.tray.exit">Zakończ</sys:String>
     <sys:String x:Key="S.set.data">Dane aplikacji</sys:String>
     <sys:String x:Key="S.set.openfolder">Otwórz folder</sys:String>
     <sys:String x:Key="S.set.exportprofile">Eksportuj profil…</sys:String>
@@ -104,6 +108,10 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.gw0">Nie używaj</sys:String>
     <sys:String x:Key="S.se.gw1">Zawsze przez bramę</sys:String>
     <sys:String x:Key="S.se.gw2">Wykryj automatycznie</sys:String>
+    <sys:String x:Key="S.se.admin">Sesja administracyjna / konsola (jak mstsc /admin)</sys:String>
+    <sys:String x:Key="S.se.mac">Adres MAC — Wake-on-LAN (opcjonalnie)</sys:String>
+    <sys:String x:Key="S.se.mac.ph">np. AA:BB:CC:DD:EE:FF</sys:String>
+    <sys:String x:Key="S.se.mac.bad">Niepoprawny adres MAC: {0}</sys:String>
 
     <!-- dialog: poświadczenia -->
     <sys:String x:Key="S.cp.title">Poświadczenia</sys:String>
@@ -129,6 +137,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.closeothers">Zamknij pozostałe</sys:String>
     <sys:String x:Key="S.m.close">Zamknij</sys:String>
     <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
+    <sys:String x:Key="S.m.wol">Obudź (Wake-on-LAN)</sys:String>
 
     <!-- pass 2b: ulotne komunikaty z code-behind (statusy, dialogi, prompty, diagnostyka) -->
     <sys:String x:Key="S.st.connecting">Łączenie z {0}…</sys:String>
@@ -149,6 +158,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.exported">Wyeksportowano do {0}</sys:String>
     <sys:String x:Key="S.st.saved">Zapisano ✓</sys:String>
     <sys:String x:Key="S.st.exportedProfile">Wyeksportowano profil ✓</sys:String>
+    <sys:String x:Key="S.st.wolsent">Wysłano pakiet Wake-on-LAN do {0}</sys:String>
 
     <sys:String x:Key="S.dash.servers">Serwery</sys:String>
     <sys:String x:Key="S.dash.reachable">Osiągalne</sys:String>

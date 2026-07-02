@@ -65,6 +65,12 @@ namespace RdpManager.Models
         /// </summary>
         public bool UseAllMonitors { get; set; }
 
+        /// <summary>Sesja administracyjna/konsolowa (mstsc /admin).</summary>
+        public bool AdminSession { get; set; }
+
+        /// <summary>Adres MAC do Wake-on-LAN (puste = funkcja nieaktywna dla tego serwera).</summary>
+        public string MacAddress { get; set; } = "";
+
         /// <summary>Host bramy RD Gateway / jump-hosta (puste = połączenie bezpośrednie).</summary>
         public string GatewayHostname { get; set; } = "";
 

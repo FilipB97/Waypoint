@@ -124,6 +124,11 @@ namespace RdpManager
             if (_settings.ReachabilityEnabled) { _reachTimer.Start(); CheckReachabilityAsync(); }
 
             ShowView("Sessions");
+
+            InitTray();
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndHook);
+            ApplyHotkey();
+
             CheckForUpdatesAsync();
         }
 
@@ -190,7 +195,78 @@ namespace RdpManager
             UpdateImmersive();
         }
 
-        private void Window_StateChanged(object sender, System.EventArgs e) => UpdateImmersive();
+        private void Window_StateChanged(object sender, System.EventArgs e)
+        {
+            // Minimalizacja do zasobnika (opcjonalna): chowamy okno; powrót przez ikonę/skrót.
+            if (WindowState == WindowState.Minimized && _settings != null
+                && _settings.MinimizeToTray && !_isFullscreen)
+            {
+                Hide();
+                return;
+            }
+            UpdateImmersive();
+        }
+
+        // ---------- Zasobnik + globalny skrót ----------
+
+        private System.Windows.Forms.NotifyIcon _tray;
+
+        private void InitTray()
+        {
+            _tray = new System.Windows.Forms.NotifyIcon { Text = "Waypoint", Visible = true };
+            using (var s = Application.GetResourceStream(new Uri("pack://application:,,,/Assets/app.ico")).Stream)
+                _tray.Icon = new System.Drawing.Icon(s);
+            _tray.MouseClick += (o, e) =>
+            {
+                if (e.Button == System.Windows.Forms.MouseButtons.Left) RestoreFromTray();
+            };
+            BuildTrayMenu();
+        }
+
+        // Osobno, bo etykiety zależą od języka — przebudowywane też po zmianie ustawień.
+        private void BuildTrayMenu()
+        {
+            if (_tray == null) return;
+            var menu = new System.Windows.Forms.ContextMenuStrip();
+            menu.Items.Add(L("S.tray.show"), null, (o, e) => RestoreFromTray());
+            menu.Items.Add(L("S.quickConnect"), null, (o, e) => { RestoreFromTray(); QuickConnect_Click(this, null); });
+            menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+            menu.Items.Add(L("S.tray.exit"), null, (o, e) => Close());
+            _tray.ContextMenuStrip = menu;
+        }
+
+        private void RestoreFromTray()
+        {
+            Show();
+            if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+            Activate();
+        }
+
+        private const int WM_HOTKEY = 0x0312;
+        private const int HotkeyId = 0x5751;   // 'WQ'
+        private const uint MOD_ALT = 0x0001, MOD_CONTROL = 0x0002;
+
+        // Globalny skrót Ctrl+Alt+Q → Szybkie połączenie (opt-in; rejestracja może się nie udać,
+        // gdy inny program zajął kombinację — wtedy po prostu nie działa, bez błędu).
+        private void ApplyHotkey()
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            UnregisterHotKey(hwnd, HotkeyId);
+            if (_settings.QuickConnectHotkey)
+                RegisterHotKey(hwnd, HotkeyId, MOD_CONTROL | MOD_ALT, (uint)'Q');
+        }
+
+        private IntPtr WndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_HOTKEY && wParam.ToInt32() == HotkeyId)
+            {
+                RestoreFromTray();
+                QuickConnect_Click(this, null);
+                handled = true;
+            }
+            return IntPtr.Zero;
+        }
 
         // Czy tryb skupienia jest aktywny: zmaksymalizowane okno + aktywna sesja w widoku Połączenia.
         private bool IsImmersive()
@@ -286,6 +362,9 @@ namespace RdpManager
                 SettingsStore.Save(_settings);
             }
 
+            if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
+            try { UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId); } catch { }
+
             foreach (var s in _sessions)
             {
                 if (s.IsSsh) { try { s.Ssh.DisposeTerminal(); } catch { } continue; }
@@ -317,6 +396,8 @@ namespace RdpManager
             SetOpenNewWindow.IsChecked = _settings.OpenInNewWindowByDefault;
             SetImmersive.IsChecked = _settings.ImmersiveOnMaximize;
             SetCheckUpdates.IsChecked = _settings.CheckUpdates;
+            SetMinimizeToTray.IsChecked = _settings.MinimizeToTray;
+            SetHotkey.IsChecked = _settings.QuickConnectHotkey;
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
         }
@@ -335,6 +416,8 @@ namespace RdpManager
             _settings.OpenInNewWindowByDefault = SetOpenNewWindow.IsChecked == true;
             _settings.ImmersiveOnMaximize = SetImmersive.IsChecked == true;
             _settings.CheckUpdates = SetCheckUpdates.IsChecked == true;
+            _settings.MinimizeToTray = SetMinimizeToTray.IsChecked == true;
+            _settings.QuickConnectHotkey = SetHotkey.IsChecked == true;
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
@@ -368,6 +451,8 @@ namespace RdpManager
 
             ThemeManager.Apply(_settings.Theme);
             LocalizationManager.Apply(_settings.Language);
+            BuildTrayMenu();   // etykiety menu zasobnika w nowym języku
+            ApplyHotkey();
             UpdateImmersive();
         }
 
@@ -806,6 +891,12 @@ namespace RdpManager
             editItem.Click += (s, e) => EditServer(server);
             var diagItem = new MenuItem { Header = L("S.m.diag") };
             diagItem.Click += (s, e) => DiagnoseServer(server);
+            var wolItem = new MenuItem
+            {
+                Header = L("S.m.wol"),
+                IsEnabled = !string.IsNullOrWhiteSpace(server.MacAddress)   // bez MAC nie ma czego budzić
+            };
+            wolItem.Click += (s, e) => WakeServer(server);
             var exportItem = new MenuItem { Header = L("S.m.exportrdp") };
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = L("S.m.delete") };
@@ -817,6 +908,7 @@ namespace RdpManager
             menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(diagItem);
+            menu.Items.Add(wolItem);
             if (!ssh) menu.Items.Add(exportItem);      // .rdp nie ma sensu dla SSH
             menu.Items.Add(new Separator());
             menu.Items.Add(delItem);
@@ -1396,6 +1488,7 @@ namespace RdpManager
                 // Weryfikacja tożsamości serwera (domyślnie 2 = ostrzegaj) — chroni przed MITM.
                 adv.AuthenticationLevel = (uint)Math.Clamp(s.Server.AuthenticationLevel, 0, 2);
                 adv.EnableCredSspSupport = true;
+                adv.ConnectToAdministerServer = s.Server.AdminSession;   // sesja konsolowa (mstsc /admin)
                 adv.SmartSizing = false;   // dynamiczna rozdzielczość zajmie się dopasowaniem
                 adv.EnableAutoReconnect = _settings.AutoReconnect;
                 s.Rdp.ColorDepth = _settings.ColorDepth;
@@ -1828,6 +1921,12 @@ namespace RdpManager
 
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT { public int X, Y; }
@@ -2432,6 +2531,26 @@ namespace RdpManager
             finally
             {
                 _reachBusy = false;
+            }
+        }
+
+        // Wake-on-LAN: magic packet broadcastem na podstawie MAC z ustawień serwera.
+        private void WakeServer(ServerInfo server)
+        {
+            if (!Core.WakeOnLan.TryParseMac(server.MacAddress, out var mac))
+            {
+                MessageBox.Show(string.Format(L("S.se.mac.bad"), server.MacAddress),
+                    L("S.m.wol"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            try
+            {
+                Core.WakeOnLan.Send(mac);
+                SetStatus(string.Format(L("S.st.wolsent"), server.Name), StatusKind.Ok);
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
             }
         }
 

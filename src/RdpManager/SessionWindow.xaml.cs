@@ -129,6 +129,7 @@ namespace RdpManager
                 adv.RDPPort = _server.Port;
                 adv.AuthenticationLevel = (uint)Math.Clamp(_server.AuthenticationLevel, 0, 2);
                 adv.EnableCredSspSupport = true;
+                adv.ConnectToAdministerServer = _server.AdminSession;   // sesja konsolowa (mstsc /admin)
                 adv.SmartSizing = false;
                 adv.EnableAutoReconnect = _settings.AutoReconnect;
                 _rdp.ColorDepth = _settings.ColorDepth;

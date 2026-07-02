@@ -43,5 +43,11 @@ namespace RdpManager
 
         /// <summary>Przy starcie sprawdź w tle, czy na GitHubie jest nowsza wersja (tylko powiadomienie).</summary>
         public bool CheckUpdates { get; set; } = true;
+
+        /// <summary>Minimalizacja chowa okno do zasobnika (powrót przez ikonę).</summary>
+        public bool MinimizeToTray { get; set; }
+
+        /// <summary>Globalny skrót Ctrl+Alt+Q otwiera Szybkie połączenie (działa też z zasobnika).</summary>
+        public bool QuickConnectHotkey { get; set; }
     }
 }

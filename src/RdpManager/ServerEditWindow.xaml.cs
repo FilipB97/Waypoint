@@ -32,6 +32,8 @@ namespace RdpManager
             EdClipboard.IsChecked = server.RedirectClipboard;
             EdDrives.IsChecked = server.RedirectDrives;
             EdPrinters.IsChecked = server.RedirectPrinters;
+            EdAdmin.IsChecked = server.AdminSession;
+            MacBox.Text = server.MacAddress ?? "";
             EdAudio.SelectedIndex = Math.Clamp(server.AudioMode, 0, 2);
             EdAuthLevel.SelectedIndex = Math.Clamp(server.AuthenticationLevel, 0, 2);
             GatewayHostBox.Text = server.GatewayHostname ?? "";
@@ -119,11 +121,18 @@ namespace RdpManager
 
             bool ssh = ProtocolCombo.SelectedIndex == 1;
 
-            // Tunele: waliduj PRZED zapisem czegokolwiek (błędna reguła = nic się nie zmienia).
+            // Tunele i MAC: waliduj PRZED zapisem czegokolwiek (błąd = nic się nie zmienia).
             var tunnels = TunnelSpec.ParseAll(TunnelsBox.Text, out string badTunnel);
             if (ssh && badTunnel != null)
             {
                 MessageBox.Show(string.Format(LocalizationManager.S("S.se.tunnels.bad"), badTunnel),
+                    LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            string macText = MacBox.Text.Trim();
+            if (macText.Length > 0 && !WakeOnLan.TryParseMac(macText, out _))
+            {
+                MessageBox.Show(string.Format(LocalizationManager.S("S.se.mac.bad"), macText),
                     LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -144,6 +153,8 @@ namespace RdpManager
             _server.RedirectClipboard = EdClipboard.IsChecked == true;
             _server.RedirectDrives = EdDrives.IsChecked == true;
             _server.RedirectPrinters = EdPrinters.IsChecked == true;
+            _server.AdminSession = !ssh && EdAdmin.IsChecked == true;
+            _server.MacAddress = macText;
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
             _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;
             _server.GatewayHostname = GatewayHostBox.Text.Trim();

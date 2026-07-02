@@ -98,6 +98,9 @@
                     <CheckBox x:Name="EdDrives" Content="{DynamicResource S.se.drives}" Margin="0,0,18,6"/>
                     <CheckBox x:Name="EdPrinters" Content="{DynamicResource S.se.printers}" Margin="0,0,18,6"/>
                 </WrapPanel>
+                <CheckBox x:Name="EdAdmin" Margin="0,2,0,4">
+                    <TextBlock Text="{DynamicResource S.se.admin}" TextWrapping="Wrap"/>
+                </CheckBox>
                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                     <TextBlock Text="{DynamicResource S.se.audio}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <ComboBox x:Name="EdAudio" Width="220">
@@ -127,6 +130,8 @@
                 </StackPanel>
             </StackPanel>
         </Grid>
+        <TextBlock Text="{DynamicResource S.se.mac}" Margin="0,10,0,4"/>
+        <ui:TextBox x:Name="MacBox" PlaceholderText="{DynamicResource S.se.mac.ph}" Width="240" HorizontalAlignment="Left"/>
         </StackPanel>
         </ScrollViewer>
 
