@@ -167,6 +167,8 @@ namespace RdpManager
             var vis = immersive ? Visibility.Collapsed : Visibility.Visible;
             Rail.Visibility = vis;
             Sidebar.Visibility = vis;
+            SessionToolbar.Visibility = vis;   // pasek połączenia/stanu znika w trybie skupienia
+            FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void SetNav(Button b, Wpf.Ui.Controls.SymbolIcon ico, bool active)
@@ -984,6 +986,13 @@ namespace RdpManager
             };
             _tabName[session] = tabName;
             content.Children.Add(tabName);
+            // Adres na karcie (pasek stanu z adresem znika w trybie skupienia).
+            content.Children.Add(new TextBlock
+            {
+                Text = session.Server.Host, Foreground = (Brush)TryFindResource("TextTer"),
+                FontFamily = (System.Windows.Media.FontFamily)TryFindResource("Mono"), FontSize = 10.5,
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 1, 0, 0)
+            });
             // Kropka odzwierciedla ŻYWY stan sesji (nie statyczny status serwera): startowo rozłączona.
             var tabDot = new Ellipse
             {

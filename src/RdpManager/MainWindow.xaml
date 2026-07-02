@@ -94,7 +94,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <ui:TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Waypoint">
+        <ui:TitleBar x:Name="AppTitleBar" Grid.Row="0" Height="32" Title="Waypoint">
             <ui:TitleBar.Icon>
                 <ui:SymbolIcon Symbol="Desktop24" Foreground="{DynamicResource Accent}"/>
             </ui:TitleBar.Icon>
@@ -202,10 +202,23 @@
 
                 <!-- tab strip (built in code) -->
                 <Border x:Name="TabStripHost" Grid.Row="0" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
-                    <ScrollViewer x:Name="TabScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                                  PreviewMouseWheel="TabScroller_PreviewMouseWheel">
-                        <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,8,8,0"/>
-                    </ScrollViewer>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ScrollViewer x:Name="TabScroller" Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                                      PreviewMouseWheel="TabScroller_PreviewMouseWheel">
+                            <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,8,8,0"/>
+                        </ScrollViewer>
+                        <!-- W trybie skupienia (zmaksymalizowane) pasek stanu znika, więc pełny ekran jest tu. -->
+                        <StackPanel x:Name="FocusControls" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
+                                    Margin="4,0,8,0" Visibility="Collapsed">
+                            <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
+                                <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
                 </Border>
 
                 <!-- session toolbar: two states -->
