@@ -122,19 +122,19 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" HorizontalAlignment="Center">
-                        <Button x:Name="NavDashboard" Style="{DynamicResource RailBtn}" ToolTip="Pulpit" Tag="Dashboard" Click="Nav_Click">
+                        <Button x:Name="NavDashboard" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.dashboard}" Tag="Dashboard" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoDashboard" Symbol="Apps24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
-                        <Button x:Name="NavSessions" Style="{DynamicResource RailBtn}" ToolTip="Połączenia" Tag="Sessions" Click="Nav_Click">
+                        <Button x:Name="NavSessions" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.sessions}" Tag="Sessions" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoSessions" Symbol="Desktop24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
-                        <Button x:Name="NavRecent" Style="{DynamicResource RailBtn}" ToolTip="Ostatnie" Tag="Recent" Click="Nav_Click">
+                        <Button x:Name="NavRecent" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.recent}" Tag="Recent" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoRecent" Symbol="History24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">
-                        <Button x:Name="AvatarBtn" Style="{DynamicResource RailBtn}" ToolTip="O aplikacji" Click="Avatar_Click">
+                        <Button x:Name="AvatarBtn" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.about}" Click="Avatar_Click">
                             <Ellipse Width="26" Height="26">
                                 <Ellipse.Fill>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -143,7 +143,7 @@
                                 </Ellipse.Fill>
                             </Ellipse>
                         </Button>
-                        <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="Ustawienia" Tag="Settings" Click="Nav_Click">
+                        <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.settings}" Tag="Settings" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="17" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                     </StackPanel>
@@ -160,7 +160,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <ui:TextBox x:Name="SearchBox" Grid.Row="0" Margin="12" PlaceholderText="Szukaj serwera…"
+                    <ui:TextBox x:Name="SearchBox" Grid.Row="0" Margin="12" PlaceholderText="{DynamicResource S.search}"
                                 TextChanged="SearchBox_TextChanged">
                         <ui:TextBox.Icon>
                             <ui:SymbolIcon Symbol="Search24"/>
@@ -175,16 +175,16 @@
 
                     <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10">
                         <StackPanel>
-                            <ui:Button Content="Szybkie połączenie" HorizontalAlignment="Stretch"
+                            <ui:Button Content="{DynamicResource S.quickConnect}" HorizontalAlignment="Stretch"
                                        Appearance="Primary" Click="QuickConnect_Click"
-                                       ToolTip="Połącz bez zapisywania — podaj host, host:port, user@host lub DOMENA\user@host"/>
-                            <ui:Button Content="+ Dodaj serwer" HorizontalAlignment="Stretch"
+                                       ToolTip="{DynamicResource S.quickConnect.tip}"/>
+                            <ui:Button Content="{DynamicResource S.addServer}" HorizontalAlignment="Stretch"
                                        Appearance="Secondary" Margin="0,6,0,0" Click="AddServer_Click"/>
-                            <ui:Button Content="Importuj .rdp" HorizontalAlignment="Stretch"
+                            <ui:Button Content="{DynamicResource S.importRdp}" HorizontalAlignment="Stretch"
                                        Appearance="Secondary" Margin="0,6,0,0" Click="ImportRdp_Click"/>
-                            <ui:Button Content="Importuj z mstsc" HorizontalAlignment="Stretch"
+                            <ui:Button Content="{DynamicResource S.importMstsc}" HorizontalAlignment="Stretch"
                                        Appearance="Secondary" Margin="0,6,0,0" Click="ImportMstsc_Click"
-                                       ToolTip="Zaciągnij historię połączeń wbudowanego klienta RDP (Windows)"/>
+                                       ToolTip="{DynamicResource S.importMstsc.tip}"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -284,7 +284,7 @@
             <!-- Pulpit -->
             <ScrollViewer x:Name="DashboardView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">
                 <StackPanel Margin="28,24">
-                    <TextBlock Text="Pulpit" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+                    <TextBlock Text="{DynamicResource S.nav.dashboard}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
                     <StackPanel x:Name="DashboardPanel"/>
                 </StackPanel>
             </ScrollViewer>
@@ -292,7 +292,7 @@
             <!-- Ostatnie -->
             <ScrollViewer x:Name="RecentView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">
                 <StackPanel Margin="28,24">
-                    <TextBlock Text="Ostatnie połączenia" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+                    <TextBlock Text="{DynamicResource S.view.recent}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
                     <StackPanel x:Name="RecentPanel"/>
                 </StackPanel>
             </ScrollViewer>
@@ -300,21 +300,26 @@
             <!-- Ustawienia -->
             <ScrollViewer x:Name="SettingsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">
                 <StackPanel Margin="28,24" MaxWidth="600" HorizontalAlignment="Left">
-                    <TextBlock Text="Ustawienia" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+                    <TextBlock Text="{DynamicResource S.nav.settings}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
 
                     <!-- Interfejs -->
                     <Border Style="{DynamicResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Interfejs" Style="{DynamicResource CardHead}"/>
-                            <TextBlock Text="Skala interfejsu (%) — także Ctrl + kółko myszy" Foreground="{DynamicResource TextSec}" Margin="0,6,0,4"/>
+                            <TextBlock Text="{DynamicResource S.set.iface}" Style="{DynamicResource CardHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.uiscale}" Foreground="{DynamicResource TextSec}" Margin="0,6,0,4"/>
                             <ui:TextBox x:Name="SetUiScale" Width="120" HorizontalAlignment="Left"/>
-                            <TextBlock Text="Opóźnienie paska pełnoekranowego (ms)" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
+                            <TextBlock Text="{DynamicResource S.set.bardelay}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ui:TextBox x:Name="SetBarDelay" Width="120" HorizontalAlignment="Left"/>
-                            <TextBlock Text="Motyw" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
+                            <TextBlock Text="{DynamicResource S.set.theme}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ComboBox x:Name="SetTheme" Width="160" HorizontalAlignment="Left">
-                                <ComboBoxItem Content="Ciemny" Tag="Dark"/>
-                                <ComboBoxItem Content="Jasny" Tag="Light"/>
-                                <ComboBoxItem Content="Systemowy" Tag="System"/>
+                                <ComboBoxItem Content="{DynamicResource S.theme.dark}" Tag="Dark"/>
+                                <ComboBoxItem Content="{DynamicResource S.theme.light}" Tag="Light"/>
+                                <ComboBoxItem Content="{DynamicResource S.theme.system}" Tag="System"/>
+                            </ComboBox>
+                            <TextBlock Text="{DynamicResource S.set.language}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
+                            <ComboBox x:Name="SetLanguage" Width="160" HorizontalAlignment="Left">
+                                <ComboBoxItem Content="Polski" Tag="pl"/>
+                                <ComboBoxItem Content="English" Tag="en"/>
                             </ComboBox>
                         </StackPanel>
                     </Border>
@@ -322,51 +327,51 @@
                     <!-- Połączenie -->
                     <Border Style="{DynamicResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Połączenie" Style="{DynamicResource CardHead}"/>
-                            <TextBlock Text="Domyślny port RDP" Foreground="{DynamicResource TextSec}" Margin="0,6,0,4"/>
+                            <TextBlock Text="{DynamicResource S.set.conn}" Style="{DynamicResource CardHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.port}" Foreground="{DynamicResource TextSec}" Margin="0,6,0,4"/>
                             <ui:TextBox x:Name="SetDefaultPort" Width="120" HorizontalAlignment="Left"/>
-                            <TextBlock Text="Domyślna głębia kolorów (bit)" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
+                            <TextBlock Text="{DynamicResource S.set.colordepth}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ComboBox x:Name="SetColorDepth" Width="120" HorizontalAlignment="Left">
                                 <ComboBoxItem>16</ComboBoxItem>
                                 <ComboBoxItem>24</ComboBoxItem>
                                 <ComboBoxItem>32</ComboBoxItem>
                             </ComboBox>
-                            <CheckBox x:Name="SetAutoReconnect" Content="Automatycznie wznawiaj zerwane połączenie" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
+                            <CheckBox x:Name="SetAutoReconnect" Content="{DynamicResource S.set.autoreconnect}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Zachowanie -->
                     <Border Style="{DynamicResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Zachowanie" Style="{DynamicResource CardHead}"/>
-                            <CheckBox x:Name="SetReachEnabled" Content="Sprawdzaj osiągalność serwerów w tle" Foreground="{DynamicResource TextSec}" Margin="0,6,0,0"/>
-                            <TextBlock Text="Interwał sprawdzania (s)" Foreground="{DynamicResource TextSec}" Margin="0,10,0,4"/>
+                            <TextBlock Text="{DynamicResource S.set.behavior}" Style="{DynamicResource CardHead}"/>
+                            <CheckBox x:Name="SetReachEnabled" Content="{DynamicResource S.set.reach}" Foreground="{DynamicResource TextSec}" Margin="0,6,0,0"/>
+                            <TextBlock Text="{DynamicResource S.set.reachinterval}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,4"/>
                             <ui:TextBox x:Name="SetReachInterval" Width="120" HorizontalAlignment="Left"/>
-                            <CheckBox x:Name="SetConfirmClose" Content="Pytaj przed zamknięciem połączonej sesji" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
-                            <CheckBox x:Name="SetConnLog" Content="Zapisuj dziennik audytu połączeń (bez haseł)" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
+                            <CheckBox x:Name="SetConfirmClose" Content="{DynamicResource S.set.confirmclose}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
+                            <CheckBox x:Name="SetConnLog" Content="{DynamicResource S.set.connlog}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Dane -->
                     <Border Style="{DynamicResource Card}">
                         <StackPanel>
-                            <TextBlock Text="Dane aplikacji" Style="{DynamicResource CardHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.data}" Style="{DynamicResource CardHead}"/>
                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                 <TextBlock x:Name="SetDataPath" Foreground="{DynamicResource TextTer}" FontFamily="{DynamicResource Mono}"
                                            FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
-                                <ui:Button Content="Otwórz folder" Appearance="Secondary" Click="OpenDataFolder_Click" Margin="12,0,0,0"/>
+                                <ui:Button Content="{DynamicResource S.set.openfolder}" Appearance="Secondary" Click="OpenDataFolder_Click" Margin="12,0,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                <ui:Button Content="Eksportuj profil…" Appearance="Secondary" Click="ExportProfile_Click"/>
-                                <ui:Button Content="Importuj profil…" Appearance="Secondary" Click="ImportProfile_Click" Margin="8,0,0,0"/>
+                                <ui:Button Content="{DynamicResource S.set.exportprofile}" Appearance="Secondary" Click="ExportProfile_Click"/>
+                                <ui:Button Content="{DynamicResource S.set.importprofile}" Appearance="Secondary" Click="ImportProfile_Click" Margin="8,0,0,0"/>
                             </StackPanel>
                             <TextBlock Foreground="{DynamicResource TextTer}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
-                                       Text="Kopia zawiera serwery i ustawienia (bez haseł — te zostają w Windows Credential Manager)."/>
+                                       Text="{DynamicResource S.set.backupnote}"/>
                         </StackPanel>
                     </Border>
 
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <ui:Button Content="Zapisz ustawienia" Appearance="Primary" Click="SaveSettings_Click"/>
+                        <ui:Button Content="{DynamicResource S.set.save}" Appearance="Primary" Click="SaveSettings_Click"/>
                         <TextBlock x:Name="SettingsStatus" Foreground="{DynamicResource Online}" VerticalAlignment="Center" Margin="14,0,0,0"/>
                     </StackPanel>
                 </StackPanel>

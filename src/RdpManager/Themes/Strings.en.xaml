@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <!-- English strings. Same keys as Strings.pl.xaml; swapped at runtime by LocalizationManager. -->
+    <sys:String x:Key="S.nav.dashboard">Dashboard</sys:String>
+    <sys:String x:Key="S.nav.sessions">Sessions</sys:String>
+    <sys:String x:Key="S.nav.recent">Recent</sys:String>
+    <sys:String x:Key="S.nav.about">About</sys:String>
+    <sys:String x:Key="S.nav.settings">Settings</sys:String>
+
+    <sys:String x:Key="S.search">Search servers…</sys:String>
+    <sys:String x:Key="S.quickConnect">Quick connect</sys:String>
+    <sys:String x:Key="S.quickConnect.tip">Connect without saving — enter host, host:port, user@host or DOMAIN\user@host</sys:String>
+    <sys:String x:Key="S.addServer">+ Add server</sys:String>
+    <sys:String x:Key="S.importRdp">Import .rdp</sys:String>
+    <sys:String x:Key="S.importMstsc">Import from mstsc</sys:String>
+    <sys:String x:Key="S.importMstsc.tip">Pull the built-in Windows RDP client's connection history</sys:String>
+
+    <sys:String x:Key="S.view.recent">Recent connections</sys:String>
+
+    <sys:String x:Key="S.set.iface">Interface</sys:String>
+    <sys:String x:Key="S.set.uiscale">UI scale (%) — also Ctrl + mouse wheel</sys:String>
+    <sys:String x:Key="S.set.bardelay">Fullscreen bar delay (ms)</sys:String>
+    <sys:String x:Key="S.set.theme">Theme</sys:String>
+    <sys:String x:Key="S.theme.dark">Dark</sys:String>
+    <sys:String x:Key="S.theme.light">Light</sys:String>
+    <sys:String x:Key="S.theme.system">System</sys:String>
+    <sys:String x:Key="S.set.language">Język / Language</sys:String>
+    <sys:String x:Key="S.set.conn">Connection</sys:String>
+    <sys:String x:Key="S.set.port">Default RDP port</sys:String>
+    <sys:String x:Key="S.set.colordepth">Default color depth (bit)</sys:String>
+    <sys:String x:Key="S.set.autoreconnect">Automatically resume dropped connections</sys:String>
+    <sys:String x:Key="S.set.behavior">Behavior</sys:String>
+    <sys:String x:Key="S.set.reach">Check server reachability in the background</sys:String>
+    <sys:String x:Key="S.set.reachinterval">Check interval (s)</sys:String>
+    <sys:String x:Key="S.set.confirmclose">Ask before closing a connected session</sys:String>
+    <sys:String x:Key="S.set.connlog">Keep a connection audit log (no passwords)</sys:String>
+    <sys:String x:Key="S.set.data">Application data</sys:String>
+    <sys:String x:Key="S.set.openfolder">Open folder</sys:String>
+    <sys:String x:Key="S.set.exportprofile">Export profile…</sys:String>
+    <sys:String x:Key="S.set.importprofile">Import profile…</sys:String>
+    <sys:String x:Key="S.set.backupnote">The backup includes servers and settings (no passwords — those stay in Windows Credential Manager).</sys:String>
+    <sys:String x:Key="S.set.save">Save settings</sys:String>
+</ResourceDictionary>

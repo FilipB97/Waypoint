@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <!-- Teksty PL. Klucze wspólne z Strings.en.xaml; przełączane w runtime przez LocalizationManager. -->
+    <sys:String x:Key="S.nav.dashboard">Pulpit</sys:String>
+    <sys:String x:Key="S.nav.sessions">Połączenia</sys:String>
+    <sys:String x:Key="S.nav.recent">Ostatnie</sys:String>
+    <sys:String x:Key="S.nav.about">O aplikacji</sys:String>
+    <sys:String x:Key="S.nav.settings">Ustawienia</sys:String>
+
+    <sys:String x:Key="S.search">Szukaj serwera…</sys:String>
+    <sys:String x:Key="S.quickConnect">Szybkie połączenie</sys:String>
+    <sys:String x:Key="S.quickConnect.tip">Połącz bez zapisywania — podaj host, host:port, user@host lub DOMENA\user@host</sys:String>
+    <sys:String x:Key="S.addServer">+ Dodaj serwer</sys:String>
+    <sys:String x:Key="S.importRdp">Importuj .rdp</sys:String>
+    <sys:String x:Key="S.importMstsc">Importuj z mstsc</sys:String>
+    <sys:String x:Key="S.importMstsc.tip">Zaciągnij historię połączeń wbudowanego klienta RDP (Windows)</sys:String>
+
+    <sys:String x:Key="S.view.recent">Ostatnie połączenia</sys:String>
+
+    <sys:String x:Key="S.set.iface">Interfejs</sys:String>
+    <sys:String x:Key="S.set.uiscale">Skala interfejsu (%) — także Ctrl + kółko myszy</sys:String>
+    <sys:String x:Key="S.set.bardelay">Opóźnienie paska pełnoekranowego (ms)</sys:String>
+    <sys:String x:Key="S.set.theme">Motyw</sys:String>
+    <sys:String x:Key="S.theme.dark">Ciemny</sys:String>
+    <sys:String x:Key="S.theme.light">Jasny</sys:String>
+    <sys:String x:Key="S.theme.system">Systemowy</sys:String>
+    <sys:String x:Key="S.set.language">Język / Language</sys:String>
+    <sys:String x:Key="S.set.conn">Połączenie</sys:String>
+    <sys:String x:Key="S.set.port">Domyślny port RDP</sys:String>
+    <sys:String x:Key="S.set.colordepth">Domyślna głębia kolorów (bit)</sys:String>
+    <sys:String x:Key="S.set.autoreconnect">Automatycznie wznawiaj zerwane połączenie</sys:String>
+    <sys:String x:Key="S.set.behavior">Zachowanie</sys:String>
+    <sys:String x:Key="S.set.reach">Sprawdzaj osiągalność serwerów w tle</sys:String>
+    <sys:String x:Key="S.set.reachinterval">Interwał sprawdzania (s)</sys:String>
+    <sys:String x:Key="S.set.confirmclose">Pytaj przed zamknięciem połączonej sesji</sys:String>
+    <sys:String x:Key="S.set.connlog">Zapisuj dziennik audytu połączeń (bez haseł)</sys:String>
+    <sys:String x:Key="S.set.data">Dane aplikacji</sys:String>
+    <sys:String x:Key="S.set.openfolder">Otwórz folder</sys:String>
+    <sys:String x:Key="S.set.exportprofile">Eksportuj profil…</sys:String>
+    <sys:String x:Key="S.set.importprofile">Importuj profil…</sys:String>
+    <sys:String x:Key="S.set.backupnote">Kopia zawiera serwery i ustawienia (bez haseł — te zostają w Windows Credential Manager).</sys:String>
+    <sys:String x:Key="S.set.save">Zapisz ustawienia</sys:String>
+</ResourceDictionary>

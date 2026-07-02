@@ -16,6 +16,9 @@ namespace RdpManager
         /// <summary>Motyw interfejsu: „Dark" | „Light" | „System".</summary>
         public string Theme { get; set; } = "Dark";
 
+        /// <summary>Język interfejsu: „pl" | „en".</summary>
+        public string Language { get; set; } = "pl";
+
         /// <summary>Domyślne ustawienia połączeń RDP.</summary>
         public bool AutoReconnect { get; set; } = true;
         public int ColorDepth { get; set; } = 32;

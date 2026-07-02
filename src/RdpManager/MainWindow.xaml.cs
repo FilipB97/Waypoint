@@ -209,6 +209,7 @@ namespace RdpManager
             SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
             SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
+            SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
             SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
             SetAutoReconnect.IsChecked = _settings.AutoReconnect;
@@ -232,6 +233,7 @@ namespace RdpManager
             _settings.ConfirmCloseConnected = SetConfirmClose.IsChecked == true;
             _settings.ConnectionLogEnabled = SetConnLog.IsChecked == true;
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
+            _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
             SettingsStore.Save(_settings);
             ApplySettings();
@@ -262,6 +264,7 @@ namespace RdpManager
             }
 
             ThemeManager.Apply(_settings.Theme);
+            LocalizationManager.Apply(_settings.Language);
         }
 
         private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
