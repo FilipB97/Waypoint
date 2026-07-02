@@ -154,22 +154,30 @@ namespace RdpManager
 
         private void Window_StateChanged(object sender, System.EventArgs e) => UpdateImmersive();
 
-        // Tryb skupienia: po zmaksymalizowaniu (i gdy jest aktywna sesja w widoku Połączenia) chowa
-        // panel boczny (rail + lista serwerów) — zostają tylko karty + połączenie, do szybkiego
-        // przełączania. Przywrócenie okna (un-maximize) = pełny UI z powrotem. W pełnym ekranie nie działa.
+        // Czy tryb skupienia jest aktywny: zmaksymalizowane okno + aktywna sesja w widoku Połączenia.
+        private bool IsImmersive()
+        {
+            return _settings != null && !_isFullscreen
+                   && _settings.ImmersiveOnMaximize
+                   && WindowState == WindowState.Maximized
+                   && _active != null
+                   && SessionsView.Visibility == Visibility.Visible;
+        }
+
+        // Tryb skupienia: po zmaksymalizowaniu chowa titlebar + panel boczny — zostają tylko karty
+        // + pulpit. Przywrócenie okna (un-maximize) = pełny UI. W pełnym ekranie nie działa.
+        // UWAGA: widocznością SessionToolbar rządzi WYŁĄCZNIE UpdateToolbarMode (stan pusty +
+        // skupienie) — tu jej nie dotykamy, żeby nie wskrzeszać paska bez aktywnej sesji.
         private void UpdateImmersive()
         {
             if (_settings == null || _isFullscreen) return;
-            bool immersive = _settings.ImmersiveOnMaximize
-                             && WindowState == WindowState.Maximized
-                             && _active != null
-                             && SessionsView.Visibility == Visibility.Visible;
+            bool immersive = IsImmersive();
             var vis = immersive ? Visibility.Collapsed : Visibility.Visible;
             AppTitleBar.Visibility = vis;      // „dosłownie jak fullscreen" — zostaje tylko pasek kart + pulpit
             Rail.Visibility = vis;
             Sidebar.Visibility = vis;
-            SessionToolbar.Visibility = vis;   // pasek połączenia/stanu znika w trybie skupienia
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
+            UpdateToolbarMode();
         }
 
         // Przyciski okna na pasku kart (widoczne w trybie skupienia, bo titlebar jest wtedy ukryty).
@@ -1368,7 +1376,8 @@ namespace RdpManager
             if (!_isFullscreen)
             {
                 bool has = _active != null;
-                SessionToolbar.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
+                // Pasek połączenia: chowany też w trybie skupienia (adres jest na karcie).
+                SessionToolbar.Visibility = (has && !IsImmersive()) ? Visibility.Visible : Visibility.Collapsed;
                 TabStripHost.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
             }
             if (_active == null) return;
