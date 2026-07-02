@@ -6,6 +6,7 @@
 [Ll]ogs/
 dist/
 publish/
+/Waypoint.exe
 
 # .NET / MSBuild
 *.user

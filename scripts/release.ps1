@@ -59,8 +59,14 @@ if ($LASTEXITCODE -ne 0) { throw "Publish nie powiodl sie." }
 New-Item -ItemType Directory -Force dist | Out-Null
 $Out = "dist\Waypoint-$Version-win-x64.exe"
 Copy-Item 'publish\Waypoint.exe' $Out -Force
+
+# Zawsze najnowsza wersja pod stala nazwa w glownym folderze repo (wygodne do odpalania).
+# Ignorowane przez git (patrz .gitignore: /Waypoint.exe).
+Copy-Item 'publish\Waypoint.exe' 'Waypoint.exe' -Force
+
 $SizeMB = [math]::Round((Get-Item $Out).Length / 1MB, 1)
 Write-Host ">> Gotowe: $Out ($SizeMB MB)" -ForegroundColor Green
+Write-Host ">> Najnowszy: Waypoint.exe (glowny folder repo)" -ForegroundColor Green
 
 if ($Publish) {
   Write-Host ">> Publikacja: tag v$Version + push (uruchomi GitHub Actions 'Release')..." -ForegroundColor Cyan
