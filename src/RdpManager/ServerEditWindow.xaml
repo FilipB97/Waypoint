@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="Serwer" Width="440" SizeToContent="Height"
+        Title="{DynamicResource S.se.title}" Width="440" SizeToContent="Height"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
         MinWidth="440" MinHeight="360"
@@ -15,7 +15,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ui:TitleBar x:Name="DlgTitleBar" Grid.Row="0" Title="Serwer"/>
+        <ui:TitleBar x:Name="DlgTitleBar" Grid.Row="0" Title="{DynamicResource S.se.title}"/>
 
         <!-- Treść przewija się; stopka z przyciskami jest ZAWSZE widoczna (małe okna / niskie ekrany). -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -37,7 +37,7 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Nazwa" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource S.se.name}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="NameBox" Grid.Row="0" Grid.Column="1" Margin="0,6"/>
 
             <TextBlock Grid.Row="1" Grid.Column="0" Text="Host" VerticalAlignment="Center" Margin="0,6,12,6"/>
@@ -46,60 +46,60 @@
             <TextBlock Grid.Row="2" Grid.Column="0" Text="Port" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="PortBox" Grid.Row="2" Grid.Column="1" Text="3389" Margin="0,6" HorizontalAlignment="Left" Width="90"/>
 
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="Grupa" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource S.se.group}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="GroupBox" Grid.Row="3" Grid.Column="1" Margin="0,6"/>
 
             <CheckBox x:Name="WinAuthCheck" Grid.Row="4" Grid.Column="1" Margin="0,8"
                       Checked="WinAuth_Changed" Unchecked="WinAuth_Changed">
-                <TextBlock Text="Logowanie kontem Windows (bez loginu/hasła)" TextWrapping="Wrap"/>
+                <TextBlock Text="{DynamicResource S.se.winauth}" TextWrapping="Wrap"/>
             </CheckBox>
 
-            <TextBlock Grid.Row="5" Grid.Column="0" Text="Użytkownik" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource S.se.user}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="UserBox" Grid.Row="5" Grid.Column="1" Margin="0,6"/>
 
-            <TextBlock Grid.Row="6" Grid.Column="0" Text="Domena" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock Grid.Row="6" Grid.Column="0" Text="{DynamicResource S.se.domain}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="DomainBox" Grid.Row="6" Grid.Column="1" Margin="0,6"/>
 
-            <TextBlock Grid.Row="7" Grid.Column="0" Text="Hasło" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource S.pass}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <StackPanel Grid.Row="7" Grid.Column="1" Margin="0,6">
                 <PasswordBox x:Name="PassBox" VerticalContentAlignment="Center"/>
                 <CheckBox x:Name="SavePassCheck" Margin="0,6,0,0">
-                    <TextBlock Text="Zapisz hasło (Windows Credential Manager)" TextWrapping="Wrap"/>
+                    <TextBlock Text="{DynamicResource S.se.savepass}" TextWrapping="Wrap"/>
                 </CheckBox>
             </StackPanel>
 
-            <TextBlock Grid.Row="8" Grid.ColumnSpan="2" Text="Przekierowania" FontWeight="SemiBold" Margin="0,16,0,6"/>
+            <TextBlock Grid.Row="8" Grid.ColumnSpan="2" Text="{DynamicResource S.se.redir}" FontWeight="SemiBold" Margin="0,16,0,6"/>
             <StackPanel Grid.Row="9" Grid.ColumnSpan="2">
                 <WrapPanel>
-                    <CheckBox x:Name="EdClipboard" Content="Schowek" Margin="0,0,18,6"/>
-                    <CheckBox x:Name="EdDrives" Content="Dyski" Margin="0,0,18,6"/>
-                    <CheckBox x:Name="EdPrinters" Content="Drukarki" Margin="0,0,18,6"/>
+                    <CheckBox x:Name="EdClipboard" Content="{DynamicResource S.se.clipboard}" Margin="0,0,18,6"/>
+                    <CheckBox x:Name="EdDrives" Content="{DynamicResource S.se.drives}" Margin="0,0,18,6"/>
+                    <CheckBox x:Name="EdPrinters" Content="{DynamicResource S.se.printers}" Margin="0,0,18,6"/>
                 </WrapPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock Text="Dźwięk" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="{DynamicResource S.se.audio}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <ComboBox x:Name="EdAudio" Width="220">
-                        <ComboBoxItem>Odtwarzaj na tym komputerze</ComboBoxItem>
-                        <ComboBoxItem>Nie odtwarzaj</ComboBoxItem>
-                        <ComboBoxItem>Odtwarzaj na serwerze</ComboBoxItem>
+                        <ComboBoxItem Content="{DynamicResource S.se.audio0}"/>
+                        <ComboBoxItem Content="{DynamicResource S.se.audio1}"/>
+                        <ComboBoxItem Content="{DynamicResource S.se.audio2}"/>
                     </ComboBox>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                    <TextBlock Text="Weryfikacja serwera" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="{DynamicResource S.se.authlvl}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <ComboBox x:Name="EdAuthLevel" Width="220">
-                        <ComboBoxItem>Nie sprawdzaj (niezalecane)</ComboBoxItem>
-                        <ComboBoxItem>Wymagaj — odrzuć przy błędzie</ComboBoxItem>
-                        <ComboBoxItem>Ostrzegaj przy błędzie (zalecane)</ComboBoxItem>
+                        <ComboBoxItem Content="{DynamicResource S.se.auth0}"/>
+                        <ComboBoxItem Content="{DynamicResource S.se.auth1}"/>
+                        <ComboBoxItem Content="{DynamicResource S.se.auth2}"/>
                     </ComboBox>
                 </StackPanel>
 
-                <TextBlock Text="Brama (RD Gateway / jump-host)" FontWeight="SemiBold" Margin="0,16,0,6"/>
-                <ui:TextBox x:Name="GatewayHostBox" PlaceholderText="host bramy — puste = połączenie bezpośrednie"/>
+                <TextBlock Text="{DynamicResource S.se.gateway}" FontWeight="SemiBold" Margin="0,16,0,6"/>
+                <ui:TextBox x:Name="GatewayHostBox" PlaceholderText="{DynamicResource S.se.gateway.ph}"/>
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock Text="Tryb bramy" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="{DynamicResource S.se.gwmode}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <ComboBox x:Name="EdGatewayUsage" Width="220">
-                        <ComboBoxItem>Nie używaj</ComboBoxItem>
-                        <ComboBoxItem>Zawsze przez bramę</ComboBoxItem>
-                        <ComboBoxItem>Wykryj automatycznie</ComboBoxItem>
+                        <ComboBoxItem Content="{DynamicResource S.se.gw0}"/>
+                        <ComboBoxItem Content="{DynamicResource S.se.gw1}"/>
+                        <ComboBoxItem Content="{DynamicResource S.se.gw2}"/>
                     </ComboBox>
                 </StackPanel>
             </StackPanel>
@@ -107,8 +107,8 @@
         </ScrollViewer>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,4,18,16">
-            <ui:Button Content="Anuluj" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="90"/>
-            <ui:Button Content="Zapisz" Appearance="Primary" Click="Save_Click" MinWidth="90"/>
+            <ui:Button Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="90"/>
+            <ui:Button Content="{DynamicResource S.save}" Appearance="Primary" Click="Save_Click" MinWidth="90"/>
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

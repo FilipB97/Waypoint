@@ -221,13 +221,13 @@
                             <TextBlock x:Name="CfName" Foreground="{DynamicResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <TextBlock x:Name="CfHost" FontFamily="{DynamicResource Mono}" Foreground="{DynamicResource TextTer}"
                                        VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <CheckBox x:Name="WinAuthCheck" Content="Konto Windows" Foreground="{DynamicResource TextSec}"
+                            <CheckBox x:Name="WinAuthCheck" Content="{DynamicResource S.winauth}" Foreground="{DynamicResource TextSec}"
                                       VerticalAlignment="Center" Margin="16,0,0,0" Checked="WinAuth_Changed" Unchecked="WinAuth_Changed"/>
                             <StackPanel x:Name="CfPassGroup" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                                <TextBlock Text="Hasło" Style="{DynamicResource FieldLabel}"/>
+                                <TextBlock Text="{DynamicResource S.pass}" Style="{DynamicResource FieldLabel}"/>
                                 <PasswordBox x:Name="PassBox" Width="150" VerticalContentAlignment="Center" KeyDown="PassBox_KeyDown"/>
                             </StackPanel>
-                            <ui:Button x:Name="ConnectBtn" Content="Połącz" Appearance="Primary" Click="Connect_Click" Margin="16,0,0,0"/>
+                            <ui:Button x:Name="ConnectBtn" Content="{DynamicResource S.connect}" Appearance="Primary" Click="Connect_Click" Margin="16,0,0,0"/>
                             <Ellipse x:Name="CfStatusDot" Width="7" Height="7" Fill="{DynamicResource TextTer}"
                                      VerticalAlignment="Center" Margin="14,0,6,0" Visibility="Collapsed"/>
                             <TextBlock x:Name="StatusText" Text="—" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"
@@ -241,15 +241,15 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="StatusLive" Text="● Połączono" Foreground="{DynamicResource Online}" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="StatusLive" Text="{DynamicResource S.connected}" Foreground="{DynamicResource Online}" FontWeight="SemiBold"/>
                                 <TextBlock x:Name="StatusHost" Text="" FontFamily="{DynamicResource Mono}"
                                            Foreground="{DynamicResource TextTer}" Margin="14,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="Pełny ekran (na tym monitorze)">
+                                <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
                                     <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
                                 </Button>
-                                <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="Rozłącz">
+                                <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="{DynamicResource S.disconnect}">
                                     <TextBlock Text="✕" FontSize="14" Foreground="{DynamicResource Danger}"/>
                                 </Button>
                             </StackPanel>
@@ -261,7 +261,7 @@
 
                 <!-- all sessions' hosts live here; only the active one is Visible -->
                 <Grid x:Name="SessionContainer" Grid.Row="3" Background="{DynamicResource CanvasBrush}">
-                    <TextBlock x:Name="EmptyHint" Text="Wybierz serwer z listy po lewej, aby otworzyć sesję."
+                    <TextBlock x:Name="EmptyHint" Text="{DynamicResource S.emptyhint}"
                                Foreground="{DynamicResource TextTer}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
                     <!-- Stan sesji gdy kontrolka RDP jest schowana (łączenie / rozłączono) -->
@@ -390,7 +390,7 @@
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <Thumb x:Name="FsBarThumb" Width="20" Cursor="SizeWE" DragDelta="FsBarThumb_DragDelta"
-                               Margin="0,0,10,0" ToolTip="Przeciągnij, aby przesunąć pasek">
+                               Margin="0,0,10,0" ToolTip="{DynamicResource S.fs.drag}">
                             <Thumb.Template>
                                 <ControlTemplate TargetType="Thumb">
                                     <Border Background="Transparent">
@@ -402,30 +402,30 @@
                         </Thumb>
                         <TextBlock x:Name="FsName" Text="—" Foreground="{DynamicResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
-                        <ui:Button x:Name="InnyBtn" Content="inne połączenia  ▾" Appearance="Secondary" Click="ToggleFlyout_Click"/>
+                        <ui:Button x:Name="InnyBtn" Content="{DynamicResource S.fs.others}" Appearance="Secondary" Click="ToggleFlyout_Click"/>
                         <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
-                        <ui:Button x:Name="PinBtn" Content="📌 przypnij" Appearance="Secondary" Click="TogglePin_Click"/>
+                        <ui:Button x:Name="PinBtn" Content="{DynamicResource S.fs.pin}" Appearance="Secondary" Click="TogglePin_Click"/>
                         <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
-                        <Button Style="{DynamicResource IconBtn}" Click="Minimize_Click" ToolTip="Minimalizuj">
+                        <Button Style="{DynamicResource IconBtn}" Click="Minimize_Click" ToolTip="{DynamicResource S.tip.minimize}">
                             <TextBlock Text="&#x2212;" FontSize="15" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                         </Button>
-                        <ui:Button Content="Przywróć okno" Appearance="Secondary" Click="Fullscreen_Click" Margin="6,0,0,0"/>
+                        <ui:Button Content="{DynamicResource S.fs.restore}" Appearance="Secondary" Click="Fullscreen_Click" Margin="6,0,0,0"/>
                     </StackPanel>
 
                     <!-- flyout "inne połączenia" -->
                     <Border x:Name="FsFlyout" Visibility="Collapsed" Width="300" Margin="0,8,0,0"
                             Background="#22FFFFFF" CornerRadius="8" Padding="8">
                         <StackPanel>
-                            <ui:TextBox x:Name="FsFlyoutSearch" PlaceholderText="Szukaj serwera…"
+                            <ui:TextBox x:Name="FsFlyoutSearch" PlaceholderText="{DynamicResource S.search}"
                                         Margin="0,0,0,6" TextChanged="FsFlyoutSearch_TextChanged">
                                 <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
                             </ui:TextBox>
                             <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
-                                    <TextBlock Text="OTWARTE SESJE" Foreground="{DynamicResource TextTer}" FontSize="10"
+                                    <TextBlock Text="{DynamicResource S.fs.opensessions}" Foreground="{DynamicResource TextTer}" FontSize="10"
                                                FontWeight="SemiBold" Margin="6,6,6,4"/>
                                     <StackPanel x:Name="FlyoutSessions"/>
-                                    <TextBlock Text="WSZYSTKIE SERWERY" Foreground="{DynamicResource TextTer}" FontSize="10"
+                                    <TextBlock Text="{DynamicResource S.fs.allservers}" Foreground="{DynamicResource TextTer}" FontSize="10"
                                                FontWeight="SemiBold" Margin="6,8,6,4"/>
                                     <StackPanel x:Name="FlyoutServers"/>
                                 </StackPanel>

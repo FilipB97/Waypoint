@@ -10,6 +10,9 @@ namespace RdpManager
     /// </summary>
     public static class LocalizationManager
     {
+        /// <summary>Zwraca tekst dla klucza z aktywnego słownika (albo sam klucz, gdy brak). Do użycia w code-behind.</summary>
+        public static string S(string key) => Application.Current?.Resources[key] as string ?? key;
+
         public static void Apply(string lang)
         {
             string l = (lang == "en") ? "en" : "pl";

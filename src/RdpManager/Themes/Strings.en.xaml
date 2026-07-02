@@ -41,4 +41,80 @@
     <sys:String x:Key="S.set.importprofile">Import profile…</sys:String>
     <sys:String x:Key="S.set.backupnote">The backup includes servers and settings (no passwords — those stay in Windows Credential Manager).</sys:String>
     <sys:String x:Key="S.set.save">Save settings</sys:String>
+
+    <!-- pass 2: connection bar, canvas, fullscreen bar -->
+    <sys:String x:Key="S.winauth">Windows account</sys:String>
+    <sys:String x:Key="S.pass">Password</sys:String>
+    <sys:String x:Key="S.connect">Connect</sys:String>
+    <sys:String x:Key="S.disconnect">Disconnect</sys:String>
+    <sys:String x:Key="S.fullscreen">Full screen</sys:String>
+    <sys:String x:Key="S.reconnect">Reconnect</sys:String>
+    <sys:String x:Key="S.connected">● Connected</sys:String>
+    <sys:String x:Key="S.tip.fullscreen">Full screen (on this monitor)</sys:String>
+    <sys:String x:Key="S.tip.minimize">Minimize</sys:String>
+    <sys:String x:Key="S.emptyhint">Select a server on the left to open a session.</sys:String>
+    <sys:String x:Key="S.fs.drag">Drag to move the bar</sys:String>
+    <sys:String x:Key="S.fs.others">other connections  ▾</sys:String>
+    <sys:String x:Key="S.fs.others.up">other connections  ▴</sys:String>
+    <sys:String x:Key="S.fs.pin">📌 pin</sys:String>
+    <sys:String x:Key="S.fs.pinned">📌 pinned</sys:String>
+    <sys:String x:Key="S.fs.restore">Restore window</sys:String>
+    <sys:String x:Key="S.fs.opensessions">OPEN SESSIONS</sys:String>
+    <sys:String x:Key="S.fs.allservers">ALL SERVERS</sys:String>
+
+    <!-- session window -->
+    <sys:String x:Key="S.dock">Dock to a tab</sys:String>
+    <sys:String x:Key="S.dock.tip">Put the session back as a tab in the manager</sys:String>
+
+    <!-- dialog: server -->
+    <sys:String x:Key="S.se.title">Server</sys:String>
+    <sys:String x:Key="S.se.name">Name</sys:String>
+    <sys:String x:Key="S.se.group">Group</sys:String>
+    <sys:String x:Key="S.se.winauth">Sign in with Windows account (no username/password)</sys:String>
+    <sys:String x:Key="S.se.user">User</sys:String>
+    <sys:String x:Key="S.se.domain">Domain</sys:String>
+    <sys:String x:Key="S.se.savepass">Save password (Windows Credential Manager)</sys:String>
+    <sys:String x:Key="S.se.redir">Redirections</sys:String>
+    <sys:String x:Key="S.se.clipboard">Clipboard</sys:String>
+    <sys:String x:Key="S.se.drives">Drives</sys:String>
+    <sys:String x:Key="S.se.printers">Printers</sys:String>
+    <sys:String x:Key="S.se.audio">Audio</sys:String>
+    <sys:String x:Key="S.se.audio0">Play on this computer</sys:String>
+    <sys:String x:Key="S.se.audio1">Do not play</sys:String>
+    <sys:String x:Key="S.se.audio2">Play on the server</sys:String>
+    <sys:String x:Key="S.se.authlvl">Server verification</sys:String>
+    <sys:String x:Key="S.se.auth0">Don't check (not recommended)</sys:String>
+    <sys:String x:Key="S.se.auth1">Require — reject on failure</sys:String>
+    <sys:String x:Key="S.se.auth2">Warn on failure (recommended)</sys:String>
+    <sys:String x:Key="S.se.gateway">Gateway (RD Gateway / jump host)</sys:String>
+    <sys:String x:Key="S.se.gateway.ph">gateway host — empty = direct connection</sys:String>
+    <sys:String x:Key="S.se.gwmode">Gateway mode</sys:String>
+    <sys:String x:Key="S.se.gw0">Don't use</sys:String>
+    <sys:String x:Key="S.se.gw1">Always via gateway</sys:String>
+    <sys:String x:Key="S.se.gw2">Auto-detect</sys:String>
+
+    <!-- dialog: credentials -->
+    <sys:String x:Key="S.cp.title">Credentials</sys:String>
+    <sys:String x:Key="S.cp.domainopt">Domain (optional)</sys:String>
+
+    <!-- shared buttons -->
+    <sys:String x:Key="S.cancel">Cancel</sys:String>
+    <sys:String x:Key="S.save">Save</sys:String>
+
+    <!-- context menus -->
+    <sys:String x:Key="S.m.pin">Pin</sys:String>
+    <sys:String x:Key="S.m.unpin">Unpin</sys:String>
+    <sys:String x:Key="S.m.newwin">Open in a new window</sys:String>
+    <sys:String x:Key="S.m.connectas">Connect as…</sys:String>
+    <sys:String x:Key="S.m.edit">Edit…</sys:String>
+    <sys:String x:Key="S.m.diag">Diagnostics…</sys:String>
+    <sys:String x:Key="S.m.exportrdp">Export .rdp…</sys:String>
+    <sys:String x:Key="S.m.delete">Delete</sys:String>
+    <sys:String x:Key="S.m.tearoff">Tear off to a window</sys:String>
+    <sys:String x:Key="S.m.duplicate">Duplicate</sys:String>
+    <sys:String x:Key="S.m.moveleft">Move left</sys:String>
+    <sys:String x:Key="S.m.moveright">Move right</sys:String>
+    <sys:String x:Key="S.m.closeothers">Close others</sys:String>
+    <sys:String x:Key="S.m.close">Close</sys:String>
+    <sys:String x:Key="S.m.renamegroup">Rename group…</sys:String>
 </ResourceDictionary>

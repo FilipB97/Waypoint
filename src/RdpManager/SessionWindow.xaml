@@ -38,11 +38,11 @@
                                MaxWidth="640" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <ui:Button x:Name="TbDock" Content="Zadokuj do karty" Appearance="Secondary" Click="Dock_Click" Margin="0,0,6,0"
-                               ToolTip="Wstaw sesję z powrotem jako kartę w managerze"/>
-                    <ui:Button x:Name="TbConnect" Content="Połącz" Appearance="Secondary" Click="Connect_Click" Margin="0,0,6,0"/>
-                    <ui:Button x:Name="TbFullscreen" Content="Pełny ekran" Appearance="Secondary" Click="Fullscreen_Click" Margin="0,0,6,0"/>
-                    <ui:Button x:Name="TbDisconnect" Content="Rozłącz" Appearance="Secondary" Click="Disconnect_Click"/>
+                    <ui:Button x:Name="TbDock" Content="{DynamicResource S.dock}" Appearance="Secondary" Click="Dock_Click" Margin="0,0,6,0"
+                               ToolTip="{DynamicResource S.dock.tip}"/>
+                    <ui:Button x:Name="TbConnect" Content="{DynamicResource S.connect}" Appearance="Secondary" Click="Connect_Click" Margin="0,0,6,0"/>
+                    <ui:Button x:Name="TbFullscreen" Content="{DynamicResource S.fullscreen}" Appearance="Secondary" Click="Fullscreen_Click" Margin="0,0,6,0"/>
+                    <ui:Button x:Name="TbDisconnect" Content="{DynamicResource S.disconnect}" Appearance="Secondary" Click="Disconnect_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -58,7 +58,7 @@
                                FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="OverlayMsg" Foreground="{DynamicResource TextSec}" HorizontalAlignment="Center"
                                TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                    <ui:Button x:Name="OverlayReconnect" Content="Połącz ponownie" Appearance="Primary"
+                    <ui:Button x:Name="OverlayReconnect" Content="{DynamicResource S.reconnect}" Appearance="Primary"
                                Click="Connect_Click" HorizontalAlignment="Center" Margin="0,18,0,0" Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
@@ -82,9 +82,9 @@
                     </Thumb>
                     <TextBlock x:Name="FsName" Foreground="{DynamicResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
-                    <ui:Button x:Name="FsPinBtn" Content="📌 przypnij" Appearance="Secondary" Click="FsPin_Click" Margin="0,0,6,0"/>
-                    <ui:Button Content="Minimalizuj" Appearance="Secondary" Click="FsMinimize_Click" Margin="0,0,6,0"/>
-                    <ui:Button Content="Przywróć okno" Appearance="Secondary" Click="Fullscreen_Click"/>
+                    <ui:Button x:Name="FsPinBtn" Content="{DynamicResource S.fs.pin}" Appearance="Secondary" Click="FsPin_Click" Margin="0,0,6,0"/>
+                    <ui:Button Content="{DynamicResource S.tip.minimize}" Appearance="Secondary" Click="FsMinimize_Click" Margin="0,0,6,0"/>
+                    <ui:Button Content="{DynamicResource S.fs.restore}" Appearance="Secondary" Click="Fullscreen_Click"/>
                 </StackPanel>
             </Border>
         </Popup>

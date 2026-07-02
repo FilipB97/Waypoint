@@ -72,6 +72,9 @@ namespace RdpManager
         // Klucz sekcji „Przypięte" w AppSettings.CollapsedGroups (nie koliduje z nazwami grup użytkownika).
         private const string PinnedGroupKey = "__pinned__";
 
+        // Skrót do lokalizowanego tekstu (dla UI budowanego w kodzie: menu, komunikaty).
+        private static string L(string key) => LocalizationManager.S(key);
+
         // Otwarte, samodzielne okna sesji (model wielookienny).
         private readonly System.Collections.Generic.List<SessionWindow> _sessionWindows = new System.Collections.Generic.List<SessionWindow>();
 
@@ -531,7 +534,7 @@ namespace RdpManager
             if (!isPinned)
             {
                 var menu = new ContextMenu();
-                var rename = new MenuItem { Header = "Zmień nazwę grupy…" };
+                var rename = new MenuItem { Header = L("S.m.renamegroup") };
                 rename.Click += (s, e) => RenameGroup(name);
                 menu.Items.Add(rename);
                 row.ContextMenu = menu;
@@ -689,23 +692,23 @@ namespace RdpManager
             };
 
             var menu = new ContextMenu();
-            var pinItem = new MenuItem { Header = server.Pinned ? "Odepnij" : "Przypnij" };
+            var pinItem = new MenuItem { Header = L(server.Pinned ? "S.m.unpin" : "S.m.pin") };
             pinItem.Click += (s, e) => TogglePin(server);
-            var newWinItem = new MenuItem { Header = "Otwórz w nowym oknie" };
+            var newWinItem = new MenuItem { Header = L("S.m.newwin") };
             newWinItem.Click += (s, e) => OpenInNewWindow(server);
-            var connectAsItem = new MenuItem { Header = "Połącz jako…" };
+            var connectAsItem = new MenuItem { Header = L("S.m.connectas") };
             connectAsItem.Click += (s, e) =>
             {
                 OpenServer(server);
                 if (_active?.Server == server) PromptAndConnect(_active, "Połącz z innymi poświadczeniami.");
             };
-            var editItem = new MenuItem { Header = "Edytuj…" };
+            var editItem = new MenuItem { Header = L("S.m.edit") };
             editItem.Click += (s, e) => EditServer(server);
-            var diagItem = new MenuItem { Header = "Diagnostyka…" };
+            var diagItem = new MenuItem { Header = L("S.m.diag") };
             diagItem.Click += (s, e) => DiagnoseServer(server);
-            var exportItem = new MenuItem { Header = "Eksportuj .rdp…" };
+            var exportItem = new MenuItem { Header = L("S.m.exportrdp") };
             exportItem.Click += (s, e) => ExportRdp(server);
-            var delItem = new MenuItem { Header = "Usuń" };
+            var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
@@ -978,17 +981,17 @@ namespace RdpManager
             tab.MouseLeftButtonUp += (s, e) => Activate(session);
 
             var tabMenu = new ContextMenu();
-            var tearItem = new MenuItem { Header = "Wyciągnij do osobnego okna" };
+            var tearItem = new MenuItem { Header = L("S.m.tearoff") };
             tearItem.Click += (s, e) => TearOffToWindow(session);
-            var dupItem = new MenuItem { Header = "Duplikuj" };
+            var dupItem = new MenuItem { Header = L("S.m.duplicate") };
             dupItem.Click += (s, e) => DuplicateSession(session);
-            var moveLeft = new MenuItem { Header = "Przesuń w lewo" };
+            var moveLeft = new MenuItem { Header = L("S.m.moveleft") };
             moveLeft.Click += (s, e) => MoveTab(session, -1);
-            var moveRight = new MenuItem { Header = "Przesuń w prawo" };
+            var moveRight = new MenuItem { Header = L("S.m.moveright") };
             moveRight.Click += (s, e) => MoveTab(session, +1);
-            var closeOthers = new MenuItem { Header = "Zamknij pozostałe" };
+            var closeOthers = new MenuItem { Header = L("S.m.closeothers") };
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
-            var closeThis = new MenuItem { Header = "Zamknij" };
+            var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => RequestCloseSession(session);
             tabMenu.Items.Add(tearItem);
             tabMenu.Items.Add(dupItem);
