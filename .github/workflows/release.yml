@@ -1,6 +1,15 @@
 name: Release
 
+# Dwa sposoby wydania:
+#  • jednym kliknięciem: Actions → Release → "Run workflow" (wybierz branch, np. master, i podaj wersję)
+#  • albo przez push taga: git tag v1.2.3 && git push origin v1.2.3
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Wersja bez 'v' (np. 1.0.0)"
+        required: true
+        default: "1.0.0"
   push:
     tags: ["v*"]
 
@@ -20,23 +29,56 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Publish (self-contained x64)
-        run: >
-          dotnet publish src/RdpManager/RdpManager.csproj
-          -c Release -r win-x64 --self-contained true
-          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-          -o publish
+      # Wartości do env (nie inline ${{ }} w skrypcie) — chroni przed script injection.
+      - name: Determine version
+        id: ver
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then V="$INPUT_VERSION"; else V="${REF_NAME#v}"; fi
+          if [ -z "$V" ]; then echo "Brak wersji"; exit 1; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "tag=v$V"    >> "$GITHUB_OUTPUT"
 
-      # Nazwa taga przez env (nie inline ${{ }} w skrypcie) — chroni przed injection w pwsh.
-      - name: Package
+      - name: Test
+        run: dotnet test RdpManager.sln -c Release
+
+      - name: Publish (self-contained single-file x64)
         shell: pwsh
         env:
-          TAG: ${{ github.ref_name }}
-        run: Compress-Archive -Path publish/* -DestinationPath "RdpManager-$env:TAG-win-x64.zip"
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          dotnet publish src/RdpManager/RdpManager.csproj -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false `
+            -p:Version=$env:VERSION -o publish
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item publish/Waypoint.exe "dist/Waypoint-$env:VERSION-win-x64.exe"
+
+      - name: Release notes
+        shell: bash
+        run: |
+          cat > notes.md <<'EOF'
+          **Waypoint** — a modern RDP manager for Windows (WPF, Fluent / Mica).
+
+          Download the `Waypoint-...-win-x64.exe` asset below and run it — self-contained,
+          no .NET install required (Windows 10/11 x64).
+
+          > Not code-signed yet, so SmartScreen may warn on first run: *More info → Run anyway*.
+          EOF
 
       - name: Create GitHub release
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: gh release create "$env:TAG" "RdpManager-$env:TAG-win-x64.zip" --title "$env:TAG" --generate-notes
+          TAG: ${{ steps.ver.outputs.tag }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh release create "$TAG" "dist/Waypoint-$VERSION-win-x64.exe" \
+            --title "Waypoint $VERSION" \
+            --target "$SHA" \
+            --notes-file notes.md
