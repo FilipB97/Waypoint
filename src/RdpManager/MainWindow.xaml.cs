@@ -69,6 +69,9 @@ namespace RdpManager
         private InsertionAdorner _dropAdorner;   // linia „tu wyląduje" na krawędzi wiersza
         private Border _dropRow;                  // wiersz, do którego przypięty jest adorner
 
+        // Klucz sekcji „Przypięte" w AppSettings.CollapsedGroups (nie koliduje z nazwami grup użytkownika).
+        private const string PinnedGroupKey = "__pinned__";
+
         // Otwarte, samodzielne okna sesji (model wielookienny).
         private readonly System.Collections.Generic.List<SessionWindow> _sessionWindows = new System.Collections.Generic.List<SessionWindow>();
 
@@ -440,10 +443,22 @@ namespace RdpManager
             _serverAccent.Clear();
             _serverStatusDot.Clear();
 
+            // Sekcja „Przypięte" na górze — ulubione serwery (kolejność z listy), niezależnie od grupy.
+            var pinned = _vm.Servers.Where(s => s.Pinned && RdpUtils.MatchesFilter(s, filter)).ToList();
+            if (pinned.Count > 0)
+            {
+                bool pinCollapsed = _settings.CollapsedGroups.Contains(PinnedGroupKey);
+                ServerTree.Children.Add(BuildGroupHeader(PinnedGroupKey, pinned.Count, pinCollapsed, isPinned: true));
+                if (!pinCollapsed)
+                    foreach (var s in pinned) ServerTree.Children.Add(BuildServerRow(s));
+            }
+
+            // Zwykłe grupy (bez przypiętych).
             var order = new List<string>();
             var byGroup = new Dictionary<string, List<ServerInfo>>();
             foreach (var s in _vm.Servers)
             {
+                if (s.Pinned) continue;
                 if (!RdpUtils.MatchesFilter(s, filter)) continue;
                 var g = string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group;
                 if (!byGroup.ContainsKey(g)) { order.Add(g); byGroup[g] = new List<ServerInfo>(); }
@@ -451,31 +466,109 @@ namespace RdpManager
             }
             foreach (var g in order)
             {
-                ServerTree.Children.Add(BuildGroupHeader(new ServerGroup { Name = g }));
-                foreach (var s in byGroup[g])
-                    ServerTree.Children.Add(BuildServerRow(s));
+                bool collapsed = _settings.CollapsedGroups.Contains(g);
+                ServerTree.Children.Add(BuildGroupHeader(g, byGroup[g].Count, collapsed, isPinned: false));
+                if (!collapsed)
+                    foreach (var s in byGroup[g])
+                        ServerTree.Children.Add(BuildServerRow(s));
             }
             UpdateActiveRows();
         }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RenderTree(SearchBox.Text);
 
-        private FrameworkElement BuildGroupHeader(ServerGroup group)
+        private FrameworkElement BuildGroupHeader(string name, int count, bool collapsed, bool isPinned)
         {
-            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(6, 10, 6, 4) };
-            sp.Children.Add(new Ellipse
+            var row = new Border
             {
-                Width = 6, Height = 6, Fill = GroupDotBrush(group.Name),
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
-            });
+                Padding = new Thickness(6, 10, 6, 4),
+                Background = Brushes.Transparent,
+                Cursor = Cursors.Hand
+            };
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+
+            // Strzałka zwijania (▸ zwinięte / ▾ rozwinięte).
             sp.Children.Add(new TextBlock
             {
-                Text = group.Name.ToUpperInvariant(),
+                Text = collapsed ? "▸" : "▾",
+                Foreground = (Brush)Resources["TextTer"], FontSize = 10, Width = 12,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            if (isPinned)
+                sp.Children.Add(new TextBlock
+                {
+                    Text = "★", Foreground = (Brush)Resources["Idle"], FontSize = 11,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+                });
+            else
+                sp.Children.Add(new Ellipse
+                {
+                    Width = 6, Height = 6, Fill = GroupDotBrush(name),
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+                });
+
+            sp.Children.Add(new TextBlock
+            {
+                Text = (isPinned ? "PRZYPIĘTE" : name.ToUpperInvariant()) + "  ·  " + count,
                 Foreground = (Brush)Resources["TextSec"],
                 FontSize = 11.5, FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
             });
-            return sp;
+
+            row.Child = sp;
+
+            string key = isPinned ? PinnedGroupKey : name;
+            row.MouseLeftButtonUp += (s, e) => ToggleGroupCollapse(key);
+
+            if (!isPinned)
+            {
+                var menu = new ContextMenu();
+                var rename = new MenuItem { Header = "Zmień nazwę grupy…" };
+                rename.Click += (s, e) => RenameGroup(name);
+                menu.Items.Add(rename);
+                row.ContextMenu = menu;
+            }
+            return row;
+        }
+
+        // Zwija/rozwija grupę i zapamiętuje stan w ustawieniach.
+        private void ToggleGroupCollapse(string key)
+        {
+            if (!_settings.CollapsedGroups.Remove(key)) _settings.CollapsedGroups.Add(key);
+            SettingsStore.Save(_settings);
+            RenderTree(SearchBox.Text);
+        }
+
+        // Zmienia nazwę grupy dla WSZYSTKICH jej serwerów naraz (bez wchodzenia w każdy z osobna).
+        private void RenameGroup(string oldName)
+        {
+            var dlg = new InputDialog("Zmień nazwę grupy",
+                "Nowa nazwa grupy (obecnie: " + oldName + ")", oldName) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+
+            string newName = dlg.Value;
+            if (string.IsNullOrWhiteSpace(newName) || newName == oldName) return;
+
+            foreach (var s in _vm.Servers)
+                if ((string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group) == oldName)
+                    s.Group = newName;
+
+            // Przenieś stan zwinięcia na nową nazwę.
+            if (_settings.CollapsedGroups.Remove(oldName) && !_settings.CollapsedGroups.Contains(newName))
+                _settings.CollapsedGroups.Add(newName);
+            SettingsStore.Save(_settings);
+
+            PersistServers();
+            RenderTree(SearchBox.Text);
+        }
+
+        // Przypina/odpina serwer (sekcja „Przypięte" na górze).
+        private void TogglePin(ServerInfo server)
+        {
+            server.Pinned = !server.Pinned;
+            PersistServers();
+            RenderTree(SearchBox.Text);
         }
 
         private FrameworkElement BuildServerRow(ServerInfo server)
@@ -533,9 +626,18 @@ namespace RdpManager
                 Width = 7, Height = 7, Fill = StatusBrush(server.Status),
                 VerticalAlignment = VerticalAlignment.Center
             };
-            Grid.SetColumn(status, 3);
-            grid.Children.Add(status);
             _serverStatusDot[server] = status;
+
+            var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            if (server.Pinned)
+                right.Children.Add(new TextBlock
+                {
+                    Text = "★", Foreground = (Brush)Resources["Idle"], FontSize = 10,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+                });
+            right.Children.Add(status);
+            Grid.SetColumn(right, 3);
+            grid.Children.Add(right);
 
             row.Child = grid;
 
@@ -580,6 +682,8 @@ namespace RdpManager
             };
 
             var menu = new ContextMenu();
+            var pinItem = new MenuItem { Header = server.Pinned ? "Odepnij" : "Przypnij" };
+            pinItem.Click += (s, e) => TogglePin(server);
             var newWinItem = new MenuItem { Header = "Otwórz w nowym oknie" };
             newWinItem.Click += (s, e) => OpenInNewWindow(server);
             var connectAsItem = new MenuItem { Header = "Połącz jako…" };
@@ -596,11 +700,14 @@ namespace RdpManager
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = "Usuń" };
             delItem.Click += (s, e) => DeleteServer(server);
+            menu.Items.Add(pinItem);
+            menu.Items.Add(new Separator());
             menu.Items.Add(newWinItem);
             menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(diagItem);
             menu.Items.Add(exportItem);
+            menu.Items.Add(new Separator());
             menu.Items.Add(delItem);
             row.ContextMenu = menu;
 

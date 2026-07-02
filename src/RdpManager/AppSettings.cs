@@ -25,5 +25,8 @@ namespace RdpManager
 
         /// <summary>Id serwerów w kolejności ostatnich połączeń (najnowsze pierwsze).</summary>
         public List<string> RecentIds { get; set; } = new List<string>();
+
+        /// <summary>Nazwy grup zwiniętych w drzewie (klucz „__pinned__" = sekcja Przypięte).</summary>
+        public List<string> CollapsedGroups { get; set; } = new List<string>();
     }
 }
