@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using RdpManager.Core;
 using RdpManager.Models;
@@ -39,6 +40,7 @@ namespace RdpManager
             _initializing = true;
             ProtocolCombo.SelectedIndex = server.Protocol == RemoteProtocol.Ssh ? 1 : 0;
             KeyPathBox.Text = server.PrivateKeyPath ?? "";
+            TunnelsBox.Text = server.Tunnels == null ? "" : string.Join(Environment.NewLine, server.Tunnels);
             ApplyWinAuthState();
             ApplyProtocolState();
             _initializing = false;
@@ -116,8 +118,19 @@ namespace RdpManager
             }
 
             bool ssh = ProtocolCombo.SelectedIndex == 1;
+
+            // Tunele: waliduj PRZED zapisem czegokolwiek (błędna reguła = nic się nie zmienia).
+            var tunnels = TunnelSpec.ParseAll(TunnelsBox.Text, out string badTunnel);
+            if (ssh && badTunnel != null)
+            {
+                MessageBox.Show(string.Format(LocalizationManager.S("S.se.tunnels.bad"), badTunnel),
+                    LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             _server.Protocol = ssh ? RemoteProtocol.Ssh : RemoteProtocol.Rdp;
             _server.PrivateKeyPath = ssh ? KeyPathBox.Text.Trim() : "";
+            _server.Tunnels = ssh ? tunnels : new List<string>();
 
             _server.Name = NameBox.Text.Trim();
             _server.Host = HostBox.Text.Trim();

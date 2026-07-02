@@ -124,6 +124,44 @@ namespace RdpManager
             if (_settings.ReachabilityEnabled) { _reachTimer.Start(); CheckReachabilityAsync(); }
 
             ShowView("Sessions");
+            CheckForUpdatesAsync();
+        }
+
+        // ---------- Aktualizacje ----------
+
+        // Ciche sprawdzenie GitHub releases/latest; nowsza wersja → przycisk w panelu bocznym.
+        // Bez sieci / rate limitu / złego JSON-a — po prostu nic się nie pokazuje.
+        private async void CheckForUpdatesAsync()
+        {
+            if (!_settings.CheckUpdates) return;
+            try
+            {
+                using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) })
+                {
+                    http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
+                    string json = await http.GetStringAsync(
+                        "https://api.github.com/repos/FilipB97/Waypoint/releases/latest");
+                    var latest = Core.UpdateCheck.ParseLatest(json);
+                    var cur = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                    var current = new Version(cur.Major, cur.Minor, Math.Max(cur.Build, 0));
+                    if (Core.UpdateCheck.IsNewer(latest, current))
+                    {
+                        UpdateBtn.Content = string.Format(L("S.update.available"), latest);
+                        UpdateBtn.Visibility = Visibility.Visible;
+                    }
+                }
+            }
+            catch { /* offline / proxy / rate limit — sprawdzimy przy kolejnym starcie */ }
+        }
+
+        private void Update_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    "https://github.com/FilipB97/Waypoint/releases/latest") { UseShellExecute = true });
+            }
+            catch { /* brak przeglądarki — ignoruj */ }
         }
 
         // ---------- Nawigacja (rail) ----------
@@ -278,6 +316,7 @@ namespace RdpManager
             SetConnLog.IsChecked = _settings.ConnectionLogEnabled;
             SetOpenNewWindow.IsChecked = _settings.OpenInNewWindowByDefault;
             SetImmersive.IsChecked = _settings.ImmersiveOnMaximize;
+            SetCheckUpdates.IsChecked = _settings.CheckUpdates;
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
         }
@@ -295,6 +334,7 @@ namespace RdpManager
             _settings.ConnectionLogEnabled = SetConnLog.IsChecked == true;
             _settings.OpenInNewWindowByDefault = SetOpenNewWindow.IsChecked == true;
             _settings.ImmersiveOnMaximize = SetImmersive.IsChecked == true;
+            _settings.CheckUpdates = SetCheckUpdates.IsChecked == true;
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
@@ -905,6 +945,14 @@ namespace RdpManager
                         L("S.ssh.hostkey.title"), MessageBoxButton.YesNo,
                         changed ? MessageBoxImage.Warning : MessageBoxImage.Question,
                         changed ? MessageBoxResult.No : MessageBoxResult.Yes) == MessageBoxResult.Yes));
+                // Zaszyfrowany klucz prywatny → maskowany prompt o passphrase (null = anuluj).
+                term.RequestKeyPassphrase = path => (string)Dispatcher.Invoke(new Func<string>(() =>
+                {
+                    var dlg = new InputDialog(L("S.ssh.keypass.title"),
+                        string.Format(L("S.ssh.keypass.label"), System.IO.Path.GetFileName(path)),
+                        "", masked: true) { Owner = this };
+                    return dlg.ShowDialog() == true ? dlg.Value : null;
+                }));
                 SessionContainer.Children.Add(term);
                 session = new Session(server, term);
                 WireSshEvents(session);
@@ -1467,6 +1515,10 @@ namespace RdpManager
                 SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); s.Ssh.FocusTerminal(); }
             }));
+            s.Ssh.TunnelStatus += (spec, ok, err) => Dispatcher.BeginInvoke(new Action(() =>
+                s.Ssh.WriteLocal(ok
+                    ? "\x1b[92m" + string.Format(L("S.ssh.tunnel.up"), spec) + "\x1b[0m\r\n"
+                    : "\x1b[91m" + string.Format(L("S.ssh.tunnel.fail"), spec, err) + "\x1b[0m\r\n")));
             s.Ssh.Disconnected += reason => Dispatcher.BeginInvoke(new Action(() =>
             {
                 bool was = s.Connected;

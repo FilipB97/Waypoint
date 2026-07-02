@@ -37,6 +37,8 @@
     <sys:String x:Key="S.set.connlog">Zapisuj dziennik audytu połączeń (bez haseł)</sys:String>
     <sys:String x:Key="S.set.opennewwin">Otwieraj połączenia w osobnym oknie</sys:String>
     <sys:String x:Key="S.set.immersive">Tryb skupienia po zmaksymalizowaniu (ukryj panel boczny)</sys:String>
+    <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje przy starcie</sys:String>
+    <sys:String x:Key="S.update.available">Nowa wersja {0} — pobierz</sys:String>
     <sys:String x:Key="S.set.data">Dane aplikacji</sys:String>
     <sys:String x:Key="S.set.openfolder">Otwórz folder</sys:String>
     <sys:String x:Key="S.set.exportprofile">Eksportuj profil…</sys:String>
@@ -73,6 +75,10 @@
     <sys:String x:Key="S.se.protocol">Protokół</sys:String>
     <sys:String x:Key="S.se.keypath">Klucz prywatny (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.keypath.ph">ścieżka do pliku klucza — puste = tylko hasło</sys:String>
+    <sys:String x:Key="S.se.tunnels">Tunele lokalne (jak ssh -L)</sys:String>
+    <sys:String x:Key="S.se.tunnels.ph">portLokalny:host:portZdalny — jedna reguła na linię, np. 5433:db.internal:5432</sys:String>
+    <sys:String x:Key="S.se.tunnels.bad">Niepoprawna reguła tunelu: {0}
+Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.browse">Przeglądaj…</sys:String>
     <sys:String x:Key="S.se.name">Nazwa</sys:String>
     <sys:String x:Key="S.se.group">Grupa</sys:String>
@@ -212,6 +218,10 @@
     <sys:String x:Key="S.msg.import.nopass">Hasła nie są przenoszone — podasz je przy pierwszym połączeniu.</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">Terminal SSH wymaga składnika WebView2 Runtime (wbudowany w Windows 11; na starszych systemach doinstaluj go ze strony Microsoft).</sys:String>
+    <sys:String x:Key="S.ssh.tunnel.up">tunel {0} aktywny — nasłuch na 127.0.0.1</sys:String>
+    <sys:String x:Key="S.ssh.tunnel.fail">tunel {0}: {1}</sys:String>
+    <sys:String x:Key="S.ssh.keypass.title">Klucz SSH</sys:String>
+    <sys:String x:Key="S.ssh.keypass.label">Klucz {0} jest zaszyfrowany. Podaj passphrase:</sys:String>
     <sys:String x:Key="S.ssh.hostkey.title">Klucz hosta SSH</sys:String>
     <sys:String x:Key="S.ssh.hostkey.new">Pierwsze połączenie z {0}.
 Odcisk klucza hosta:

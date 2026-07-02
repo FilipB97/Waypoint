@@ -44,6 +44,16 @@ namespace RdpManager
         /// </summary>
         public Func<string, string, bool, bool> TrustHostKey;
 
+        /// <summary>
+        /// Klucz prywatny jest zaszyfrowany — poproś o passphrase (parametr: ścieżka klucza).
+        /// null = anuluj. Wątek SSH; obsługa marshaluje na UI.
+        /// </summary>
+        public Func<string, string> RequestKeyPassphrase;
+
+        /// <summary>Status tunelu: (reguła, ok, błąd). Wątek SSH.</summary>
+        public event Action<string, bool, string> TunnelStatus;
+
+        private readonly List<ForwardedPortLocal> _forwards = new List<ForwardedPortLocal>();
         private string _hostKeyHost;
         private int _hostKeyPort;
 
@@ -157,7 +167,7 @@ namespace RdpManager
                 var methods = new List<AuthenticationMethod>();
                 if (!string.IsNullOrWhiteSpace(server.PrivateKeyPath))
                     methods.Add(new PrivateKeyAuthenticationMethod(server.Username,
-                        new PrivateKeyFile(server.PrivateKeyPath)));
+                        LoadPrivateKey(server.PrivateKeyPath)));
                 if (!string.IsNullOrEmpty(password))
                 {
                     methods.Add(new PasswordAuthenticationMethod(server.Username, password));
@@ -184,6 +194,8 @@ namespace RdpManager
                 client.ErrorOccurred += (o, e) => RaiseDisconnected(e.Exception?.Message);
                 client.Connect();
 
+                StartTunnels(client, server);
+
                 var shell = client.CreateShellStream("xterm-256color",
                     (uint)Math.Max(cols, 10), (uint)Math.Max(rows, 5), 0, 0, 8192);
                 shell.DataReceived += OnShellData;
@@ -193,6 +205,47 @@ namespace RdpManager
                 _shell = shell;
                 Connected?.Invoke();
             });
+        }
+
+        // Klucz zaszyfrowany passphrasem → dopytaj przez RequestKeyPassphrase (do 3 prób).
+        private PrivateKeyFile LoadPrivateKey(string path)
+        {
+            try { return new PrivateKeyFile(path); }
+            catch (SshPassPhraseNullOrEmptyException)
+            {
+                var ask = RequestKeyPassphrase;
+                if (ask == null) throw;
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    string phrase = ask(path);
+                    if (phrase == null) throw new SshAuthenticationException("Anulowano podawanie passphrase klucza.");
+                    try { return new PrivateKeyFile(path, phrase); }
+                    catch (SshException) { /* złe hasło klucza — spróbuj ponownie */ }
+                    catch (InvalidOperationException) { /* jw. — starsze wersje rzucają inaczej */ }
+                }
+                throw new SshAuthenticationException("Niepoprawna passphrase klucza (3 próby).");
+            }
+        }
+
+        // Tunele lokalne (ssh -L): 127.0.0.1:portLokalny → host:portZdalny przez serwer SSH.
+        // Błąd jednej reguły nie ubija sesji — leci zdarzeniem do UI.
+        private void StartTunnels(SshClient client, ServerInfo server)
+        {
+            if (server.Tunnels == null) return;
+            foreach (var spec in server.Tunnels)
+            {
+                if (!TunnelSpec.TryParse(spec, out int lp, out string host, out int rp)) continue;   // walidacja w edytorze
+                try
+                {
+                    var fp = new ForwardedPortLocal("127.0.0.1", (uint)lp, host, (uint)rp);
+                    client.AddForwardedPort(fp);
+                    fp.Exception += (o, e) => TunnelStatus?.Invoke(spec, false, e.Exception?.Message);
+                    fp.Start();
+                    lock (_forwards) _forwards.Add(fp);
+                    TunnelStatus?.Invoke(spec, true, null);
+                }
+                catch (Exception ex) { TunnelStatus?.Invoke(spec, false, ex.Message); }
+            }
         }
 
         // TOFU: znany klucz → OK; nowy → pytanie (domyślnie ufaj); ZMIENIONY → pytanie z ostrzeżeniem (domyślnie odrzuć).
@@ -292,6 +345,9 @@ namespace RdpManager
         {
             var sh = _shell; var c = _client;
             _shell = null; _client = null;
+            ForwardedPortLocal[] fws;
+            lock (_forwards) { fws = _forwards.ToArray(); _forwards.Clear(); }
+            foreach (var f in fws) { try { f.Stop(); f.Dispose(); } catch { } }
             try { if (sh != null) { sh.DataReceived -= OnShellData; sh.Dispose(); } } catch { }
             try { c?.Dispose(); } catch { }
         }

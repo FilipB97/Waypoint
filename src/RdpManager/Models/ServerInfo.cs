@@ -26,6 +26,9 @@ namespace RdpManager.Models
         /// <summary>SSH: ścieżka do pliku klucza prywatnego (puste = uwierzytelnianie hasłem).</summary>
         public string PrivateKeyPath { get; set; } = "";
 
+        /// <summary>SSH: tunele lokalne w składni ssh -L („portLokalny:host:portZdalny", po jednej regule).</summary>
+        public List<string> Tunnels { get; set; } = new List<string>();
+
         /// <summary>Logowanie zintegrowane kontem Windows (bez podawania loginu/hasła).</summary>
         public bool UseWindowsAccount { get; set; }
 

@@ -84,6 +84,10 @@
                         <ui:TextBox x:Name="KeyPathBox" Grid.Column="0" PlaceholderText="{DynamicResource S.se.keypath.ph}"/>
                         <ui:Button Grid.Column="1" Content="{DynamicResource S.se.browse}" Click="BrowseKey_Click" Margin="8,0,0,0"/>
                     </Grid>
+                    <TextBlock Text="{DynamicResource S.se.tunnels}" Margin="0,10,0,4"/>
+                    <ui:TextBox x:Name="TunnelsBox" AcceptsReturn="True" TextWrapping="NoWrap"
+                                MinHeight="64" MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                                PlaceholderText="{DynamicResource S.se.tunnels.ph}"/>
                 </StackPanel>
             </StackPanel>
 
