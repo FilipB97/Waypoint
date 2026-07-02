@@ -1,11 +1,19 @@
-# RDP Manager
+# Waypoint
 
-A modern, tabbed Remote Desktop client for Windows, built with WPF (.NET 8) and the
+**Waypoint** is a modern, tabbed Remote Desktop client for Windows, built with WPF (.NET 8) and the
 Windows 11 **Fluent / Mica** design. It wraps the official Microsoft RDP ActiveX control
 (`mstscax`) and aims to be a comfortable daily replacement for the built-in
 Remote Desktop Connection (`mstsc.exe`).
 
 > Status: early but usable. See the [roadmap](docs/ROADMAP.md) for what's next.
+
+## Download
+
+Grab the latest **`Waypoint-<version>-win-x64.exe`** from the
+[Releases](https://github.com/FilipB97/RemoteDesktopManager/releases) page and run it —
+it's a self-contained single file, no .NET install required (Windows 10/11 x64).
+
+> Not code-signed yet, so SmartScreen may warn on first run: *More info → Run anyway*.
 
 ## Features
 
@@ -24,10 +32,11 @@ Remote Desktop Connection (`mstsc.exe`).
 - **Keyboard shortcuts** — `Ctrl+Tab` cycle tabs, `Alt+1..9` jump, `Ctrl+W` close,
   `Ctrl+F`/`Ctrl+K` focus search, `Ctrl+±/0` zoom, `F11` full screen.
 - **Diagnostics & audit** — per-server TCP port test and an optional connection log.
-- **Multiple sessions per server**, duplicate tab, and tab reorder.
+- **Multiple sessions per server**, duplicate tab, tab reorder, and **drag-and-drop server reordering** in the tree.
 - **Profile export / import** — back up all servers and settings to one file.
-- **Multi-monitor full screen** *(experimental)* — per-server "use all monitors" option
-  (mstsc `use multimon`); active only on systems with more than one monitor.
+- **Multi-monitor, mstsc-style** — open any session in a **standalone window**, drag it to
+  another monitor and go full screen there; run several sessions on several screens at once.
+  **Tear off** a tab into its own window and **dock** it back to a tab (seamless reconnect).
 - **Dashboard & recents**, UI zoom (Ctrl+scroll), dark Fluent theme.
 
 > **Known limitation:** keyboard shortcuts (Ctrl+Tab, Alt+1..9, F11, …) work while focus
@@ -49,6 +58,15 @@ dotnet run     --project src/RdpManager/RdpManager.csproj -c Release
 ```
 
 Or open `RdpManager.sln` in Visual Studio 2022 (17.8+) and press F5.
+
+To produce the self-contained single-file build shipped on Releases:
+
+```powershell
+dotnet publish src/RdpManager/RdpManager.csproj -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:EnableCompressionInSingleFile=true
+# -> src/RdpManager/bin/Release/net8.0-windows/win-x64/publish/Waypoint.exe
+```
 
 ## Tests
 

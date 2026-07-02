@@ -1,6 +1,6 @@
 # Roadmap
 
-Goal: make RDP Manager a full daily replacement for the Windows built-in Remote Desktop
+Goal: make Waypoint a full daily replacement for the Windows built-in Remote Desktop
 Connection (`mstsc.exe`). This list comes from a full review of the current tool. Order
 reflects the chosen priorities.
 

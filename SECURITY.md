@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-If you discover a security vulnerability in RDP Manager, please report it **privately** so it
+If you discover a security vulnerability in Waypoint, please report it **privately** so it
 can be fixed before public disclosure.
 
 - Preferred: open a [GitHub Security Advisory](../../security/advisories/new) for this

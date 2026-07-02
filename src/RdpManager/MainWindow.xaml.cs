@@ -61,7 +61,6 @@ namespace RdpManager
         private bool _isFullscreen;
         private bool _fsPinned;   // pasek pełnoekranowy „przypięty" (bez auto-chowania)
         private double _fsBarOffset;   // przesunięcie paska od środka (przeciąganie w poziomie)
-        private System.Windows.Forms.Screen _fsTargetScreen;   // monitor docelowy pełnego ekranu (null = bieżący)
 
         // Drag&drop kolejności serwerów w drzewie.
         private Point _dragStartPoint;
@@ -154,7 +153,7 @@ namespace RdpManager
         private void Avatar_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(
-                "RDP Manager\nNowoczesny menedżer połączeń RDP (WPF / Fluent).\n\nFolder danych:\n" + SettingsStore.Dir,
+                "Waypoint\nNowoczesny menedżer połączeń RDP (WPF / Fluent).\n\nFolder danych:\n" + SettingsStore.Dir,
                 "O aplikacji", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -273,7 +272,7 @@ namespace RdpManager
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
                 Title = "Eksportuj profil",
-                Filter = "Profil RDP Manager (*.json)|*.json",
+                Filter = "Profil Waypoint (*.json)|*.json",
                 FileName = "rdpmanager-profil.json"
             };
             if (dlg.ShowDialog(this) != true) return;
@@ -294,7 +293,7 @@ namespace RdpManager
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
                 Title = "Importuj profil",
-                Filter = "Profil RDP Manager (*.json)|*.json|Wszystkie pliki (*.*)|*.*"
+                Filter = "Profil Waypoint (*.json)|*.json|Wszystkie pliki (*.*)|*.*"
             };
             if (dlg.ShowDialog(this) != true) return;
 
@@ -1269,10 +1268,10 @@ namespace RdpManager
 
         private void Fullscreen_Click(object sender, RoutedEventArgs e) => ToggleFullscreen();
 
-        private void ToggleFullscreen(System.Windows.Forms.Screen target = null)
+        private void ToggleFullscreen()
         {
             if (_active == null && !_isFullscreen) return;
-            if (!_isFullscreen) { _fsTargetScreen = target; EnterFullscreen(); }
+            if (!_isFullscreen) EnterFullscreen();
             else ExitFullscreen();
         }
 
@@ -1297,10 +1296,10 @@ namespace RdpManager
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.NoResize;
 
-            // Pozycjonujemy w pikselach fizycznych na wybranym monitorze (_fsTargetScreen) albo bieżącym.
+            // Pełny ekran na monitorze, na którym stoi okno (na inny ekran = osobne okno + przeciągnięcie).
             // SetWindowPos jest poprawny także między monitorami o różnym DPI; zakrywa pasek zadań.
             var hwnd = new WindowInteropHelper(this).Handle;
-            var screen = _fsTargetScreen ?? System.Windows.Forms.Screen.FromHandle(hwnd);
+            var screen = System.Windows.Forms.Screen.FromHandle(hwnd);
             var b = screen.Bounds;
             SetWindowPos(hwnd, IntPtr.Zero, b.Left, b.Top, b.Width, b.Height, SWP_SHOWWINDOW);
             Topmost = true;
