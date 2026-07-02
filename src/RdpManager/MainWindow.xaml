@@ -210,6 +210,9 @@
                                        Appearance="Secondary" Click="AddServer_Click"/>
                             <ui:Button Content="Importuj .rdp" HorizontalAlignment="Stretch"
                                        Appearance="Secondary" Margin="0,6,0,0" Click="ImportRdp_Click"/>
+                            <ui:Button Content="Importuj z mstsc" HorizontalAlignment="Stretch"
+                                       Appearance="Secondary" Margin="0,6,0,0" Click="ImportMstsc_Click"
+                                       ToolTip="Zaciągnij historię połączeń wbudowanego klienta RDP (Windows)"/>
                         </StackPanel>
                     </Border>
                 </Grid>

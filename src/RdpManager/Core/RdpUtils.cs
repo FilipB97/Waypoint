@@ -27,6 +27,21 @@ namespace RdpManager.Core
         }
 
         /// <summary>
+        /// Rozdziela adres "host" / "host:port" na host i port. Bierze port tylko gdy jest dokładnie
+        /// jeden ':' i po nim poprawny numer [1..65535] (pomija adresy IPv6 z wieloma ':'). W innym
+        /// przypadku zwraca cały adres jako host i <paramref name="defaultPort"/>. Używane przy imporcie z mstsc.
+        /// </summary>
+        public static (string Host, int Port) SplitHostPort(string address, int defaultPort)
+        {
+            string host = (address ?? "").Trim();
+            int i = host.LastIndexOf(':');
+            if (i > 0 && host.IndexOf(':') == i
+                && int.TryParse(host.Substring(i + 1), out var p) && p >= 1 && p <= 65535)
+                return (host.Substring(0, i), p);
+            return (host, defaultPort);
+        }
+
+        /// <summary>
         /// Normalizuje wymiar sesji: zakres [200, 8192] i parzystość (nieparzyste =&gt; E_INVALIDARG
         /// w UpdateSessionDisplaySettings). Źródło: RdpDynamicResolution.NormalizeDim.
         /// </summary>

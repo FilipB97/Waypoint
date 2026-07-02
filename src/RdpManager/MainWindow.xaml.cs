@@ -1706,6 +1706,74 @@ namespace RdpManager
             }
         }
 
+        // Zaciąga historię połączeń wbudowanego klienta RDP (mstsc) z rejestru: host (+ port) i ostatni login.
+        // mstsc nie ma eksportu zbiorczego, więc to jest „jedno kliknięcie = wszystkie znane połączenia".
+        private void ImportMstsc_Click(object sender, RoutedEventArgs e)
+        {
+            List<MstscEntry> entries;
+            try { entries = MstscHistory.Read(); }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Nie udało się odczytać historii mstsc:\n" + ex.Message,
+                    "Import z mstsc", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (entries.Count == 0)
+            {
+                MessageBox.Show("Nie znaleziono historii połączeń mstsc w tym profilu Windows.",
+                    "Import z mstsc", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Dedup po host:port — nie duplikujemy już dodanych serwerów.
+            var existing = new HashSet<string>(
+                _vm.Servers.Select(s => (s.Host ?? "") + ":" + s.Port), StringComparer.OrdinalIgnoreCase);
+
+            int added = 0, skipped = 0;
+            foreach (var en in entries)
+            {
+                var (host, port) = RdpUtils.SplitHostPort(en.Address, _settings.DefaultPort);
+                if (string.IsNullOrWhiteSpace(host)) continue;
+                if (!existing.Add(host + ":" + port)) { skipped++; continue; }
+
+                // Rozdziel ewentualne „DOMENA\user" na domenę i login (Waypoint trzyma je osobno).
+                string domain = "", user = en.Username ?? "";
+                int bs = user.IndexOf('\\');
+                if (bs > 0) { domain = user.Substring(0, bs); user = user.Substring(bs + 1); }
+
+                var srv = new ServerInfo
+                {
+                    Name = host,
+                    Host = host,
+                    Port = port,
+                    Username = user,
+                    Domain = domain,
+                    Group = "Zaimportowane z mstsc",
+                    Status = ServerStatus.Offline
+                };
+                srv.Initials = RdpUtils.MakeInitials(srv.Name);
+                _vm.Add(srv);
+                added++;
+            }
+
+            if (added > 0)
+            {
+                PersistServers();
+                RenderTree(SearchBox.Text);
+                CheckReachabilityAsync();
+                SetStatus("Zaimportowano z mstsc: " + added, StatusKind.Ok);
+            }
+
+            MessageBox.Show(
+                "Zaimportowano połączeń z mstsc: " + added +
+                (skipped > 0 ? "\nPominięto już istniejące: " + skipped : "") +
+                "\n\nHasła nie są przenoszone (mstsc trzyma je w sejfie Windows pod innym kluczem) — " +
+                "podasz je przy pierwszym połączeniu.",
+                "Import z mstsc", MessageBoxButton.OK,
+                added > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        }
+
         private void ExportRdp(ServerInfo server)
         {
             var dlg = new Microsoft.Win32.SaveFileDialog
