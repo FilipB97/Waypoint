@@ -34,5 +34,11 @@ namespace RdpManager
 
         /// <summary>Nazwy grup zwiniętych w drzewie (klucz „__pinned__" = sekcja Przypięte).</summary>
         public List<string> CollapsedGroups { get; set; } = new List<string>();
+
+        /// <summary>Klik na serwer otwiera go od razu w osobnym oknie zamiast jako karta w managerze.</summary>
+        public bool OpenInNewWindowByDefault { get; set; }
+
+        /// <summary>Po zmaksymalizowaniu okna ukryj panel boczny — zostają tylko karty + sesja (tryb skupienia).</summary>
+        public bool ImmersiveOnMaximize { get; set; } = true;
     }
 }

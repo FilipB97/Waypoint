@@ -19,6 +19,13 @@ namespace RdpManager.Models
         public string Username { get; set; } = "";
         public string Domain { get; set; } = "";
 
+        /// <summary>Protokół połączenia — RDP (domyślnie) lub SSH (terminal).</summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public RemoteProtocol Protocol { get; set; } = RemoteProtocol.Rdp;
+
+        /// <summary>SSH: ścieżka do pliku klucza prywatnego (puste = uwierzytelnianie hasłem).</summary>
+        public string PrivateKeyPath { get; set; } = "";
+
         /// <summary>Logowanie zintegrowane kontem Windows (bez podawania loginu/hasła).</summary>
         public bool UseWindowsAccount { get; set; }
 
@@ -81,6 +88,13 @@ namespace RdpManager.Models
         Online,
         Idle,
         Offline
+    }
+
+    /// <summary>Protokół zdalnego połączenia.</summary>
+    public enum RemoteProtocol
+    {
+        Rdp,
+        Ssh
     }
 
     /// <summary>Grupa serwerów w drzewie (Produkcja / Staging / Klienci …).</summary>

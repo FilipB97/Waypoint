@@ -19,7 +19,15 @@
 
         <!-- Treść przewija się; stopka z przyciskami jest ZAWSZE widoczna (małe okna / niskie ekrany). -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="18,8,18,8">
+        <StackPanel Margin="18,8,18,8">
+        <StackPanel Orientation="Horizontal" Margin="0,6,0,2">
+            <TextBlock Text="{DynamicResource S.se.protocol}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <ComboBox x:Name="ProtocolCombo" Width="140" SelectionChanged="Protocol_Changed">
+                <ComboBoxItem Content="RDP"/>
+                <ComboBoxItem Content="SSH"/>
+            </ComboBox>
+        </StackPanel>
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -57,7 +65,7 @@
             <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource S.se.user}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="UserBox" Grid.Row="5" Grid.Column="1" Margin="0,6"/>
 
-            <TextBlock Grid.Row="6" Grid.Column="0" Text="{DynamicResource S.se.domain}" VerticalAlignment="Center" Margin="0,6,12,6"/>
+            <TextBlock x:Name="DomainLabel" Grid.Row="6" Grid.Column="0" Text="{DynamicResource S.se.domain}" VerticalAlignment="Center" Margin="0,6,12,6"/>
             <ui:TextBox x:Name="DomainBox" Grid.Row="6" Grid.Column="1" Margin="0,6"/>
 
             <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource S.pass}" VerticalAlignment="Center" Margin="0,6,12,6"/>
@@ -66,10 +74,21 @@
                 <CheckBox x:Name="SavePassCheck" Margin="0,6,0,0">
                     <TextBlock Text="{DynamicResource S.se.savepass}" TextWrapping="Wrap"/>
                 </CheckBox>
+                <StackPanel x:Name="KeyPathPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                    <TextBlock Text="{DynamicResource S.se.keypath}" Margin="0,0,0,4"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox x:Name="KeyPathBox" Grid.Column="0" PlaceholderText="{DynamicResource S.se.keypath.ph}"/>
+                        <ui:Button Grid.Column="1" Content="{DynamicResource S.se.browse}" Click="BrowseKey_Click" Margin="8,0,0,0"/>
+                    </Grid>
+                </StackPanel>
             </StackPanel>
 
-            <TextBlock Grid.Row="8" Grid.ColumnSpan="2" Text="{DynamicResource S.se.redir}" FontWeight="SemiBold" Margin="0,16,0,6"/>
-            <StackPanel Grid.Row="9" Grid.ColumnSpan="2">
+            <TextBlock x:Name="RedirHeader" Grid.Row="8" Grid.ColumnSpan="2" Text="{DynamicResource S.se.redir}" FontWeight="SemiBold" Margin="0,16,0,6"/>
+            <StackPanel x:Name="RdpOptionsPanel" Grid.Row="9" Grid.ColumnSpan="2">
                 <WrapPanel>
                     <CheckBox x:Name="EdClipboard" Content="{DynamicResource S.se.clipboard}" Margin="0,0,18,6"/>
                     <CheckBox x:Name="EdDrives" Content="{DynamicResource S.se.drives}" Margin="0,0,18,6"/>
@@ -104,6 +123,7 @@
                 </StackPanel>
             </StackPanel>
         </Grid>
+        </StackPanel>
         </ScrollViewer>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,4,18,16">
