@@ -131,7 +131,9 @@ namespace RdpManager.Tests
         [InlineData(false, 0, "host:3389 — BRAK odpowiedzi (port zamknięty, zapora lub host nieosiągalny).")]
         public void FormatDiagnostics_Formats(bool reachable, long ms, string expected)
         {
-            Assert.Equal(expected, RdpUtils.FormatDiagnostics("host", 3389, reachable, ms));
+            Assert.Equal(expected, RdpUtils.FormatDiagnostics("host", 3389, reachable, ms,
+                "{0}:{1} — port OTWARTY (odpowiedź w {2} ms).",
+                "{0}:{1} — BRAK odpowiedzi (port zamknięty, zapora lub host nieosiągalny)."));
         }
 
         [Fact]

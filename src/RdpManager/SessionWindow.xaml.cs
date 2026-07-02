@@ -78,7 +78,7 @@ namespace RdpManager
             _fsPoll.Tick += FsPollTick;
             FsPopup.CustomPopupPlacementCallback = PlaceFsBar;
 
-            SetStatus("Gotowe do połączenia", StatusKind.Info, false);
+            SetStatus(L("S.st.ready"), StatusKind.Info, false);
             ShowOverlay();
         }
 
@@ -150,11 +150,11 @@ namespace RdpManager
                     _rdp.UserName = _server.Username; _rdp.Domain = _server.Domain; adv.ClearTextPassword = _password;
                 }
                 _rdp.Connect();
-                SetStatus("Łączenie z " + _server.Host + "…", StatusKind.Connecting, false);
+                SetStatus(string.Format(L("S.st.connecting"), _server.Host), StatusKind.Connecting, false);
             }
             catch (Exception ex)
             {
-                SetStatus("Wyjątek: " + ex.Message, StatusKind.Error, true);
+                SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error, true);
             }
         }
 
@@ -188,11 +188,11 @@ namespace RdpManager
 
         private void WireEvents()
         {
-            _rdp.OnConnecting += (o, a) => SetStatus("Łączenie…", StatusKind.Connecting, false);
+            _rdp.OnConnecting += (o, a) => SetStatus(L("S.st.connectingShort"), StatusKind.Connecting, false);
             _rdp.OnConnected += (o, a) =>
             {
                 _session.Connected = true;
-                SetStatus("Połączono", StatusKind.Ok, false);
+                SetStatus(L("S.st.connected"), StatusKind.Ok, false);
                 HideOverlay();
                 ConnectionLog.Append("CONNECTED", _server);
             };
@@ -203,21 +203,23 @@ namespace RdpManager
                 _session.Connected = false; _loggedIn = false;
                 string ext = ""; try { ext = ((uint)_rdp.ExtendedDisconnectReason).ToString(); } catch { }
                 string desc = ""; try { desc = _rdp.GetErrorDescription((uint)a.discReason, string.IsNullOrEmpty(ext) ? 0u : (uint)_rdp.ExtendedDisconnectReason); } catch { }
-                string msg = "Rozłączono: " + RdpUtils.FormatDisconnectReason(desc, a.discReason, string.IsNullOrEmpty(ext) ? 0 : long.Parse(ext));
+                string msg = string.Format(L("S.st.disconnected"), RdpUtils.FormatDisconnectReason(desc, a.discReason, string.IsNullOrEmpty(ext) ? 0 : long.Parse(ext)));
                 if (!was)
-                    msg += _server.UseWindowsAccount
-                        ? "  Wskazówka: konto Windows może nie mieć dostępu — odznacz i podaj login/hasło."
-                        : "  Wskazówka: sprawdź login, hasło, domenę i dostępność hosta.";
+                    msg += "  " + (_server.UseWindowsAccount
+                        ? L("S.st.hint.winauth")
+                        : L("S.st.hint.creds"));
                 SetStatus(msg, StatusKind.Error, true);
             };
             _rdp.OnFatalError += (o, a) =>
             {
                 _session.Connected = false;
-                SetStatus("Błąd krytyczny (errorCode " + a.errorCode + ")", StatusKind.Error, true);
+                SetStatus(string.Format(L("S.st.fatal"), a.errorCode), StatusKind.Error, true);
             };
         }
 
         // ---------- Nakładka / status ----------
+
+        private static string L(string key) => LocalizationManager.S(key);
 
         private void SetStatus(string text, StatusKind kind, bool reconnect)
         {
@@ -247,8 +249,8 @@ namespace RdpManager
             bool connecting = kind == StatusKind.Connecting;
             Spinner.Visibility = connecting ? Visibility.Visible : Visibility.Collapsed;
             OverlayReconnect.Visibility = (connecting || !reconnect) ? Visibility.Collapsed : Visibility.Visible;
-            OverlayTitle.Text = connecting ? "Łączenie z " + _server.Host + "…"
-                : (kind == StatusKind.Error ? "Rozłączono" : "Gotowe do połączenia");
+            OverlayTitle.Text = connecting ? string.Format(L("S.st.connecting"), _server.Host)
+                : (kind == StatusKind.Error ? L("S.st.disconnectedShort") : L("S.st.ready"));
             OverlayMsg.Text = connecting ? "" : msg;
         }
 
@@ -318,7 +320,7 @@ namespace RdpManager
             FsPopup.IsOpen = false;
             _fs = false;
             _fsPinned = false;
-            FsPinBtn.Content = "📌 przypnij";
+            FsPinBtn.Content = L("S.fs.pin");
         }
 
         private void FsPollTick(object sender, EventArgs e)
@@ -338,7 +340,7 @@ namespace RdpManager
         private void FsPin_Click(object sender, RoutedEventArgs e)
         {
             _fsPinned = !_fsPinned;
-            FsPinBtn.Content = _fsPinned ? "📌 przypięte" : "📌 przypnij";
+            FsPinBtn.Content = _fsPinned ? L("S.fs.pinned") : L("S.fs.pin");
             if (_fsPinned) FsPopup.IsOpen = true;
         }
 

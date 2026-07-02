@@ -136,14 +136,16 @@ namespace RdpManager.Core
             return new string(chars);
         }
 
-        /// <summary>Czytelny wynik diagnostyki osiągalności portu RDP.</summary>
-        public static string FormatDiagnostics(string host, int port, bool reachable, long elapsedMs)
+        /// <summary>
+        /// Czytelny wynik diagnostyki osiągalności portu RDP. Szablony (zlokalizowane) podaje wołający:
+        /// <paramref name="openFormat"/> dostaje {0}=host, {1}=port, {2}=ms; <paramref name="closedFormat"/> {0}=host, {1}=port.
+        /// </summary>
+        public static string FormatDiagnostics(string host, int port, bool reachable, long elapsedMs,
+                                               string openFormat, string closedFormat)
         {
             return reachable
-                ? string.Format(CultureInfo.InvariantCulture,
-                    "{0}:{1} — port OTWARTY (odpowiedź w {2} ms).", host, port, elapsedMs)
-                : string.Format(CultureInfo.InvariantCulture,
-                    "{0}:{1} — BRAK odpowiedzi (port zamknięty, zapora lub host nieosiągalny).", host, port);
+                ? string.Format(CultureInfo.InvariantCulture, openFormat, host, port, elapsedMs)
+                : string.Format(CultureInfo.InvariantCulture, closedFormat, host, port);
         }
     }
 }

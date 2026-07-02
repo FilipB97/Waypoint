@@ -117,4 +117,82 @@
     <sys:String x:Key="S.m.closeothers">Close others</sys:String>
     <sys:String x:Key="S.m.close">Close</sys:String>
     <sys:String x:Key="S.m.renamegroup">Rename group…</sys:String>
+
+    <!-- pass 2b: transient code-behind messages (status, dialogs, prompts, diagnostics) -->
+    <sys:String x:Key="S.st.connecting">Connecting to {0}…</sys:String>
+    <sys:String x:Key="S.st.connectingShort">Connecting…</sys:String>
+    <sys:String x:Key="S.st.connected">Connected</sys:String>
+    <sys:String x:Key="S.st.exception">Exception: {0}</sys:String>
+    <sys:String x:Key="S.st.disconnecting">Disconnecting: {0}</sys:String>
+    <sys:String x:Key="S.st.fatal">Fatal error (errorCode {0})</sys:String>
+    <sys:String x:Key="S.st.disconnected">Disconnected: {0}</sys:String>
+    <sys:String x:Key="S.st.disconnectedShort">Disconnected</sys:String>
+    <sys:String x:Key="S.st.ready">Ready to connect</sys:String>
+    <sys:String x:Key="S.st.hint.winauth">Hint: the Windows account may not have access to the host — uncheck "Windows account" and enter a username/password.</sys:String>
+    <sys:String x:Key="S.st.hint.creds">Hint: check the username, password, domain and host availability.</sys:String>
+    <sys:String x:Key="S.st.multimon">Full screen (all monitors) — press Ctrl+Alt+Break or use the connection bar to return.</sys:String>
+    <sys:String x:Key="S.st.diagnosing">Diagnostics {0}:{1}…</sys:String>
+    <sys:String x:Key="S.st.imported">Imported servers: {0}</sys:String>
+    <sys:String x:Key="S.st.importedMstsc">Imported from mstsc: {0}</sys:String>
+    <sys:String x:Key="S.st.exported">Exported to {0}</sys:String>
+    <sys:String x:Key="S.st.saved">Saved ✓</sys:String>
+    <sys:String x:Key="S.st.exportedProfile">Profile exported ✓</sys:String>
+
+    <sys:String x:Key="S.dash.servers">Servers</sys:String>
+    <sys:String x:Key="S.dash.reachable">Reachable</sys:String>
+    <sys:String x:Key="S.dash.opensessions">Open sessions</sys:String>
+    <sys:String x:Key="S.dash.recent">Recently used</sys:String>
+    <sys:String x:Key="S.dash.norecent">No recent connections.</sys:String>
+
+    <sys:String x:Key="S.group.pinned">PINNED</sys:String>
+
+    <sys:String x:Key="S.prompt.renamegroup.title">Rename group</sys:String>
+    <sys:String x:Key="S.prompt.renamegroup.label">New group name (currently: {0})</sys:String>
+    <sys:String x:Key="S.prompt.quickconnect.label">Address — host, host:port, user@host or DOMAIN\user@host:</sys:String>
+    <sys:String x:Key="S.prompt.connectas">Connect with different credentials.</sys:String>
+
+    <sys:String x:Key="S.msg.about.desc">A modern RDP connection manager (WPF / Fluent).</sys:String>
+    <sys:String x:Key="S.msg.about.datafolder">Data folder:</sys:String>
+    <sys:String x:Key="S.msg.closeapp">There are active connections. Close the app?</sys:String>
+    <sys:String x:Key="S.msg.closeapp.title">Close</sys:String>
+    <sys:String x:Key="S.msg.exportprofile.fail">Could not save the profile:</sys:String>
+    <sys:String x:Key="S.msg.exportprofile.title">Export profile</sys:String>
+    <sys:String x:Key="S.msg.importprofile.bad">Invalid profile file:</sys:String>
+    <sys:String x:Key="S.msg.importprofile.empty">Empty or invalid profile file.</sys:String>
+    <sys:String x:Key="S.msg.importprofile.title">Import profile</sys:String>
+    <sys:String x:Key="S.msg.importprofile.confirm">Import profile? Servers in file: {0} — this replaces the current server list and settings.</sys:String>
+    <sys:String x:Key="S.msg.importprofile.confirmSessions">Open sessions ({0}) will be closed.</sys:String>
+    <sys:String x:Key="S.msg.closeothers">Close the other sessions? Connected: {0}.</sys:String>
+    <sys:String x:Key="S.msg.closesession">Close the connected session "{0}"?</sys:String>
+    <sys:String x:Key="S.msg.closesession.title">Close session</sys:String>
+    <sys:String x:Key="S.msg.importrdp.fail">Could not import "{0}":</sys:String>
+    <sys:String x:Key="S.msg.importrdp.title">Import .rdp</sys:String>
+    <sys:String x:Key="S.msg.mstsc.readfail">Could not read mstsc history:</sys:String>
+    <sys:String x:Key="S.msg.mstsc.title">Import from mstsc</sys:String>
+    <sys:String x:Key="S.msg.mstsc.none">No mstsc connection history found in this Windows profile.</sys:String>
+    <sys:String x:Key="S.msg.mstsc.summary">Connections imported from mstsc: {0}</sys:String>
+    <sys:String x:Key="S.msg.mstsc.skipped">Skipped existing: {0}</sys:String>
+    <sys:String x:Key="S.msg.mstsc.nopass">Passwords are not migrated (mstsc keeps them in the Windows vault under a different key) — you'll enter them on first connect.</sys:String>
+    <sys:String x:Key="S.msg.exportrdp.fail">Could not save the file:</sys:String>
+    <sys:String x:Key="S.msg.exportrdp.title">Export .rdp</sys:String>
+    <sys:String x:Key="S.msg.delete">Delete server "{0}"?</sys:String>
+    <sys:String x:Key="S.msg.delete.title">Delete server</sys:String>
+    <sys:String x:Key="S.msg.diag.nohost">The server has no host set.</sys:String>
+    <sys:String x:Key="S.msg.diag.title">Diagnostics</sys:String>
+    <sys:String x:Key="S.msg.diag.titlefmt">Diagnostics — {0}</sys:String>
+    <sys:String x:Key="S.diag.open">{0}:{1} — port OPEN (response in {2} ms).</sys:String>
+    <sys:String x:Key="S.diag.closed">{0}:{1} — NO response (port closed, firewall, or host unreachable).</sys:String>
+
+    <sys:String x:Key="S.dlg.exportprofile.title">Export profile</sys:String>
+    <sys:String x:Key="S.dlg.profile.filter">Waypoint profile (*.json)|*.json</sys:String>
+    <sys:String x:Key="S.dlg.importprofile.title">Import profile</sys:String>
+    <sys:String x:Key="S.dlg.profile.filterAll">Waypoint profile (*.json)|*.json|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdp.title">Import .rdp file</sys:String>
+    <sys:String x:Key="S.dlg.rdp.filterAll">Remote Desktop files (*.rdp)|*.rdp|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.exportrdp.title">Export to .rdp</sys:String>
+    <sys:String x:Key="S.dlg.rdp.filter">Remote Desktop files (*.rdp)|*.rdp</sys:String>
+
+    <sys:String x:Key="S.cp.header">Enter credentials for {0} ({1}).</sys:String>
+    <sys:String x:Key="S.cp.needuser">Enter a username.</sys:String>
+    <sys:String x:Key="S.se.needname">Enter a name and host.</sys:String>
 </ResourceDictionary>

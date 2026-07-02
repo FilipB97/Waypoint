@@ -117,4 +117,82 @@
     <sys:String x:Key="S.m.closeothers">Zamknij pozostałe</sys:String>
     <sys:String x:Key="S.m.close">Zamknij</sys:String>
     <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
+
+    <!-- pass 2b: ulotne komunikaty z code-behind (statusy, dialogi, prompty, diagnostyka) -->
+    <sys:String x:Key="S.st.connecting">Łączenie z {0}…</sys:String>
+    <sys:String x:Key="S.st.connectingShort">Łączenie…</sys:String>
+    <sys:String x:Key="S.st.connected">Połączono</sys:String>
+    <sys:String x:Key="S.st.exception">Wyjątek: {0}</sys:String>
+    <sys:String x:Key="S.st.disconnecting">Rozłączanie: {0}</sys:String>
+    <sys:String x:Key="S.st.fatal">Błąd krytyczny (errorCode {0})</sys:String>
+    <sys:String x:Key="S.st.disconnected">Rozłączono: {0}</sys:String>
+    <sys:String x:Key="S.st.disconnectedShort">Rozłączono</sys:String>
+    <sys:String x:Key="S.st.ready">Gotowe do połączenia</sys:String>
+    <sys:String x:Key="S.st.hint.winauth">Wskazówka: konto Windows może nie mieć dostępu do hosta — odznacz „Konto Windows" i podaj login/hasło.</sys:String>
+    <sys:String x:Key="S.st.hint.creds">Wskazówka: sprawdź login, hasło, domenę i dostępność hosta.</sys:String>
+    <sys:String x:Key="S.st.multimon">Pełny ekran (wszystkie monitory) — Ctrl+Alt+Break lub pasek połączenia, by wrócić.</sys:String>
+    <sys:String x:Key="S.st.diagnosing">Diagnostyka {0}:{1}…</sys:String>
+    <sys:String x:Key="S.st.imported">Zaimportowano serwerów: {0}</sys:String>
+    <sys:String x:Key="S.st.importedMstsc">Zaimportowano z mstsc: {0}</sys:String>
+    <sys:String x:Key="S.st.exported">Wyeksportowano do {0}</sys:String>
+    <sys:String x:Key="S.st.saved">Zapisano ✓</sys:String>
+    <sys:String x:Key="S.st.exportedProfile">Wyeksportowano profil ✓</sys:String>
+
+    <sys:String x:Key="S.dash.servers">Serwery</sys:String>
+    <sys:String x:Key="S.dash.reachable">Osiągalne</sys:String>
+    <sys:String x:Key="S.dash.opensessions">Otwarte sesje</sys:String>
+    <sys:String x:Key="S.dash.recent">Ostatnio używane</sys:String>
+    <sys:String x:Key="S.dash.norecent">Brak ostatnich połączeń.</sys:String>
+
+    <sys:String x:Key="S.group.pinned">PRZYPIĘTE</sys:String>
+
+    <sys:String x:Key="S.prompt.renamegroup.title">Zmień nazwę grupy</sys:String>
+    <sys:String x:Key="S.prompt.renamegroup.label">Nowa nazwa grupy (obecnie: {0})</sys:String>
+    <sys:String x:Key="S.prompt.quickconnect.label">Adres — host, host:port, user@host albo DOMENA\user@host:</sys:String>
+    <sys:String x:Key="S.prompt.connectas">Połącz z innymi poświadczeniami.</sys:String>
+
+    <sys:String x:Key="S.msg.about.desc">Nowoczesny menedżer połączeń RDP (WPF / Fluent).</sys:String>
+    <sys:String x:Key="S.msg.about.datafolder">Folder danych:</sys:String>
+    <sys:String x:Key="S.msg.closeapp">Są aktywne połączenia. Zamknąć aplikację?</sys:String>
+    <sys:String x:Key="S.msg.closeapp.title">Zamknij</sys:String>
+    <sys:String x:Key="S.msg.exportprofile.fail">Nie udało się zapisać profilu:</sys:String>
+    <sys:String x:Key="S.msg.exportprofile.title">Eksport profilu</sys:String>
+    <sys:String x:Key="S.msg.importprofile.bad">Niepoprawny plik profilu:</sys:String>
+    <sys:String x:Key="S.msg.importprofile.empty">Pusty lub niepoprawny plik profilu.</sys:String>
+    <sys:String x:Key="S.msg.importprofile.title">Import profilu</sys:String>
+    <sys:String x:Key="S.msg.importprofile.confirm">Zaimportować profil? Serwerów w pliku: {0} — zastąpi bieżącą listę serwerów i ustawienia.</sys:String>
+    <sys:String x:Key="S.msg.importprofile.confirmSessions">Otwarte sesje ({0}) zostaną zamknięte.</sys:String>
+    <sys:String x:Key="S.msg.closeothers">Zamknąć pozostałe sesje? Połączonych: {0}.</sys:String>
+    <sys:String x:Key="S.msg.closesession">Zamknąć połączoną sesję "{0}"?</sys:String>
+    <sys:String x:Key="S.msg.closesession.title">Zamknij sesję</sys:String>
+    <sys:String x:Key="S.msg.importrdp.fail">Nie udało się zaimportować "{0}":</sys:String>
+    <sys:String x:Key="S.msg.importrdp.title">Import .rdp</sys:String>
+    <sys:String x:Key="S.msg.mstsc.readfail">Nie udało się odczytać historii mstsc:</sys:String>
+    <sys:String x:Key="S.msg.mstsc.title">Import z mstsc</sys:String>
+    <sys:String x:Key="S.msg.mstsc.none">Nie znaleziono historii połączeń mstsc w tym profilu Windows.</sys:String>
+    <sys:String x:Key="S.msg.mstsc.summary">Zaimportowano połączeń z mstsc: {0}</sys:String>
+    <sys:String x:Key="S.msg.mstsc.skipped">Pominięto już istniejące: {0}</sys:String>
+    <sys:String x:Key="S.msg.mstsc.nopass">Hasła nie są przenoszone (mstsc trzyma je w sejfie Windows pod innym kluczem) — podasz je przy pierwszym połączeniu.</sys:String>
+    <sys:String x:Key="S.msg.exportrdp.fail">Nie udało się zapisać pliku:</sys:String>
+    <sys:String x:Key="S.msg.exportrdp.title">Eksport .rdp</sys:String>
+    <sys:String x:Key="S.msg.delete">Usunąć serwer "{0}"?</sys:String>
+    <sys:String x:Key="S.msg.delete.title">Usuń serwer</sys:String>
+    <sys:String x:Key="S.msg.diag.nohost">Serwer nie ma ustawionego hosta.</sys:String>
+    <sys:String x:Key="S.msg.diag.title">Diagnostyka</sys:String>
+    <sys:String x:Key="S.msg.diag.titlefmt">Diagnostyka — {0}</sys:String>
+    <sys:String x:Key="S.diag.open">{0}:{1} — port OTWARTY (odpowiedź w {2} ms).</sys:String>
+    <sys:String x:Key="S.diag.closed">{0}:{1} — BRAK odpowiedzi (port zamknięty, zapora lub host nieosiągalny).</sys:String>
+
+    <sys:String x:Key="S.dlg.exportprofile.title">Eksportuj profil</sys:String>
+    <sys:String x:Key="S.dlg.profile.filter">Profil Waypoint (*.json)|*.json</sys:String>
+    <sys:String x:Key="S.dlg.importprofile.title">Importuj profil</sys:String>
+    <sys:String x:Key="S.dlg.profile.filterAll">Profil Waypoint (*.json)|*.json|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdp.title">Importuj plik .rdp</sys:String>
+    <sys:String x:Key="S.dlg.rdp.filterAll">Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.exportrdp.title">Eksportuj do .rdp</sys:String>
+    <sys:String x:Key="S.dlg.rdp.filter">Pliki Podłączania pulpitu zdalnego (*.rdp)|*.rdp</sys:String>
+
+    <sys:String x:Key="S.cp.header">Podaj poświadczenia dla {0} ({1}).</sys:String>
+    <sys:String x:Key="S.cp.needuser">Podaj nazwę użytkownika.</sys:String>
+    <sys:String x:Key="S.se.needname">Podaj nazwę i host.</sys:String>
 </ResourceDictionary>

@@ -19,7 +19,7 @@ namespace RdpManager
             InitializeComponent();
 
             PromptHeader.Text = (string.IsNullOrEmpty(reason) ? "" : reason + "\n")
-                + "Podaj poświadczenia dla " + (server.Name ?? server.Host) + " (" + server.Host + ").";
+                + string.Format(LocalizationManager.S("S.cp.header"), server.Name ?? server.Host, server.Host);
 
             UserBox.Text = server.Username ?? "";
             DomainBox.Text = server.Domain ?? "";
@@ -51,7 +51,7 @@ namespace RdpManager
         {
             if (string.IsNullOrWhiteSpace(UserBox.Text))
             {
-                MessageBox.Show("Podaj nazwę użytkownika.", "Poświadczenia", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LocalizationManager.S("S.cp.needuser"), LocalizationManager.S("S.cp.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             EnteredUser = UserBox.Text.Trim();
