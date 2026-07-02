@@ -232,6 +232,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">The SSH terminal requires the WebView2 Runtime (built into Windows 11; on older systems install it from Microsoft).</sys:String>
     <!-- SFTP file panel -->
+    <sys:String x:Key="S.qs.tip">Connect to another server</sys:String>
     <sys:String x:Key="S.sftp.toggle">Files (SFTP)</sys:String>
     <sys:String x:Key="S.sftp.name">Name</sys:String>
     <sys:String x:Key="S.sftp.size">Size</sys:String>

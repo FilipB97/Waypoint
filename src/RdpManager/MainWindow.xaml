@@ -216,6 +216,7 @@
                 <!-- IsHitTestVisibleInChrome: w trybie skupienia titlebar znika, a pasek kart wjeżdża
                      w strefę caption WindowChrome — bez tego kliknięcia w karty przeciągałyby okno. -->
                 <Border x:Name="TabStripHost" Grid.Row="0" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Background="{DynamicResource RailBg}"
                         BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -224,12 +225,16 @@
                         </Grid.ColumnDefinitions>
                         <ScrollViewer x:Name="TabScroller" Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                                       PreviewMouseWheel="TabScroller_PreviewMouseWheel">
-                            <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,8,8,0"/>
+                            <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,6,8,6"/>
                         </ScrollViewer>
                         <!-- Tryb skupienia (zmaksymalizowane): titlebar + pasek stanu znikają, więc pełny ekran
                              i przyciski okna (minimalizuj / przywróć / zamknij) mieszkają tu, na pasku kart. -->
                         <StackPanel x:Name="FocusControls" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="4,0,6,0" Visibility="Collapsed">
+                            <Button x:Name="QuickSwitchBtn" Style="{DynamicResource IconBtn}" Click="QuickSwitch_Click"
+                                    ToolTip="{DynamicResource S.qs.tip}">
+                                <ui:SymbolIcon Symbol="Add24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                            </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
                                 <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
                             </Button>
@@ -425,6 +430,31 @@
             </ScrollViewer>
             </Grid>
         </Grid>
+
+        <!-- Szybkie przełączanie z paska kart (tryb skupienia): popup = osobny HWND, rysuje się nad sesją -->
+        <Popup x:Name="QuickSwitchPopup" Placement="Bottom" PlacementTarget="{Binding ElementName=QuickSwitchBtn}"
+               StaysOpen="False" AllowsTransparency="True">
+            <Border Background="{DynamicResource RailBg}" CornerRadius="10" Padding="8" Margin="0,4,12,12"
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="300">
+                <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45"/></Border.Effect>
+                <StackPanel>
+                    <ui:TextBox x:Name="QuickSwitchSearch" PlaceholderText="{DynamicResource S.search}"
+                                Margin="0,0,0,6" TextChanged="QuickSwitchSearch_TextChanged" KeyDown="QuickSwitchSearch_KeyDown">
+                        <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
+                    </ui:TextBox>
+                    <ScrollViewer MaxHeight="340" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource S.fs.opensessions}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                                       FontWeight="SemiBold" Margin="6,6,6,4"/>
+                            <StackPanel x:Name="QsSessions"/>
+                            <TextBlock Text="{DynamicResource S.fs.allservers}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                                       FontWeight="SemiBold" Margin="6,8,6,4"/>
+                            <StackPanel x:Name="QsServers"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+        </Popup>
 
         <!-- floating fullscreen bar (Popup = osobny HWND -> rysuje się nad kontrolką RDP) -->
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
