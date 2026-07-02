@@ -35,6 +35,7 @@ namespace RdpManager
         private readonly Dictionary<Session, Rectangle> _tabUnderline = new Dictionary<Session, Rectangle>();
         private readonly Dictionary<Session, Ellipse> _tabStatus = new Dictionary<Session, Ellipse>();
         private readonly Dictionary<Session, TextBlock> _tabName = new Dictionary<Session, TextBlock>();
+        private readonly Dictionary<Session, TextBlock> _tabClose = new Dictionary<Session, TextBlock>();
         private readonly MainViewModel _vm = new MainViewModel();
 
         private AppSettings _settings = new AppSettings();
@@ -1202,16 +1203,19 @@ namespace RdpManager
 
         private FrameworkElement BuildTab(Session session)
         {
+            // Pastylka w stylu Windows Terminal: pełne zaokrąglenie, aktywna = wypełnienie + obrys,
+            // najechanie podświetla nieaktywną i pokazuje ✕ (Hidden, nie Collapsed — szerokość stała).
             var tab = new Border
             {
-                CornerRadius = new CornerRadius(6, 6, 0, 0),
-                BorderThickness = new Thickness(1, 1, 1, 0),
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
-                Padding = new Thickness(10, 7, 8, 7),
-                Margin = new Thickness(0, 0, 2, 0),
+                Padding = new Thickness(10, 5, 7, 5),
+                Margin = new Thickness(0, 0, 4, 0),
                 Cursor = Cursors.Hand,
-                Tag = session
+                Tag = session,
+                ToolTip = session.Server.Name + " — " + DisplayHost(session.Server)
             };
 
             var grid = new Grid();
@@ -1251,22 +1255,36 @@ namespace RdpManager
             content.Children.Add(tabDot);
             var close = new TextBlock
             {
-                Text = "✕", Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12,
-                Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand
+                Text = "✕", Foreground = (Brush)TryFindResource("TextTer"), FontSize = 11,
+                Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(3, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand,
+                Visibility = Visibility.Hidden   // Hidden (nie Collapsed): karta nie zmienia szerokości na hover
             };
+            close.MouseEnter += (s, e) => close.Foreground = (Brush)TryFindResource("Danger");
+            close.MouseLeave += (s, e) => close.Foreground = (Brush)TryFindResource("TextTer");
             close.MouseLeftButtonUp += (s, e) => { e.Handled = true; RequestCloseSession(session); };
+            _tabClose[session] = close;
             content.Children.Add(close);
             grid.Children.Add(content);
 
             var underline = new Rectangle
             {
                 Height = 2, Fill = (Brush)TryFindResource("Accent"), RadiusX = 1, RadiusY = 1,
-                VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(4, 0, 4, -3),
                 Visibility = Visibility.Collapsed
             };
             grid.Children.Add(underline);
 
             tab.Child = grid;
+
+            // Hover: podświetlenie nieaktywnej + pokazanie ✕; zejście przywraca stan z RefreshTabStyles.
+            tab.MouseEnter += (s, e) =>
+            {
+                if (session != _active)
+                    tab.Background = (Brush)TryFindResource("Elevated") ?? Brushes.Transparent;
+                close.Visibility = Visibility.Visible;
+            };
+            tab.MouseLeave += (s, e) => RefreshTabStyles();
             tab.MouseLeftButtonUp += (s, e) =>
             {
                 if (_tabDidDrag) { _tabDidDrag = false; return; }   // to było przeciąganie, nie klik
@@ -1342,6 +1360,8 @@ namespace RdpManager
                 b.BorderBrush = active ? (Brush)TryFindResource("Border") : Brushes.Transparent;
                 if (_tabUnderline.TryGetValue(s, out var u))
                     u.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+                if (_tabClose.TryGetValue(s, out var c))
+                    c.Visibility = active ? Visibility.Visible : Visibility.Hidden;   // ✕ tylko na aktywnej/hoverze
             }
         }
 
@@ -1454,6 +1474,7 @@ namespace RdpManager
             _tabUnderline.Remove(session);
             _tabStatus.Remove(session);
             _tabName.Remove(session);
+            _tabClose.Remove(session);
             _sessions.Remove(session);
             RefreshTabTitles();
 

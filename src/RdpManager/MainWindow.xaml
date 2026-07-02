@@ -216,6 +216,7 @@
                 <!-- IsHitTestVisibleInChrome: w trybie skupienia titlebar znika, a pasek kart wjeżdża
                      w strefę caption WindowChrome — bez tego kliknięcia w karty przeciągałyby okno. -->
                 <Border x:Name="TabStripHost" Grid.Row="0" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Background="{DynamicResource RailBg}"
                         BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -224,7 +225,7 @@
                         </Grid.ColumnDefinitions>
                         <ScrollViewer x:Name="TabScroller" Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                                       PreviewMouseWheel="TabScroller_PreviewMouseWheel">
-                            <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,8,8,0"/>
+                            <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,6,8,6"/>
                         </ScrollViewer>
                         <!-- Tryb skupienia (zmaksymalizowane): titlebar + pasek stanu znikają, więc pełny ekran
                              i przyciski okna (minimalizuj / przywróć / zamknij) mieszkają tu, na pasku kart. -->

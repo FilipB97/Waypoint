@@ -86,13 +86,17 @@ namespace RdpManager
             SavePassCheck.IsEnabled = !win;
         }
 
+        // Porty domyślne wszystkich protokołów — port podmieniamy tylko, gdy bieżąca wartość
+        // jest jednym z nich (czyli użytkownik nie wpisał własnego). Musi zawierać KAŻDY default,
+        // inaczej jedno przejście przez dany protokół zrywa automat na zawsze.
+        private static readonly string[] DefaultPorts = { "", "3389", "22", "23", "115200", "443" };
+
         private void Protocol_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (_initializing) return;
-            // Podmień domyślny port przy zmianie protokołu, o ile użytkownik nie ustawił własnego.
             string port = PortBox.Text.Trim();
-            bool isDefault = port == "" || port == "3389" || port == "22" || port == "23" || port == "115200";
-            if (isDefault) PortBox.Text = DefaultPortFor(ProtocolCombo.SelectedIndex).ToString();
+            if (Array.IndexOf(DefaultPorts, port) >= 0)
+                PortBox.Text = DefaultPortFor(ProtocolCombo.SelectedIndex).ToString();
             ApplyProtocolState();
         }
 
