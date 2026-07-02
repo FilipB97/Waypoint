@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
-        Title="RDP Manager" Width="1180" Height="720" MinWidth="900" MinHeight="560"
+        Title="Waypoint" Width="1180" Height="720" MinWidth="900" MinHeight="560"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True"
@@ -125,7 +125,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <ui:TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="RDP Manager">
+        <ui:TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Waypoint">
             <ui:TitleBar.Icon>
                 <ui:SymbolIcon Symbol="Desktop24" Foreground="{StaticResource Accent}"/>
             </ui:TitleBar.Icon>

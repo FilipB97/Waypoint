@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waypoint — a modern RDP manager for Windows</title>
+<meta name="description" content="Waypoint is a modern RDP connection manager for Windows: tabs, standalone windows across multiple monitors, crisp 1:1 full screen and secure passwords. A comfortable replacement for mstsc.">
+<meta property="og:title" content="Waypoint — a modern RDP manager">
+<meta property="og:description" content="Tabs, mstsc-style multi-monitor, crisp 1:1 full screen and secure passwords. A comfortable replacement for Remote Desktop Connection.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='6' width='24' height='16' rx='3' fill='%2329C5D6'/%3E%3Crect x='12' y='24' width='8' height='2.5' rx='1.25' fill='%2329C5D6'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0f1014; --panel:#1b1c22; --panel2:#212228;
+    --border:rgba(255,255,255,.09); --border2:rgba(255,255,255,.15);
+    --text:#f1f2f4; --text2:#9da0a8; --text3:#6c6f78;
+    --accent:#29c5d6; --accent2:#36c4cf; --online:#3ddc97; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(920px 520px at 80% -10%, rgba(41,197,214,.14), transparent 60%),
+                     radial-gradient(720px 520px at 6% 2%, rgba(124,108,251,.10), transparent 55%);
+    background-attachment:fixed;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  .btn{display:inline-flex;align-items:center;gap:9px;border-radius:10px;padding:12px 22px;
+    font-weight:600;font-size:15px;border:1px solid var(--border2);cursor:pointer;transition:.18s;white-space:nowrap}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),#2aa7d6);color:#04222a;border-color:transparent;
+    box-shadow:0 8px 26px -8px rgba(41,197,214,.55)}
+  .btn.primary:hover{transform:translateY(-1px);box-shadow:0 12px 32px -8px rgba(41,197,214,.7)}
+  .btn.ghost{background:rgba(255,255,255,.04);color:var(--text)}
+  .btn.ghost:hover{background:rgba(255,255,255,.09);border-color:var(--border2)}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
+    background:rgba(15,16,20,.72);border-bottom:1px solid var(--border)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px;gap:18px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
+  .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#2b8fd6);
+    display:grid;place-items:center;box-shadow:0 4px 14px -4px rgba(41,197,214,.6)}
+  .logo svg{width:15px;height:15px}
+  .nav-links{display:flex;align-items:center;gap:24px;font-size:14.5px;color:var(--text2)}
+  .nav-links a.link:hover{color:var(--text)}
+  .nav-links .btn{padding:8px 16px;font-size:14px}
+  .lang{display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden}
+  .lang button{background:transparent;color:var(--text3);border:0;padding:6px 11px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
+  .lang button.active{background:rgba(41,197,214,.16);color:var(--accent2)}
+  @media(max-width:760px){.nav-links a.link{display:none}}
+
+  /* hero */
+  .hero{padding:92px 0 60px;display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--accent2);
+    background:rgba(41,197,214,.1);border:1px solid rgba(41,197,214,.28);border-radius:999px;padding:6px 14px;font-weight:600}
+  h1{font-size:clamp(38px,5.4vw,60px);line-height:1.05;margin:20px 0 0;letter-spacing:-1px;font-weight:800}
+  h1 .grad{background:linear-gradient(120deg,var(--accent),#8f7cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{color:var(--text2);font-size:18px;margin:22px 0 0;max-width:520px}
+  .cta{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap}
+  .meta{margin-top:24px;font-size:13px;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .meta b{color:var(--text2);font-weight:600}
+  .sep{width:3px;height:3px;border-radius:50%;background:var(--text3);display:inline-block}
+  @media(max-width:860px){.hero{grid-template-columns:1fr;gap:40px;padding:64px 0 44px}.mock{order:-1}}
+
+  .mock{filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))}
+  .mock svg{width:100%;height:auto;border-radius:12px;display:block}
+
+  /* sections */
+  section{padding:76px 0;scroll-margin-top:80px}
+  .eyebrow{color:var(--accent2);font-weight:700;font-size:13px;letter-spacing:1.6px;text-transform:uppercase}
+  h2{font-size:clamp(26px,3.4vw,34px);margin:12px 0 0;letter-spacing:-.5px;font-weight:800}
+  .sub{color:var(--text2);margin-top:12px;max-width:640px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:18px;margin-top:40px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+    border-radius:var(--radius);padding:26px 24px;transition:.2s}
+  .card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 18px 40px -22px rgba(0,0,0,.8)}
+  .ico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;margin-bottom:16px;
+    background:rgba(41,197,214,.12);border:1px solid rgba(41,197,214,.22)}
+  .ico svg{width:21px;height:21px;stroke:var(--accent2);fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .card h3{margin:0 0 8px;font-size:16.5px}
+  .card p{margin:0;color:var(--text2);font-size:14.5px}
+  code{background:rgba(255,255,255,.07);padding:1px 6px;border-radius:5px;color:var(--text2);font-size:.88em;
+    font-family:"Cascadia Code",Consolas,monospace}
+
+  .band{background:linear-gradient(180deg,rgba(124,108,251,.09),rgba(41,197,214,.06));
+    border:1px solid var(--border);border-radius:18px;padding:34px 36px;display:flex;gap:26px;
+    align-items:center;flex-wrap:wrap;justify-content:space-between}
+  .band .txt{max-width:640px}
+  .band h2{font-size:24px}
+  .band p{margin:12px 0 0;color:var(--text2)}
+  .band b{color:var(--text)}
+
+  .dl{text-align:center;background:linear-gradient(180deg,var(--panel),#191a20);border:1px solid var(--border);
+    border-radius:20px;padding:64px 28px}
+  .dl h2{margin-top:12px}
+  .dl .sub{margin:14px auto 0}
+  .dl .cta{justify-content:center;margin-top:30px}
+  .note{margin-top:26px;font-size:13px;color:var(--text3);max-width:580px;margin-left:auto;margin-right:auto;line-height:1.7}
+
+  footer{border-top:1px solid var(--border);padding:34px 0;margin-top:52px;color:var(--text3);font-size:13.5px;
+    display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
+  footer a{color:var(--text2)} footer a:hover{color:var(--text)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 32 32"><rect x="3" y="5" width="26" height="17" rx="3" fill="#04222a"/><rect x="13" y="24" width="6" height="2.5" rx="1.25" fill="#04222a"/></svg></span>
+      Waypoint
+    </div>
+    <div class="nav-links">
+      <a class="link" href="#features" data-i18n="nav.features">Features</a>
+      <a class="link" href="#security" data-i18n="nav.security">Security</a>
+      <a class="link" href="https://github.com/FilipB97/Waypoint">GitHub</a>
+      <span class="lang"><button data-lang-btn="en">EN</button><button data-lang-btn="pl">PL</button></span>
+      <a class="btn primary" href="https://github.com/FilipB97/Waypoint/releases/latest" data-i18n="nav.download">Download</a>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <div>
+    <span class="pill" data-i18n="hero.badge">● Open source · MIT</span>
+    <h1 data-i18n-html="hero.title">Remote desktop,<br><span class="grad">finally pleasant.</span></h1>
+    <p class="lead" data-i18n-html="hero.lead">
+      <b style="color:var(--text)">Waypoint</b> is a modern RDP manager for Windows — tabs, standalone
+      windows across multiple monitors, crisp 1:1 full screen and secure passwords. A comfortable
+      replacement for the built-in Remote Desktop Connection (mstsc).
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/FilipB97/Waypoint/releases/latest">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#04222a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        <span data-i18n="hero.dl">Download for Windows</span>
+      </a>
+      <a class="btn ghost" href="https://github.com/FilipB97/Waypoint" data-i18n="hero.gh">View on GitHub</a>
+    </div>
+    <div class="meta">
+      <b data-i18n="meta.os">Windows 10/11</b><span class="sep"></span>
+      <b data-i18n="meta.file">single .exe</b><span class="sep"></span>
+      <b data-i18n="meta.net">no .NET install</b><span class="sep"></span>
+      <b data-i18n="meta.free">free</b>
+    </div>
+  </div>
+
+  <div class="mock">
+    <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Waypoint interface preview">
+      <defs>
+        <linearGradient id="win" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1a1b22"/><stop offset="1" stop-color="#121319"/></linearGradient>
+        <linearGradient id="desk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#12325a"/><stop offset="1" stop-color="#0a1c34"/></linearGradient>
+        <linearGradient id="av1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cfb"/><stop offset="1" stop-color="#4f3fd1"/></linearGradient>
+        <linearGradient id="av2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#36c4cf"/><stop offset="1" stop-color="#1f8b94"/></linearGradient>
+        <linearGradient id="av3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fb6c9c"/><stop offset="1" stop-color="#d13f6e"/></linearGradient>
+      </defs>
+      <rect x="1" y="1" width="558" height="378" rx="12" fill="url(#win)" stroke="rgba(255,255,255,.10)"/>
+      <circle cx="24" cy="22" r="4.5" fill="#29c5d6"/>
+      <rect x="36" y="18" width="70" height="8" rx="4" fill="rgba(255,255,255,.55)"/>
+      <rect x="500" y="17" width="42" height="10" rx="3" fill="rgba(255,255,255,.06)"/>
+      <rect x="12" y="44" width="40" height="324" rx="8" fill="rgba(255,255,255,.03)"/>
+      <rect x="24" y="60" width="16" height="16" rx="4" fill="rgba(41,197,214,.9)"/>
+      <rect x="24" y="86" width="16" height="16" rx="4" fill="rgba(255,255,255,.16)"/>
+      <rect x="24" y="112" width="16" height="16" rx="4" fill="rgba(255,255,255,.16)"/>
+      <rect x="60" y="48" width="150" height="26" rx="7" fill="rgba(255,255,255,.05)"/>
+      <rect x="60" y="86" width="150" height="34" rx="7" fill="rgba(41,197,214,.14)"/>
+      <rect x="60" y="86" width="3" height="34" rx="1.5" fill="#29c5d6"/>
+      <rect x="70" y="95" width="16" height="16" rx="5" fill="url(#av1)"/>
+      <rect x="94" y="96" width="66" height="6" rx="3" fill="rgba(255,255,255,.7)"/>
+      <rect x="94" y="106" width="44" height="5" rx="2.5" fill="rgba(255,255,255,.28)"/>
+      <circle cx="200" cy="103" r="3.5" fill="#3ddc97"/>
+      <rect x="70" y="129" width="16" height="16" rx="5" fill="url(#av2)"/>
+      <rect x="94" y="130" width="72" height="6" rx="3" fill="rgba(255,255,255,.55)"/>
+      <rect x="94" y="140" width="40" height="5" rx="2.5" fill="rgba(255,255,255,.22)"/>
+      <circle cx="200" cy="137" r="3.5" fill="#3ddc97"/>
+      <rect x="70" y="163" width="16" height="16" rx="5" fill="url(#av3)"/>
+      <rect x="94" y="164" width="60" height="6" rx="3" fill="rgba(255,255,255,.55)"/>
+      <rect x="94" y="174" width="48" height="5" rx="2.5" fill="rgba(255,255,255,.22)"/>
+      <circle cx="200" cy="171" r="3.5" fill="#6c6f78"/>
+      <rect x="222" y="46" width="120" height="26" rx="7" fill="rgba(255,255,255,.06)"/>
+      <rect x="232" y="55" width="9" height="9" rx="3" fill="url(#av1)"/>
+      <rect x="247" y="57" width="56" height="5" rx="2.5" fill="rgba(255,255,255,.7)"/>
+      <circle cx="315" cy="59" r="3" fill="#3ddc97"/>
+      <rect x="222" y="80" width="326" height="288" rx="9" fill="url(#desk)"/>
+      <rect x="242" y="100" width="20" height="16" rx="2.5" fill="rgba(255,255,255,.85)"/>
+      <rect x="240" y="122" width="24" height="5" rx="2.5" fill="rgba(255,255,255,.35)"/>
+      <rect x="242" y="150" width="20" height="16" rx="2.5" fill="rgba(255,214,102,.9)"/>
+      <rect x="240" y="172" width="24" height="5" rx="2.5" fill="rgba(255,255,255,.35)"/>
+      <rect x="222" y="350" width="326" height="18" fill="rgba(0,0,0,.35)"/>
+      <rect x="230" y="356" width="10" height="7" rx="1.5" fill="#29c5d6"/>
+      <rect x="332" y="92" width="150" height="26" rx="9" fill="rgba(33,34,38,.95)" stroke="rgba(255,255,255,.14)"/>
+      <circle cx="346" cy="105" r="3" fill="#3ddc97"/>
+      <rect x="356" y="102" width="60" height="6" rx="3" fill="rgba(255,255,255,.6)"/>
+      <rect x="428" y="99" width="46" height="12" rx="4" fill="rgba(41,197,214,.85)"/>
+    </svg>
+  </div>
+</header>
+
+<section id="features" class="wrap">
+  <span class="eyebrow" data-i18n="feat.eyebrow">Features</span>
+  <h2 data-i18n="feat.h2">Everything missing from mstsc</h2>
+  <p class="sub" data-i18n-html="feat.sub">Built on Microsoft's official RDP control (<code>mstscax</code>) — full compatibility, with a modern Fluent / Mica interface on top.</p>
+  <div class="grid">
+    <div class="card">
+      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg></div>
+      <h3 data-i18n="c1t">Tabs and standalone windows</h3>
+      <p data-i18n="c1d">Multiple sessions in one window, or each in its own — whatever suits you. Duplicate and reorder tabs.</p>
+    </div>
+    <div class="card">
+      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="4" width="9" height="12" rx="1.5"/><rect x="13" y="7" width="9" height="13" rx="1.5"/></svg></div>
+      <h3 data-i18n="c2t">Multi-monitor, mstsc-style</h3>
+      <p data-i18n="c2d">Tear a tab off into its own window, drag it to another screen and go full screen. Dock it back with one click.</p>
+    </div>
+    <div class="card">
+      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"/></svg></div>
+      <h3 data-i18n="c3t">Crisp 1:1 full screen</h3>
+      <p data-i18n="c3d">Dynamic resolution matched to the monitor (DPI-aware) — no blur, with an auto-hiding bar (pin / minimize).</p>
+    </div>
+    <div class="card">
+      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div>
+      <h3 data-i18n="c4t">Secure passwords</h3>
+      <p data-i18n="c4d">Credentials kept in Windows Credential Manager (DPAPI) — never in app files.</p>
+    </div>
+    <div class="card">
+      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div>
+      <h3 data-i18n="c5t">Import / export .rdp and profiles</h3>
+      <p data-i18n="c5d">Move over from mstsc in a minute. Export your whole server and settings profile to a single file.</p>
+    </div>
+    <div class="card">
+      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10l2 2M5 19l2-2m10-10l2-2"/></svg></div>
+      <h3 data-i18n="c6t">Redirections and RD Gateway</h3>
+      <p data-i18n="c6d">Clipboard, drives, printers, audio, authentication level and RD Gateway — configurable per server.</p>
+    </div>
+  </div>
+</section>
+
+<section id="security" class="wrap">
+  <div class="band">
+    <div class="txt">
+      <span class="eyebrow" data-i18n="sec.eyebrow">Security</span>
+      <h2 data-i18n="sec.h2">Your passwords stay with you</h2>
+      <p data-i18n-html="sec.p">Waypoint never writes passwords to its own files. They go to <b>Windows Credential Manager</b> (DPAPI, tied to your account) — the same vault mstsc uses. Server-identity verification (MITM protection) is on by default and configurable per server.</p>
+    </div>
+    <a class="btn ghost" href="https://github.com/FilipB97/Waypoint/blob/master/SECURITY.md" data-i18n="sec.link">Security model →</a>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="dl">
+    <span class="eyebrow" data-i18n="dl.eyebrow">Download</span>
+    <h2 data-i18n="dl.h2">Get started with Waypoint</h2>
+    <p class="sub" data-i18n="dl.sub">One file. Run it and go — no installer, no .NET to install.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/FilipB97/Waypoint/releases/latest">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#04222a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        <span data-i18n="dl.dl">Download for Windows (x64)</span>
+      </a>
+      <a class="btn ghost" href="https://github.com/FilipB97/Waypoint" data-i18n="dl.source">Source code</a>
+    </div>
+    <p class="note" data-i18n-html="dl.note">
+      Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen
+      may show a warning — click <code>More info → Run anyway</code>.
+    </p>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div data-i18n="foot.left">Waypoint · MIT © 2026 Filip Benklewski</div>
+  <div data-i18n-html="foot.right">Built with WPF / .NET 8 · <a href="https://github.com/FilipB97/Waypoint">GitHub</a></div>
+</footer>
+
+<script>
+(function(){
+  var I18N = {
+    en: {
+      "nav.features":"Features","nav.security":"Security","nav.download":"Download",
+      "hero.badge":"● Open source · MIT",
+      "hero.title":"Remote desktop,<br><span class=\"grad\">finally pleasant.</span>",
+      "hero.lead":"<b style=\"color:var(--text)\">Waypoint</b> is a modern RDP manager for Windows — tabs, standalone windows across multiple monitors, crisp 1:1 full screen and secure passwords. A comfortable replacement for the built-in Remote Desktop Connection (mstsc).",
+      "hero.dl":"Download for Windows","hero.gh":"View on GitHub",
+      "meta.os":"Windows 10/11","meta.file":"single .exe","meta.net":"no .NET install","meta.free":"free",
+      "feat.eyebrow":"Features","feat.h2":"Everything missing from mstsc",
+      "feat.sub":"Built on Microsoft's official RDP control (<code>mstscax</code>) — full compatibility, with a modern Fluent / Mica interface on top.",
+      "c1t":"Tabs and standalone windows","c1d":"Multiple sessions in one window, or each in its own — whatever suits you. Duplicate and reorder tabs.",
+      "c2t":"Multi-monitor, mstsc-style","c2d":"Tear a tab off into its own window, drag it to another screen and go full screen. Dock it back with one click.",
+      "c3t":"Crisp 1:1 full screen","c3d":"Dynamic resolution matched to the monitor (DPI-aware) — no blur, with an auto-hiding bar (pin / minimize).",
+      "c4t":"Secure passwords","c4d":"Credentials kept in Windows Credential Manager (DPAPI) — never in app files.",
+      "c5t":"Import / export .rdp and profiles","c5d":"Move over from mstsc in a minute. Export your whole server and settings profile to a single file.",
+      "c6t":"Redirections and RD Gateway","c6d":"Clipboard, drives, printers, audio, authentication level and RD Gateway — configurable per server.",
+      "sec.eyebrow":"Security","sec.h2":"Your passwords stay with you",
+      "sec.p":"Waypoint never writes passwords to its own files. They go to <b>Windows Credential Manager</b> (DPAPI, tied to your account) — the same vault mstsc uses. Server-identity verification (MITM protection) is on by default and configurable per server.",
+      "sec.link":"Security model →",
+      "dl.eyebrow":"Download","dl.h2":"Get started with Waypoint","dl.sub":"One file. Run it and go — no installer, no .NET to install.",
+      "dl.dl":"Download for Windows (x64)","dl.source":"Source code",
+      "dl.note":"Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.",
+      "foot.left":"Waypoint · MIT © 2026 Filip Benklewski",
+      "foot.right":"Built with WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>"
+    },
+    pl: {
+      "nav.features":"Funkcje","nav.security":"Bezpieczeństwo","nav.download":"Pobierz",
+      "hero.badge":"● Open source · MIT",
+      "hero.title":"Zdalny pulpit,<br><span class=\"grad\">wreszcie przyjemny.</span>",
+      "hero.lead":"<b style=\"color:var(--text)\">Waypoint</b> to nowoczesny menedżer RDP dla Windows — zakładki, osobne okna na wielu monitorach, ostry pełny ekran 1:1 i bezpieczne hasła. Wygodny zamiennik wbudowanego Podłączania pulpitu zdalnego (mstsc).",
+      "hero.dl":"Pobierz na Windows","hero.gh":"Zobacz na GitHub",
+      "meta.os":"Windows 10/11","meta.file":"jeden plik .exe","meta.net":"bez instalacji .NET","meta.free":"za darmo",
+      "feat.eyebrow":"Funkcje","feat.h2":"Wszystko, czego brakuje w mstsc",
+      "feat.sub":"Zbudowane na oficjalnej kontrolce RDP Microsoftu (<code>mstscax</code>) — pełna zgodność, a na wierzchu nowoczesny interfejs Fluent / Mica.",
+      "c1t":"Zakładki i osobne okna","c1d":"Wiele sesji w jednym oknie albo każda w swoim — jak Ci wygodniej. Duplikuj i zmieniaj kolejność kart.",
+      "c2t":"Multi-monitor jak w mstsc","c2d":"Wyciągnij kartę do osobnego okna, przeciągnij na drugi ekran i włącz pełny ekran. Zadokuj z powrotem jednym kliknięciem.",
+      "c3t":"Ostry pełny ekran 1:1","c3d":"Dynamiczna rozdzielczość dopasowana do monitora (DPI-aware) — bez rozmycia, z auto-chowanym paskiem (przypnij / minimalizuj).",
+      "c4t":"Bezpieczne hasła","c4d":"Poświadczenia trzymane w Menedżerze poświadczeń Windows (DPAPI) — nigdy w plikach aplikacji.",
+      "c5t":"Import / eksport .rdp i profile","c5d":"Przenieś się z mstsc w minutę. Wyeksportuj cały profil serwerów i ustawień do jednego pliku.",
+      "c6t":"Przekierowania i RD Gateway","c6d":"Schowek, dyski, drukarki, audio, poziom uwierzytelniania i brama RD — konfigurowalne per serwer.",
+      "sec.eyebrow":"Bezpieczeństwo","sec.h2":"Twoje hasła zostają u Ciebie",
+      "sec.p":"Waypoint nie zapisuje haseł w swoich plikach. Trafiają do <b>Menedżera poświadczeń Windows</b> (DPAPI, powiązany z Twoim kontem) — tego samego sejfu, którego używa mstsc. Weryfikacja tożsamości serwera (ochrona przed MITM) jest domyślnie włączona i konfigurowalna per serwer.",
+      "sec.link":"Model bezpieczeństwa →",
+      "dl.eyebrow":"Pobierz","dl.h2":"Zacznij z Waypoint","dl.sub":"Jeden plik. Odpalasz i działa — bez instalatora, bez instalowania .NET.",
+      "dl.dl":"Pobierz na Windows (x64)","dl.source":"Kod źródłowy",
+      "dl.note":"Wymagania: Windows 10/11 (x64). Plik nie jest jeszcze podpisany cyfrowo, więc przy pierwszym uruchomieniu SmartScreen może pokazać ostrzeżenie — kliknij <code>Więcej informacji → Uruchom mimo to</code>.",
+      "foot.left":"Waypoint · MIT © 2026 Filip Benklewski",
+      "foot.right":"Zbudowane w WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>"
+    }
+  };
+  function apply(lang){
+    var dict = I18N[lang] || I18N.en;
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var v = dict[el.getAttribute('data-i18n')]; if(v!=null) el.textContent = v;
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(function(el){
+      var v = dict[el.getAttribute('data-i18n-html')]; if(v!=null) el.innerHTML = v;
+    });
+    document.querySelectorAll('[data-lang-btn]').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-lang-btn')===lang);
+    });
+    try{ localStorage.setItem('wp-lang', lang); }catch(e){}
+  }
+  var saved=null; try{ saved = localStorage.getItem('wp-lang'); }catch(e){}
+  var lang = saved || (((navigator.language||'en').toLowerCase().indexOf('pl')===0) ? 'pl' : 'en');
+  document.querySelectorAll('[data-lang-btn]').forEach(function(b){
+    b.addEventListener('click', function(){ apply(b.getAttribute('data-lang-btn')); });
+  });
+  apply(lang);
+})();
+</script>
+</body>
+</html>

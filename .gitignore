@@ -32,6 +32,9 @@ coverage*.info
 # Visual Studio / Rider
 .vs/
 .idea/
+
+# Claude Code local tooling (launch config for site preview, etc.)
+.claude/
 *.swp
 *.*~
 
