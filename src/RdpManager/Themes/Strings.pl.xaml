@@ -232,6 +232,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">Terminal SSH wymaga składnika WebView2 Runtime (wbudowany w Windows 11; na starszych systemach doinstaluj go ze strony Microsoft).</sys:String>
     <!-- panel plików SFTP -->
+    <sys:String x:Key="S.qs.tip">Połącz z innym serwerem</sys:String>
     <sys:String x:Key="S.sftp.toggle">Pliki (SFTP)</sys:String>
     <sys:String x:Key="S.sftp.name">Nazwa</sys:String>
     <sys:String x:Key="S.sftp.size">Rozmiar</sys:String>

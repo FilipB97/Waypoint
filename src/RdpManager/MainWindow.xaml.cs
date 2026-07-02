@@ -2121,6 +2121,54 @@ namespace RdpManager
             BuildFlyoutLists(FsFlyoutSearch.Text);
         }
 
+        // ---------- Szybkie przełączanie z paska kart (tryb skupienia) ----------
+
+        private Action _qsFirstAction;   // Enter w szukajce = pierwsze trafienie
+
+        private void QuickSwitch_Click(object sender, RoutedEventArgs e)
+        {
+            QuickSwitchSearch.Text = "";
+            BuildQuickSwitchLists("");
+            QuickSwitchPopup.IsOpen = true;
+            QuickSwitchSearch.Dispatcher.BeginInvoke(new Action(() => QuickSwitchSearch.Focus()), DispatcherPriority.Input);
+        }
+
+        private void QuickSwitchSearch_TextChanged(object sender, TextChangedEventArgs e)
+            => BuildQuickSwitchLists(QuickSwitchSearch.Text);
+
+        private void QuickSwitchSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && _qsFirstAction != null) { _qsFirstAction(); e.Handled = true; }
+            else if (e.Key == Key.Escape) { QuickSwitchPopup.IsOpen = false; e.Handled = true; }
+        }
+
+        private void BuildQuickSwitchLists(string filter)
+        {
+            filter = (filter ?? "").Trim().ToLowerInvariant();
+            QsSessions.Children.Clear();
+            QsServers.Children.Clear();
+            _qsFirstAction = null;
+
+            foreach (var s in _sessions)
+            {
+                if (!RdpUtils.MatchesFilter(s.Server, filter)) continue;
+                var session = s;
+                Action go = () => { QuickSwitchPopup.IsOpen = false; Activate(session); };
+                if (_qsFirstAction == null && s != _active) _qsFirstAction = go;
+                QsSessions.Children.Add(BuildFlyoutRow(s.Server,
+                    s.Connected ? ServerStatus.Online : ServerStatus.Offline, s == _active, go));
+            }
+
+            foreach (var server in _vm.Servers)
+            {
+                if (!RdpUtils.MatchesFilter(server, filter)) continue;
+                var srv = server;
+                Action go = () => { QuickSwitchPopup.IsOpen = false; LaunchServer(srv, true); };
+                if (_qsFirstAction == null) _qsFirstAction = go;
+                QsServers.Children.Add(BuildFlyoutRow(server, server.Status, false, go));
+            }
+        }
+
         private void BuildFlyoutLists(string filter)
         {
             filter = (filter ?? "").Trim().ToLowerInvariant();
