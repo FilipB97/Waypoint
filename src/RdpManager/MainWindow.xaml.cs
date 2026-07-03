@@ -899,22 +899,33 @@ namespace RdpManager
         {
             DashboardPanel.Children.Clear();
 
-            int total = _vm.Total;
-            int online = _vm.OnlineCount;
             int open = _sessions.Count + _sessionWindows.Count;
+            var stats = LoadConnectionStats(14);
+            int last7 = stats.PerDay.Length >= 7
+                ? stats.PerDay.Skip(stats.PerDay.Length - 7).Sum() : stats.PerDay.Sum();
 
             var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 22) };
-            cards.Children.Add(StatCard(L("S.dash.servers"), total.ToString()));
-            cards.Children.Add(StatCard(L("S.dash.reachable"), online.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.servers"), _vm.Total.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.reachable"), _vm.OnlineCount.ToString()));
             cards.Children.Add(StatCard(L("S.dash.opensessions"), open.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.conns7"), last7.ToString()));
             DashboardPanel.Children.Add(cards);
 
-            DashboardPanel.Children.Add(new TextBlock
-            {
-                Text = L("S.dash.recent"), Foreground = (Brush)TryFindResource("TextSec"),
-                FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8)
-            });
+            // Połączenia / dzień (14 dni) — z dziennika audytu.
+            DashboardPanel.Children.Add(DashSection(L("S.dash.perday")));
+            DashboardPanel.Children.Add(stats.TotalConnects > 0
+                ? DashCard(BuildBarChart(stats.PerDay, DateTime.Now))
+                : DashHint(L("S.dash.nodata")));
 
+            // Najczęściej używane serwery.
+            if (stats.TopServers.Count > 0)
+            {
+                DashboardPanel.Children.Add(DashSection(L("S.dash.top")));
+                DashboardPanel.Children.Add(DashCard(BuildTopServers(stats.TopServers)));
+            }
+
+            // Ostatnie połączenia.
+            DashboardPanel.Children.Add(DashSection(L("S.dash.recent")));
             int shown = 0;
             foreach (var srv in _vm.RecentServers())
             {
@@ -922,8 +933,93 @@ namespace RdpManager
                 DashboardPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => LaunchServer(s, true)));
                 if (++shown >= 5) break;
             }
-            if (shown == 0)
-                DashboardPanel.Children.Add(new TextBlock { Text = "Brak historii.", Foreground = (Brush)TryFindResource("TextTer") });
+            if (shown == 0) DashboardPanel.Children.Add(DashHint(L("S.dash.nohistory")));
+        }
+
+        private Core.ConnectionStats LoadConnectionStats(int days)
+        {
+            try
+            {
+                string path = System.IO.Path.Combine(SettingsStore.Dir, "connections.log");
+                if (System.IO.File.Exists(path))
+                    return Core.ConnectionStats.Compute(System.IO.File.ReadLines(path), DateTime.Now, days);
+            }
+            catch { /* dziennik best-effort */ }
+            return Core.ConnectionStats.Compute(null, DateTime.Now, days);
+        }
+
+        private FrameworkElement DashSection(string text) => new TextBlock
+        {
+            Text = text, Foreground = (Brush)TryFindResource("TextSec"),
+            FontWeight = FontWeights.SemiBold, Margin = new Thickness(2, 0, 0, 8)
+        };
+
+        private FrameworkElement DashCard(FrameworkElement content) => new Border
+        {
+            Background = (Brush)TryFindResource("Panel"), BorderBrush = (Brush)TryFindResource("Border"),
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(16, 14, 16, 14), Margin = new Thickness(0, 0, 0, 22), Child = content
+        };
+
+        private FrameworkElement DashHint(string text) => new TextBlock
+        {
+            Text = text, Foreground = (Brush)TryFindResource("TextTer"), Margin = new Thickness(2, 0, 0, 22)
+        };
+
+        // Wykres słupkowy „połączenia / dzień" — rysowany prostokątami (bez zależności od bibliotek).
+        private FrameworkElement BuildBarChart(int[] values, DateTime endDate)
+        {
+            int max = Math.Max(1, values.Max());
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Height = 108,
+                VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left };
+            var accent = (Brush)TryFindResource("Accent");
+            var dim = (Brush)TryFindResource("Elevated");
+            for (int i = 0; i < values.Length; i++)
+            {
+                var date = endDate.Date.AddDays(-(values.Length - 1 - i));
+                row.Children.Add(new System.Windows.Shapes.Rectangle
+                {
+                    Width = 18, Height = Math.Max(3, 92.0 * values[i] / max), RadiusX = 3, RadiusY = 3,
+                    Fill = values[i] > 0 ? accent : dim, Margin = new Thickness(3, 0, 3, 0),
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    ToolTip = date.ToString("dd.MM") + " — " + values[i]
+                });
+            }
+            return row;
+        }
+
+        // Poziome słupki: nazwa | pasek (proporcjonalny) | liczba.
+        private FrameworkElement BuildTopServers(List<KeyValuePair<string, int>> top)
+        {
+            int max = Math.Max(1, top.Max(t => t.Value));
+            var accent = (Brush)TryFindResource("Accent");
+            var track = (Brush)TryFindResource("Elevated");
+            var panel = new StackPanel();
+            foreach (var kv in top)
+            {
+                var grid = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var name = new TextBlock { Text = kv.Key, Foreground = (Brush)TryFindResource("TextPrim"),
+                    FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis };
+                Grid.SetColumn(name, 0); grid.Children.Add(name);
+
+                var barGrid = new Grid { Width = 200, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 10, 0) };
+                barGrid.Children.Add(new Border { Height = 8, Background = track, CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Stretch });
+                barGrid.Children.Add(new Border { Height = 8, Width = 200.0 * kv.Value / max, Background = accent,
+                    CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Left });
+                Grid.SetColumn(barGrid, 1); grid.Children.Add(barGrid);
+
+                var count = new TextBlock { Text = kv.Value.ToString(), Foreground = (Brush)TryFindResource("TextSec"),
+                    FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, MinWidth = 24, TextAlignment = TextAlignment.Right };
+                Grid.SetColumn(count, 2); grid.Children.Add(count);
+
+                panel.Children.Add(grid);
+            }
+            return panel;
         }
 
         private FrameworkElement StatCard(string label, string value)
@@ -1726,6 +1822,9 @@ namespace RdpManager
                 // Lżej: aktywna = subtelne tło + akcent (underline), bez „pudełkowego" obrysu.
                 b.Background = active ? (Brush)TryFindResource("Panel") : Brushes.Transparent;
                 b.BorderBrush = Brushes.Transparent;
+                // Hierarchia: nieaktywne karty przygaszone (spokojniejszy pasek).
+                if (_tabName.TryGetValue(s, out var nm))
+                    nm.Foreground = (Brush)TryFindResource(active ? "TextPrim" : "TextSec");
                 if (_tabUnderline.TryGetValue(s, out var u))
                     u.Visibility = active ? Visibility.Visible : Visibility.Hidden;
                 if (_tabClose.TryGetValue(s, out var c))
