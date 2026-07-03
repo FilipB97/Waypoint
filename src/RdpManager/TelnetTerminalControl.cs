@@ -30,6 +30,7 @@ namespace RdpManager
 
                 var tcp = new TcpClient { NoDelay = true };
                 tcp.Connect(host, port > 0 ? port : 23);
+                if (IsTerminalDisposed) { try { tcp.Dispose(); } catch { } return; }   // karta zamknięta w trakcie łączenia
                 _tcp = tcp;
                 _stream = tcp.GetStream();
                 RaiseConnected();
