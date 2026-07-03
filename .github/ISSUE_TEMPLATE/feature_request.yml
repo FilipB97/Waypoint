@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest an idea or improvement for Waypoint
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: What are you trying to do that's hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like Waypoint to do?
+    validations:
+      required: true
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Related protocol (optional)
+      options:
+        - Any / general
+        - RDP
+        - SSH
+        - SFTP
+        - Telnet
+        - Serial
+        - VNC
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives / prior art (optional)
+      description: How do other tools (mstsc, PuTTY, mRemoteNG, …) handle this?
+    validations:
+      required: false

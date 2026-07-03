@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/FilipB97/Waypoint/security/advisories/new
+    about: Please report security issues privately, not as a public issue (see SECURITY.md).
+  - name: Support Waypoint (Buy Me a Coffee)
+    url: https://buymeacoffee.com/filipjasiuu
+    about: Waypoint is free and open source — a coffee helps keep it going. Thank you!

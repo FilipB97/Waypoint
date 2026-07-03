@@ -1,0 +1,64 @@
+name: Bug report
+description: Something in Waypoint doesn't work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please don't include passwords, private keys, or real internal
+        hostnames/IPs. Logs live in `%APPDATA%\RdpManager` (`connections.log`, `crash.log`).
+  - type: input
+    id: version
+    attributes:
+      label: Waypoint version
+      description: See the About window (or the release you downloaded).
+      placeholder: e.g. 1.4.2
+    validations:
+      required: true
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Protocol
+      description: Which connection type is affected?
+      options:
+        - RDP
+        - SSH
+        - SFTP
+        - Telnet
+        - Serial
+        - VNC
+        - Not protocol-specific / the app itself
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 23H2
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots (optional)
+      description: Relevant lines from crash.log, an error message, or a screenshot. Redact secrets.
+      render: text
+    validations:
+      required: false
