@@ -37,24 +37,22 @@ namespace RdpManager.Core
             catch { /* najlepszy wysiłek */ }
         }
 
-        /// <summary>Self-heal: jeśli „.bak" jest WYRAŹNIE nowszy niż sam plik, to plik podmieniono na
-        /// starszą wersję JUŻ PO zrobieniu kopii — czyli cofnięto go z zewnątrz (np. rollback antywirusa
-        /// / ochrony folderów). Normalnie .bak powstaje TUŻ PRZED nadpisaniem, więc plik jest zawsze
-        /// NIE STARSZY niż .bak; odwrotna relacja = rollback. Wtedy przywracamy dobrą kopię z .bak.
-        /// Wołać na początku Load, PRZED odczytem. Najlepszy wysiłek — nie może wywalić startu.</summary>
-        public static void RecoverIfReverted(string path)
+        /// <summary>True, gdy „.bak" jest WYRAŹNIE nowszy niż sam plik (albo plik nie istnieje, a .bak tak).
+        /// Normalnie .bak powstaje TUŻ PRZED nadpisaniem, więc plik jest zawsze NIE STARSZY niż .bak;
+        /// odwrotna relacja = plik podmieniono na starszy JUŻ PO zrobieniu kopii, czyli cofnięto go z
+        /// zewnątrz (np. rollback antywirusa / ochrony folderów). To sam sygnał CZASU — wołający MUSI
+        /// jeszcze sprawdzić, że .bak nie jest UBOŻSZY niż plik, zanim przywróci (inaczej cofnąłby dobre
+        /// dane do domyślnych — „bujanie" pliku przez AV potrafi zostawić świeży, ubogi .bak).</summary>
+        public static bool BackupLooksNewer(string path)
         {
             try
             {
                 string bak = path + ".bak";
-                if (!File.Exists(bak)) return;
-                if (!File.Exists(path) ||
-                    File.GetLastWriteTimeUtc(bak) - File.GetLastWriteTimeUtc(path) > TimeSpan.FromSeconds(2))
-                {
-                    File.Copy(bak, path, overwrite: true);
-                }
+                if (!File.Exists(bak)) return false;
+                if (!File.Exists(path)) return true;
+                return File.GetLastWriteTimeUtc(bak) - File.GetLastWriteTimeUtc(path) > TimeSpan.FromSeconds(2);
             }
-            catch { /* self-heal nie może przerwać startu aplikacji */ }
+            catch { return false; }
         }
     }
 }

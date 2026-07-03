@@ -28,30 +28,47 @@ namespace RdpManager
         public static List<ServerInfo> Load(string dir)
         {
             var path = FilePath(dir);
-            AtomicFile.RecoverIfReverted(path);   // self-heal: cofnięty z zewnątrz plik → przywróć z .bak (przed odczytem)
-            try
+            var main = ReadOrNull(path, preserveCorrupt: true);
+
+            // Self-heal jak w ustawieniach: cofnięty z zewnątrz plik (bak NOWSZY niż plik) przywracamy
+            // tylko, gdy .bak ma NIE MNIEJ serwerów niż bieżący — żeby nie „odtworzyć" świadomie usuniętych
+            // serwerów (usunięcie daje plik NOWSZY niż .bak, więc self-heal się wtedy nie odpala).
+            if (AtomicFile.BackupLooksNewer(path))
             {
-                if (File.Exists(path))
+                var bak = ReadOrNull(path + ".bak", preserveCorrupt: false);
+                if (bak != null && (main == null || bak.Count >= main.Count))
                 {
-                    var json = File.ReadAllText(path);
-                    var list = JsonSerializer.Deserialize<List<ServerInfo>>(json);
-                    if (list != null) return list;
+                    try { File.Copy(path + ".bak", path, overwrite: true); } catch { /* best-effort */ }
+                    return bak;
                 }
             }
-            catch
-            {
-                // Uszkodzony/niekompatybilny plik z realnymi serwerami — zachowaj kopię (.corrupt)
-                // ZANIM poniżej nadpiszemy go danymi przykładowymi, żeby dało się go odzyskać.
-                AtomicFile.PreserveCorrupt(path);
-            }
+            if (main != null) return main;
 
-            // Pierwsze uruchomienie (albo plik uszkodzony): seed z przykładowych danych, potem zapis.
+            // Pierwsze uruchomienie: seed z przykładowych danych, potem zapis.
             var seed = new List<ServerInfo>();
             foreach (var g in TestData.Groups())
                 foreach (var s in g.Servers)
                     seed.Add(s);
             Save(seed, dir);
             return seed;
+        }
+
+        private static List<ServerInfo> ReadOrNull(string p, bool preserveCorrupt)
+        {
+            try
+            {
+                if (File.Exists(p))
+                {
+                    var list = JsonSerializer.Deserialize<List<ServerInfo>>(File.ReadAllText(p));
+                    if (list != null) return list;
+                }
+            }
+            catch
+            {
+                // Uszkodzony/niekompatybilny plik z realnymi serwerami — zachowaj kopię (.corrupt).
+                if (preserveCorrupt) AtomicFile.PreserveCorrupt(p);
+            }
+            return null;
         }
 
         /// <summary>Zapisuje listę do podanego katalogu (testowalne).</summary>

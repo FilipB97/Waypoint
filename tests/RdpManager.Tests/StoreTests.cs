@@ -207,5 +207,35 @@ namespace RdpManager.Tests
             Assert.Single(loaded);
             Assert.Equal("prawdziwy", loaded[0].Name);   // przywrócono z .bak, nie seed/pusta lista
         }
+
+        [Fact]
+        public void SettingsStore_DoesNotRestorePoorerBackupOverRicherFile()
+        {
+            // „Bujanie" AV: .bak NOWSZY, ale UBOŻSZY (domyślne) niż bogaty bieżący plik — NIE cofamy.
+            var path = Path.Combine(_dir, "settings.json");
+            File.WriteAllText(path,
+                "{\"AutoConnectServerIds\":[\"a\",\"b\"],\"TabGroups\":[{\"Name\":\"G\"}]}");   // bogaty
+            File.WriteAllText(path + ".bak", "{\"DefaultPort\":3389}");                          // ubogi
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddHours(-1));                        // bogaty STARSZY
+            File.SetLastWriteTimeUtc(path + ".bak", DateTime.UtcNow);                            // ubogi NOWSZY
+
+            var loaded = SettingsStore.Load(_dir);
+            Assert.Equal(2, loaded.AutoConnectServerIds.Count);   // zachowano bogate dane, nie cofnięto
+            Assert.Single(loaded.TabGroups);
+        }
+
+        [Fact]
+        public void ServerRepository_RespectsDeletionWhenCurrentFileIsNewer()
+        {
+            // Świadome usunięcie serwerów: bieżący plik ma MNIEJ, ale jest NOWSZY niż .bak → NIE przywracamy.
+            var path = Path.Combine(_dir, "servers.json");
+            File.WriteAllText(path + ".bak", "[{\"Name\":\"a\"},{\"Name\":\"b\"},{\"Name\":\"c\"}]");   // 3 (stare)
+            File.WriteAllText(path, "[{\"Name\":\"a\"}]");                                              // 1 (po usunięciu)
+            File.SetLastWriteTimeUtc(path + ".bak", DateTime.UtcNow.AddHours(-1));
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
+
+            var loaded = ServerRepository.Load(_dir);
+            Assert.Single(loaded);   // usunięcie uszanowane (bak starszy → self-heal się nie odpala)
+        }
     }
 }
