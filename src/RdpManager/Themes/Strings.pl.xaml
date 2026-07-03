@@ -42,6 +42,9 @@
     <sys:String x:Key="S.theme.light">Jasny</sys:String>
     <sys:String x:Key="S.theme.system">Systemowy</sys:String>
     <sys:String x:Key="S.set.language">Język / Language</sys:String>
+    <sys:String x:Key="S.set.liststyle">Styl widoku listy</sys:String>
+    <sys:String x:Key="S.liststyle.default">Domyślny</sys:String>
+    <sys:String x:Key="S.liststyle.minimal">Minimalistyczny</sys:String>
     <sys:String x:Key="S.set.conn">Połączenie</sys:String>
     <sys:String x:Key="S.set.port">Domyślny port RDP</sys:String>
     <sys:String x:Key="S.set.colordepth">Domyślna głębia kolorów (bit)</sys:String>
@@ -179,6 +182,19 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.moveright">Przesuń w prawo</sys:String>
     <sys:String x:Key="S.m.closeothers">Zamknij pozostałe</sys:String>
     <sys:String x:Key="S.m.close">Zamknij</sys:String>
+    <!-- Grupy kart (stosy jak w Vivaldi) -->
+    <sys:String x:Key="S.m.newgroup">Nowa grupa z karty…</sys:String>
+    <sys:String x:Key="S.m.addtogroup">Dodaj do grupy</sys:String>
+    <sys:String x:Key="S.m.removefromgroup">Usuń z grupy</sys:String>
+    <sys:String x:Key="S.m.grp.rename">Zmień nazwę grupy…</sys:String>
+    <sys:String x:Key="S.m.grp.color">Kolor grupy</sys:String>
+    <sys:String x:Key="S.m.grp.collapse">Zwiń grupę</sys:String>
+    <sys:String x:Key="S.m.grp.expand">Rozwiń grupę</sys:String>
+    <sys:String x:Key="S.m.grp.ungroup">Rozgrupuj</sys:String>
+    <sys:String x:Key="S.group.newtitle">Nowa grupa kart</sys:String>
+    <sys:String x:Key="S.group.renametitle">Zmień nazwę grupy</sys:String>
+    <sys:String x:Key="S.group.nameprompt">Nazwa grupy:</sys:String>
+    <sys:String x:Key="S.group.default">Grupa</sys:String>
     <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
     <sys:String x:Key="S.m.wol">Obudź (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplikuj serwer…</sys:String>
