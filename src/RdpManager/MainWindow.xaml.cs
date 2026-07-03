@@ -168,6 +168,17 @@ namespace RdpManager
             foreach (var s in dlg.SelectedServers) OpenServer(s, autoConnect: true);
         }
 
+        // Zapisz aktualnie otwarte karty (tylko zapisane serwery — nie Quick Connect) do przywrócenia na starcie.
+        // Wołane przy każdym otwarciu/zamknięciu karty, więc lista przetrwa też ubicie procesu, nie tylko czyste zamknięcie.
+        private void PersistOpenSessions()
+        {
+            _settings.LastOpenServerIds = _sessions
+                .Select(s => s.Server.Id)
+                .Where(id => _vm.Servers.Any(v => v.Id == id))
+                .Distinct().ToList();
+            SettingsStore.Save(_settings);
+        }
+
         // ---------- Aktualizacje ----------
 
         // Ciche sprawdzenie GitHub releases/latest; nowsza wersja → przycisk w panelu bocznym.
@@ -465,15 +476,9 @@ namespace RdpManager
                 return;
             }
 
-            // Zapamiętaj otwarte karty (tylko zapisane serwery — nie Quick Connect) do przywrócenia na starcie.
-            _settings.LastOpenServerIds = _sessions
-                .Select(s => s.Server.Id)
-                .Where(id => _vm.Servers.Any(v => v.Id == id))
-                .Distinct().ToList();
-
-            // Dograj odroczony zapis ustawień (debounce zoomu) + powyższe, zanim aplikacja zniknie.
+            // Zapamiętaj otwarte karty + dograj odroczony zapis ustawień (debounce zoomu), zanim aplikacja zniknie.
             _settingsSaveTimer?.Stop();
-            SettingsStore.Save(_settings);
+            PersistOpenSessions();
 
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
             try { UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId); } catch { }
@@ -1227,6 +1232,7 @@ namespace RdpManager
 
             Activate(session);
             if (autoConnect) BeginConnect(session);
+            PersistOpenSessions();
         }
 
         private static bool CanAuto(Session s)
@@ -1595,6 +1601,7 @@ namespace RdpManager
             _tabName.Remove(session);
             _tabClose.Remove(session);
             _sessions.Remove(session);
+            PersistOpenSessions();
             RefreshTabTitles();
 
             if (_active == session)
