@@ -152,5 +152,29 @@ namespace RdpManager.Tests
             original.UseAllMonitors = false;
             Assert.False(RdpFile.Parse(RdpFile.Serialize(original)).UseAllMonitors);
         }
+
+        [Fact]
+        public void SerializeThenParse_RoundTripsRemoteApp()
+        {
+            var original = new ServerInfo
+            {
+                Host = "rds.example.com", Name = "Kalkulator",
+                RemoteAppProgram = "||Calc", RemoteAppArgs = "/n"
+            };
+            var text = RdpFile.Serialize(original);
+            Assert.Contains("remoteapplicationmode:i:1", text);
+            Assert.Contains("remoteapplicationprogram:s:||Calc", text);
+            Assert.Contains("remoteapplicationcmdline:s:/n", text);
+
+            var back = RdpFile.Parse(text);
+            Assert.Equal("||Calc", back.RemoteAppProgram);
+            Assert.Equal("/n", back.RemoteAppArgs);
+        }
+
+        [Fact]
+        public void Serialize_OmitsRemoteApp_WhenNoProgram()
+        {
+            Assert.DoesNotContain("remoteapplicationmode", RdpFile.Serialize(new ServerInfo { Host = "h" }));
+        }
     }
 }

@@ -70,6 +70,14 @@ namespace RdpManager.Core
             if (TryGetInt(map, "use multimon", out var mm)) s.UseAllMonitors = mm != 0;
             if (TryGetInt(map, "administrative session", out var admin)) s.AdminSession = admin != 0;
 
+            if (TryGetInt(map, "remoteapplicationmode", out var ram) && ram != 0)
+            {
+                if (map.TryGetValue("remoteapplicationprogram", out var prog) && !string.IsNullOrWhiteSpace(prog))
+                    s.RemoteAppProgram = prog.Trim();
+                if (map.TryGetValue("remoteapplicationcmdline", out var cmd) && !string.IsNullOrWhiteSpace(cmd))
+                    s.RemoteAppArgs = cmd.Trim();
+            }
+
             if (map.TryGetValue("gatewayhostname", out var gw) && !string.IsNullOrWhiteSpace(gw))
                 s.GatewayHostname = gw.Trim();
             if (TryGetInt(map, "gatewayusagemethod", out var gwm)) s.GatewayUsageMethod = Clamp(gwm, 0, 2);
@@ -103,6 +111,16 @@ namespace RdpManager.Core
             sb.Append("authentication level:i:").Append(Clamp(s.AuthenticationLevel, 0, 2).ToString(CultureInfo.InvariantCulture)).Append("\r\n");
             sb.Append("use multimon:i:").Append(s.UseAllMonitors ? "1" : "0").Append("\r\n");
             sb.Append("administrative session:i:").Append(s.AdminSession ? "1" : "0").Append("\r\n");
+
+            if (!string.IsNullOrWhiteSpace(s.RemoteAppProgram))
+            {
+                sb.Append("remoteapplicationmode:i:1\r\n");
+                sb.Append("remoteapplicationprogram:s:").Append(s.RemoteAppProgram.Trim()).Append("\r\n");
+                if (!string.IsNullOrWhiteSpace(s.RemoteAppArgs))
+                    sb.Append("remoteapplicationcmdline:s:").Append(s.RemoteAppArgs.Trim()).Append("\r\n");
+                sb.Append("remoteapplicationname:s:")
+                  .Append(string.IsNullOrWhiteSpace(s.Name) ? s.RemoteAppProgram.Trim() : s.Name.Trim()).Append("\r\n");
+            }
 
             if (!string.IsNullOrWhiteSpace(s.GatewayHostname))
             {
