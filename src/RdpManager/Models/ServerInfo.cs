@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace RdpManager.Models
@@ -103,6 +104,12 @@ namespace RdpManager.Models
         /// docelowo z monitoringu osiągalności w tle (TCP 3389 / ping).
         /// </summary>
         public ServerStatus Status { get; set; } = ServerStatus.Offline;
+
+        /// <summary>Zachowuje pola zapisane przez NOWSZĄ wersję aplikacji, których ta (starsza) wersja
+        /// jeszcze nie zna (analogicznie do AppSettings.Extra) — chroni definicje serwerów przed utratą
+        /// pól przy uruchomieniu starszego builda. Hasła i tak nigdy nie trafiają do JSON.</summary>
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement> Extra { get; set; }
     }
 
     public enum ServerStatus

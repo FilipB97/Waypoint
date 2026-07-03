@@ -20,23 +20,29 @@ namespace RdpManager
         /// <summary>Wczytuje ustawienia z podanego katalogu (testowalne).</summary>
         public static AppSettings Load(string dir)
         {
+            var path = FilePath(dir);
             try
             {
-                var path = FilePath(dir);
                 if (File.Exists(path))
                 {
                     var s = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path));
                     if (s != null) return s;
                 }
             }
-            catch { /* uszkodzony plik -> domyślne */ }
+            catch
+            {
+                // Uszkodzony plik: odłóż na bok (.corrupt) zamiast po cichu stracić, potem wróć do domyślnych.
+                AtomicFile.PreserveCorrupt(path);
+            }
             return new AppSettings();
         }
 
         /// <summary>Zapisuje ustawienia do podanego katalogu (testowalne).</summary>
         public static void Save(AppSettings settings, string dir)
         {
-            AtomicFile.WriteAllText(FilePath(dir), JsonSerializer.Serialize(settings, Options));
+            var path = FilePath(dir);
+            AtomicFile.Backup(path);   // kopia poprzedniej wersji na wypadek błędnego zapisu
+            AtomicFile.WriteAllText(path, JsonSerializer.Serialize(settings, Options));
         }
     }
 }

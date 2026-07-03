@@ -96,5 +96,74 @@ namespace RdpManager.Tests
             var second = ServerRepository.Load(_dir);
             Assert.Equal(first.Count, second.Count);
         }
+
+        [Fact]
+        public void SettingsStore_PreservesUnknownFieldsFromNewerVersion()
+        {
+            // Plik zapisany przez NOWSZĄ wersję z polem, którego ta wersja nie zna (regresja autostartu).
+            var path = Path.Combine(_dir, "settings.json");
+            File.WriteAllText(path, "{\"DefaultPort\":3391,\"FutureFeatureX\":[\"keep-me\"]}");
+
+            var loaded = SettingsStore.Load(_dir);   // nieznane pole -> [JsonExtensionData]
+            SettingsStore.Save(loaded, _dir);        // ...i z powrotem na dysk
+
+            Assert.Equal(3391, loaded.DefaultPort);
+            var json = File.ReadAllText(path);
+            Assert.Contains("FutureFeatureX", json);   // starszy build NIE zjada pola nowszego
+            Assert.Contains("keep-me", json);
+        }
+
+        [Fact]
+        public void SettingsStore_BacksUpPreviousFileOnSave()
+        {
+            SettingsStore.Save(new AppSettings { DefaultPort = 5001 }, _dir);
+            SettingsStore.Save(new AppSettings { DefaultPort = 5002 }, _dir);
+
+            var bak = Path.Combine(_dir, "settings.json.bak");
+            Assert.True(File.Exists(bak), "Zapis powinien zostawić kopię .bak");
+            Assert.Contains("5001", File.ReadAllText(bak));   // .bak = wersja sprzed ostatniego zapisu
+        }
+
+        [Fact]
+        public void SettingsStore_PreservesCorruptFileInsteadOfLosingIt()
+        {
+            var path = Path.Combine(_dir, "settings.json");
+            File.WriteAllText(path, "{ to nie jest poprawny json ");
+
+            var loaded = SettingsStore.Load(_dir);   // nie wysypuje się — zwraca domyślne
+            Assert.Equal(3389, loaded.DefaultPort);
+
+            var corrupt = Path.Combine(_dir, "settings.json.corrupt");
+            Assert.True(File.Exists(corrupt), "Uszkodzony plik powinien zostać zachowany jako .corrupt");
+            Assert.Contains("to nie jest poprawny json", File.ReadAllText(corrupt));
+        }
+
+        [Fact]
+        public void ServerRepository_PreservesCorruptFileInsteadOfOverwritingRealData()
+        {
+            var path = Path.Combine(_dir, "servers.json");
+            File.WriteAllText(path, "[ { \"Name\": \"realny-serwer\", \"Host\": \"10.9.9.9\"  <-- uciety");
+
+            var loaded = ServerRepository.Load(_dir);   // uszkodzony -> seed, ale oryginał zachowany
+            Assert.NotEmpty(loaded);
+
+            var corrupt = Path.Combine(_dir, "servers.json.corrupt");
+            Assert.True(File.Exists(corrupt), "Uszkodzony servers.json powinien trafić do .corrupt");
+            Assert.Contains("realny-serwer", File.ReadAllText(corrupt));
+        }
+
+        [Fact]
+        public void ServerRepository_PreservesUnknownServerFieldsFromNewerVersion()
+        {
+            var path = Path.Combine(_dir, "servers.json");
+            File.WriteAllText(path, "[{\"Name\":\"srv\",\"Host\":\"h\",\"FutureServerField\":\"keep\"}]");
+
+            var loaded = ServerRepository.Load(_dir);
+            ServerRepository.Save(loaded, _dir);
+
+            var json = File.ReadAllText(path);
+            Assert.Contains("FutureServerField", json);
+            Assert.Contains("keep", json);
+        }
     }
 }

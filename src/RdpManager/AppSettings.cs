@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace RdpManager
 {
@@ -70,6 +72,13 @@ namespace RdpManager
 
         /// <summary>Styl renderowania listy serwerów i paska kart: „Default" | „Minimal".</summary>
         public string ListStyle { get; set; } = "Default";
+
+        /// <summary>Zachowuje pola zapisane przez NOWSZĄ wersję aplikacji, których ta (starsza) wersja
+        /// jeszcze nie zna: [JsonExtensionData] wczytuje nieznane właściwości tutaj i zapisuje je z powrotem.
+        /// Dzięki temu uruchomienie starszego builda nie kasuje ustawień dodanych przez nowszy
+        /// (np. AutoConnectServerIds). Główny bezpiecznik przeciw utracie konfiguracji przy mieszaniu wersji.</summary>
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement> Extra { get; set; }
     }
 
     /// <summary>Zapis grupy kart w settings.json (kolor jako #AARRGGBB).</summary>
