@@ -1276,8 +1276,8 @@ namespace RdpManager
             // czytnika ekranu (nazwa + host + status tekstowo), a kropka statusu — swój tekst.
             row.Focusable = true;
             System.Windows.Automation.AutomationProperties.SetName(row,
-                server.Name + " — " + DisplayHost(server) + " — " + StatusText(server.Status));
-            System.Windows.Automation.AutomationProperties.SetName(status, StatusText(server.Status));
+                server.Name + " — " + DisplayHost(server) + " — " + StatusLabel(server.Status));
+            System.Windows.Automation.AutomationProperties.SetName(status, StatusLabel(server.Status));
 
             row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
             row.MouseLeave += (s, e) => { if (_active?.Server != server && !row.IsKeyboardFocused) row.Background = Brushes.Transparent; };
@@ -3331,7 +3331,7 @@ namespace RdpManager
         }
 
         /// <summary>Tekstowy odpowiednik statusu (dla czytników ekranu — status nie tylko kolorem).</summary>
-        private static string StatusText(ServerStatus status)
+        private static string StatusLabel(ServerStatus status)
         {
             switch (status)
             {
