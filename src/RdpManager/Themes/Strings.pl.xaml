@@ -227,7 +227,9 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.prompt.quickconnect.label">Adres — host, host:port, user@host albo DOMENA\user@host:</sys:String>
     <sys:String x:Key="S.prompt.connectas">Połącz z innymi poświadczeniami.</sys:String>
 
-    <sys:String x:Key="S.msg.about.desc">Nowoczesny menedżer połączeń RDP (WPF / Fluent).</sys:String>
+    <sys:String x:Key="S.msg.about.desc">Nowoczesny menedżer połączeń RDP i SSH dla Windows (WPF / Fluent / Mica).</sys:String>
+    <sys:String x:Key="S.about.author">Autor: </sys:String>
+    <sys:String x:Key="S.about.repo">Repozytorium ★</sys:String>
     <sys:String x:Key="S.msg.about.datafolder">Folder danych:</sys:String>
     <sys:String x:Key="S.msg.closeapp">Są aktywne połączenia. Zamknąć aplikację?</sys:String>
     <sys:String x:Key="S.msg.closeapp.title">Zamknij</sys:String>

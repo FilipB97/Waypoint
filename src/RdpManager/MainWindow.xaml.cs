@@ -480,6 +480,14 @@ namespace RdpManager
         // obszar klienta, przyciski działają zwykłym hit-testem WPF. Poza skupieniem przywracamy wartość.
         private void ApplyImmersiveCaption(bool immersive)
         {
+            ApplyCaptionCore(immersive);
+            // WPF-UI przy PIERWSZEJ maksymalizacji przywraca CaptionHeight PO naszym handlerze (stąd „działa
+            // dopiero po przywróceniu i ponownej maksymalizacji"). Re-asercja po jego synchronicznych handlerach.
+            Dispatcher.BeginInvoke(new Action(() => ApplyCaptionCore(IsImmersive())), DispatcherPriority.Loaded);
+        }
+
+        private void ApplyCaptionCore(bool immersive)
+        {
             var chrome = System.Windows.Shell.WindowChrome.GetWindowChrome(this);
             if (chrome == null) return;   // brak chrome = brak strefy caption do naprawy
             if (immersive)
@@ -607,11 +615,7 @@ namespace RdpManager
         }
 
         private void Avatar_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show(
-                "Waypoint\n" + L("S.msg.about.desc") + "\n\n" + L("S.msg.about.datafolder") + "\n" + SettingsStore.Dir,
-                L("S.nav.about"), MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+            => new AboutWindow { Owner = this }.ShowDialog();
 
         // ---------- Zoom interfejsu (Ctrl + kółko / Ctrl +/- / Ctrl 0) ----------
 
@@ -1584,7 +1588,7 @@ namespace RdpManager
             var content = new StackPanel { Orientation = Orientation.Horizontal };
             content.Children.Add(new Border
             {
-                Width = 16, Height = 16, CornerRadius = new CornerRadius(4),
+                Width = 14, Height = 14, CornerRadius = new CornerRadius(4),
                 Background = AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
@@ -1594,7 +1598,7 @@ namespace RdpManager
             });
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5,
+                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -1719,8 +1723,9 @@ namespace RdpManager
             {
                 if (!(s.TabButton is Border b)) continue;
                 bool active = s == _active;
+                // Lżej: aktywna = subtelne tło + akcent (underline), bez „pudełkowego" obrysu.
                 b.Background = active ? (Brush)TryFindResource("Panel") : Brushes.Transparent;
-                b.BorderBrush = active ? (Brush)TryFindResource("Border") : Brushes.Transparent;
+                b.BorderBrush = Brushes.Transparent;
                 if (_tabUnderline.TryGetValue(s, out var u))
                     u.Visibility = active ? Visibility.Visible : Visibility.Hidden;
                 if (_tabClose.TryGetValue(s, out var c))

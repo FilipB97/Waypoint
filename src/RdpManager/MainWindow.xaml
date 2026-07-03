@@ -139,13 +139,7 @@
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">
                         <Button x:Name="AvatarBtn" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.about}" Click="Avatar_Click">
-                            <Ellipse Width="26" Height="26">
-                                <Ellipse.Fill>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#7C6CFB" Offset="0"/><GradientStop Color="#4F3FD1" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Ellipse.Fill>
-                            </Ellipse>
+                            <ui:SymbolIcon Symbol="Info24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                         <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.settings}" Tag="Settings" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="17" Foreground="{DynamicResource TextTer}"/>
