@@ -40,6 +40,9 @@ namespace RdpManager
                 return;
             }
 
+            Core.PersistLog.Write(SettingsStore.Dir,
+                "=== app start v" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " ===");
+
             // Kontrolka ActiveX (mstscax) potrafi rzucić natywnym wyjątkiem ASYNCHRONICZNIE,
             // w pętli komunikatów (SEHException w DispatchMessage) — np. przy zmianach trybu
             // pełnoekranowego. try/catch wokół wywołania nie pomaga, bo wyjątek leci później.
@@ -85,6 +88,8 @@ namespace RdpManager
                     catch { /* już nie żyje */ }
                 }
 
+                Core.PersistLog.Write(SettingsStore.Dir, "update-bootstrap: stary proces zniknął, podmieniam " + targetPath);
+
                 // Kopiuj obok celu, potem atomowo podmień (File.Move overwrite). Kilka prób — plik bywa
                 // jeszcze chwilę zablokowany po wyjściu procesu. Gdy się nie uda, cel zostaje stary (bez szkody).
                 string self = Environment.ProcessPath;
@@ -97,6 +102,7 @@ namespace RdpManager
                 }
                 try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
 
+                Core.PersistLog.Write(SettingsStore.Dir, "update-bootstrap: uruchamiam zaktualizowany exe");
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(targetPath) { UseShellExecute = true });
             }
             catch (Exception ex) { LogCrash("update", ex); }

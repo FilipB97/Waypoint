@@ -32,10 +32,13 @@ namespace RdpManager
                 var bak = ReadOrNull(path + ".bak", preserveCorrupt: false);
                 if (bak != null && (main == null || DataScore(bak) >= DataScore(main)))
                 {
+                    PersistLog.Write(dir, $"settings.Load: SELF-HEAL z .bak (main={(main == null ? -1 : DataScore(main))}, bak={DataScore(bak)})");
                     try { File.Copy(path + ".bak", path, overwrite: true); } catch { /* best-effort */ }
                     return bak;
                 }
+                PersistLog.Write(dir, $"settings.Load: .bak nowszy, lecz uboższy/pusty → zostaje główny (main={(main == null ? -1 : DataScore(main))}, bak={(bak == null ? -1 : DataScore(bak))})");
             }
+            PersistLog.Write(dir, $"settings.Load: główny (score={(main == null ? -1 : DataScore(main))}, istnieje={File.Exists(path)})");
             return main ?? new AppSettings();
         }
 
@@ -68,6 +71,7 @@ namespace RdpManager
         public static void Save(AppSettings settings, string dir)
         {
             var path = FilePath(dir);
+            PersistLog.Write(dir, $"settings.Save: score={DataScore(settings)}");
             AtomicFile.Backup(path);   // kopia poprzedniej wersji na wypadek błędnego zapisu
             AtomicFile.WriteAllText(path, JsonSerializer.Serialize(settings, Options));
         }

@@ -38,11 +38,14 @@ namespace RdpManager
                 var bak = ReadOrNull(path + ".bak", preserveCorrupt: false);
                 if (bak != null && (main == null || bak.Count >= main.Count))
                 {
+                    PersistLog.Write(dir, $"servers.Load: SELF-HEAL z .bak (main={(main == null ? -1 : main.Count)}, bak={bak.Count})");
                     try { File.Copy(path + ".bak", path, overwrite: true); } catch { /* best-effort */ }
                     return bak;
                 }
+                PersistLog.Write(dir, $"servers.Load: .bak nowszy, lecz nie liczniejszy → zostaje główny (main={(main == null ? -1 : main.Count)}, bak={(bak == null ? -1 : bak.Count)})");
             }
-            if (main != null) return main;
+            if (main != null) { PersistLog.Write(dir, $"servers.Load: główny ({main.Count} serwerów)"); return main; }
+            PersistLog.Write(dir, "servers.Load: brak/nieczytelny główny → seed danymi przykładowymi");
 
             // Pierwsze uruchomienie: seed z przykładowych danych, potem zapis.
             var seed = new List<ServerInfo>();
@@ -75,6 +78,7 @@ namespace RdpManager
         public static void Save(List<ServerInfo> servers, string dir)
         {
             var path = FilePath(dir);
+            PersistLog.Write(dir, $"servers.Save: {servers.Count} serwerów");
             AtomicFile.Backup(path);   // kopia poprzedniej listy na wypadek błędnego zapisu
             AtomicFile.WriteAllText(path, JsonSerializer.Serialize(servers, Options));
         }
