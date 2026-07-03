@@ -144,6 +144,9 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.mac">Adres MAC — Wake-on-LAN (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.mac.ph">np. AA:BB:CC:DD:EE:FF</sys:String>
     <sys:String x:Key="S.se.mac.bad">Niepoprawny adres MAC: {0}</sys:String>
+    <sys:String x:Key="S.se.reveal">Pokaż / ukryj hasło</sys:String>
+    <sys:String x:Key="S.se.iconcolor">Kolor ikony</sys:String>
+    <sys:String x:Key="S.se.iconcolor.auto">Automatyczny (wg grupy)</sys:String>
 
     <!-- dialog: poświadczenia -->
     <sys:String x:Key="S.cp.title">Poświadczenia</sys:String>
@@ -171,6 +174,14 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
     <sys:String x:Key="S.m.wol">Obudź (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplikuj serwer…</sys:String>
+    <sys:String x:Key="S.m.copy">Kopiuj</sys:String>
+    <sys:String x:Key="S.m.copy.name">Nazwę</sys:String>
+    <sys:String x:Key="S.m.copy.host">Host / adres</sys:String>
+    <sys:String x:Key="S.m.copy.port">Port</sys:String>
+    <sys:String x:Key="S.m.copy.user">Użytkownika</sys:String>
+    <sys:String x:Key="S.m.copy.domain">Domenę</sys:String>
+    <sys:String x:Key="S.m.copy.pass">Hasło</sys:String>
+    <sys:String x:Key="S.m.copy.userpass">Użytkownik + hasło</sys:String>
     <sys:String x:Key="S.copy.suffix">(kopia)</sys:String>
 
     <!-- pass 2b: ulotne komunikaty z code-behind (statusy, dialogi, prompty, diagnostyka) -->
@@ -188,6 +199,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.multimon">Pełny ekran (wszystkie monitory) — Ctrl+Alt+Break lub pasek połączenia, by wrócić.</sys:String>
     <sys:String x:Key="S.st.diagnosing">Diagnostyka {0}:{1}…</sys:String>
     <sys:String x:Key="S.st.imported">Zaimportowano serwerów: {0}</sys:String>
+    <sys:String x:Key="S.st.copied">Skopiowano do schowka</sys:String>
+    <sys:String x:Key="S.st.copyempty">Brak wartości do skopiowania</sys:String>
     <sys:String x:Key="S.st.importedMstsc">Zaimportowano z mstsc: {0}</sys:String>
     <sys:String x:Key="S.st.exported">Wyeksportowano do {0}</sys:String>
     <sys:String x:Key="S.st.saved">Zapisano ✓</sys:String>

@@ -144,6 +144,9 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.mac">MAC address — Wake-on-LAN (optional)</sys:String>
     <sys:String x:Key="S.se.mac.ph">e.g. AA:BB:CC:DD:EE:FF</sys:String>
     <sys:String x:Key="S.se.mac.bad">Invalid MAC address: {0}</sys:String>
+    <sys:String x:Key="S.se.reveal">Show / hide password</sys:String>
+    <sys:String x:Key="S.se.iconcolor">Icon color</sys:String>
+    <sys:String x:Key="S.se.iconcolor.auto">Automatic (by group)</sys:String>
 
     <!-- dialog: credentials -->
     <sys:String x:Key="S.cp.title">Credentials</sys:String>
@@ -171,6 +174,14 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.renamegroup">Rename group…</sys:String>
     <sys:String x:Key="S.m.wol">Wake up (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplicate server…</sys:String>
+    <sys:String x:Key="S.m.copy">Copy</sys:String>
+    <sys:String x:Key="S.m.copy.name">Name</sys:String>
+    <sys:String x:Key="S.m.copy.host">Host / address</sys:String>
+    <sys:String x:Key="S.m.copy.port">Port</sys:String>
+    <sys:String x:Key="S.m.copy.user">Username</sys:String>
+    <sys:String x:Key="S.m.copy.domain">Domain</sys:String>
+    <sys:String x:Key="S.m.copy.pass">Password</sys:String>
+    <sys:String x:Key="S.m.copy.userpass">Username + password</sys:String>
     <sys:String x:Key="S.copy.suffix">(copy)</sys:String>
 
     <!-- pass 2b: transient code-behind messages (status, dialogs, prompts, diagnostics) -->
@@ -188,6 +199,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.multimon">Full screen (all monitors) — press Ctrl+Alt+Break or use the connection bar to return.</sys:String>
     <sys:String x:Key="S.st.diagnosing">Diagnostics {0}:{1}…</sys:String>
     <sys:String x:Key="S.st.imported">Imported servers: {0}</sys:String>
+    <sys:String x:Key="S.st.copied">Copied to clipboard</sys:String>
+    <sys:String x:Key="S.st.copyempty">Nothing to copy</sys:String>
     <sys:String x:Key="S.st.importedMstsc">Imported from mstsc: {0}</sys:String>
     <sys:String x:Key="S.st.exported">Exported to {0}</sys:String>
     <sys:String x:Key="S.st.saved">Saved ✓</sys:String>

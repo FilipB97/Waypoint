@@ -98,6 +98,11 @@
                         <ui:TextBox x:Name="MacBox" PlaceholderText="{DynamicResource S.se.mac.ph}"
                                     Width="260" HorizontalAlignment="Left"/>
                     </StackPanel>
+
+                    <StackPanel Margin="0,10,0,0">
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.iconcolor}"/>
+                        <WrapPanel x:Name="ColorSwatches"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -129,7 +134,18 @@
 
                     <TextBlock x:Name="PassLabel" Style="{StaticResource SeLbl}" Text="{DynamicResource S.pass}"/>
                     <StackPanel x:Name="PassPanel">
-                        <PasswordBox x:Name="PassBox" VerticalContentAlignment="Center"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <PasswordBox x:Name="PassBox" Grid.Column="0" VerticalContentAlignment="Center"/>
+                            <ui:TextBox x:Name="PassPlain" Grid.Column="0" Visibility="Collapsed" VerticalContentAlignment="Center"/>
+                            <ui:Button x:Name="RevealBtn" Grid.Column="1" Margin="8,0,0,0" Click="RevealPass_Click"
+                                       ToolTip="{DynamicResource S.se.reveal}">
+                                <ui:SymbolIcon x:Name="RevealIcon" Symbol="Eye24"/>
+                            </ui:Button>
+                        </Grid>
                         <CheckBox x:Name="SavePassCheck" Margin="0,8,0,0">
                             <TextBlock Text="{DynamicResource S.se.savepass}" TextWrapping="Wrap"/>
                         </CheckBox>

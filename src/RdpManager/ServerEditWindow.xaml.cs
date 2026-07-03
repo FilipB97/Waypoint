@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using RdpManager.Core;
 using RdpManager.Models;
 
@@ -47,6 +50,7 @@ namespace RdpManager
                 server.Protocol == RemoteProtocol.Http ? 4 : 0;
             KeyPathBox.Text = server.PrivateKeyPath ?? "";
             TunnelsBox.Text = server.Tunnels == null ? "" : string.Join(Environment.NewLine, server.Tunnels);
+            BuildColorSwatches();
             ApplyWinAuthState();
             ApplyProtocolState();
             _initializing = false;
@@ -83,7 +87,81 @@ namespace RdpManager
             UserBox.IsEnabled = !win;
             DomainBox.IsEnabled = !win;
             PassBox.IsEnabled = !win;
+            PassPlain.IsEnabled = !win;
+            RevealBtn.IsEnabled = !win;
             SavePassCheck.IsEnabled = !win;
+        }
+
+        // Podgląd hasła: przełącza PasswordBox <-> zwykły TextBox (WPF PasswordBox nie ma trybu „pokaż").
+        private void RevealPass_Click(object sender, RoutedEventArgs e)
+        {
+            if (PassPlain.Visibility != Visibility.Visible)
+            {
+                PassPlain.Text = PassBox.Password;
+                PassBox.Visibility = Visibility.Collapsed;
+                PassPlain.Visibility = Visibility.Visible;
+                RevealIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.EyeOff24;
+                PassPlain.Focus();
+            }
+            else
+            {
+                PassBox.Password = PassPlain.Text;
+                PassPlain.Visibility = Visibility.Collapsed;
+                PassBox.Visibility = Visibility.Visible;
+                RevealIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.Eye24;
+                PassBox.Focus();
+            }
+        }
+
+        // Hasło z aktywnego pola (gdy odsłonięte, PasswordBox nie jest zsynchronizowany).
+        private string CurrentPassword()
+            => PassPlain.Visibility == Visibility.Visible ? PassPlain.Text : PassBox.Password;
+
+        // Wybór koloru awatara: presety + „Auto" (pusty = kolor wg grupy). Zaznaczenie = obrys akcentem.
+        private static readonly string[] SwatchColors =
+            { "", "#3B82F6", "#22C1C3", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#64748B" };
+        private string _avatarColor = "";
+        private readonly Dictionary<string, Border> _swatchByColor = new Dictionary<string, Border>();
+
+        private void BuildColorSwatches()
+        {
+            _avatarColor = _server.AvatarColor ?? "";
+            foreach (var hex in SwatchColors)
+            {
+                var sw = new Border
+                {
+                    Width = 26, Height = 26, CornerRadius = new CornerRadius(6),
+                    Margin = new Thickness(0, 0, 8, 6), Cursor = Cursors.Hand, BorderThickness = new Thickness(2),
+                    ToolTip = hex.Length == 0 ? LocalizationManager.S("S.se.iconcolor.auto") : hex
+                };
+                if (hex.Length == 0)
+                {
+                    sw.Background = (Brush)TryFindResource("Elevated") ?? Brushes.Gray;
+                    sw.Child = new TextBlock
+                    {
+                        Text = "A", Foreground = (Brush)TryFindResource("TextSec") ?? Brushes.White,
+                        FontWeight = FontWeights.Bold, FontSize = 12,
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                    };
+                }
+                else
+                {
+                    try { sw.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)); }
+                    catch { continue; }
+                }
+                string captured = hex;
+                sw.MouseLeftButtonUp += (s, e) => { _avatarColor = captured; HighlightSwatches(); };
+                _swatchByColor[hex] = sw;
+                ColorSwatches.Children.Add(sw);
+            }
+            HighlightSwatches();
+        }
+
+        private void HighlightSwatches()
+        {
+            var accent = (Brush)TryFindResource("Accent") ?? Brushes.DodgerBlue;
+            foreach (var kv in _swatchByColor)
+                kv.Value.BorderBrush = kv.Key == _avatarColor ? accent : Brushes.Transparent;
         }
 
         // Porty domyślne wszystkich protokołów — port podmieniamy tylko, gdy bieżąca wartość
@@ -203,10 +281,10 @@ namespace RdpManager
             _server.GatewayHostname = GatewayHostBox.Text.Trim();
             _server.GatewayUsageMethod = EdGatewayUsage.SelectedIndex < 0 ? 0 : EdGatewayUsage.SelectedIndex;
 
-            if (string.IsNullOrWhiteSpace(_server.Initials))
-                _server.Initials = RdpUtils.MakeInitials(_server.Name);
+            _server.AvatarColor = _avatarColor ?? "";
+            _server.Initials = RdpUtils.MakeInitials(_server.Name);   // zawsze z nazwy (leczy stare inicjały z IP)
 
-            EnteredPassword = (creds && !_server.UseWindowsAccount) ? PassBox.Password : "";
+            EnteredPassword = (creds && !_server.UseWindowsAccount) ? CurrentPassword() : "";
             DialogResult = true;
         }
 

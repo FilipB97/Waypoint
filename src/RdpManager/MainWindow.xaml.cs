@@ -1078,10 +1078,10 @@ namespace RdpManager
             var avatar = new Border
             {
                 Width = 22, Height = 22, CornerRadius = new CornerRadius(6),
-                Background = AvatarBrush(server.Group), Margin = new Thickness(8, 0, 0, 0),
+                Background = AvatarBrush(server), Margin = new Thickness(8, 0, 0, 0),
                 Child = new TextBlock
                 {
-                    Text = server.Initials, Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -1159,6 +1159,7 @@ namespace RdpManager
             };
 
             var menu = new ContextMenu();
+            bool rdp = server.Protocol == RemoteProtocol.Rdp;
             var pinItem = new MenuItem { Header = L(server.Pinned ? "S.m.unpin" : "S.m.pin") };
             pinItem.Click += (s, e) => TogglePin(server);
             var newWinItem = new MenuItem { Header = L("S.m.newwin") };
@@ -1173,6 +1174,28 @@ namespace RdpManager
             editItem.Click += (s, e) => EditServer(server);
             var dupItem = new MenuItem { Header = L("S.m.dupserver") };
             dupItem.Click += (s, e) => DuplicateServer(server);
+
+            // Kopiuj ▸ — pojedyncze pola (i login+hasło) do schowka. Hasło z Credential Managera na żądanie.
+            var copyMenu = new MenuItem { Header = L("S.m.copy") };
+            void AddCopy(string key, Func<string> value)
+            {
+                var mi = new MenuItem { Header = L(key) };
+                mi.Click += (s, e) => CopyToClipboard(value());
+                copyMenu.Items.Add(mi);
+            }
+            AddCopy("S.m.copy.name", () => server.Name);
+            AddCopy("S.m.copy.host", () => server.Host);
+            if (server.Protocol != RemoteProtocol.Http)
+                AddCopy("S.m.copy.port", () => server.Port.ToString());
+            if (rdp || server.Protocol == RemoteProtocol.Ssh)
+            {
+                AddCopy("S.m.copy.user", () => server.Username);
+                if (rdp) AddCopy("S.m.copy.domain", () => server.Domain);
+                copyMenu.Items.Add(new Separator());
+                AddCopy("S.m.copy.pass", () => ReadPassword(server));
+                AddCopy("S.m.copy.userpass", () => server.Username + "\t" + ReadPassword(server));
+            }
+
             var diagItem = new MenuItem { Header = L("S.m.diag") };
             diagItem.Click += (s, e) => DiagnoseServer(server);
             var wolItem = new MenuItem
@@ -1185,13 +1208,13 @@ namespace RdpManager
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
-            bool rdp = server.Protocol == RemoteProtocol.Rdp;
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
             if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
             if (rdp || server.Protocol == RemoteProtocol.Ssh) menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(dupItem);
+            menu.Items.Add(copyMenu);
             if (server.Protocol != RemoteProtocol.Serial && server.Protocol != RemoteProtocol.Http)
                 menu.Items.Add(diagItem);   // sonda TCP — nie dla COM/URL
             menu.Items.Add(wolItem);
@@ -1474,8 +1497,8 @@ namespace RdpManager
 
         private void LoadToolbar(Session s)
         {
-            CfAvatar.Background = AvatarBrush(s.Server.Group);
-            CfAvatarText.Text = s.Server.Initials;
+            CfAvatar.Background = AvatarBrush(s.Server);
+            CfAvatarText.Text = ServerInitials(s.Server);
             CfName.Text = s.Server.Name;
             CfHost.Text = s.Server.Host + ":" + s.Server.Port;
             // Konto Windows tylko dla RDP; Telnet/Serial nie mają pól poświadczeń w ogóle.
@@ -1497,23 +1520,26 @@ namespace RdpManager
                 BorderThickness = new Thickness(1),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
-                Padding = new Thickness(10, 5, 7, 5),
+                Padding = new Thickness(10, 6, 7, 5),
                 Margin = new Thickness(0, 0, 4, 0),
                 Cursor = Cursors.Hand,
                 Tag = session,
                 ToolTip = session.Server.Name + " — " + DisplayHost(session.Server)
             };
 
+            // 2 wiersze: treść (góra) + pasek podświetlenia (dół) z odstępem — pasek nie nachodzi na nazwę.
             var grid = new Grid();
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             var content = new StackPanel { Orientation = Orientation.Horizontal };
             content.Children.Add(new Border
             {
                 Width = 16, Height = 16, CornerRadius = new CornerRadius(4),
-                Background = AvatarBrush(session.Server.Group), VerticalAlignment = VerticalAlignment.Center,
+                Background = AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = session.Server.Initials, Foreground = Brushes.White, FontSize = 7, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(session.Server), Foreground = Brushes.White, FontSize = 7, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             });
@@ -1551,14 +1577,16 @@ namespace RdpManager
             close.MouseLeftButtonUp += (s, e) => { e.Handled = true; RequestCloseSession(session); };
             _tabClose[session] = close;
             content.Children.Add(close);
+            Grid.SetRow(content, 0);
             grid.Children.Add(content);
 
             var underline = new Rectangle
             {
                 Height = 2, Fill = (Brush)TryFindResource("Accent"), RadiusX = 1, RadiusY = 1,
-                VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(4, 0, 4, -3),
-                Visibility = Visibility.Collapsed
+                Margin = new Thickness(2, 4, 2, 0),
+                Visibility = Visibility.Hidden   // Hidden (nie Collapsed): karta ma stałą wysokość aktywna/nie
             };
+            Grid.SetRow(underline, 1);
             grid.Children.Add(underline);
 
             tab.Child = grid;
@@ -1645,7 +1673,7 @@ namespace RdpManager
                 b.Background = active ? (Brush)TryFindResource("Panel") : Brushes.Transparent;
                 b.BorderBrush = active ? (Brush)TryFindResource("Border") : Brushes.Transparent;
                 if (_tabUnderline.TryGetValue(s, out var u))
-                    u.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+                    u.Visibility = active ? Visibility.Visible : Visibility.Hidden;
                 if (_tabClose.TryGetValue(s, out var c))
                     c.Visibility = active ? Visibility.Visible : Visibility.Hidden;   // ✕ tylko na aktywnej/hoverze
             }
@@ -2502,10 +2530,10 @@ namespace RdpManager
 
             var avatar = new Border
             {
-                Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = AvatarBrush(server.Group),
+                Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = AvatarBrush(server),
                 Child = new TextBlock
                 {
-                    Text = server.Initials, Foreground = Brushes.White, FontSize = 7.5, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 7.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -2848,6 +2876,7 @@ namespace RdpManager
                 Name = ((src.Name ?? "").Trim() + " " + L("S.copy.suffix")).Trim(),
                 Host = src.Host, Port = src.Port, Username = src.Username, Domain = src.Domain,
                 UseWindowsAccount = src.UseWindowsAccount, Group = src.Group, Initials = src.Initials,
+                AvatarColor = src.AvatarColor,
                 Protocol = src.Protocol, PrivateKeyPath = src.PrivateKeyPath,
                 Tunnels = new List<string>(src.Tunnels ?? new List<string>()),
                 RedirectClipboard = src.RedirectClipboard, RedirectDrives = src.RedirectDrives,
@@ -2919,6 +2948,36 @@ namespace RdpManager
             else
                 CredentialStore.Delete(server.CredTarget);   // nie zapisujemy / kasujemy stare
         }
+
+        // Awatar serwera: własny kolor (hex) → gradient od koloru do jego ciemniejszego wariantu;
+        // brak koloru → automatyczny wg grupy. Inicjały zawsze z NAZWY (nie ze starego zapisu z IP).
+        private Brush AvatarBrush(ServerInfo s)
+        {
+            if (s != null && !string.IsNullOrWhiteSpace(s.AvatarColor))
+            {
+                try
+                {
+                    var c = (Color)ColorConverter.ConvertFromString(s.AvatarColor);
+                    var c2 = Color.FromRgb((byte)(c.R * 0.78), (byte)(c.G * 0.78), (byte)(c.B * 0.78));
+                    var g = new LinearGradientBrush(c, c2, 45); g.Freeze();
+                    return g;
+                }
+                catch { /* zły hex → fallback do grupy */ }
+            }
+            return AvatarBrush(s?.Group);
+        }
+
+        private static string ServerInitials(ServerInfo s) => RdpUtils.MakeInitials(s?.Name);
+
+        private void CopyToClipboard(string text)
+        {
+            if (string.IsNullOrEmpty(text)) { SetStatus(L("S.st.copyempty"), StatusKind.Ok); return; }
+            try { Clipboard.SetText(text); SetStatus(L("S.st.copied"), StatusKind.Ok); }
+            catch { /* schowek chwilowo zajęty przez inny proces */ }
+        }
+
+        private static string ReadPassword(ServerInfo s)
+            => CredentialStore.TryRead(s.CredTarget, out var p) ? (p ?? "") : "";
 
         private Brush AvatarBrush(string group)
         {
