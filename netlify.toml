@@ -1,3 +1,0 @@
-# Netlify: statyczna strona z folderu site/ (bez kroku budowania).
-[build]
-  publish = "site"

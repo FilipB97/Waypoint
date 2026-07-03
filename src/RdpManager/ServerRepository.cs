@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using RdpManager.Core;
 using RdpManager.Models;
 
 namespace RdpManager
@@ -53,8 +54,7 @@ namespace RdpManager
         /// <summary>Zapisuje listę do podanego katalogu (testowalne).</summary>
         public static void Save(List<ServerInfo> servers, string dir)
         {
-            Directory.CreateDirectory(dir);
-            File.WriteAllText(FilePath(dir), JsonSerializer.Serialize(servers, Options));
+            AtomicFile.WriteAllText(FilePath(dir), JsonSerializer.Serialize(servers, Options));
         }
     }
 }

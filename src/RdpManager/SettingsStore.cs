@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using RdpManager.Core;
 
 namespace RdpManager
 {
@@ -35,8 +36,7 @@ namespace RdpManager
         /// <summary>Zapisuje ustawienia do podanego katalogu (testowalne).</summary>
         public static void Save(AppSettings settings, string dir)
         {
-            Directory.CreateDirectory(dir);
-            File.WriteAllText(FilePath(dir), JsonSerializer.Serialize(settings, Options));
+            AtomicFile.WriteAllText(FilePath(dir), JsonSerializer.Serialize(settings, Options));
         }
     }
 }

@@ -13,6 +13,9 @@ namespace RdpManager.Core
     /// </summary>
     public static class KnownHosts
     {
+        /// <summary>Serializuje odczyt-modyfikację-zapis pliku (terminal + SFTP + wiele sesji naraz).</summary>
+        public static readonly object Sync = new object();
+
         public enum Status { Unknown, Match, Mismatch }
 
         /// <summary>Odcisk SHA256 klucza publicznego hosta w notacji OpenSSH (base64 bez '=').</summary>
@@ -49,7 +52,7 @@ namespace RdpManager.Core
             try
             {
                 Directory.CreateDirectory(dir);
-                File.WriteAllText(Path.Combine(dir, "known_hosts.json"),
+                AtomicFile.WriteAllText(Path.Combine(dir, "known_hosts.json"),
                     JsonSerializer.Serialize(store, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch { /* nieudany zapis = pytanie wróci przy kolejnym połączeniu */ }

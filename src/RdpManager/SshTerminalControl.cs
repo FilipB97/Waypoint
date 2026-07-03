@@ -138,6 +138,15 @@ namespace RdpManager
                 shell.DataReceived += OnShellData;
                 shell.Closed += (o, e) => RaiseDisconnected(null);
 
+                // Karta mogła zostać zamknięta w trakcie łączenia — wtedy DisposeClient już przebiegł
+                // i nikt nie zwolniłby tych zasobów. Sprzątnij i nie ożywiaj sesji.
+                if (IsTerminalDisposed)
+                {
+                    try { shell.Dispose(); } catch { }
+                    try { client.Dispose(); } catch { }
+                    return;
+                }
+
                 _client = client;
                 _shell = shell;
                 RaiseConnected();
@@ -241,19 +250,24 @@ namespace RdpManager
             try
             {
                 string fp = KnownHosts.Fingerprint(e.HostKey);
-                var store = KnownHosts.Load(SettingsStore.Dir);
-                var status = KnownHosts.Check(store, _hostKeyHost, _hostKeyPort, fp);
-                if (status == KnownHosts.Status.Match) { e.CanTrust = true; return; }
-
-                bool changed = status == KnownHosts.Status.Mismatch;
-                var ask = TrustHostKey;
-                bool trust = ask != null ? ask(_hostKeyHost + ":" + _hostKeyPort, fp, changed) : !changed;
-                if (trust)
+                // Cała operacja odczyt→sprawdzenie→zapis pod jednym lockiem: terminal i SFTP
+                // (oraz wiele sesji) potrafią trafić tu równolegle i pogubić/uciąć plik.
+                lock (KnownHosts.Sync)
                 {
-                    store[KnownHosts.EntryKey(_hostKeyHost, _hostKeyPort)] = fp;
-                    KnownHosts.Save(SettingsStore.Dir, store);
+                    var store = KnownHosts.Load(SettingsStore.Dir);
+                    var status = KnownHosts.Check(store, _hostKeyHost, _hostKeyPort, fp);
+                    if (status == KnownHosts.Status.Match) { e.CanTrust = true; return; }
+
+                    bool changed = status == KnownHosts.Status.Mismatch;
+                    var ask = TrustHostKey;
+                    bool trust = ask != null ? ask(_hostKeyHost + ":" + _hostKeyPort, fp, changed) : !changed;
+                    if (trust)
+                    {
+                        store[KnownHosts.EntryKey(_hostKeyHost, _hostKeyPort)] = fp;
+                        KnownHosts.Save(SettingsStore.Dir, store);
+                    }
+                    e.CanTrust = trust;
                 }
-                e.CanTrust = trust;
             }
             catch { e.CanTrust = false; }   // wątpliwość = odmowa (bezpieczny domyślny)
         }

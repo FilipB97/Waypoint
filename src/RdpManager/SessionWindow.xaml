@@ -67,7 +67,7 @@
         <!-- pasek pełnoekranowy (auto-hide) -->
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
-            <Border Background="#DD212226" CornerRadius="10" Padding="14,7" Margin="12,4,12,12"
+            <Border Background="{DynamicResource FsBarBg}" CornerRadius="10" Padding="14,7" Margin="12,4,12,12"
                     BorderBrush="{DynamicResource Border}" BorderThickness="1">
                 <Border.Effect><DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/></Border.Effect>
                 <StackPanel Orientation="Horizontal">
