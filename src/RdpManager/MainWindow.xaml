@@ -123,25 +123,25 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" HorizontalAlignment="Center">
-                        <Button x:Name="NavDashboard" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.dashboard}" Tag="Dashboard" Click="Nav_Click">
+                        <Button x:Name="NavDashboard" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.dashboard}" AutomationProperties.Name="{DynamicResource S.nav.dashboard}" Tag="Dashboard" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoDashboard" Symbol="Apps24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
-                        <Button x:Name="NavSessions" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.sessions}" Tag="Sessions" Click="Nav_Click">
+                        <Button x:Name="NavSessions" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.sessions}" AutomationProperties.Name="{DynamicResource S.nav.sessions}" Tag="Sessions" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoSessions" Symbol="Desktop24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
-                        <Button x:Name="NavRecent" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.recent}" Tag="Recent" Click="Nav_Click">
+                        <Button x:Name="NavRecent" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.recent}" AutomationProperties.Name="{DynamicResource S.nav.recent}" Tag="Recent" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoRecent" Symbol="History24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
-                        <Button x:Name="NavTools" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.tools}" Click="OpenPasswordGen_Click">
+                        <Button x:Name="NavTools" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.tools}" AutomationProperties.Name="{DynamicResource S.nav.tools}" Click="OpenPasswordGen_Click">
                             <ui:SymbolIcon x:Name="IcoTools" Symbol="Key24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">
-                        <Button x:Name="AvatarBtn" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.about}" Click="Avatar_Click">
+                        <Button x:Name="AvatarBtn" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.about}" AutomationProperties.Name="{DynamicResource S.nav.about}" Click="Avatar_Click">
                             <ui:SymbolIcon Symbol="Info24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
-                        <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.settings}" Tag="Settings" Click="Nav_Click">
+                        <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.settings}" AutomationProperties.Name="{DynamicResource S.nav.settings}" Tag="Settings" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="17" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                     </StackPanel>

@@ -1070,6 +1070,10 @@ namespace RdpManager
             _serverAccent.Clear();
             _serverStatusDot.Clear();
 
+            // Dostępność: strzałki i Tab przenoszą fokus między wierszami serwerów.
+            System.Windows.Input.KeyboardNavigation.SetDirectionalNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
+            System.Windows.Input.KeyboardNavigation.SetTabNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
+
             // Sekcja „Przypięte" na górze — ulubione serwery (kolejność z listy), niezależnie od grupy.
             var pinned = _vm.Servers.Where(s => s.Pinned && RdpUtils.MatchesFilter(s, filter)).ToList();
             if (pinned.Count > 0)
@@ -1268,8 +1272,21 @@ namespace RdpManager
 
             row.Child = grid;
 
+            // Dostępność: wiersz jest fokusowalny (nawigacja klawiaturą po drzewie), ma nazwę dla
+            // czytnika ekranu (nazwa + host + status tekstowo), a kropka statusu — swój tekst.
+            row.Focusable = true;
+            System.Windows.Automation.AutomationProperties.SetName(row,
+                server.Name + " — " + DisplayHost(server) + " — " + StatusText(server.Status));
+            System.Windows.Automation.AutomationProperties.SetName(status, StatusText(server.Status));
+
             row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
-            row.MouseLeave += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
+            row.MouseLeave += (s, e) => { if (_active?.Server != server && !row.IsKeyboardFocused) row.Background = Brushes.Transparent; };
+            row.GotKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
+            row.LostKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
+            row.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter || e.Key == Key.Space) { LaunchServer(server, true); e.Handled = true; }
+            };
 
             // Drag&drop: przeciągnięcie zmienia kolejność (a upuszczenie na inną grupę przenosi do niej).
             row.AllowDrop = true;
@@ -3310,6 +3327,17 @@ namespace RdpManager
                 case ServerStatus.Online: return (Brush)TryFindResource("Online");
                 case ServerStatus.Idle: return (Brush)TryFindResource("Idle");
                 default: return (Brush)TryFindResource("Offline");
+            }
+        }
+
+        /// <summary>Tekstowy odpowiednik statusu (dla czytników ekranu — status nie tylko kolorem).</summary>
+        private static string StatusText(ServerStatus status)
+        {
+            switch (status)
+            {
+                case ServerStatus.Online: return LocalizationManager.S("S.status.online");
+                case ServerStatus.Idle: return LocalizationManager.S("S.status.idle");
+                default: return LocalizationManager.S("S.status.offline");
             }
         }
 

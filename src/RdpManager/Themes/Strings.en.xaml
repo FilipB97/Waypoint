@@ -221,6 +221,9 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
 
     <sys:String x:Key="S.dash.servers">Servers</sys:String>
     <sys:String x:Key="S.dash.reachable">Reachable</sys:String>
+    <sys:String x:Key="S.status.online">online</sys:String>
+    <sys:String x:Key="S.status.idle">idle</sys:String>
+    <sys:String x:Key="S.status.offline">offline</sys:String>
     <sys:String x:Key="S.dash.opensessions">Open sessions</sys:String>
     <sys:String x:Key="S.dash.recent">Recently used</sys:String>
     <sys:String x:Key="S.dash.conns7">Connections (7 days)</sys:String>
