@@ -67,6 +67,9 @@ namespace RdpManager
         /// <summary>Zapisane grupy kart (stosy jak w Vivaldi). Odtwarzane przy starcie — sesje serwerów
         /// z danej grupy trafiają do niej automatycznie.</summary>
         public List<TabGroupDef> TabGroups { get; set; } = new List<TabGroupDef>();
+
+        /// <summary>Styl renderowania listy serwerów i paska kart: „Default" | „Minimal".</summary>
+        public string ListStyle { get; set; } = "Default";
     }
 
     /// <summary>Zapis grupy kart w settings.json (kolor jako #AARRGGBB).</summary>

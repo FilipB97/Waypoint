@@ -375,6 +375,11 @@
                                 <ComboBoxItem Content="Polski" Tag="pl"/>
                                 <ComboBoxItem Content="English" Tag="en"/>
                             </ComboBox>
+                            <TextBlock Text="{DynamicResource S.set.liststyle}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
+                            <ComboBox x:Name="SetListStyle" Width="160" HorizontalAlignment="Left">
+                                <ComboBoxItem Content="{DynamicResource S.liststyle.default}" Tag="Default"/>
+                                <ComboBoxItem Content="{DynamicResource S.liststyle.minimal}" Tag="Minimal"/>
+                            </ComboBox>
                         </StackPanel>
                     </Border>
 

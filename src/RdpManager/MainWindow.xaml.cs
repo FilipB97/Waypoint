@@ -30,7 +30,9 @@ namespace RdpManager
         private Session _active;
 
         private readonly Dictionary<ServerInfo, Border> _serverRows = new Dictionary<ServerInfo, Border>();
-        private readonly Dictionary<ServerInfo, Rectangle> _serverAccent = new Dictionary<ServerInfo, Rectangle>();
+        // Jak wiersz odzwierciedla stan „aktywny" — różni się między stylami (Domyślny: obrys+tło,
+        // Minimal: pasek koloru→akcent+tło). UpdateActiveRows woła te akcje zamiast znać elementy.
+        private readonly Dictionary<ServerInfo, Action<bool>> _serverActivate = new Dictionary<ServerInfo, Action<bool>>();
         private readonly Dictionary<ServerInfo, Ellipse> _serverStatusDot = new Dictionary<ServerInfo, Ellipse>();
         private readonly Dictionary<Session, Rectangle> _tabUnderline = new Dictionary<Session, Rectangle>();
         private readonly Dictionary<Session, Ellipse> _tabStatus = new Dictionary<Session, Ellipse>();
@@ -133,6 +135,7 @@ namespace RdpManager
             _focusPeekPoll.Tick += FocusPeekPollTick;
 
             BuildServerTree();
+            ApplyTabStripStyle();   // margines paska / rozmiar ikon wg stylu (Domyślny/Minimal) — zanim wejdą karty
             UpdateToolbarEnabled();
             UpdateToolbarMode();
 
@@ -693,6 +696,7 @@ namespace RdpManager
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
             SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
             SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
+            SetListStyle.SelectedIndex = _settings.ListStyle == "Minimal" ? 1 : 0;
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
             SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
             SetAutoReconnect.IsChecked = _settings.AutoReconnect;
@@ -839,6 +843,7 @@ namespace RdpManager
                 .Where(id => !string.IsNullOrEmpty(id)).ToList();
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
+            _settings.ListStyle = (SetListStyle.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Default";
 
             SettingsStore.Save(_settings);
             ApplySettings();
@@ -874,6 +879,9 @@ namespace RdpManager
             BuildTrayMenu();   // etykiety menu zasobnika w nowym języku
             ApplyHotkey();
             UpdateImmersive();
+            // Styl widoku (Domyślny/Minimalny) i motyw zmieniają wygląd wierszy/kart — przerysuj oba na żywo.
+            RenderTree(SearchBox.Text);
+            RebuildTabStrip();
         }
 
         private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
@@ -1151,7 +1159,7 @@ namespace RdpManager
             filter = (filter ?? "").Trim().ToLowerInvariant();
             ServerTree.Children.Clear();
             _serverRows.Clear();
-            _serverAccent.Clear();
+            _serverActivate.Clear();
             _serverStatusDot.Clear();
 
             // Sekcja „Przypięte" na górze — ulubione serwery (kolejność z listy), niezależnie od grupy.
@@ -1192,7 +1200,8 @@ namespace RdpManager
         {
             var row = new Border
             {
-                Padding = new Thickness(6, 10, 6, 4),
+                // Minimal: ciaśniejszy padding niż domyślny (lżejsze nagłówki grup i sekcja przypiętych).
+                Padding = IsMinimalList ? new Thickness(6, 5, 6, 2) : new Thickness(6, 10, 6, 4),
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand
             };
@@ -1282,7 +1291,13 @@ namespace RdpManager
             RenderTree(SearchBox.Text);
         }
 
+        private bool IsMinimalList => _settings != null && _settings.ListStyle == "Minimal";
+
         private FrameworkElement BuildServerRow(ServerInfo server)
+            => IsMinimalList ? BuildServerRowMinimal(server) : BuildServerRowDefault(server);
+
+        // Wariant DOMYŚLNY (bez zmian): awatar 22px + dwie linie (nazwa/host) + kropka statusu po prawej.
+        private FrameworkElement BuildServerRowDefault(ServerInfo server)
         {
             var row = new Border
             {
@@ -1352,6 +1367,95 @@ namespace RdpManager
 
             row.Child = grid;
 
+            _serverActivate[server] = active =>
+            {
+                row.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+                accent.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+            };
+            WireServerRow(row, server);
+            return row;
+        }
+
+        // Wariant MINIMALISTYCZNY: jednowierszowy, bez awatara — pasek koloru + kropka statusu + nazwa/host.
+        private FrameworkElement BuildServerRowMinimal(ServerInfo server)
+        {
+            var row = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                Margin = new Thickness(0, 1, 0, 1),
+                Padding = new Thickness(0, 3, 8, 3),
+                Background = Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                Tag = server
+            };
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });                    // pasek koloru
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                      // kropka
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // nazwa
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                      // host
+
+            // Pasek koloru przy lewej krawędzi = tożsamość serwera; zmienia się na akcent, gdy zaznaczony.
+            var serverColor = AvatarBrush(server);
+            var bar = new Rectangle
+            {
+                Width = 3, RadiusX = 2, RadiusY = 2, Fill = serverColor,
+                VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(0, 3, 0, 3)
+            };
+            Grid.SetColumn(bar, 0);
+            grid.Children.Add(bar);
+
+            var status = new Ellipse
+            {
+                Width = 7, Height = 7, Fill = StatusBrush(server.Status),
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(11, 0, 0, 0)
+            };
+            _serverStatusDot[server] = status;
+            Grid.SetColumn(status, 1);
+            grid.Children.Add(status);
+
+            var name = new TextBlock
+            {
+                Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 13, FontWeight = FontWeights.Medium,
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(9, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            Grid.SetColumn(name, 2);
+            grid.Children.Add(name);
+
+            // Host dosunięty do prawej (z opcjonalną gwiazdką przypięcia), przycinany przy długich nazwach.
+            var rightPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center
+            };
+            if (server.Pinned)
+                rightPanel.Children.Add(new TextBlock
+                {
+                    Text = "★", Foreground = (Brush)TryFindResource("Idle"), FontSize = 9,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+                });
+            rightPanel.Children.Add(new TextBlock
+            {
+                Text = DisplayHost(server), Foreground = (Brush)TryFindResource("TextTer"), FontSize = 11.5,
+                FontFamily = (FontFamily)TryFindResource("Mono"), VerticalAlignment = VerticalAlignment.Center,
+                MaxWidth = 100, TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            Grid.SetColumn(rightPanel, 3);
+            grid.Children.Add(rightPanel);
+
+            row.Child = grid;
+
+            _serverActivate[server] = active =>
+            {
+                row.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+                bar.Fill = active ? (Brush)TryFindResource("Accent") : serverColor;
+            };
+            WireServerRow(row, server);
+            return row;
+        }
+
+        // Wspólne zachowanie wiersza (hover / przeciąganie-zmiana kolejności / klik / menu) — jednakowe w obu stylach.
+        private void WireServerRow(Border row, ServerInfo server)
+        {
             row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
             row.MouseLeave += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
 
@@ -1392,6 +1496,12 @@ namespace RdpManager
                 LaunchServer(server, true);
             };
 
+            row.ContextMenu = BuildServerContextMenu(server);
+            _serverRows[server] = row;
+        }
+
+        private ContextMenu BuildServerContextMenu(ServerInfo server)
+        {
             var menu = new ContextMenu();
             bool rdp = server.Protocol == RemoteProtocol.Rdp;
             var pinItem = new MenuItem { Header = L(server.Pinned ? "S.m.unpin" : "S.m.pin") };
@@ -1455,21 +1565,13 @@ namespace RdpManager
             if (rdp) menu.Items.Add(exportItem);       // .rdp ma sens tylko dla RDP
             menu.Items.Add(new Separator());
             menu.Items.Add(delItem);
-            row.ContextMenu = menu;
-
-            _serverRows[server] = row;
-            _serverAccent[server] = accent;
-            return row;
+            return menu;
         }
 
         private void UpdateActiveRows()
         {
-            foreach (var kv in _serverRows)
-            {
-                bool active = _active != null && _active.Server == kv.Key;
-                kv.Value.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
-                _serverAccent[kv.Key].Visibility = active ? Visibility.Visible : Visibility.Collapsed;
-            }
+            foreach (var kv in _serverActivate)
+                kv.Value(_active != null && _active.Server == kv.Key);
         }
 
         /// <summary>Zmienia kolejność serwerów (drag&drop): wstawia <paramref name="dragged"/> przed albo
@@ -1761,9 +1863,11 @@ namespace RdpManager
         // ---------- Pasek zakładek ----------
 
         private FrameworkElement BuildTab(Session session)
+            => IsMinimalList ? BuildTabMinimal(session) : BuildTabDefault(session);
+
+        // Wariant DOMYŚLNY: awatar 14px + nazwa + kropka statusu + ✕; aktywna = podkreślenie akcentem.
+        private FrameworkElement BuildTabDefault(Session session)
         {
-            // Pastylka w stylu Windows Terminal: pełne zaokrąglenie, aktywna = wypełnienie + obrys,
-            // najechanie podświetla nieaktywną i pokazuje ✕ (Hidden, nie Collapsed — szerokość stała).
             var tab = new Border
             {
                 CornerRadius = new CornerRadius(6),
@@ -1810,38 +1914,98 @@ namespace RdpManager
             };
             _tabStatus[session] = tabDot;
             content.Children.Add(tabDot);
+            content.Children.Add(BuildTabClose(session));
+            Grid.SetRow(content, 0);
+            grid.Children.Add(content);
+
+            var underline = BuildTabUnderline(new Thickness(2, 4, 2, 0));
+            Grid.SetRow(underline, 1);
+            grid.Children.Add(underline);
+
+            tab.Child = grid;
+            _tabUnderline[session] = underline;
+            WireTab(tab, session);
+            return tab;
+        }
+
+        // Wariant MINIMALISTYCZNY: kropka statusu + nazwa (bez awatara i hosta) — niższa, lżejsza karta.
+        private FrameworkElement BuildTabMinimal(Session session)
+        {
+            var tab = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1),
+                BorderBrush = Brushes.Transparent,
+                Background = Brushes.Transparent,
+                Padding = new Thickness(11, 3, 6, 3),
+                Margin = new Thickness(0, 0, 4, 0),
+                Cursor = Cursors.Hand,
+                Tag = session,
+                ToolTip = session.Server.Name + " — " + DisplayHost(session.Server)
+            };
+
+            var grid = new Grid();
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var content = new StackPanel { Orientation = Orientation.Horizontal };
+            var tabDot = new Ellipse
+            {
+                Width = 7, Height = 7, Fill = StatusBrush(ServerStatus.Offline), VerticalAlignment = VerticalAlignment.Center
+            };
+            _tabStatus[session] = tabDot;
+            content.Children.Add(tabDot);
+            var tabName = new TextBlock
+            {
+                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5,
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
+            };
+            _tabName[session] = tabName;
+            content.Children.Add(tabName);
+            content.Children.Add(BuildTabClose(session));
+            Grid.SetRow(content, 0);
+            grid.Children.Add(content);
+
+            var underline = BuildTabUnderline(new Thickness(2, 3, 2, 0));
+            Grid.SetRow(underline, 1);
+            grid.Children.Add(underline);
+
+            tab.Child = grid;
+            _tabUnderline[session] = underline;
+            WireTab(tab, session);
+            return tab;
+        }
+
+        // ✕ karty (wspólny dla obu stylów): pokazywany na aktywnej/hoverze (Hidden, nie Collapsed — stała szerokość).
+        private TextBlock BuildTabClose(Session session)
+        {
             var close = new TextBlock
             {
                 Text = "✕", Foreground = (Brush)TryFindResource("TextTer"), FontSize = 11,
                 Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(3, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand,
-                Visibility = Visibility.Hidden   // Hidden (nie Collapsed): karta nie zmienia szerokości na hover
+                Visibility = Visibility.Hidden
             };
             close.MouseEnter += (s, e) => close.Foreground = (Brush)TryFindResource("Danger");
             close.MouseLeave += (s, e) => close.Foreground = (Brush)TryFindResource("TextTer");
             close.MouseLeftButtonUp += (s, e) => { e.Handled = true; RequestCloseSession(session); };
             _tabClose[session] = close;
-            content.Children.Add(close);
-            Grid.SetRow(content, 0);
-            grid.Children.Add(content);
+            return close;
+        }
 
-            var underline = new Rectangle
-            {
-                Height = 2, Fill = (Brush)TryFindResource("Accent"), RadiusX = 1, RadiusY = 1,
-                Margin = new Thickness(2, 4, 2, 0),
-                Visibility = Visibility.Hidden   // Hidden (nie Collapsed): karta ma stałą wysokość aktywna/nie
-            };
-            Grid.SetRow(underline, 1);
-            grid.Children.Add(underline);
+        private Rectangle BuildTabUnderline(Thickness margin) => new Rectangle
+        {
+            Height = 2, Fill = (Brush)TryFindResource("Accent"), RadiusX = 1, RadiusY = 1,
+            Margin = margin, Visibility = Visibility.Hidden   // Hidden: karta ma stałą wysokość aktywna/nie
+        };
 
-            tab.Child = grid;
-
-            // Hover: podświetlenie nieaktywnej + pokazanie ✕; zejście przywraca stan z RefreshTabStyles.
+        // Wspólne zachowanie karty (hover / klik / środkowy-klik / przeciąganie: grupuj lub zmień kolejność / menu).
+        private void WireTab(Border tab, Session session)
+        {
             tab.MouseEnter += (s, e) =>
             {
-                if (session != _active)
-                    tab.Background = (Brush)TryFindResource("Elevated") ?? Brushes.Transparent;
-                close.Visibility = Visibility.Visible;
+                if (session != _active) tab.Background = (Brush)TryFindResource("Elevated") ?? Brushes.Transparent;
+                if (_tabClose.TryGetValue(session, out var c)) c.Visibility = Visibility.Visible;
             };
             tab.MouseLeave += (s, e) => RefreshTabStyles();
             tab.MouseLeftButtonUp += (s, e) =>
@@ -1855,7 +2019,6 @@ namespace RdpManager
                 if (e.ChangedButton == MouseButton.Middle) { RequestCloseSession(session); e.Handled = true; }
             };
 
-            // Drag&drop kart: przeciągnięcie zmienia kolejność (upuszczenie na lewą/prawą połowę celu).
             tab.AllowDrop = true;
             tab.PreviewMouseLeftButtonDown += (s, e) => { _tabDragStart = e.GetPosition(null); _tabDragSession = session; _tabDidDrag = false; };
             tab.PreviewMouseMove += (s, e) =>
@@ -1920,9 +2083,6 @@ namespace RdpManager
             tab.ContextMenu = tabMenu;
             // Pozycje dot. grup zależą od bieżącego stanu (jakie grupy istnieją) — wstrzykiwane przy otwarciu.
             tabMenu.Opened += (s, e) => PopulateTabGroupItems(tabMenu, session);
-
-            _tabUnderline[session] = underline;
-            return tab;
         }
 
         /// <summary>Wysyła jedną komendę (z Enterem) do wszystkich połączonych sesji SSH naraz.</summary>
@@ -2169,6 +2329,18 @@ namespace RdpManager
             if (s?.TabButton is FrameworkElement fe && fe.Parent is Panel p) p.Children.Remove(fe);
         }
 
+        // Minimal: niższy pasek kart (mniejszy margines) i drobniejsze ikony sesji po prawej stronie paska.
+        private void ApplyTabStripStyle()
+        {
+            bool min = IsMinimalList;
+            TabStrip.Margin = new Thickness(8, min ? 3 : 6, 8, min ? 3 : 6);
+            foreach (var b in SessionActions.Children.OfType<Button>())
+            {
+                b.Width = min ? 25 : 28;
+                b.Height = min ? 25 : 28;
+            }
+        }
+
         // Podpowiedź przy przeciąganiu karty: środek celu = podświetlenie („zgrupuj"), brzeg = pionowa
         // krawędź („wstaw przed/za"). Czyszczenie przywraca style wszystkich kart (RefreshTabStyles).
         private Border _tabDropTarget;
@@ -2218,6 +2390,7 @@ namespace RdpManager
         /// do wspólnego kontenera (z możliwością zwinięcia do liczby). Odłącza karty od starych rodziców.</summary>
         private void RebuildTabStrip()
         {
+            ApplyTabStripStyle();
             foreach (var s in _sessions) DetachTab(s);   // karta = jeden rodzic naraz
             TabStrip.Children.Clear();
             NormalizeGroupOrder();
@@ -2255,7 +2428,8 @@ namespace RdpManager
             var pill = new Border
             {
                 CornerRadius = new CornerRadius(5), Background = strong, Cursor = Cursors.Hand,
-                Padding = new Thickness(6, 2, 7, 3), Margin = new Thickness(1, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, IsMinimalList ? 1 : 2, 7, IsMinimalList ? 1 : 3),
+                Margin = new Thickness(1, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center,
                 ContextMenu = BuildGroupMenu(g)
             };
             var pillRow = new StackPanel { Orientation = Orientation.Horizontal };
@@ -2266,7 +2440,7 @@ namespace RdpManager
             });
             pillRow.Children.Add(new TextBlock
             {
-                Text = g.Name, Foreground = new SolidColorBrush(color), FontSize = 11.5, FontWeight = FontWeights.SemiBold,
+                Text = g.Name, Foreground = new SolidColorBrush(color), FontSize = IsMinimalList ? 11 : 11.5, FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
             });
             if (g.Collapsed)

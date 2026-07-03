@@ -42,6 +42,9 @@
     <sys:String x:Key="S.theme.light">Light</sys:String>
     <sys:String x:Key="S.theme.system">System</sys:String>
     <sys:String x:Key="S.set.language">Język / Language</sys:String>
+    <sys:String x:Key="S.set.liststyle">List view style</sys:String>
+    <sys:String x:Key="S.liststyle.default">Default</sys:String>
+    <sys:String x:Key="S.liststyle.minimal">Minimal</sys:String>
     <sys:String x:Key="S.set.conn">Connection</sys:String>
     <sys:String x:Key="S.set.port">Default RDP port</sys:String>
     <sys:String x:Key="S.set.colordepth">Default color depth (bit)</sys:String>
