@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Linq;
 using RdpManager.Models;
 
@@ -132,6 +133,91 @@ namespace RdpManager.Core
                 DescendRdg(group, string.IsNullOrEmpty(path) ? gname : path + " / " + gname,
                            user, domain, result, defaultPort);
             }
+        }
+
+        // ---------- Devolutions Remote Desktop Manager (eksport XML .rdm/.xml) ----------
+
+        /// <summary>
+        /// Parsuje eksport XML z RDM (root Connections lub ArrayOfConnection). Mapowanie typów:
+        /// RDPConfigured→RDP, SSHShell→SSH, Telnet→Telnet, WebBrowser→WWW. Wpisy-foldery
+        /// (ConnectionType=Group) pomijane; ścieżka grupy brana z pola &lt;Group&gt; każdego wpisu.
+        /// Haseł nie importujemy (RDM trzyma je zaszyfrowane własnym kluczem/skarbcem).
+        /// </summary>
+        public static Result ParseRdm(string xml)
+        {
+            var result = new Result();
+            var root = XDocument.Parse(xml).Root;
+            if (root == null) return result;
+
+            foreach (var node in root.Descendants().Where(e => LocalIs(e, "Connection")))
+            {
+                string type = Elem(node, "ConnectionType").ToUpperInvariant();
+                if (type.Length == 0 || type == "GROUP") continue;   // folder / pusty — nie połączenie
+
+                RemoteProtocol proto; int defPort;
+                switch (type)
+                {
+                    case "RDPCONFIGURED": proto = RemoteProtocol.Rdp;    defPort = 3389; break;
+                    case "SSHSHELL":      proto = RemoteProtocol.Ssh;    defPort = 22;   break;
+                    case "TELNET":        proto = RemoteProtocol.Telnet; defPort = 23;   break;
+                    case "WEBBROWSER":    proto = RemoteProtocol.Http;   defPort = 443;  break;
+                    default: result.UnsupportedProtocol++; continue;
+                }
+
+                string host = FirstNonEmpty(Elem(node, "Host"), Elem(node, "HostName"), Elem(node, "Url"));
+                if (host.Length == 0) continue;
+
+                int port = defPort;
+                if (proto != RemoteProtocol.Http)   // dla WWW cały adres (z ewentualnym portem) zostaje w Host
+                {
+                    var (h, p) = RdpUtils.SplitHostPort(host, defPort);
+                    host = h; port = p;
+                    if (int.TryParse(Elem(node, "Port"), out var pe) && pe >= 1 && pe <= 65535) port = pe;
+                }
+
+                string name = Elem(node, "Name");
+                string display = name.Length > 0 ? name : host;
+                result.Servers.Add(new ServerInfo
+                {
+                    Name = display,
+                    Host = host,
+                    Port = port,
+                    Protocol = proto,
+                    Username = FirstNonEmpty(Elem(node, "Username"), Elem(node, "UserName")),
+                    Domain = proto == RemoteProtocol.Rdp ? Elem(node, "Domain") : "",
+                    Group = RdmGroup(Elem(node, "Group")),
+                    Initials = RdpUtils.MakeInitials(display),
+                    Status = ServerStatus.Offline
+                });
+            }
+            return result;
+        }
+
+        private static bool LocalIs(XElement e, string name) =>
+            string.Equals(e.Name.LocalName, name, StringComparison.OrdinalIgnoreCase);
+
+        // Wartość pierwszego dziecka o danej nazwie lokalnej (ignoruje przestrzenie nazw).
+        private static string Elem(XElement parent, string localName)
+        {
+            foreach (var c in parent.Elements())
+                if (string.Equals(c.Name.LocalName, localName, StringComparison.OrdinalIgnoreCase))
+                    return (c.Value ?? "").Trim();
+            return "";
+        }
+
+        private static string FirstNonEmpty(params string[] vals)
+        {
+            foreach (var v in vals) if (!string.IsNullOrEmpty(v)) return v;
+            return "";
+        }
+
+        // "Klienci\ACME\Serwery" → "Klienci / ACME / Serwery" (spójnie z importem mRemoteNG/RDCMan).
+        private static string RdmGroup(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return "RDM";
+            var parts = raw.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
+                           .Select(p => p.Trim()).Where(p => p.Length > 0).ToArray();
+            return parts.Length == 0 ? "RDM" : string.Join(" / ", parts);
         }
     }
 }

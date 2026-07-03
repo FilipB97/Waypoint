@@ -383,10 +383,18 @@ namespace RdpManager
             if (WindowState == WindowState.Minimized || QuickSwitchPopup.IsOpen) return;
             if (!GetCursorPos(out POINT p)) return;
 
+            // Lewa krawędź LICZONA Z PROSTOKĄTA MONITORA (jak pasek pełnoekranowy), nie z PointToScreen(0,0):
+            // zmaksymalizowane okno wystaje ~8px poza monitor, więc PointToScreen dawało ujemny lewy brzeg
+            // i próg poza ekranem — trigger nigdy się nie odpalał.
+            IntPtr mon = MonitorFromWindow(new WindowInteropHelper(this).Handle, MONITOR_DEFAULTTONEAREST);
+            var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
+            if (!GetMonitorInfo(mon, ref mi)) return;
+            var r = mi.rcMonitor;
+
             if (!_focusPeeking)
             {
-                double leftX = PointToScreen(new Point(0, 0)).X;
-                if (p.X <= leftX + 3) { if (!_focusPeekDelay.IsEnabled) _focusPeekDelay.Start(); }
+                bool withinY = p.Y >= r.top && p.Y < r.bottom;
+                if (withinY && p.X <= r.left + 3) { if (!_focusPeekDelay.IsEnabled) _focusPeekDelay.Start(); }
                 else if (_focusPeekDelay.IsEnabled) _focusPeekDelay.Stop();
             }
             else
@@ -2493,6 +2501,10 @@ namespace RdpManager
         private void ImportRdg_Click(object sender, RoutedEventArgs e)
             => ImportExternal(L("S.dlg.importrdg.title"), L("S.dlg.rdg.filter"),
                 text => ExternalImport.ParseRdcMan(text, _settings.DefaultPort));
+
+        private void ImportRdm_Click(object sender, RoutedEventArgs e)
+            => ImportExternal(L("S.dlg.importrdm.title"), L("S.dlg.rdm.filter"),
+                text => ExternalImport.ParseRdm(text));
 
         // Wspólny przebieg importu z innego menedżera: plik → parser → dedup po host:port → zapis.
         // Hasła nie są przenoszone (mRemoteNG/RDCMan szyfrują je własnymi kluczami).

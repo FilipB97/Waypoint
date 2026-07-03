@@ -247,10 +247,13 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.rdpfile">Plik .rdp…</sys:String>
     <sys:String x:Key="S.import.mrng">mRemoteNG (confCons.xml)…</sys:String>
     <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
+    <sys:String x:Key="S.import.rdm">Devolutions RDM (.rdm/.xml)…</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Importuj z mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Importuj z RDCMan</sys:String>
     <sys:String x:Key="S.dlg.rdg.filter">RDCMan (*.rdg)|*.rdg|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdm.title">Importuj z Devolutions RDM</sys:String>
+    <sys:String x:Key="S.dlg.rdm.filter">Eksport RDM (*.rdm;*.xml)|*.rdm;*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.msg.import.unsupported">Pominięto nieobsługiwane protokoły: {0}</sys:String>
     <sys:String x:Key="S.msg.import.nopass">Hasła nie są przenoszone — podasz je przy pierwszym połączeniu.</sys:String>
 
