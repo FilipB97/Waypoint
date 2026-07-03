@@ -206,7 +206,9 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition x:Name="SessionHotZoneRow" Height="6"/>
+                    <!-- Strefa „hot zone" pod paskiem tylko dla kotwicy paska pełnoekranowego (Popup).
+                         W oknie 0 (żeby nie było odstępu pod kartami); w pełnym ekranie i tak jest 0. -->
+                    <RowDefinition x:Name="SessionHotZoneRow" Height="0"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -221,7 +223,9 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <ScrollViewer x:Name="TabScroller" Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                        <!-- Pasek przewijania ukryty: przy wielu kartach przewija się kółkiem myszy (handler niżej)
+                             i przeciąganiem — bez brzydkiego natywnego scrollbara pod kartami. -->
+                        <ScrollViewer x:Name="TabScroller" Grid.Column="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
                                       PreviewMouseWheel="TabScroller_PreviewMouseWheel">
                             <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,6,8,6"/>
                         </ScrollViewer>
@@ -256,12 +260,31 @@
                                 <TextBlock Text="&#x2715;" FontSize="13" Foreground="{DynamicResource Danger}" VerticalAlignment="Center"/>
                             </Button>
                         </StackPanel>
+                        <!-- Połączona sesja (poza trybem skupienia): akcje przy prawym końcu paska kart —
+                             zamiast osobnego paska stanu. Widoczne tylko gdy okno NIE jest w trybie skupienia,
+                             więc pasek kart nie leży w strefie caption i nie trzeba tu IsHitTestVisibleInChrome. -->
+                        <StackPanel x:Name="SessionActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
+                                    Margin="4,0,6,0" Visibility="Collapsed">
+                            <Button x:Name="FilesBtn" Style="{DynamicResource IconBtn}" Click="Files_Click"
+                                    Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}">
+                                <ui:SymbolIcon Symbol="Folder24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                            </Button>
+                            <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}">
+                                <TextBlock Text="&#x25A3;" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
+                                <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                            </Button>
+                            <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="{DynamicResource S.disconnect}">
+                                <TextBlock Text="✕" FontSize="14" Foreground="{DynamicResource Danger}"/>
+                            </Button>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
                 <!-- session toolbar: two states -->
                 <Border x:Name="SessionToolbar" Grid.Row="1" Background="{DynamicResource Panel}"
-                        BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="12,8">
+                        BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="12,5">
                     <Grid>
                         <!-- disconnected -> kompaktowy pasek połączenia (pełna edycja jest w oknie serwera) -->
                         <StackPanel x:Name="ConnectForm" Orientation="Horizontal" VerticalAlignment="Center">
@@ -285,33 +308,6 @@
                                        MaxWidth="460" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
 
-                        <!-- connected -> compact status bar -->
-                        <Grid x:Name="StatusPanel" Visibility="Collapsed">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="StatusLive" Text="{DynamicResource S.connected}" Foreground="{DynamicResource Online}" FontWeight="SemiBold"/>
-                                <TextBlock x:Name="StatusHost" Text="" FontFamily="{DynamicResource Mono}"
-                                           Foreground="{DynamicResource TextTer}" Margin="14,0,0,0" VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button x:Name="FilesBtn" Style="{DynamicResource IconBtn}" Click="Files_Click"
-                                        Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}">
-                                    <ui:SymbolIcon Symbol="Folder24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
-                                </Button>
-                                <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}">
-                                    <TextBlock Text="&#x25A3;" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
-                                </Button>
-                                <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
-                                    <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
-                                </Button>
-                                <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="{DynamicResource S.disconnect}">
-                                    <TextBlock Text="✕" FontSize="14" Foreground="{DynamicResource Danger}"/>
-                                </Button>
-                            </StackPanel>
-                        </Grid>
                     </Grid>
                 </Border>
 

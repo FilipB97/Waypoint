@@ -60,8 +60,21 @@ namespace RdpManager
         /// <summary>Pytaj na starcie o przywrócenie ostatnio otwartych połączeń.</summary>
         public bool RestorePrompt { get; set; } = true;
 
-        /// <summary>Serwery, z którymi łączyć się automatycznie na starcie. Niepuste = ma priorytet
-        /// nad popupem przywracania (łączymy z tymi i popup się nie pokazuje).</summary>
+        /// <summary>Serwery, z którymi łączyć się automatycznie na starcie, W KOLEJNOŚCI uruchamiania.
+        /// Niepuste = ma priorytet nad popupem przywracania (łączymy z tymi i popup się nie pokazuje).</summary>
         public List<string> AutoConnectServerIds { get; set; } = new List<string>();
+
+        /// <summary>Zapisane grupy kart (stosy jak w Vivaldi). Odtwarzane przy starcie — sesje serwerów
+        /// z danej grupy trafiają do niej automatycznie.</summary>
+        public List<TabGroupDef> TabGroups { get; set; } = new List<TabGroupDef>();
+    }
+
+    /// <summary>Zapis grupy kart w settings.json (kolor jako #AARRGGBB).</summary>
+    public class TabGroupDef
+    {
+        public string Name { get; set; }
+        public string Color { get; set; }
+        public bool Collapsed { get; set; }
+        public List<string> ServerIds { get; set; } = new List<string>();
     }
 }

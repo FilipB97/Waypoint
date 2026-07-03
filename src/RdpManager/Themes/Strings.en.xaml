@@ -178,6 +178,19 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.moveright">Move right</sys:String>
     <sys:String x:Key="S.m.closeothers">Close others</sys:String>
     <sys:String x:Key="S.m.close">Close</sys:String>
+    <!-- Tab groups (stacks like in Vivaldi) -->
+    <sys:String x:Key="S.m.newgroup">New group from tab…</sys:String>
+    <sys:String x:Key="S.m.addtogroup">Add to group</sys:String>
+    <sys:String x:Key="S.m.removefromgroup">Remove from group</sys:String>
+    <sys:String x:Key="S.m.grp.rename">Rename group…</sys:String>
+    <sys:String x:Key="S.m.grp.color">Group color</sys:String>
+    <sys:String x:Key="S.m.grp.collapse">Collapse group</sys:String>
+    <sys:String x:Key="S.m.grp.expand">Expand group</sys:String>
+    <sys:String x:Key="S.m.grp.ungroup">Ungroup</sys:String>
+    <sys:String x:Key="S.group.newtitle">New tab group</sys:String>
+    <sys:String x:Key="S.group.renametitle">Rename group</sys:String>
+    <sys:String x:Key="S.group.nameprompt">Group name:</sys:String>
+    <sys:String x:Key="S.group.default">Group</sys:String>
     <sys:String x:Key="S.m.renamegroup">Rename group…</sys:String>
     <sys:String x:Key="S.m.wol">Wake up (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplicate server…</sys:String>

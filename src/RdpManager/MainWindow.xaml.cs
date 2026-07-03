@@ -36,6 +36,9 @@ namespace RdpManager
         private readonly Dictionary<Session, Ellipse> _tabStatus = new Dictionary<Session, Ellipse>();
         private readonly Dictionary<Session, TextBlock> _tabName = new Dictionary<Session, TextBlock>();
         private readonly Dictionary<Session, TextBlock> _tabClose = new Dictionary<Session, TextBlock>();
+        // Grupy kart (stosy jak w Vivaldi). Przynależność po Id serwera (w TabGroup.ServerIds), więc
+        // grupy zapisują się do ustawień i wracają po restarcie. Runtime-lista niżej ładowana z _settings.
+        private readonly List<TabGroup> _tabGroups = new List<TabGroup>();
         private readonly MainViewModel _vm = new MainViewModel();
 
         private AppSettings _settings = new AppSettings();
@@ -101,6 +104,7 @@ namespace RdpManager
             _settings = SettingsStore.Load();
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
             _vm.UseRecentIds(_settings.RecentIds);   // współdziel listę „ostatnich" z ustawieniami
+            LoadTabGroups();                          // grupy kart z poprzedniej sesji (przypisanie po Id serwera)
             RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
 
             FsPopup.CustomPopupPlacementCallback = PlaceFsPopup;
@@ -707,30 +711,107 @@ namespace RdpManager
             SettingsStatus.Text = "";
         }
 
-        // Lista serwerów do „Połącz na starcie" — checkbox per serwer, zaznaczone = auto-połączenie.
+        // Lista serwerów do „Połącz na starcie": checkbox = auto-połączenie, przeciąganie (uchwyt ⠿) ustala
+        // KOLEJNOŚĆ uruchamiania. Wyświetlane najpierw zaznaczone (w zapisanej kolejności), potem reszta.
         private void BuildAutoConnectList()
         {
             AutoConnectList.Children.Clear();
-            var selected = new HashSet<string>(_settings.AutoConnectServerIds ?? new List<string>());
-            var any = false;
-            foreach (var s in _vm.Servers.OrderBy(v => v.Group).ThenBy(v => v.Name))
+            var servers = _vm.Servers.ToList();
+            if (servers.Count == 0)
             {
-                any = true;
-                AutoConnectList.Children.Add(new CheckBox
-                {
-                    Content = (string.IsNullOrWhiteSpace(s.Name) ? s.Host : s.Name) + "  —  " + DisplayHost(s),
-                    Tag = s.Id,
-                    IsChecked = selected.Contains(s.Id),
-                    Foreground = (Brush)TryFindResource("TextPrim"),
-                    Margin = new Thickness(0, 3, 0, 3)
-                });
-            }
-            if (!any)
                 AutoConnectList.Children.Add(new TextBlock
                 {
                     Text = L("S.set.autoconnect.empty"),
                     Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12
                 });
+                return;
+            }
+
+            var ids = _settings.AutoConnectServerIds ?? new List<string>();
+            var selected = new HashSet<string>(ids);
+            var ordered = new List<ServerInfo>();
+            foreach (var id in ids)
+            {
+                var s = servers.FirstOrDefault(v => v.Id == id);
+                if (s != null && !ordered.Contains(s)) ordered.Add(s);
+            }
+            foreach (var s in servers.OrderBy(v => v.Group).ThenBy(v => v.Name))
+                if (!ordered.Contains(s)) ordered.Add(s);
+
+            foreach (var s in ordered)
+                AutoConnectList.Children.Add(BuildAutoConnectRow(s, selected.Contains(s.Id)));
+        }
+
+        private Point _acDragStart;
+        private Border _acDragRow;
+        private Border _acDropRow;
+
+        private FrameworkElement BuildAutoConnectRow(ServerInfo server, bool isChecked)
+        {
+            var row = new Border
+            {
+                Tag = server.Id, CornerRadius = new CornerRadius(6), Background = Brushes.Transparent,
+                BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0),
+                Padding = new Thickness(2, 1, 2, 1), Margin = new Thickness(0, 1, 0, 1), AllowDrop = true
+            };
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(new TextBlock
+            {
+                Text = "⠿", Foreground = (Brush)TryFindResource("TextTer"), FontSize = 13, Cursor = Cursors.SizeAll,
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 8, 0)
+            });
+            sp.Children.Add(new CheckBox
+            {
+                Content = (string.IsNullOrWhiteSpace(server.Name) ? server.Host : server.Name) + "  —  " + DisplayHost(server),
+                Tag = server.Id, IsChecked = isChecked,
+                Foreground = (Brush)TryFindResource("TextPrim"), VerticalAlignment = VerticalAlignment.Center
+            });
+            row.Child = sp;
+
+            // Przeciąganie startuje po ruchu (klik w checkbox bez ruchu nadal przełącza zaznaczenie).
+            row.PreviewMouseLeftButtonDown += (s, e) => { _acDragStart = e.GetPosition(null); _acDragRow = row; };
+            row.PreviewMouseMove += (s, e) =>
+            {
+                if (e.LeftButton != MouseButtonState.Pressed || _acDragRow != row) return;
+                var pos = e.GetPosition(null);
+                if (Math.Abs(pos.X - _acDragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                    Math.Abs(pos.Y - _acDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+                row.Opacity = 0.5;
+                try { DragDrop.DoDragDrop(row, row, DragDropEffects.Move); }
+                catch { }
+                finally { row.Opacity = 1.0; _acDragRow = null; ClearAcDropIndicator(); }
+            };
+            row.DragOver += (s, e) =>
+            {
+                if (!(e.Data.GetData(typeof(Border)) is Border dragged) || dragged == row) { e.Effects = DragDropEffects.None; return; }
+                e.Effects = DragDropEffects.Move; e.Handled = true;
+                ShowAcDropIndicator(row, e.GetPosition(row).Y > row.ActualHeight / 2);
+            };
+            row.DragLeave += (s, e) => ClearAcDropIndicator();
+            row.Drop += (s, e) =>
+            {
+                ClearAcDropIndicator();
+                if (!(e.Data.GetData(typeof(Border)) is Border dragged) || dragged == row) return;
+                bool bottom = e.GetPosition(row).Y > row.ActualHeight / 2;
+                AutoConnectList.Children.Remove(dragged);
+                int target = AutoConnectList.Children.IndexOf(row);
+                AutoConnectList.Children.Insert(bottom ? target + 1 : target, dragged);
+                e.Handled = true;
+            };
+            return row;
+        }
+
+        private void ShowAcDropIndicator(Border row, bool bottom)
+        {
+            if (_acDropRow != null && _acDropRow != row) _acDropRow.BorderThickness = new Thickness(0);
+            _acDropRow = row;
+            row.BorderBrush = (Brush)TryFindResource("Accent");
+            row.BorderThickness = bottom ? new Thickness(0, 0, 0, 2) : new Thickness(0, 2, 0, 0);
+        }
+
+        private void ClearAcDropIndicator()
+        {
+            if (_acDropRow != null) { _acDropRow.BorderThickness = new Thickness(0); _acDropRow = null; }
         }
 
         private void SaveSettings_Click(object sender, RoutedEventArgs e)
@@ -750,8 +831,11 @@ namespace RdpManager
             _settings.MinimizeToTray = SetMinimizeToTray.IsChecked == true;
             _settings.QuickConnectHotkey = SetHotkey.IsChecked == true;
             _settings.RestorePrompt = SetRestorePrompt.IsChecked == true;
-            _settings.AutoConnectServerIds = AutoConnectList.Children.OfType<CheckBox>()
-                .Where(cb => cb.IsChecked == true).Select(cb => cb.Tag as string)
+            // Kolejność wierszy (po przeciąganiu) = kolejność uruchamiania na starcie.
+            _settings.AutoConnectServerIds = AutoConnectList.Children.OfType<Border>()
+                .Select(b => (b.Child as StackPanel)?.Children.OfType<CheckBox>().FirstOrDefault())
+                .Where(cb => cb != null && cb.IsChecked == true)
+                .Select(cb => cb.Tag as string)
                 .Where(id => !string.IsNullOrEmpty(id)).ToList();
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
@@ -1575,8 +1659,8 @@ namespace RdpManager
 
             _sessions.Add(session);
             session.TabButton = BuildTab(session);
-            TabStrip.Children.Add(session.TabButton);
-            RefreshTabTitles();
+            if (GroupOf(session) != null) RebuildTabStrip();   // serwer w grupie → renderuj w jej kontenerze
+            else { TabStrip.Children.Add(session.TabButton); RefreshTabTitles(); }
 
             Activate(session);
             if (autoConnect) BeginConnect(session);
@@ -1602,6 +1686,8 @@ namespace RdpManager
         {
             HideFocusPeek();   // aktywacja sesji (np. klik z wysuniętego panelu) chowa peek (i przenosi panel z powrotem)
             _active = session;
+            // Zwinięta grupa pokazuje aktywną kartę — po zmianie aktywnej trzeba przebudować pasek.
+            if (_tabGroups.Any(g => g.Collapsed)) RebuildTabStrip();
             RefreshTabStyles();
             UpdateActiveRows();
             LoadToolbar(session);
@@ -1714,13 +1800,8 @@ namespace RdpManager
             };
             _tabName[session] = tabName;
             content.Children.Add(tabName);
-            // Adres na karcie (pasek stanu z adresem znika w trybie skupienia).
-            content.Children.Add(new TextBlock
-            {
-                Text = DisplayHost(session.Server), Foreground = (Brush)TryFindResource("TextTer"),
-                FontFamily = (System.Windows.Media.FontFamily)TryFindResource("Mono"), FontSize = 10.5,
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 1, 0, 0)
-            });
+            // Adres nie jest już na karcie (był w 3 miejscach naraz) — zostaje w pasku bocznym,
+            // podpowiedzi karty i szybkim przełączaniu. Karta = ikona + nazwa + kropka + ✕.
             // Kropka odzwierciedla ŻYWY stan sesji (nie statyczny status serwera): startowo rozłączona.
             var tabDot = new Ellipse
             {
@@ -1791,13 +1872,20 @@ namespace RdpManager
             };
             tab.DragOver += (s, e) =>
             {
-                if (e.Data.GetData(typeof(Session)) is Session) { e.Effects = DragDropEffects.Move; e.Handled = true; }
+                if (!(e.Data.GetData(typeof(Session)) is Session over) || over == session)
+                { e.Effects = DragDropEffects.None; return; }
+                e.Effects = DragDropEffects.Move; e.Handled = true;
+                double x = e.GetPosition(tab).X, w = tab.ActualWidth;
+                ShowTabDropIndicator(tab, group: x > w * 0.33 && x < w * 0.67, after: x >= w / 2);
             };
+            tab.DragLeave += (s, e) => ClearTabDropIndicator();
             tab.Drop += (s, e) =>
             {
-                var dragged = e.Data.GetData(typeof(Session)) as Session;
-                if (dragged == null || dragged == session) return;
-                MoveTabTo(dragged, session, after: e.GetPosition(tab).X > tab.ActualWidth / 2);
+                ClearTabDropIndicator();
+                if (!(e.Data.GetData(typeof(Session)) is Session dragged) || dragged == session) return;
+                double x = e.GetPosition(tab).X, w = tab.ActualWidth;
+                if (x > w * 0.33 && x < w * 0.67) GroupTabs(session, dragged);   // środek celu = grupuj
+                else MoveTabTo(dragged, session, after: x >= w / 2);              // brzeg = zmiana kolejności
                 e.Handled = true;
             };
 
@@ -1830,6 +1918,8 @@ namespace RdpManager
             tabMenu.Items.Add(closeOthers);
             tabMenu.Items.Add(closeThis);
             tab.ContextMenu = tabMenu;
+            // Pozycje dot. grup zależą od bieżącego stanu (jakie grupy istnieją) — wstrzykiwane przy otwarciu.
+            tabMenu.Opened += (s, e) => PopulateTabGroupItems(tabMenu, session);
 
             _tabUnderline[session] = underline;
             return tab;
@@ -1927,9 +2017,7 @@ namespace RdpManager
             _sessions.RemoveAt(from);
             int to = _sessions.IndexOf(target) + (after ? 1 : 0);
             _sessions.Insert(to, dragged);
-            TabStrip.Children.Remove(dragged.TabButton);
-            TabStrip.Children.Insert(to, dragged.TabButton);
-            RefreshTabTitles();   // numeracja duplikatów (#2) podąża za kolejnością
+            RebuildTabStrip();   // odbudowa respektuje grupy (kontenery) i numerację duplikatów
         }
 
         /// <summary>Adres do wyświetlenia — z prefiksem protokołu, żeby odróżnić na pierwszy rzut oka.</summary>
@@ -1954,9 +2042,327 @@ namespace RdpManager
 
             _sessions.RemoveAt(i);
             _sessions.Insert(j, s);
-            TabStrip.Children.Remove(s.TabButton);
-            TabStrip.Children.Insert(j, s.TabButton);
-            RefreshTabTitles();   // numeracja duplikatów (#2) podąża za kolejnością
+            RebuildTabStrip();   // odbudowa respektuje grupy (kontenery) i numerację duplikatów
+        }
+
+        // ---------- Grupy kart (stosy jak w Vivaldi) ----------
+
+        // Paleta kolorów grup (spójna z akcentami/awatarami motywu). Nowa grupa dostaje pierwszy nieużyty.
+        private static readonly Color[] GroupColors =
+        {
+            Color.FromRgb(0x7C, 0x6C, 0xFB),  // fiolet
+            Color.FromRgb(0x36, 0xB8, 0xC4),  // turkus
+            Color.FromRgb(0xFF, 0xB4, 0x54),  // bursztyn
+            Color.FromRgb(0x37, 0x8A, 0xDD),  // błękit
+            Color.FromRgb(0xD4, 0x53, 0x7E),  // róż
+            Color.FromRgb(0x3D, 0xDC, 0x97),  // zieleń
+        };
+        private const string GroupMenuMark = "grp";   // znacznik pozycji menu karty wstrzykiwanych dla grup
+
+        private TabGroup GroupOf(Session s) => s == null ? null : _tabGroups.FirstOrDefault(g => g.ServerIds.Contains(s.Server.Id));
+
+        private Color NextGroupColor()
+        {
+            foreach (var c in GroupColors)
+                if (!_tabGroups.Any(g => g.Color == c)) return c;
+            return GroupColors[_tabGroups.Count % GroupColors.Length];
+        }
+
+        // Wypina serwer ze wszystkich grup i kasuje grupy, które przez to zostały puste.
+        private void DetachServerFromGroups(string serverId)
+        {
+            foreach (var g in _tabGroups) g.ServerIds.Remove(serverId);
+            _tabGroups.RemoveAll(g => g.ServerIds.Count == 0);
+        }
+
+        private void CreateGroupFromTab(Session seed)
+        {
+            string suggested = string.IsNullOrWhiteSpace(seed.Server.Group) ? L("S.group.default") : seed.Server.Group;
+            var dlg = new InputDialog(L("S.group.newtitle"), L("S.group.nameprompt"), suggested) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+            DetachServerFromGroups(seed.Server.Id);
+            var group = new TabGroup { Name = string.IsNullOrWhiteSpace(dlg.Value) ? suggested : dlg.Value, Color = NextGroupColor() };
+            group.ServerIds.Add(seed.Server.Id);
+            _tabGroups.Add(group);
+            SaveTabGroups();
+            RebuildTabStrip();
+        }
+
+        private void AddToGroup(Session s, TabGroup g)
+        {
+            if (s == null || g == null) return;
+            DetachServerFromGroups(s.Server.Id);          // przenieś z ewentualnej innej grupy
+            if (!_tabGroups.Contains(g)) return;          // (gdyby odpięcie ją opróżniło)
+            if (!g.ServerIds.Contains(s.Server.Id)) g.ServerIds.Add(s.Server.Id);
+            SaveTabGroups();
+            RebuildTabStrip();
+        }
+
+        // Upuszczenie karty NA środek innej (jak w Vivaldi): tworzy grupę z obu (gdy cel luzem) albo
+        // dokłada przeciąganą do grupy celu. Bez pytania o nazwę — nazwę zmienia się z menu pastylki.
+        private void GroupTabs(Session target, Session dragged)
+        {
+            if (target == null || dragged == null || target == dragged || target.Server.Id == dragged.Server.Id) return;
+            var g = GroupOf(target);
+            if (g == null)
+            {
+                g = new TabGroup { Name = AutoGroupName(target), Color = NextGroupColor() };
+                g.ServerIds.Add(target.Server.Id);
+                _tabGroups.Add(g);
+            }
+            DetachServerFromGroups(dragged.Server.Id);    // wyjmij z ewentualnej starej grupy
+            if (!_tabGroups.Contains(g)) return;
+            if (!g.ServerIds.Contains(dragged.Server.Id)) g.ServerIds.Add(dragged.Server.Id);
+            SaveTabGroups();
+            RebuildTabStrip();
+        }
+
+        private string AutoGroupName(Session seed) =>
+            string.IsNullOrWhiteSpace(seed.Server.Group) ? L("S.group.default") : seed.Server.Group;
+
+        private void RemoveFromGroup(Session s)
+        {
+            if (s == null) return;
+            DetachServerFromGroups(s.Server.Id);
+            SaveTabGroups();
+            RebuildTabStrip();
+        }
+
+        private void Ungroup(TabGroup g)
+        {
+            _tabGroups.Remove(g);
+            SaveTabGroups();
+            RebuildTabStrip();
+        }
+
+        // Zapis/odczyt grup w ustawieniach (kolor jako #AARRGGBB) — grupy przeżywają restart aplikacji.
+        private void SaveTabGroups()
+        {
+            _settings.TabGroups = _tabGroups.Select(g => new TabGroupDef
+            {
+                Name = g.Name,
+                Color = string.Format("#{0:X2}{1:X2}{2:X2}{3:X2}", g.Color.A, g.Color.R, g.Color.G, g.Color.B),
+                Collapsed = g.Collapsed,
+                ServerIds = g.ServerIds.ToList()
+            }).ToList();
+            SettingsStore.Save(_settings);
+        }
+
+        private void LoadTabGroups()
+        {
+            _tabGroups.Clear();
+            foreach (var d in _settings.TabGroups ?? new List<TabGroupDef>())
+            {
+                Color color;
+                try { color = (Color)ColorConverter.ConvertFromString(d.Color); }
+                catch { color = GroupColors[0]; }
+                _tabGroups.Add(new TabGroup
+                {
+                    Name = d.Name, Color = color, Collapsed = d.Collapsed,
+                    ServerIds = (d.ServerIds ?? new List<string>()).ToList()
+                });
+            }
+        }
+
+        private static void DetachTab(Session s)
+        {
+            if (s?.TabButton is FrameworkElement fe && fe.Parent is Panel p) p.Children.Remove(fe);
+        }
+
+        // Podpowiedź przy przeciąganiu karty: środek celu = podświetlenie („zgrupuj"), brzeg = pionowa
+        // krawędź („wstaw przed/za"). Czyszczenie przywraca style wszystkich kart (RefreshTabStyles).
+        private Border _tabDropTarget;
+
+        private void ShowTabDropIndicator(Border tab, bool group, bool after)
+        {
+            ClearTabDropIndicator();
+            _tabDropTarget = tab;
+            if (group)
+            {
+                tab.Background = (Brush)TryFindResource("AccentSoft");
+                tab.BorderBrush = (Brush)TryFindResource("Accent");
+                tab.BorderThickness = new Thickness(1);
+            }
+            else
+            {
+                tab.BorderBrush = (Brush)TryFindResource("Accent");
+                tab.BorderThickness = after ? new Thickness(0, 0, 2, 0) : new Thickness(2, 0, 0, 0);
+            }
+        }
+
+        private void ClearTabDropIndicator()
+        {
+            if (_tabDropTarget == null) return;
+            _tabDropTarget.BorderThickness = new Thickness(1);   // domyślna grubość z BuildTab
+            _tabDropTarget = null;
+            RefreshTabStyles();
+        }
+
+        /// <summary>Porządkuje _sessions tak, by członkowie każdej grupy stali obok siebie (stabilnie, wg
+        /// pierwszego wystąpienia) — dzięki temu grupa renderuje się jako jeden kontener.</summary>
+        private void NormalizeGroupOrder()
+        {
+            var ordered = new List<Session>(_sessions.Count);
+            var emitted = new HashSet<TabGroup>();
+            foreach (var s in _sessions)
+            {
+                var g = GroupOf(s);
+                if (g == null) { ordered.Add(s); continue; }
+                if (emitted.Add(g)) ordered.AddRange(_sessions.Where(x => GroupOf(x) == g));
+            }
+            _sessions.Clear();
+            _sessions.AddRange(ordered);
+        }
+
+        /// <summary>Przebudowuje pasek: karty luzem trafiają wprost do paska, a ciągi kart tej samej grupy —
+        /// do wspólnego kontenera (z możliwością zwinięcia do liczby). Odłącza karty od starych rodziców.</summary>
+        private void RebuildTabStrip()
+        {
+            foreach (var s in _sessions) DetachTab(s);   // karta = jeden rodzic naraz
+            TabStrip.Children.Clear();
+            NormalizeGroupOrder();
+
+            int i = 0;
+            while (i < _sessions.Count)
+            {
+                var g = GroupOf(_sessions[i]);
+                if (g == null) { TabStrip.Children.Add(_sessions[i].TabButton); i++; continue; }
+
+                var members = new List<Session>();
+                while (i < _sessions.Count && GroupOf(_sessions[i]) == g) { members.Add(_sessions[i]); i++; }
+                TabStrip.Children.Add(BuildGroupContainer(g, members));
+            }
+
+            RefreshTabTitles();
+            RefreshTabStyles();
+        }
+
+        private FrameworkElement BuildGroupContainer(TabGroup g, List<Session> members)
+        {
+            var color = g.Color;
+            var tint = new SolidColorBrush(Color.FromArgb(0x22, color.R, color.G, color.B));
+            var strong = new SolidColorBrush(Color.FromArgb(0x3A, color.R, color.G, color.B));
+
+            var box = new Border
+            {
+                CornerRadius = new CornerRadius(8), Background = tint, BorderBrush = strong, BorderThickness = new Thickness(1),
+                Padding = new Thickness(3, 0, 4, 0), Margin = new Thickness(0, 0, 5, 0)
+            };
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            box.Child = row;
+
+            // Pastylka z nazwą: klik = zwiń/rozwiń; prawy klik = menu (nazwa / kolor / rozgrupuj).
+            var pill = new Border
+            {
+                CornerRadius = new CornerRadius(5), Background = strong, Cursor = Cursors.Hand,
+                Padding = new Thickness(6, 2, 7, 3), Margin = new Thickness(1, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center,
+                ContextMenu = BuildGroupMenu(g)
+            };
+            var pillRow = new StackPanel { Orientation = Orientation.Horizontal };
+            pillRow.Children.Add(new TextBlock
+            {
+                Text = g.Collapsed ? "▸" : "▾", Foreground = new SolidColorBrush(color), FontSize = 10,
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 5, 0)
+            });
+            pillRow.Children.Add(new TextBlock
+            {
+                Text = g.Name, Foreground = new SolidColorBrush(color), FontSize = 11.5, FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            if (g.Collapsed)
+                pillRow.Children.Add(new Border
+                {
+                    CornerRadius = new CornerRadius(9), Background = (Brush)TryFindResource("Elevated"),
+                    Padding = new Thickness(6, 0, 6, 1), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
+                    Child = new TextBlock { Text = members.Count.ToString(), Foreground = (Brush)TryFindResource("TextSec"), FontSize = 10.5 }
+                });
+            pill.Child = pillRow;
+            // e.Handled: klik przebudowuje pasek (usuwa tę pastylkę) — nie pozwól zdarzeniu bąbelkować dalej.
+            pill.MouseLeftButtonUp += (s, e) => { e.Handled = true; g.Collapsed = !g.Collapsed; SaveTabGroups(); RebuildTabStrip(); };
+            row.Children.Add(pill);
+
+            // Rozwinięta: wszystkie karty. Zwinięta: pastylka + licznik, ale aktywna karta „wychodzi" ze
+            // stosu (jak w Vivaldi) — widać, którą sesję się ogląda. Przełączenie aktywnej odświeża pasek.
+            foreach (var m in members)
+                if (!g.Collapsed || m == _active) row.Children.Add(m.TabButton);
+
+            return box;
+        }
+
+        private ContextMenu BuildGroupMenu(TabGroup g)
+        {
+            var menu = new ContextMenu();
+
+            var rename = new MenuItem { Header = L("S.m.grp.rename") };
+            rename.Click += (s, e) =>
+            {
+                var dlg = new InputDialog(L("S.group.renametitle"), L("S.group.nameprompt"), g.Name) { Owner = this };
+                if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.Value)) { g.Name = dlg.Value; SaveTabGroups(); RebuildTabStrip(); }
+            };
+            menu.Items.Add(rename);
+
+            var colorItem = new MenuItem { Header = L("S.m.grp.color") };
+            foreach (var c in GroupColors)
+            {
+                var cc = c;
+                var swatch = new MenuItem { Header = new TextBlock { Text = "●", Foreground = new SolidColorBrush(cc), FontSize = 15 } };
+                swatch.Click += (s, e) => { g.Color = cc; SaveTabGroups(); RebuildTabStrip(); };
+                colorItem.Items.Add(swatch);
+            }
+            menu.Items.Add(colorItem);
+
+            var toggle = new MenuItem { Header = g.Collapsed ? L("S.m.grp.expand") : L("S.m.grp.collapse") };
+            toggle.Click += (s, e) => { g.Collapsed = !g.Collapsed; SaveTabGroups(); RebuildTabStrip(); };
+            menu.Items.Add(toggle);
+
+            menu.Items.Add(new Separator());
+            var ungroup = new MenuItem { Header = L("S.m.grp.ungroup") };
+            ungroup.Click += (s, e) => Ungroup(g);
+            menu.Items.Add(ungroup);
+            return menu;
+        }
+
+        // Wstrzykuje na górę menu karty pozycje dot. grup (lista grup zmienia się w czasie — stąd przy otwarciu).
+        private void PopulateTabGroupItems(ContextMenu menu, Session session)
+        {
+            for (int k = menu.Items.Count - 1; k >= 0; k--)
+                if (menu.Items[k] is FrameworkElement fe && (fe.Tag as string) == GroupMenuMark)
+                    menu.Items.RemoveAt(k);
+
+            var inject = new List<Control>();
+            var g = GroupOf(session);
+            if (g == null)
+            {
+                var ng = new MenuItem { Header = L("S.m.newgroup"), Tag = GroupMenuMark };
+                ng.Click += (s, e) => CreateGroupFromTab(session);
+                inject.Add(ng);
+
+                if (_tabGroups.Count > 0)
+                {
+                    var add = new MenuItem { Header = L("S.m.addtogroup"), Tag = GroupMenuMark };
+                    foreach (var grp in _tabGroups)
+                    {
+                        var gg = grp;
+                        var gi = new MenuItem
+                        {
+                            Header = grp.Name,
+                            Icon = new Rectangle { Width = 10, Height = 10, RadiusX = 3, RadiusY = 3, Fill = new SolidColorBrush(grp.Color) }
+                        };
+                        gi.Click += (s, e) => AddToGroup(session, gg);
+                        add.Items.Add(gi);
+                    }
+                    inject.Add(add);
+                }
+            }
+            else
+            {
+                var rm = new MenuItem { Header = L("S.m.removefromgroup"), Tag = GroupMenuMark };
+                rm.Click += (s, e) => RemoveFromGroup(session);
+                inject.Add(rm);
+            }
+
+            inject.Add(new Separator { Tag = GroupMenuMark });
+            for (int k = inject.Count - 1; k >= 0; k--) menu.Items.Insert(0, inject[k]);
         }
 
         private void RequestCloseSession(Session session)
@@ -1993,14 +2399,14 @@ namespace RdpManager
                 SessionContainer.Children.Remove(session.Host);
                 try { session.Host.Dispose(); } catch { }   // zwalnia hosta i kontrolkę ActiveX (HWND)
             }
-            TabStrip.Children.Remove(session.TabButton);
+            DetachTab(session);              // odłącz kartę od paska / kontenera grupy (grupa serwera zostaje)
             _tabUnderline.Remove(session);
             _tabStatus.Remove(session);
             _tabName.Remove(session);
             _tabClose.Remove(session);
             _sessions.Remove(session);
+            RebuildTabStrip();               // przebuduj pasek (kontenery grup + tytuły)
             PersistOpenSessions();
-            RefreshTabTitles();
 
             if (_active == session)
             {
@@ -2433,18 +2839,17 @@ namespace RdpManager
             if (!_isFullscreen)
             {
                 bool has = _active != null;
-                // Pasek połączenia: chowany też w trybie skupienia (adres jest na karcie).
-                SessionToolbar.Visibility = (has && !IsImmersive()) ? Visibility.Visible : Visibility.Collapsed;
+                bool conn = has && _active.Connected;
+                bool immersive = IsImmersive();
+                // Pasek połączenia (z hasłem) tylko PRZED połączeniem; po połączeniu — brak paska (więcej miejsca),
+                // a akcje sesji przenoszą się na prawy koniec paska kart (SessionActions). W skupieniu: FocusControls.
+                SessionToolbar.Visibility = (has && !immersive && !conn) ? Visibility.Visible : Visibility.Collapsed;
+                SessionActions.Visibility = (conn && !immersive) ? Visibility.Visible : Visibility.Collapsed;
                 TabStripHost.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
             }
             if (_active == null) return;
 
-            bool connected = _active.Connected;
-            ConnectForm.Visibility = connected ? Visibility.Collapsed : Visibility.Visible;
-            StatusPanel.Visibility = connected ? Visibility.Visible : Visibility.Collapsed;
             FilesBtn.Visibility = _active.IsSsh ? Visibility.Visible : Visibility.Collapsed;   // SFTP tylko dla SSH
-            if (connected)
-                StatusHost.Text = _active.Server.Host + ":" + _active.Server.Port;
         }
 
         private void UpdateToolbarEnabled()
@@ -2571,7 +2976,7 @@ namespace RdpManager
             Sidebar.Visibility = Visibility.Visible;
             TabStripHost.Visibility = Visibility.Visible;
             SessionToolbar.Visibility = Visibility.Visible;
-            SessionHotZoneRow.Height = new GridLength(6);
+            SessionHotZoneRow.Height = new GridLength(0);   // brak odstępu pod paskiem kart (kotwica popupu ma 0)
 
             FsPopup.IsOpen = false;
             _isFullscreen = false;
