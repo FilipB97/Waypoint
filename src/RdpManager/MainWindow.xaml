@@ -314,7 +314,13 @@
                 <Border x:Name="HotZone" Grid.Row="2" Background="Transparent"/>
 
                 <!-- all sessions' hosts live here; only the active one is Visible -->
+                <!-- Kontr-transformacja skali UI: zoom Waypointa NIE powiększa widoku sesji (RDP/terminal/VNC).
+                     SessionScale = 1/UiScale znosi RootScale, więc host renderuje 1:1 i rozdzielczość liczona
+                     z ActualWidth odpowiada realnym pikselom (bez tego serwer był większy niż okno przy <100%). -->
                 <Grid x:Name="SessionContainer" Grid.Row="3" Background="{DynamicResource CanvasBrush}">
+                    <Grid.LayoutTransform>
+                        <ScaleTransform x:Name="SessionScale" ScaleX="1" ScaleY="1"/>
+                    </Grid.LayoutTransform>
                     <TextBlock x:Name="EmptyHint" Text="{DynamicResource S.emptyhint}"
                                Foreground="{DynamicResource TextTer}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
@@ -365,18 +371,18 @@
                             <TextBlock Text="{DynamicResource S.set.bardelay}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ui:TextBox x:Name="SetBarDelay" Width="120" HorizontalAlignment="Left"/>
                             <TextBlock Text="{DynamicResource S.set.theme}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ComboBox x:Name="SetTheme" Width="160" HorizontalAlignment="Left">
+                            <ComboBox x:Name="SetTheme" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
                                 <ComboBoxItem Content="{DynamicResource S.theme.dark}" Tag="Dark"/>
                                 <ComboBoxItem Content="{DynamicResource S.theme.light}" Tag="Light"/>
                                 <ComboBoxItem Content="{DynamicResource S.theme.system}" Tag="System"/>
                             </ComboBox>
                             <TextBlock Text="{DynamicResource S.set.language}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ComboBox x:Name="SetLanguage" Width="160" HorizontalAlignment="Left">
+                            <ComboBox x:Name="SetLanguage" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
                                 <ComboBoxItem Content="Polski" Tag="pl"/>
                                 <ComboBoxItem Content="English" Tag="en"/>
                             </ComboBox>
                             <TextBlock Text="{DynamicResource S.set.liststyle}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ComboBox x:Name="SetListStyle" Width="160" HorizontalAlignment="Left">
+                            <ComboBox x:Name="SetListStyle" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
                                 <ComboBoxItem Content="{DynamicResource S.liststyle.default}" Tag="Default"/>
                                 <ComboBoxItem Content="{DynamicResource S.liststyle.minimal}" Tag="Minimal"/>
                             </ComboBox>
