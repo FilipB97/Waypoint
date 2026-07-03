@@ -87,6 +87,8 @@ namespace RdpManager
         private bool _focusPeeking;                // panel boczny chwilowo wysunięty w trybie skupienia
         private bool? _focusOverride;              // ręczne wł/wył skupienia (null = wg ustawienia); reset po un-maximize
         private double _savedCaptionHeight = double.NaN;   // CaptionHeight sprzed skupienia (do przywrócenia)
+        private Core.UpdateCheck.ReleaseInfo _update;      // dostępna nowsza wersja (z URL assetu .exe); null gdy brak
+        private bool _updating;                            // trwa auto-aktualizacja — pomiń potwierdzenie zamknięcia
         private RECT _fsMonRect;   // prostokąt monitora w pikselach fizycznych (do wykrycia górnej krawędzi)
 
         public MainWindow()
@@ -194,12 +196,13 @@ namespace RdpManager
                     http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
                     string json = await http.GetStringAsync(
                         "https://api.github.com/repos/FilipB97/Waypoint/releases/latest");
-                    var latest = Core.UpdateCheck.ParseLatest(json);
+                    var info = Core.UpdateCheck.ParseRelease(json);
                     var cur = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
                     var current = new Version(cur.Major, cur.Minor, Math.Max(cur.Build, 0));
-                    if (Core.UpdateCheck.IsNewer(latest, current))
+                    if (info != null && Core.UpdateCheck.IsNewer(info.Version, current))
                     {
-                        UpdateBtn.Content = string.Format(L("S.update.available"), latest);
+                        _update = info;
+                        UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
                         UpdateBtn.Visibility = Visibility.Visible;
                     }
                 }
@@ -207,14 +210,113 @@ namespace RdpManager
             catch { /* offline / proxy / rate limit — sprawdzimy przy kolejnym starcie */ }
         }
 
-        private void Update_Click(object sender, RoutedEventArgs e)
+        private async void Update_Click(object sender, RoutedEventArgs e)
+        {
+            // Brak assetu .exe w release → tak jak dawniej: otwórz stronę wydania w przeglądarce.
+            if (_update == null || string.IsNullOrEmpty(_update.ExeUrl))
+            {
+                OpenReleasePage();
+                return;
+            }
+
+            if (MessageBox.Show(string.Format(L("S.update.confirm"), _update.Version), L("S.update.title"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                "Waypoint-update-" + _update.Version + ".exe");
+            string label = UpdateBtn.Content as string;
+            UpdateBtn.IsEnabled = false;
+            try
+            {
+                await DownloadFileAsync(_update.ExeUrl, temp, _update.ExeSize);
+                if (!IsValidExe(temp, _update.ExeSize)) throw new Exception("plik pobrany niepoprawnie");
+            }
+            catch (Exception ex)
+            {
+                UpdateBtn.IsEnabled = true;
+                UpdateBtn.Content = label;
+                MessageBox.Show(L("S.update.faildl") + "\n" + ex.Message, L("S.update.title"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Uruchom pobrany exe jako „installer": poczeka aż ten proces zniknie, podmieni plik docelowy i wystartuje go.
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(temp)
+                {
+                    UseShellExecute = false,
+                    Arguments = "--apply-update \"" + Environment.ProcessPath + "\" "
+                                + System.Diagnostics.Process.GetCurrentProcess().Id
+                });
+            }
+            catch (Exception ex)
+            {
+                UpdateBtn.IsEnabled = true;
+                UpdateBtn.Content = label;
+                MessageBox.Show(L("S.update.faildl") + "\n" + ex.Message, L("S.update.title"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _updating = true;   // Window_Closing pominie potwierdzenie i zapisze otwarte sesje do przywrócenia
+            Close();
+        }
+
+        private void OpenReleasePage()
         {
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                    "https://github.com/FilipB97/Waypoint/releases/latest") { UseShellExecute = true });
+                    _update?.HtmlUrl ?? "https://github.com/FilipB97/Waypoint/releases/latest") { UseShellExecute = true });
             }
             catch { /* brak przeglądarki — ignoruj */ }
+        }
+
+        // Pobiera plik strumieniowo z paskiem % na przycisku aktualizacji (kontynuacje async wracają na wątek UI).
+        private async System.Threading.Tasks.Task DownloadFileAsync(string url, string dest, long knownSize)
+        {
+            using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(5) })
+            {
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
+                using (var resp = await http.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead))
+                {
+                    resp.EnsureSuccessStatusCode();
+                    long total = resp.Content.Headers.ContentLength ?? knownSize;
+                    using (var src = await resp.Content.ReadAsStreamAsync())
+                    using (var fs = new System.IO.FileStream(dest, System.IO.FileMode.Create,
+                                        System.IO.FileAccess.Write, System.IO.FileShare.None))
+                    {
+                        var buf = new byte[81920];
+                        long done = 0; int read, lastPct = -1;
+                        while ((read = await src.ReadAsync(buf, 0, buf.Length)) > 0)
+                        {
+                            await fs.WriteAsync(buf, 0, read);
+                            done += read;
+                            if (total > 0)
+                            {
+                                int pct = (int)(done * 100 / total);
+                                if (pct != lastPct) { lastPct = pct; UpdateBtn.Content = string.Format(L("S.update.downloading"), pct); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Zabezpieczenie przed podmianą na uszkodzony/częściowy plik: sensowny rozmiar + nagłówek PE „MZ".
+        private static bool IsValidExe(string path, long expectedSize)
+        {
+            try
+            {
+                var fi = new System.IO.FileInfo(path);
+                if (!fi.Exists || fi.Length < 1_000_000) return false;
+                if (expectedSize > 0 && fi.Length != expectedSize) return false;
+                using (var fs = System.IO.File.OpenRead(path))
+                    return fs.ReadByte() == 'M' && fs.ReadByte() == 'Z';
+            }
+            catch { return false; }
         }
 
         // ---------- Nawigacja (rail) ----------
@@ -526,7 +628,7 @@ namespace RdpManager
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (_settings.ConfirmCloseConnected &&
+            if (!_updating && _settings.ConfirmCloseConnected &&
                 (_sessions.Any(s => s.Connected) || _sessionWindows.Any(w => w.IsConnected)) &&
                 MessageBox.Show(L("S.msg.closeapp"), L("S.msg.closeapp.title"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)

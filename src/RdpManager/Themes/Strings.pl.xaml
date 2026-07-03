@@ -54,7 +54,11 @@
     <sys:String x:Key="S.set.opennewwin">Otwieraj połączenia w osobnym oknie</sys:String>
     <sys:String x:Key="S.set.immersive">Tryb skupienia po zmaksymalizowaniu (ukryj panel boczny)</sys:String>
     <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje przy starcie</sys:String>
-    <sys:String x:Key="S.update.available">Nowa wersja {0} — pobierz</sys:String>
+    <sys:String x:Key="S.update.available">Nowa wersja {0} — aktualizuj</sys:String>
+    <sys:String x:Key="S.update.title">Aktualizacja</sys:String>
+    <sys:String x:Key="S.update.confirm">Zaktualizować do wersji {0}? Otwarte połączenia zostaną zamknięte, a Waypoint uruchomi się ponownie (i zaproponuje przywrócenie sesji).</sys:String>
+    <sys:String x:Key="S.update.downloading">Pobieranie… {0}%</sys:String>
+    <sys:String x:Key="S.update.faildl">Nie udało się pobrać aktualizacji.</sys:String>
     <sys:String x:Key="S.set.traymin">Minimalizuj do zasobnika systemowego</sys:String>
     <sys:String x:Key="S.set.hotkey">Globalny skrót szybkiego połączenia (Ctrl+Alt+Q)</sys:String>
     <sys:String x:Key="S.set.restoreprompt">Pytaj o przywrócenie ostatnich połączeń przy starcie</sys:String>

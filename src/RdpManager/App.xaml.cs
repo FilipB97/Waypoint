@@ -20,6 +20,16 @@ namespace RdpManager
         {
             base.OnStartup(e);
 
+            // Tryb podmiany po auto-aktualizacji: uruchomieni z pobranego exe (w %TEMP%). Poczekaj aż stary
+            // proces zniknie (zwolni plik + mutex), podmień plik docelowy sobą i uruchom go. NIE bierzemy
+            // mutexa i nie pokazujemy UI — to tylko krótki „installer".
+            if (e.Args.Length >= 3 && e.Args[0] == "--apply-update")
+            {
+                RunUpdateBootstrap(e.Args[1], e.Args[2]);
+                Shutdown();
+                return;
+            }
+
             // Jedna instancja: dwa procesy nadpisywałyby sobie servers.json/settings.json (ostatni wygrywa).
             _singleInstance = new Mutex(true, "Waypoint.SingleInstance", out bool firstInstance);
             if (!firstInstance)
@@ -45,6 +55,51 @@ namespace RdpManager
 
             // Zastosuj zapisany motyw i język ZANIM powstanie okno (bez mignięcia).
             try { var s = SettingsStore.Load(); ThemeManager.Apply(s.Theme); LocalizationManager.Apply(s.Language); } catch { }
+
+            CleanupUpdateLeftovers();
+        }
+
+        // Po auto-aktualizacji zostaje pobrany exe w %TEMP% i ewentualny plik .new obok celu — posprzątaj.
+        private static void CleanupUpdateLeftovers()
+        {
+            try
+            {
+                string dotNew = Environment.ProcessPath + ".new";
+                if (File.Exists(dotNew)) File.Delete(dotNew);
+                foreach (var f in Directory.GetFiles(Path.GetTempPath(), "Waypoint-update-*.exe"))
+                {
+                    try { File.Delete(f); } catch { /* może jeszcze działać (installer) — następnym razem */ }
+                }
+            }
+            catch { /* sprzątanie jest opcjonalne */ }
+        }
+
+        // Uruchamiane z pobranego exe (%TEMP%). Czeka na wyjście starego procesu, podmienia cel i go startuje.
+        private static void RunUpdateBootstrap(string targetPath, string oldPidStr)
+        {
+            try
+            {
+                if (int.TryParse(oldPidStr, out int oldPid))
+                {
+                    try { System.Diagnostics.Process.GetProcessById(oldPid).WaitForExit(20000); }
+                    catch { /* już nie żyje */ }
+                }
+
+                // Kopiuj obok celu, potem atomowo podmień (File.Move overwrite). Kilka prób — plik bywa
+                // jeszcze chwilę zablokowany po wyjściu procesu. Gdy się nie uda, cel zostaje stary (bez szkody).
+                string self = Environment.ProcessPath;
+                string tmp = targetPath + ".new";
+                File.Copy(self, tmp, true);
+                for (int i = 0; i < 30; i++)
+                {
+                    try { File.Move(tmp, targetPath, true); break; }
+                    catch { Thread.Sleep(300); }
+                }
+                try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(targetPath) { UseShellExecute = true });
+            }
+            catch (Exception ex) { LogCrash("update", ex); }
         }
 
         private static void LogCrash(string source, Exception ex)
