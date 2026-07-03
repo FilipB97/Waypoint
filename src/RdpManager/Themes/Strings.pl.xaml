@@ -7,6 +7,22 @@
     <sys:String x:Key="S.nav.recent">Ostatnie</sys:String>
     <sys:String x:Key="S.nav.about">O aplikacji</sys:String>
     <sys:String x:Key="S.nav.settings">Ustawienia</sys:String>
+    <sys:String x:Key="S.nav.tools">Generator haseł</sys:String>
+
+    <!-- generator sekretów -->
+    <sys:String x:Key="S.gen.title">Generator haseł</sys:String>
+    <sys:String x:Key="S.gen.type">Typ</sys:String>
+    <sys:String x:Key="S.gen.type.password">Hasło</sys:String>
+    <sys:String x:Key="S.gen.type.hex">Token hex (klucz / API)</sys:String>
+    <sys:String x:Key="S.gen.type.guid">GUID</sys:String>
+    <sys:String x:Key="S.gen.length">Długość</sys:String>
+    <sys:String x:Key="S.gen.bytes">Bajty</sys:String>
+    <sys:String x:Key="S.gen.noambiguous">Bez znaków mylących (O0Il1…)</sys:String>
+    <sys:String x:Key="S.gen.regenerate">Generuj</sys:String>
+    <sys:String x:Key="S.gen.copy">Kopiuj</sys:String>
+    <sys:String x:Key="S.gen.copied">Skopiowano ✓</sys:String>
+    <sys:String x:Key="S.gen.strength">Entropia: ~{0} bitów</sys:String>
+    <sys:String x:Key="S.gen.pickclass">Wybierz co najmniej jedną klasę znaków</sys:String>
 
     <sys:String x:Key="S.search">Szukaj serwera…</sys:String>
     <sys:String x:Key="S.quickConnect">Szybkie połączenie</sys:String>
@@ -41,6 +57,12 @@
     <sys:String x:Key="S.update.available">Nowa wersja {0} — pobierz</sys:String>
     <sys:String x:Key="S.set.traymin">Minimalizuj do zasobnika systemowego</sys:String>
     <sys:String x:Key="S.set.hotkey">Globalny skrót szybkiego połączenia (Ctrl+Alt+Q)</sys:String>
+    <sys:String x:Key="S.set.restoreprompt">Pytaj o przywrócenie ostatnich połączeń przy starcie</sys:String>
+    <sys:String x:Key="S.restore.title">Przywróć sesję</sys:String>
+    <sys:String x:Key="S.restore.msg">Te połączenia były otwarte przy ostatnim zamknięciu. Otworzyć je ponownie?</sys:String>
+    <sys:String x:Key="S.restore.dontask">Nie pytaj przy starcie</sys:String>
+    <sys:String x:Key="S.restore.skip">Nie teraz</sys:String>
+    <sys:String x:Key="S.restore.open">Otwórz zaznaczone</sys:String>
     <sys:String x:Key="S.tray.show">Pokaż Waypoint</sys:String>
     <sys:String x:Key="S.tray.exit">Zakończ</sys:String>
     <sys:String x:Key="S.set.data">Dane aplikacji</sys:String>
@@ -141,6 +163,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.close">Zamknij</sys:String>
     <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
     <sys:String x:Key="S.m.wol">Obudź (Wake-on-LAN)</sys:String>
+    <sys:String x:Key="S.m.dupserver">Duplikuj serwer…</sys:String>
+    <sys:String x:Key="S.copy.suffix">(kopia)</sys:String>
 
     <!-- pass 2b: ulotne komunikaty z code-behind (statusy, dialogi, prompty, diagnostyka) -->
     <sys:String x:Key="S.st.connecting">Łączenie z {0}…</sys:String>
@@ -233,6 +257,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.ssh.nowebview">Terminal SSH wymaga składnika WebView2 Runtime (wbudowany w Windows 11; na starszych systemach doinstaluj go ze strony Microsoft).</sys:String>
     <!-- panel plików SFTP -->
     <sys:String x:Key="S.qs.tip">Połącz z innym serwerem</sys:String>
+    <sys:String x:Key="S.focus.toggle">Tryb skupienia (wł/wył) — lewa krawędź wysuwa panel</sys:String>
     <sys:String x:Key="S.sftp.toggle">Pliki (SFTP)</sys:String>
     <sys:String x:Key="S.sftp.name">Nazwa</sys:String>
     <sys:String x:Key="S.sftp.size">Rozmiar</sys:String>

@@ -7,6 +7,22 @@
     <sys:String x:Key="S.nav.recent">Recent</sys:String>
     <sys:String x:Key="S.nav.about">About</sys:String>
     <sys:String x:Key="S.nav.settings">Settings</sys:String>
+    <sys:String x:Key="S.nav.tools">Password generator</sys:String>
+
+    <!-- secret generator -->
+    <sys:String x:Key="S.gen.title">Password generator</sys:String>
+    <sys:String x:Key="S.gen.type">Type</sys:String>
+    <sys:String x:Key="S.gen.type.password">Password</sys:String>
+    <sys:String x:Key="S.gen.type.hex">Hex token (key / API)</sys:String>
+    <sys:String x:Key="S.gen.type.guid">GUID</sys:String>
+    <sys:String x:Key="S.gen.length">Length</sys:String>
+    <sys:String x:Key="S.gen.bytes">Bytes</sys:String>
+    <sys:String x:Key="S.gen.noambiguous">Exclude ambiguous (O0Il1…)</sys:String>
+    <sys:String x:Key="S.gen.regenerate">Generate</sys:String>
+    <sys:String x:Key="S.gen.copy">Copy</sys:String>
+    <sys:String x:Key="S.gen.copied">Copied ✓</sys:String>
+    <sys:String x:Key="S.gen.strength">Entropy: ~{0} bits</sys:String>
+    <sys:String x:Key="S.gen.pickclass">Pick at least one character class</sys:String>
 
     <sys:String x:Key="S.search">Search servers…</sys:String>
     <sys:String x:Key="S.quickConnect">Quick connect</sys:String>
@@ -41,6 +57,12 @@
     <sys:String x:Key="S.update.available">New version {0} — download</sys:String>
     <sys:String x:Key="S.set.traymin">Minimize to the system tray</sys:String>
     <sys:String x:Key="S.set.hotkey">Global quick-connect shortcut (Ctrl+Alt+Q)</sys:String>
+    <sys:String x:Key="S.set.restoreprompt">Ask to restore last connections at startup</sys:String>
+    <sys:String x:Key="S.restore.title">Restore session</sys:String>
+    <sys:String x:Key="S.restore.msg">These connections were open last time. Reopen them?</sys:String>
+    <sys:String x:Key="S.restore.dontask">Don't ask at startup</sys:String>
+    <sys:String x:Key="S.restore.skip">Not now</sys:String>
+    <sys:String x:Key="S.restore.open">Open selected</sys:String>
     <sys:String x:Key="S.tray.show">Show Waypoint</sys:String>
     <sys:String x:Key="S.tray.exit">Exit</sys:String>
     <sys:String x:Key="S.set.data">Application data</sys:String>
@@ -141,6 +163,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.close">Close</sys:String>
     <sys:String x:Key="S.m.renamegroup">Rename group…</sys:String>
     <sys:String x:Key="S.m.wol">Wake up (Wake-on-LAN)</sys:String>
+    <sys:String x:Key="S.m.dupserver">Duplicate server…</sys:String>
+    <sys:String x:Key="S.copy.suffix">(copy)</sys:String>
 
     <!-- pass 2b: transient code-behind messages (status, dialogs, prompts, diagnostics) -->
     <sys:String x:Key="S.st.connecting">Connecting to {0}…</sys:String>
@@ -233,6 +257,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.ssh.nowebview">The SSH terminal requires the WebView2 Runtime (built into Windows 11; on older systems install it from Microsoft).</sys:String>
     <!-- SFTP file panel -->
     <sys:String x:Key="S.qs.tip">Connect to another server</sys:String>
+    <sys:String x:Key="S.focus.toggle">Focus mode (on/off) — left edge reveals the panel</sys:String>
     <sys:String x:Key="S.sftp.toggle">Files (SFTP)</sys:String>
     <sys:String x:Key="S.sftp.name">Name</sys:String>
     <sys:String x:Key="S.sftp.size">Size</sys:String>

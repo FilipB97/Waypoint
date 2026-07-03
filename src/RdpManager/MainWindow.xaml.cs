@@ -82,6 +82,10 @@ namespace RdpManager
         // Opóźnienie pojawienia się paska pełnoekranowego (jak w mstsc) + polling pozycji kursora.
         private DispatcherTimer _fsBarDelay;
         private DispatcherTimer _fsCursorPoll;
+        private DispatcherTimer _focusPeekPoll;    // wykrywa najechanie na lewą krawędź w trybie skupienia
+        private DispatcherTimer _focusPeekDelay;   // opóźnienie przytrzymania (jak pasek pełnoekranowy)
+        private bool _focusPeeking;                // panel boczny chwilowo wysunięty w trybie skupienia
+        private bool? _focusOverride;              // ręczne wł/wył skupienia (null = wg ustawienia); reset po un-maximize
         private RECT _fsMonRect;   // prostokąt monitora w pikselach fizycznych (do wykrycia górnej krawędzi)
 
         public MainWindow()
@@ -113,6 +117,14 @@ namespace RdpManager
             };
             _fsCursorPoll.Tick += FsCursorPollTick;
 
+            // Tryb skupienia: to samo opóźnienie „przytrzymania" co pasek pełnoekranowy.
+            _focusPeekDelay = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+            { Interval = TimeSpan.FromMilliseconds(Math.Clamp(_settings.FullscreenBarDelayMs, 0, 3000)) };
+            _focusPeekDelay.Tick += (s, a) => { _focusPeekDelay.Stop(); ShowFocusPeek(); };
+            _focusPeekPoll = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+            { Interval = TimeSpan.FromMilliseconds(90) };
+            _focusPeekPoll.Tick += FocusPeekPollTick;
+
             BuildServerTree();
             UpdateToolbarEnabled();
             UpdateToolbarMode();
@@ -131,6 +143,29 @@ namespace RdpManager
             ApplyHotkey();
 
             CheckForUpdatesAsync();
+            // Popup przywracania — po wyrenderowaniu okna (modal potrzebuje widocznego właściciela).
+            Dispatcher.BeginInvoke(new Action(PromptRestoreLastSession), DispatcherPriority.Loaded);
+        }
+
+        // Na starcie: zaproponuj otwarcie połączeń, które były aktywne przy ostatnim zamknięciu.
+        private void PromptRestoreLastSession()
+        {
+            if (!_settings.RestorePrompt) return;
+            var ids = _settings.LastOpenServerIds;
+            if (ids == null || ids.Count == 0) return;
+
+            var servers = new List<ServerInfo>();
+            foreach (var id in ids)
+            {
+                var s = _vm.Servers.FirstOrDefault(v => v.Id == id);
+                if (s != null) servers.Add(s);
+            }
+            if (servers.Count == 0) return;
+
+            var dlg = new SessionRestoreWindow(servers) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+            if (dlg.DontAskAgain) { _settings.RestorePrompt = false; SettingsStore.Save(_settings); }
+            foreach (var s in dlg.SelectedServers) OpenServer(s, autoConnect: true);
         }
 
         // ---------- Aktualizacje ----------
@@ -198,6 +233,8 @@ namespace RdpManager
 
         private void Window_StateChanged(object sender, System.EventArgs e)
         {
+            // Powrót do okna (un-maximize) kasuje ręczny override — następna maksymalizacja wg ustawienia.
+            if (WindowState == WindowState.Normal) _focusOverride = null;
             // Minimalizacja do zasobnika (opcjonalna): chowamy okno; powrót przez ikonę/skrót.
             if (WindowState == WindowState.Minimized && _settings != null
                 && _settings.MinimizeToTray && !_isFullscreen)
@@ -273,7 +310,7 @@ namespace RdpManager
         private bool IsImmersive()
         {
             return _settings != null && !_isFullscreen
-                   && _settings.ImmersiveOnMaximize
+                   && (_focusOverride ?? _settings.ImmersiveOnMaximize)
                    && WindowState == WindowState.Maximized
                    && _active != null
                    && SessionsView.Visibility == Visibility.Visible;
@@ -287,12 +324,66 @@ namespace RdpManager
         {
             if (_settings == null || _isFullscreen) return;
             bool immersive = IsImmersive();
-            var vis = immersive ? Visibility.Collapsed : Visibility.Visible;
-            AppTitleBar.Visibility = vis;      // „dosłownie jak fullscreen" — zostaje tylko pasek kart + pulpit
-            Rail.Visibility = vis;
-            Sidebar.Visibility = vis;
+            if (!immersive) _focusPeeking = false;   // wyjście ze skupienia kasuje wysunięty panel
+            AppTitleBar.Visibility = immersive ? Visibility.Collapsed : Visibility.Visible;
+            // Panel boczny ukryty w skupieniu — chyba że chwilowo wysunięty przez najechanie na lewą krawędź.
+            var sideVis = (immersive && !_focusPeeking) ? Visibility.Collapsed : Visibility.Visible;
+            Rail.Visibility = sideVis;
+            Sidebar.Visibility = sideVis;
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
+            if (immersive) { if (_focusPeekPoll != null && !_focusPeekPoll.IsEnabled) _focusPeekPoll.Start(); }
+            else { _focusPeekPoll?.Stop(); _focusPeekDelay?.Stop(); }
             UpdateToolbarMode();
+        }
+
+        // Przełącznik trybu skupienia (przycisk na pasku): wł/wył dla bieżącego zmaksymalizowanego okna.
+        private void ToggleFocus_Click(object sender, RoutedEventArgs e)
+        {
+            if (IsImmersive()) { _focusOverride = false; }        // wyłącz — chrome wraca (okno zostaje zmaksymalizowane)
+            else
+            {
+                _focusOverride = true;                             // włącz — schowaj chrome
+                if (WindowState != WindowState.Maximized) WindowState = WindowState.Maximized;   // by miało efekt
+            }
+            UpdateImmersive();
+        }
+
+        // Lewy panel w trybie skupienia: pokaż/schowaj (wywoływane z pollingu krawędzi).
+        private void ShowFocusPeek()
+        {
+            if (!IsImmersive() || _focusPeeking) return;
+            _focusPeeking = true;
+            Rail.Visibility = Visibility.Visible;
+            Sidebar.Visibility = Visibility.Visible;
+        }
+
+        private void HideFocusPeek()
+        {
+            if (!_focusPeeking) return;
+            _focusPeeking = false;
+            if (IsImmersive()) { Rail.Visibility = Visibility.Collapsed; Sidebar.Visibility = Visibility.Collapsed; }
+        }
+
+        // Polling kursora w trybie skupienia: najechanie na lewą krawędź (i przytrzymanie) wysuwa panel;
+        // zjechanie na prawo od panelu go chowa. Airspace kontrolki sesji wyklucza zwykłe MouseEnter.
+        private void FocusPeekPollTick(object sender, EventArgs e)
+        {
+            if (!IsImmersive()) { _focusPeekPoll.Stop(); _focusPeekDelay.Stop(); return; }
+            if (WindowState == WindowState.Minimized || QuickSwitchPopup.IsOpen) return;
+            if (!GetCursorPos(out POINT p)) return;
+
+            if (!_focusPeeking)
+            {
+                double leftX = PointToScreen(new Point(0, 0)).X;
+                if (p.X <= leftX + 3) { if (!_focusPeekDelay.IsEnabled) _focusPeekDelay.Start(); }
+                else if (_focusPeekDelay.IsEnabled) _focusPeekDelay.Stop();
+            }
+            else
+            {
+                // PointToScreen uwzględnia DPI i zoom UI (Sidebar jest pod RootScale).
+                double sbRight = Sidebar.PointToScreen(new Point(Sidebar.ActualWidth, 0)).X;
+                if (p.X > sbRight + 8) HideFocusPeek();
+            }
         }
 
         // Przyciski okna na pasku kart (widoczne w trybie skupienia, bo titlebar jest wtedy ukryty).
@@ -304,6 +395,24 @@ namespace RdpManager
         {
             b.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
             ico.Foreground = active ? (Brush)TryFindResource("Accent") : (Brush)TryFindResource("TextTer");
+        }
+
+        private PasswordGeneratorWindow _genWindow;
+
+        // Generator haseł/tokenów/GUID — niemodalny, jedno okno (drugie kliknięcie aktywuje istniejące).
+        private void OpenPasswordGen_Click(object sender, RoutedEventArgs e)
+        {
+            if (_genWindow == null)
+            {
+                _genWindow = new PasswordGeneratorWindow { Owner = this };
+                _genWindow.Closed += (s, a) => _genWindow = null;
+                _genWindow.Show();
+            }
+            else
+            {
+                if (_genWindow.WindowState == WindowState.Minimized) _genWindow.WindowState = WindowState.Normal;
+                _genWindow.Activate();
+            }
         }
 
         private void Avatar_Click(object sender, RoutedEventArgs e)
@@ -356,12 +465,15 @@ namespace RdpManager
                 return;
             }
 
-            // Dograj odroczony zapis ustawień (debounce zoomu), zanim aplikacja zniknie.
-            if (_settingsSaveTimer != null && _settingsSaveTimer.IsEnabled)
-            {
-                _settingsSaveTimer.Stop();
-                SettingsStore.Save(_settings);
-            }
+            // Zapamiętaj otwarte karty (tylko zapisane serwery — nie Quick Connect) do przywrócenia na starcie.
+            _settings.LastOpenServerIds = _sessions
+                .Select(s => s.Server.Id)
+                .Where(id => _vm.Servers.Any(v => v.Id == id))
+                .Distinct().ToList();
+
+            // Dograj odroczony zapis ustawień (debounce zoomu) + powyższe, zanim aplikacja zniknie.
+            _settingsSaveTimer?.Stop();
+            SettingsStore.Save(_settings);
 
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
             try { UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId); } catch { }
@@ -399,6 +511,7 @@ namespace RdpManager
             SetCheckUpdates.IsChecked = _settings.CheckUpdates;
             SetMinimizeToTray.IsChecked = _settings.MinimizeToTray;
             SetHotkey.IsChecked = _settings.QuickConnectHotkey;
+            SetRestorePrompt.IsChecked = _settings.RestorePrompt;
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
         }
@@ -419,6 +532,7 @@ namespace RdpManager
             _settings.CheckUpdates = SetCheckUpdates.IsChecked == true;
             _settings.MinimizeToTray = SetMinimizeToTray.IsChecked == true;
             _settings.QuickConnectHotkey = SetHotkey.IsChecked == true;
+            _settings.RestorePrompt = SetRestorePrompt.IsChecked == true;
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
@@ -439,6 +553,7 @@ namespace RdpManager
             RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
             // Clampy także tutaj — ustawienia mogą przyjść z importu profilu (plik zewnętrzny).
             _fsBarDelay.Interval = TimeSpan.FromMilliseconds(Math.Clamp(_settings.FullscreenBarDelayMs, 0, 3000));
+            if (_focusPeekDelay != null) _focusPeekDelay.Interval = _fsBarDelay.Interval;
             _reachTimer.Interval = TimeSpan.FromSeconds(Math.Clamp(_settings.ReachabilityIntervalSec, 5, 3600));
             if (_settings.ReachabilityEnabled)
             {
@@ -890,6 +1005,8 @@ namespace RdpManager
             };
             var editItem = new MenuItem { Header = L("S.m.edit") };
             editItem.Click += (s, e) => EditServer(server);
+            var dupItem = new MenuItem { Header = L("S.m.dupserver") };
+            dupItem.Click += (s, e) => DuplicateServer(server);
             var diagItem = new MenuItem { Header = L("S.m.diag") };
             diagItem.Click += (s, e) => DiagnoseServer(server);
             var wolItem = new MenuItem
@@ -908,6 +1025,7 @@ namespace RdpManager
             if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
             if (rdp || server.Protocol == RemoteProtocol.Ssh) menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
+            menu.Items.Add(dupItem);
             if (server.Protocol != RemoteProtocol.Serial && server.Protocol != RemoteProtocol.Http)
                 menu.Items.Add(diagItem);   // sonda TCP — nie dla COM/URL
             menu.Items.Add(wolItem);
@@ -1128,6 +1246,7 @@ namespace RdpManager
 
         private void Activate(Session session)
         {
+            _focusPeeking = false;   // aktywacja sesji (np. klik z wysuniętego panelu) chowa peek
             _active = session;
             RefreshTabStyles();
             UpdateActiveRows();
@@ -2546,6 +2665,37 @@ namespace RdpManager
             foreach (var c in System.IO.Path.GetInvalidFileNameChars())
                 name = name.Replace(c, '_');
             return string.IsNullOrWhiteSpace(name) ? "serwer" : name;
+        }
+
+        // Duplikuje serwer: kopia wszystkich ustawień (nowy Id → osobny wpis w sejfie), nazwa z „(kopia)",
+        // od razu otwiera edytor — szybkie dodanie przez skopiowanie i zmianę jednej rzeczy.
+        private void DuplicateServer(ServerInfo src)
+        {
+            var copy = new ServerInfo   // nowy Id z konstruktora (osobny CredTarget)
+            {
+                Name = ((src.Name ?? "").Trim() + " " + L("S.copy.suffix")).Trim(),
+                Host = src.Host, Port = src.Port, Username = src.Username, Domain = src.Domain,
+                UseWindowsAccount = src.UseWindowsAccount, Group = src.Group, Initials = src.Initials,
+                Protocol = src.Protocol, PrivateKeyPath = src.PrivateKeyPath,
+                Tunnels = new List<string>(src.Tunnels ?? new List<string>()),
+                RedirectClipboard = src.RedirectClipboard, RedirectDrives = src.RedirectDrives,
+                RedirectPrinters = src.RedirectPrinters, AudioMode = src.AudioMode,
+                AuthenticationLevel = src.AuthenticationLevel, UseAllMonitors = src.UseAllMonitors,
+                AdminSession = src.AdminSession, MacAddress = src.MacAddress,
+                GatewayHostname = src.GatewayHostname, GatewayUsageMethod = src.GatewayUsageMethod,
+                SavePassword = src.SavePassword, Status = ServerStatus.Offline
+            };
+
+            string pw = "";
+            if (src.SavePassword) CredentialStore.TryRead(src.CredTarget, out pw);
+
+            var dlg = new ServerEditWindow(copy, pw) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+            _vm.Add(copy);
+            PersistServers();
+            SaveCredential(copy, dlg.EnteredPassword);
+            RenderTree(SearchBox.Text);
+            CheckReachabilityAsync();
         }
 
         private void EditServer(ServerInfo server)

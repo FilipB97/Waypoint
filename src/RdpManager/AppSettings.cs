@@ -49,5 +49,11 @@ namespace RdpManager
 
         /// <summary>Globalny skrót Ctrl+Alt+Q otwiera Szybkie połączenie (działa też z zasobnika).</summary>
         public bool QuickConnectHotkey { get; set; }
+
+        /// <summary>Id serwerów otwartych jako karty przy ostatnim zamknięciu (do przywrócenia sesji).</summary>
+        public List<string> LastOpenServerIds { get; set; } = new List<string>();
+
+        /// <summary>Pytaj na starcie o przywrócenie ostatnio otwartych połączeń.</summary>
+        public bool RestorePrompt { get; set; } = true;
     }
 }
