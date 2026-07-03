@@ -62,6 +62,9 @@
     <sys:String x:Key="S.set.traymin">Minimalizuj do zasobnika systemowego</sys:String>
     <sys:String x:Key="S.set.hotkey">Globalny skrót szybkiego połączenia (Ctrl+Alt+Q)</sys:String>
     <sys:String x:Key="S.set.restoreprompt">Pytaj o przywrócenie ostatnich połączeń przy starcie</sys:String>
+    <sys:String x:Key="S.set.autoconnect">Połącz na starcie</sys:String>
+    <sys:String x:Key="S.set.autoconnect.hint">Zaznaczone serwery połączą się automatycznie po uruchomieniu aplikacji. Gdy coś jest zaznaczone, popup przywracania ostatniej sesji się nie pokaże.</sys:String>
+    <sys:String x:Key="S.set.autoconnect.empty">Brak serwerów — najpierw dodaj jakiś serwer.</sys:String>
     <sys:String x:Key="S.restore.title">Przywróć sesję</sys:String>
     <sys:String x:Key="S.restore.msg">Te połączenia były otwarte przy ostatnim zamknięciu. Otworzyć je ponownie?</sys:String>
     <sys:String x:Key="S.restore.dontask">Nie pytaj przy starcie</sys:String>

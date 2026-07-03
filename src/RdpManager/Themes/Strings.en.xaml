@@ -62,6 +62,9 @@
     <sys:String x:Key="S.set.traymin">Minimize to the system tray</sys:String>
     <sys:String x:Key="S.set.hotkey">Global quick-connect shortcut (Ctrl+Alt+Q)</sys:String>
     <sys:String x:Key="S.set.restoreprompt">Ask to restore last connections at startup</sys:String>
+    <sys:String x:Key="S.set.autoconnect">Connect on startup</sys:String>
+    <sys:String x:Key="S.set.autoconnect.hint">The checked servers connect automatically when the app starts. When anything is checked, the "restore last session" popup won't appear.</sys:String>
+    <sys:String x:Key="S.set.autoconnect.empty">No servers yet — add one first.</sys:String>
     <sys:String x:Key="S.restore.title">Restore session</sys:String>
     <sys:String x:Key="S.restore.msg">These connections were open last time. Reopen them?</sys:String>
     <sys:String x:Key="S.restore.dontask">Don't ask at startup</sys:String>

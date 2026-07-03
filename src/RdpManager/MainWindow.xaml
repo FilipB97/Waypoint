@@ -422,6 +422,20 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Połącz na starcie -->
+                    <Border Style="{DynamicResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource S.set.autoconnect}" Style="{DynamicResource CardHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.autoconnect.hint}" Foreground="{DynamicResource TextTer}"
+                                       FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="AutoConnectList"/>
+                                </ScrollViewer>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Dane -->
                     <Border Style="{DynamicResource Card}">
                         <StackPanel>

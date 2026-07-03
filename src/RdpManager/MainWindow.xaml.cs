@@ -146,8 +146,27 @@ namespace RdpManager
             ApplyHotkey();
 
             CheckForUpdatesAsync();
-            // Popup przywracania — po wyrenderowaniu okna (modal potrzebuje widocznego właściciela).
-            Dispatcher.BeginInvoke(new Action(PromptRestoreLastSession), DispatcherPriority.Loaded);
+            // Po wyrenderowaniu okna (modal przywracania potrzebuje widocznego właściciela).
+            Dispatcher.BeginInvoke(new Action(StartupConnect), DispatcherPriority.Loaded);
+        }
+
+        // Start: zdefiniowane serwery „Połącz na starcie" mają priorytet — łączymy z nimi i pomijamy
+        // popup przywracania. Gdy ich brak, wraca stare zachowanie (popup ostatniej sesji).
+        private void StartupConnect()
+        {
+            var ids = _settings.AutoConnectServerIds;
+            if (ids != null && ids.Count > 0)
+            {
+                var toOpen = ids
+                    .Select(id => _vm.Servers.FirstOrDefault(v => v.Id == id))
+                    .Where(s => s != null).Distinct().ToList();
+                if (toOpen.Count > 0)
+                {
+                    foreach (var s in toOpen) OpenServer(s, autoConnect: true);
+                    return;
+                }
+            }
+            PromptRestoreLastSession();
         }
 
         // Na starcie: zaproponuj otwarcie połączeń, które były aktywne przy ostatnim zamknięciu.
@@ -678,8 +697,35 @@ namespace RdpManager
             SetMinimizeToTray.IsChecked = _settings.MinimizeToTray;
             SetHotkey.IsChecked = _settings.QuickConnectHotkey;
             SetRestorePrompt.IsChecked = _settings.RestorePrompt;
+            BuildAutoConnectList();
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
+        }
+
+        // Lista serwerów do „Połącz na starcie" — checkbox per serwer, zaznaczone = auto-połączenie.
+        private void BuildAutoConnectList()
+        {
+            AutoConnectList.Children.Clear();
+            var selected = new HashSet<string>(_settings.AutoConnectServerIds ?? new List<string>());
+            var any = false;
+            foreach (var s in _vm.Servers.OrderBy(v => v.Group).ThenBy(v => v.Name))
+            {
+                any = true;
+                AutoConnectList.Children.Add(new CheckBox
+                {
+                    Content = (string.IsNullOrWhiteSpace(s.Name) ? s.Host : s.Name) + "  —  " + DisplayHost(s),
+                    Tag = s.Id,
+                    IsChecked = selected.Contains(s.Id),
+                    Foreground = (Brush)TryFindResource("TextPrim"),
+                    Margin = new Thickness(0, 3, 0, 3)
+                });
+            }
+            if (!any)
+                AutoConnectList.Children.Add(new TextBlock
+                {
+                    Text = L("S.set.autoconnect.empty"),
+                    Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12
+                });
         }
 
         private void SaveSettings_Click(object sender, RoutedEventArgs e)
@@ -699,6 +745,9 @@ namespace RdpManager
             _settings.MinimizeToTray = SetMinimizeToTray.IsChecked == true;
             _settings.QuickConnectHotkey = SetHotkey.IsChecked == true;
             _settings.RestorePrompt = SetRestorePrompt.IsChecked == true;
+            _settings.AutoConnectServerIds = AutoConnectList.Children.OfType<CheckBox>()
+                .Where(cb => cb.IsChecked == true).Select(cb => cb.Tag as string)
+                .Where(id => !string.IsNullOrEmpty(id)).ToList();
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
