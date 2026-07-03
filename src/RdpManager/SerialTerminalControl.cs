@@ -27,6 +27,7 @@ namespace RdpManager
                 };
                 p.DataReceived += OnData;
                 p.Open();
+                if (IsTerminalDisposed) { try { p.Dispose(); } catch { } return; }   // karta zamknięta w trakcie otwierania portu
                 _port = p;
                 RaiseConnected();
             });

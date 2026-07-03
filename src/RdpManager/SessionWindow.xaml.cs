@@ -384,6 +384,7 @@ namespace RdpManager
 
         private void Window_Closing(object sender, CancelEventArgs e)
         {
+            try { _fsPoll.Stop(); _fsDelay.Stop(); } catch { }   // Alt+F4 w pełnym ekranie nie woła ExitFs
             try { _resizer?.Dispose(); } catch { }
             try { _rdp.Disconnect(); } catch { }
             try { _host.Dispose(); } catch { }

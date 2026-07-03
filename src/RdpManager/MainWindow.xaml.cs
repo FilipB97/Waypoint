@@ -670,7 +670,7 @@ namespace RdpManager
             foreach (var s in _sessions)
             {
                 if (s.IsTerm) { try { s.Term.DisposeTerminal(); } catch { } continue; }
-                if (s.IsVnc) { try { s.Vnc.Client?.Close(); } catch { } try { s.Host.Dispose(); } catch { } continue; }
+                if (s.IsVnc) { var vc = s.Vnc.Client; s.Vnc.Client = null; try { vc?.Close(); } catch { } try { s.Host.Dispose(); } catch { } continue; }
                 try { s.Resizer?.Dispose(); } catch { }
                 try { s.Rdp.Disconnect(); } catch { }
                 try { s.Host.Dispose(); } catch { }
@@ -870,7 +870,7 @@ namespace RdpManager
             PersistServers();
             RenderTree(SearchBox.Text);
             CheckReachabilityAsync();
-            SettingsStatus.Text = "Zaimportowano profil ✓";
+            SettingsStatus.Text = L("S.st.importedProfile");
         }
 
         // ---------- Ostatnie / Pulpit ----------
@@ -1909,6 +1909,7 @@ namespace RdpManager
             {
                 case RemoteProtocol.Ssh: return "ssh://" + s.Host;
                 case RemoteProtocol.Telnet: return "telnet://" + s.Host;
+                case RemoteProtocol.Vnc: return "vnc://" + s.Host;
                 case RemoteProtocol.Serial: return s.Host + " @" + s.Port;   // COM3 @115200
                 default: return s.Host;
             }
@@ -1946,7 +1947,11 @@ namespace RdpManager
             }
             else if (session.IsVnc)
             {
-                try { session.Vnc.Client?.Close(); } catch { }
+                // Wyzeruj Client PRZED Close/Dispose — zakolejkowany OnVncEnded (Closed z wątku
+                // roboczego) zobaczy null i stanie się no-opem, zamiast dotykać zniszczonej kontrolki.
+                var vc = session.Vnc.Client;
+                session.Vnc.Client = null;
+                try { vc?.Close(); } catch { }
                 SessionContainer.Children.Remove(session.Host);
                 try { session.Host.Dispose(); } catch { }
             }
@@ -2106,11 +2111,26 @@ namespace RdpManager
             }
         }
 
+        /// <summary>Jednorazowe (per instalacja) ostrzeżenie o braku szyfrowania: Telnet / klasyczne VNC.</summary>
+        private void WarnUnencrypted(RemoteProtocol proto)
+        {
+            bool already = proto == RemoteProtocol.Telnet ? _settings.TelnetWarned
+                         : proto == RemoteProtocol.Vnc ? _settings.VncWarned : true;
+            if (already) return;
+
+            if (proto == RemoteProtocol.Telnet) _settings.TelnetWarned = true; else _settings.VncWarned = true;
+            SettingsStore.Save(_settings);
+
+            string k = proto == RemoteProtocol.Telnet ? "telnet" : "vnc";
+            MessageBox.Show(L("S.warn." + k), L("S.warn." + k + ".title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
         // ---------- VNC (RemoteViewing) ----------
 
         /// <summary>Łączy sesję VNC: nowy VncClient, zdarzenia na wątek UI, handshake w tle (blokuje).</summary>
         private void ConnectVnc(Session s)
         {
+            WarnUnencrypted(RemoteProtocol.Vnc);
             try
             {
                 var client = new RemoteViewing.Vnc.VncClient();
@@ -2215,6 +2235,7 @@ namespace RdpManager
         {
             // SSH wymaga loginu (nie ma odpowiednika konta Windows) — dopytaj, jeśli brak.
             if (s.IsSsh && string.IsNullOrWhiteSpace(s.Server.Username)) { PromptAndConnect(s, null); return; }
+            if (s.Server.Protocol == RemoteProtocol.Telnet) WarnUnencrypted(RemoteProtocol.Telnet);
             try
             {
                 SetTabStatus(s, ServerStatus.Idle);

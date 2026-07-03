@@ -139,6 +139,7 @@ namespace RdpManager
         /// <summary>Zgłasza Connected i uzbraja pojedyncze Disconnected dla tego połączenia.</summary>
         protected void RaiseConnected()
         {
+            if (_disposed) return;   // połączenie dobiło po zamknięciu karty — nie ożywiaj martwej sesji
             Interlocked.Exchange(ref _down, 0);
             Connected?.Invoke();
         }

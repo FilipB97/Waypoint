@@ -39,4 +39,9 @@
     <LinearGradientBrush x:Key="Canvas" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#EEF0F3" Offset="0"/><GradientStop Color="#DEE2E8" Offset="1"/>
     </LinearGradientBrush>
+
+    <!-- Nakładki (pasek pełnoekranowy / flyout / hover raila) — jasne warianty. -->
+    <SolidColorBrush x:Key="FsBarBg" Color="#F2FFFFFF"/>
+    <SolidColorBrush x:Key="FsFlyoutBg" Color="#14000000"/>
+    <SolidColorBrush x:Key="RailHover" Color="#14000000"/>
 </ResourceDictionary>
