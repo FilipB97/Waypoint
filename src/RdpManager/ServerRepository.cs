@@ -27,9 +27,9 @@ namespace RdpManager
         /// <summary>Wczytuje listę z podanego katalogu (testowalne). Pierwszy start — seed.</summary>
         public static List<ServerInfo> Load(string dir)
         {
+            var path = FilePath(dir);
             try
             {
-                var path = FilePath(dir);
                 if (File.Exists(path))
                 {
                     var json = File.ReadAllText(path);
@@ -39,10 +39,12 @@ namespace RdpManager
             }
             catch
             {
-                // uszkodzony/niekompatybilny plik — seedujemy poniżej
+                // Uszkodzony/niekompatybilny plik z realnymi serwerami — zachowaj kopię (.corrupt)
+                // ZANIM poniżej nadpiszemy go danymi przykładowymi, żeby dało się go odzyskać.
+                AtomicFile.PreserveCorrupt(path);
             }
 
-            // Pierwsze uruchomienie: seed z przykładowych danych, potem zapis.
+            // Pierwsze uruchomienie (albo plik uszkodzony): seed z przykładowych danych, potem zapis.
             var seed = new List<ServerInfo>();
             foreach (var g in TestData.Groups())
                 foreach (var s in g.Servers)
@@ -54,7 +56,9 @@ namespace RdpManager
         /// <summary>Zapisuje listę do podanego katalogu (testowalne).</summary>
         public static void Save(List<ServerInfo> servers, string dir)
         {
-            AtomicFile.WriteAllText(FilePath(dir), JsonSerializer.Serialize(servers, Options));
+            var path = FilePath(dir);
+            AtomicFile.Backup(path);   // kopia poprzedniej listy na wypadek błędnego zapisu
+            AtomicFile.WriteAllText(path, JsonSerializer.Serialize(servers, Options));
         }
     }
 }
