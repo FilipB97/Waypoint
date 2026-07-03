@@ -95,6 +95,24 @@ Or use the helper script (tests, then single-file publish to `dist/`):
 
 (Double-click `scripts\release.cmd` for a guided prompt.)
 
+### Code signing (maintainers)
+
+The Release workflow signs the published `.exe` with Authenticode **when two repository
+secrets are present** — without them it still ships an unsigned build, so releases keep
+working before a certificate is configured:
+
+| Secret | Contents |
+|---|---|
+| `SIGNING_PFX_BASE64` | Base64 of the signing `.pfx` (code-signing certificate) |
+| `SIGNING_PFX_PASSWORD` | password for that `.pfx` |
+
+A self-signed certificate is enough to protect auto-update: in-app update download verifies
+that the new build is signed by the **same certificate** as the copy already installed
+(publisher pinning / trust-on-first-use), and refuses to install a mismatched or unsigned
+file. A self-signed cert does **not** remove the SmartScreen "unknown publisher" warning —
+that requires an OV/EV certificate from a CA. Each release's SHA-256 is printed in the notes
+for manual verification.
+
 ## Tests
 
 ```powershell

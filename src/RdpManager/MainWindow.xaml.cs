@@ -260,6 +260,19 @@ namespace RdpManager
                 return;
             }
 
+            // Weryfikacja wydawcy (Authenticode „publisher pinning"): pobrany plik musi być podpisany
+            // tym samym certyfikatem, co bieżąca aplikacja. Odrzucamy podmieniony/niepodpisany plik.
+            var verdict = Core.CodeSign.VerifyPublisher(temp, Environment.ProcessPath);
+            if (!Core.CodeSign.IsAcceptable(verdict))
+            {
+                try { System.IO.File.Delete(temp); } catch { }
+                UpdateBtn.IsEnabled = true;
+                UpdateBtn.Content = label;
+                MessageBox.Show(L("S.update.badsig"), L("S.update.title"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             // Uruchom pobrany exe jako „installer": poczeka aż ten proces zniknie, podmieni plik docelowy i wystartuje go.
             try
             {
