@@ -100,6 +100,13 @@ namespace RdpManager
             try { sh.Write(data); sh.Flush(); } catch { /* shell w trakcie zamykania */ }
         }
 
+        /// <summary>Wysyła tekst do powłoki tak, jakby wpisał go użytkownik (do broadcastu). Serwer odbije echo.</summary>
+        public void SendText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            OnTerminalInput(text);
+        }
+
         protected override void OnTerminalResize(int cols, int rows) => TryResizePty(cols, rows);
 
         // ---------- Połączenie SSH ----------
