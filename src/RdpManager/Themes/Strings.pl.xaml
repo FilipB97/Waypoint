@@ -141,6 +141,10 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.gw1">Zawsze przez bramę</sys:String>
     <sys:String x:Key="S.se.gw2">Wykryj automatycznie</sys:String>
     <sys:String x:Key="S.se.admin">Sesja administracyjna / konsola (jak mstsc /admin)</sys:String>
+    <sys:String x:Key="S.se.remoteapp">RemoteApp (aplikacja zamiast pulpitu)</sys:String>
+    <sys:String x:Key="S.se.remoteapp.prog">Program / alias</sys:String>
+    <sys:String x:Key="S.se.remoteapp.prog.ph">puste = pełny pulpit; np. notepad.exe, C:\App\a.exe lub ||AliasApp</sys:String>
+    <sys:String x:Key="S.se.remoteapp.args">Argumenty (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.mac">Adres MAC — Wake-on-LAN (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.mac.ph">np. AA:BB:CC:DD:EE:FF</sys:String>
     <sys:String x:Key="S.se.mac.bad">Niepoprawny adres MAC: {0}</sys:String>

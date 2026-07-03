@@ -141,6 +141,10 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.gw1">Always via gateway</sys:String>
     <sys:String x:Key="S.se.gw2">Auto-detect</sys:String>
     <sys:String x:Key="S.se.admin">Administrative / console session (like mstsc /admin)</sys:String>
+    <sys:String x:Key="S.se.remoteapp">RemoteApp (launch an app instead of the desktop)</sys:String>
+    <sys:String x:Key="S.se.remoteapp.prog">Program / alias</sys:String>
+    <sys:String x:Key="S.se.remoteapp.prog.ph">empty = full desktop; e.g. notepad.exe, C:\App\a.exe or ||AliasApp</sys:String>
+    <sys:String x:Key="S.se.remoteapp.args">Arguments (optional)</sys:String>
     <sys:String x:Key="S.se.mac">MAC address — Wake-on-LAN (optional)</sys:String>
     <sys:String x:Key="S.se.mac.ph">e.g. AA:BB:CC:DD:EE:FF</sys:String>
     <sys:String x:Key="S.se.mac.bad">Invalid MAC address: {0}</sys:String>

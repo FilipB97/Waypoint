@@ -71,6 +71,16 @@ namespace RdpManager.Models
         /// <summary>Sesja administracyjna/konsolowa (mstsc /admin).</summary>
         public bool AdminSession { get; set; }
 
+        /// <summary>
+        /// RemoteApp: program/alias uruchamiany zamiast pełnego pulpitu (mstsc „remoteapplicationprogram").
+        /// Ścieżka („C:\…\app.exe"), sama nazwa („notepad.exe") lub opublikowany alias („||AppAlias").
+        /// Puste = zwykły pulpit zdalny.
+        /// </summary>
+        public string RemoteAppProgram { get; set; } = "";
+
+        /// <summary>RemoteApp: argumenty wiersza poleceń (mstsc „remoteapplicationcmdline").</summary>
+        public string RemoteAppArgs { get; set; } = "";
+
         /// <summary>Adres MAC do Wake-on-LAN (puste = funkcja nieaktywna dla tego serwera).</summary>
         public string MacAddress { get; set; } = "";
 

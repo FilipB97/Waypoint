@@ -183,6 +183,14 @@
                         <TextBlock Text="{DynamicResource S.se.admin}" TextWrapping="Wrap"/>
                     </CheckBox>
 
+                    <TextBlock Style="{StaticResource SeSub}" Margin="0,0,0,8" Text="{DynamicResource S.se.remoteapp}"/>
+                    <StackPanel Margin="0,0,0,4">
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.remoteapp.prog}"/>
+                        <ui:TextBox x:Name="RemoteAppBox" PlaceholderText="{DynamicResource S.se.remoteapp.prog.ph}"/>
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.remoteapp.args}" Margin="0,8,0,4"/>
+                        <ui:TextBox x:Name="RemoteAppArgsBox"/>
+                    </StackPanel>
+
                     <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>

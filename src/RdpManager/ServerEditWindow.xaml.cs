@@ -36,6 +36,8 @@ namespace RdpManager
             EdDrives.IsChecked = server.RedirectDrives;
             EdPrinters.IsChecked = server.RedirectPrinters;
             EdAdmin.IsChecked = server.AdminSession;
+            RemoteAppBox.Text = server.RemoteAppProgram ?? "";
+            RemoteAppArgsBox.Text = server.RemoteAppArgs ?? "";
             MacBox.Text = server.MacAddress ?? "";
             EdAudio.SelectedIndex = Math.Clamp(server.AudioMode, 0, 2);
             EdAuthLevel.SelectedIndex = Math.Clamp(server.AuthenticationLevel, 0, 2);
@@ -275,6 +277,8 @@ namespace RdpManager
             _server.RedirectDrives = EdDrives.IsChecked == true;
             _server.RedirectPrinters = EdPrinters.IsChecked == true;
             _server.AdminSession = rdp && EdAdmin.IsChecked == true;
+            _server.RemoteAppProgram = rdp ? RemoteAppBox.Text.Trim() : "";
+            _server.RemoteAppArgs = rdp ? RemoteAppArgsBox.Text.Trim() : "";
             _server.MacAddress = macText;
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
             _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;

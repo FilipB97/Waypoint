@@ -1906,6 +1906,22 @@ namespace RdpManager
                     adv.ClearTextPassword = s.Password;
                 }
 
+                // RemoteApp: program/alias zamiast pełnego pulpitu (ustawiane PRZED Connect).
+                try
+                {
+                    var rp = s.Rdp.RemoteProgram2;
+                    bool useApp = !string.IsNullOrWhiteSpace(s.Server.RemoteAppProgram);
+                    rp.RemoteProgramMode = useApp;
+                    if (useApp)
+                    {
+                        rp.RemoteApplicationName = string.IsNullOrWhiteSpace(s.Server.Name)
+                            ? s.Server.RemoteAppProgram.Trim() : s.Server.Name.Trim();
+                        rp.RemoteApplicationProgram = s.Server.RemoteAppProgram.Trim();
+                        rp.RemoteApplicationArgs = s.Server.RemoteAppArgs ?? "";
+                    }
+                }
+                catch { /* starsza kontrolka bez RemoteProgram2 — łączymy jako pełny pulpit */ }
+
                 s.Rdp.Connect();
                 SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
             }
@@ -2883,6 +2899,7 @@ namespace RdpManager
                 RedirectPrinters = src.RedirectPrinters, AudioMode = src.AudioMode,
                 AuthenticationLevel = src.AuthenticationLevel, UseAllMonitors = src.UseAllMonitors,
                 AdminSession = src.AdminSession, MacAddress = src.MacAddress,
+                RemoteAppProgram = src.RemoteAppProgram, RemoteAppArgs = src.RemoteAppArgs,
                 GatewayHostname = src.GatewayHostname, GatewayUsageMethod = src.GatewayUsageMethod,
                 SavePassword = src.SavePassword, Status = ServerStatus.Offline
             };
