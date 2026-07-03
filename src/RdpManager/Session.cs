@@ -20,6 +20,10 @@ namespace RdpManager
         public XtermControl Term { get; }
         public bool IsTerm => Term != null;
 
+        /// <summary>Kontrolka VNC (RemoteViewing, WinForms w Host) — null dla RDP/terminala.</summary>
+        public RemoteViewing.Windows.Forms.VncControl Vnc { get; }
+        public bool IsVnc => Vnc != null;
+
         /// <summary>Terminal SSH, jeśli to sesja SSH (skrót dla ścieżek SSH-owych: SFTP, tunele).</summary>
         public SshTerminalControl Ssh => Term as SshTerminalControl;
         public bool IsSsh => Term is SshTerminalControl;
@@ -54,6 +58,14 @@ namespace RdpManager
         {
             Server = server;
             Term = term;
+        }
+
+        /// <summary>Sesja VNC — kontrolka RemoteViewing (WinForms) w hoście WPF, jak RDP.</summary>
+        public Session(ServerInfo server, RemoteViewing.Windows.Forms.VncControl vnc, WindowsFormsHost host)
+        {
+            Server = server;
+            Vnc = vnc;
+            Host = host;
         }
     }
 

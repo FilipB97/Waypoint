@@ -670,6 +670,7 @@ namespace RdpManager
             foreach (var s in _sessions)
             {
                 if (s.IsTerm) { try { s.Term.DisposeTerminal(); } catch { } continue; }
+                if (s.IsVnc) { try { s.Vnc.Client?.Close(); } catch { } try { s.Host.Dispose(); } catch { } continue; }
                 try { s.Resizer?.Dispose(); } catch { }
                 try { s.Rdp.Disconnect(); } catch { }
                 try { s.Host.Dispose(); } catch { }
@@ -1537,6 +1538,20 @@ namespace RdpManager
                 session = new Session(server, term);
                 WireTermEvents(session);
             }
+            else if (server.Protocol == RemoteProtocol.Vnc)
+            {
+                // VNC (RemoteViewing) — kontrolka WinForms w hoście WPF, jak RDP. Zdarzenia wiążemy przy połączeniu.
+                var vnc = new RemoteViewing.Windows.Forms.VncControl
+                {
+                    AllowInput = true,
+                    Dock = System.Windows.Forms.DockStyle.Fill,
+                    AllowRemoteCursor = true
+                };
+                var host = new WindowsFormsHost { Child = vnc };
+                SessionContainer.Children.Add(host);
+                host.UpdateLayout();
+                session = new Session(server, vnc, host);
+            }
             else
             {
                 var rdp = new AxMsRdpClient11NotSafeForScripting();
@@ -1799,7 +1814,7 @@ namespace RdpManager
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => RequestCloseSession(session);
-            if (!session.IsTerm) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
+            if (session.Server.Protocol == RemoteProtocol.Rdp) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
             tabMenu.Items.Add(dupItem);
             tabMenu.Items.Add(new Separator());
             tabMenu.Items.Add(moveLeft);
@@ -1929,6 +1944,12 @@ namespace RdpManager
                 try { session.Term.DisposeTerminal(); } catch { }
                 SessionContainer.Children.Remove(session.Term);
             }
+            else if (session.IsVnc)
+            {
+                try { session.Vnc.Client?.Close(); } catch { }
+                SessionContainer.Children.Remove(session.Host);
+                try { session.Host.Dispose(); } catch { }
+            }
             else
             {
                 try { session.Rdp.Disconnect(); } catch { /* nie połączona */ }
@@ -2015,6 +2036,7 @@ namespace RdpManager
         private void ConnectSession(Session s)
         {
             if (s.IsTerm) { ConnectTerm(s); return; }
+            if (s.IsVnc) { ConnectVnc(s); return; }
 
             try { s.Rdp.Disconnect(); } catch { /* nie połączona */ }
             s.LoggedIn = false;
@@ -2084,6 +2106,75 @@ namespace RdpManager
             }
         }
 
+        // ---------- VNC (RemoteViewing) ----------
+
+        /// <summary>Łączy sesję VNC: nowy VncClient, zdarzenia na wątek UI, handshake w tle (blokuje).</summary>
+        private void ConnectVnc(Session s)
+        {
+            try
+            {
+                var client = new RemoteViewing.Vnc.VncClient();
+                client.Connected += (o, e) => Dispatcher.BeginInvoke(new Action(() => { if (ReferenceEquals(s.Vnc?.Client, client)) OnVncConnected(s); }));
+                client.ConnectionFailed += (o, e) => Dispatcher.BeginInvoke(new Action(() => OnVncEnded(s, client)));
+                client.Closed += (o, e) => Dispatcher.BeginInvoke(new Action(() => OnVncEnded(s, client)));
+                s.Vnc.Client = client;
+                s.LoggedIn = false;
+
+                char[] pw = (s.Password ?? "").ToCharArray();
+                var opts = new RemoteViewing.Vnc.VncClientConnectOptions { ShareDesktop = true, Password = pw };
+                opts.PasswordRequiredCallback = c => pw;   // gdy serwer poprosi — to samo hasło (puste => auth padnie)
+
+                SetTabStatus(s, ServerStatus.Idle);
+                SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
+                if (s == _active) UpdateCanvas();
+
+                string host = s.Server.Host;
+                int port = s.Server.Port > 0 ? s.Server.Port : 5900;
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try { client.Connect(host, port, opts); }
+                    catch (Exception ex)
+                    {
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
+                            OnVncEnded(s, client);
+                        }));
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
+            }
+        }
+
+        private void OnVncConnected(Session s)
+        {
+            s.Connected = true;
+            s.LoggedIn = true;
+            RecordRecent(s.Server);
+            ConnectionLog.Append("CONNECTED", s.Server);
+            SetTabStatus(s, ServerStatus.Online);
+            SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
+            if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); try { s.Vnc.Focus(); } catch { } }
+        }
+
+        // Failed i Closed mogą przyjść oba — strażnik po tożsamości klienta wykonuje obsługę raz.
+        private void OnVncEnded(Session s, RemoteViewing.Vnc.VncClient client)
+        {
+            if (s.Vnc == null || !ReferenceEquals(s.Vnc.Client, client)) return;
+            s.Vnc.Client = null;
+            bool was = s.Connected;
+            s.Connected = false;
+            SetTabStatus(s, ServerStatus.Offline);
+            ConnectionLog.Append(was ? "DISCONNECTED" : "FAILED", s.Server);
+            if (!s.Server.SavePassword) s.Password = "";
+            if (was) SetSessionStatus(s, string.Format(L("S.st.disconnected"), "VNC"), StatusKind.Error);
+            else if (s.StatusKind != StatusKind.Error) SetSessionStatus(s, L("S.st.disconnectedShort"), StatusKind.Error);
+            if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
+        }
+
         /// <summary>Konfiguruje bramę RD Gateway / jump-host, jeśli serwer ją ma. Bezpieczne dla starszych kontrolek.</summary>
         private static void ApplyGateway(Session s)
         {
@@ -2113,6 +2204,7 @@ namespace RdpManager
         {
             if (_active == null) return;
             if (_active.IsTerm) { _active.Term.Disconnect(); return; }
+            if (_active.IsVnc) { try { _active.Vnc.Client?.Close(); } catch { } return; }
             try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
         }
 

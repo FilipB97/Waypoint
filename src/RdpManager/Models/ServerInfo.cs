@@ -122,7 +122,8 @@ namespace RdpManager.Models
         Ssh,
         Telnet,
         Serial,
-        Http
+        Http,
+        Vnc
     }
 
     /// <summary>Grupa serwerów w drzewie (Produkcja / Staging / Klienci …).</summary>
