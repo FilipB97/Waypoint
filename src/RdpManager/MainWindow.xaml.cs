@@ -107,7 +107,7 @@ namespace RdpManager
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
             _vm.UseRecentIds(_settings.RecentIds);   // współdziel listę „ostatnich" z ustawieniami
             LoadTabGroups();                          // grupy kart z poprzedniej sesji (przypisanie po Id serwera)
-            RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
+            ApplyUiScale(_settings.UiScale);
 
             FsPopup.CustomPopupPlacementCallback = PlaceFsPopup;
             _fsBarDelay = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
@@ -539,6 +539,7 @@ namespace RdpManager
         private void ShowFocusPeek()
         {
             if (!IsImmersive() || _focusPeeking) return;
+            if (GetForegroundWindow() != new WindowInteropHelper(this).Handle) return;   // tylko gdy Waypoint na wierzchu
             _focusPeeking = true;
             BodyGrid.Children.Remove(Rail);
             BodyGrid.Children.Remove(Sidebar);
@@ -581,6 +582,16 @@ namespace RdpManager
         {
             if (!IsImmersive()) { _focusPeekPoll.Stop(); _focusPeekDelay.Stop(); return; }
             if (WindowState == WindowState.Minimized || QuickSwitchPopup.IsOpen) return;
+
+            // Wysuwaj panel TYLKO gdy Waypoint jest na pierwszym planie — inaczej najechanie na lewą krawędź
+            // ekranu pokazywało listę serwerów nad inną aplikacją (np. przeglądarką), gdy okno było w tle.
+            if (GetForegroundWindow() != new WindowInteropHelper(this).Handle)
+            {
+                _focusPeekDelay.Stop();
+                if (_focusPeeking) HideFocusPeek();
+                return;
+            }
+
             if (!GetCursorPos(out POINT p)) return;
 
             // Lewa krawędź LICZONA Z PROSTOKĄTA MONITORA (jak pasek pełnoekranowy), nie z PointToScreen(0,0):
@@ -639,11 +650,21 @@ namespace RdpManager
 
         // ---------- Zoom interfejsu (Ctrl + kółko / Ctrl +/- / Ctrl 0) ----------
 
+        // Skala UI (zoom): powiększa/pomniejsza CHROME Waypointa. Widok sesji jest kontr-skalowany
+        // (SessionScale = 1/scale), żeby RDP/terminal/VNC renderowały się 1:1 niezależnie od zoomu — inaczej
+        // przy <100% rozdzielczość liczona z ActualWidth hosta wychodziła za duża i obraz nie mieścił się w oknie.
+        private void ApplyUiScale(double scale)
+        {
+            scale = Math.Clamp(scale, 0.7, 1.8);
+            RootScale.ScaleX = RootScale.ScaleY = scale;
+            SessionScale.ScaleX = SessionScale.ScaleY = 1.0 / scale;
+        }
+
         private void ZoomTo(double scale)
         {
             scale = Math.Round(Math.Clamp(scale, 0.7, 1.8), 2);
             _settings.UiScale = scale;
-            RootScale.ScaleX = RootScale.ScaleY = scale;
+            ApplyUiScale(scale);
             if (SettingsView.Visibility == Visibility.Visible)
                 SetUiScale.Text = ((int)Math.Round(scale * 100)).ToString();
             QueueSettingsSave();   // kółko myszy potrafi sypnąć dziesiątkami zdarzeń — nie pisz pliku co tick
@@ -703,8 +724,13 @@ namespace RdpManager
 
         // ---------- Ustawienia ----------
 
+        // Blokada zdarzeń SelectionChanged podczas wypełniania formularza — inaczej ustawianie SelectedIndex
+        // w LoadSettingsForm od razu „stosowałoby" ustawienia i pisało plik.
+        private bool _loadingSettings;
+
         private void LoadSettingsForm()
         {
+            _loadingSettings = true;
             SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
             SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
@@ -726,6 +752,7 @@ namespace RdpManager
             BuildAutoConnectList();
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
+            _loadingSettings = false;
         }
 
         // Lista serwerów do „Połącz na starcie": checkbox = auto-połączenie, przeciąganie (uchwyt ⠿) ustala
@@ -872,7 +899,7 @@ namespace RdpManager
         private void ApplySettings()
         {
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
-            RootScale.ScaleX = RootScale.ScaleY = Math.Clamp(_settings.UiScale, 0.7, 1.8);
+            ApplyUiScale(_settings.UiScale);
             // Clampy także tutaj — ustawienia mogą przyjść z importu profilu (plik zewnętrzny).
             _fsBarDelay.Interval = TimeSpan.FromMilliseconds(Math.Clamp(_settings.FullscreenBarDelayMs, 0, 3000));
             if (_focusPeekDelay != null) _focusPeekDelay.Interval = _fsBarDelay.Interval;
@@ -895,6 +922,18 @@ namespace RdpManager
             // Styl widoku (Domyślny/Minimalny) i motyw zmieniają wygląd wierszy/kart — przerysuj oba na żywo.
             RenderTree(SearchBox.Text);
             RebuildTabStrip();
+        }
+
+        // Ustawienia interfejsu (motyw / język / styl listy) działają OD RAZU po zmianie — bez scrollowania do
+        // „Zapisz". Zapis pliku jest odroczony (debounce). Pozostałe ustawienia nadal zatwierdza przycisk Zapisz.
+        private void InterfaceSetting_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (_loadingSettings || _settings == null) return;
+            _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
+            _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
+            _settings.ListStyle = (SetListStyle.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Default";
+            ApplySettings();
+            QueueSettingsSave();
         }
 
         private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
@@ -1968,7 +2007,7 @@ namespace RdpManager
                 BorderThickness = new Thickness(1),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
-                Padding = new Thickness(11, 3, 6, 3),
+                Padding = new Thickness(11, 2, 6, 2),
                 Margin = new Thickness(0, 0, 4, 0),
                 Cursor = Cursors.Hand,
                 Tag = session,
@@ -1988,7 +2027,7 @@ namespace RdpManager
             content.Children.Add(tabDot);
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5,
+                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -1997,7 +2036,7 @@ namespace RdpManager
             Grid.SetRow(content, 0);
             grid.Children.Add(content);
 
-            var underline = BuildTabUnderline(new Thickness(2, 3, 2, 0));
+            var underline = BuildTabUnderline(new Thickness(2, 2, 2, 0));
             Grid.SetRow(underline, 1);
             grid.Children.Add(underline);
 
@@ -2364,11 +2403,11 @@ namespace RdpManager
         private void ApplyTabStripStyle()
         {
             bool min = IsMinimalList;
-            TabStrip.Margin = new Thickness(8, min ? 3 : 6, 8, min ? 3 : 6);
+            TabStrip.Margin = new Thickness(8, min ? 2 : 6, 8, min ? 2 : 6);
             foreach (var b in SessionActions.Children.OfType<Button>())
             {
-                b.Width = min ? 25 : 28;
-                b.Height = min ? 25 : 28;
+                b.Width = min ? 24 : 28;
+                b.Height = min ? 24 : 28;
             }
         }
 
@@ -3255,6 +3294,9 @@ namespace RdpManager
 
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
