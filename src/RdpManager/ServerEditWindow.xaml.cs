@@ -114,6 +114,7 @@ namespace RdpManager
             bool creds = rdp || ssh;
 
             var rdpVis = rdp ? Visibility.Visible : Visibility.Collapsed;
+            RdpCard.Visibility = rdpVis;               // cała karta „Opcje RDP" (bez pustego nagłówka dla nie-RDP)
             WinAuthCheck.Visibility = rdpVis;
             DomainLabel.Visibility = rdpVis;
             DomainBox.Visibility = rdpVis;
@@ -123,6 +124,7 @@ namespace RdpManager
             KeyPathPanel.Visibility = ssh ? Visibility.Visible : Visibility.Collapsed;
 
             var credsVis = creds ? Visibility.Visible : Visibility.Collapsed;
+            AuthCard.Visibility = credsVis;            // cała karta „Uwierzytelnianie" (Telnet/Serial/WWW logują się inaczej)
             UserLabel.Visibility = credsVis;
             UserBox.Visibility = credsVis;
             PassLabel.Visibility = credsVis;

@@ -102,6 +102,9 @@
 
     <!-- dialog: server -->
     <sys:String x:Key="S.se.title">Server</sys:String>
+    <sys:String x:Key="S.se.section.conn">Connection</sys:String>
+    <sys:String x:Key="S.se.section.auth">Authentication</sys:String>
+    <sys:String x:Key="S.se.section.rdp">RDP options</sys:String>
     <sys:String x:Key="S.se.protocol">Protocol</sys:String>
     <sys:String x:Key="S.se.keypath">Private key (optional)</sys:String>
     <sys:String x:Key="S.se.keypath.ph">path to key file — empty = password only</sys:String>

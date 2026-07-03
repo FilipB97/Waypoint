@@ -102,6 +102,9 @@
 
     <!-- dialog: serwer -->
     <sys:String x:Key="S.se.title">Serwer</sys:String>
+    <sys:String x:Key="S.se.section.conn">Połączenie</sys:String>
+    <sys:String x:Key="S.se.section.auth">Uwierzytelnianie</sys:String>
+    <sys:String x:Key="S.se.section.rdp">Opcje RDP</sys:String>
     <sys:String x:Key="S.se.protocol">Protokół</sys:String>
     <sys:String x:Key="S.se.keypath">Klucz prywatny (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.keypath.ph">ścieżka do pliku klucza — puste = tylko hasło</sys:String>
