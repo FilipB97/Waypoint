@@ -86,6 +86,7 @@ namespace RdpManager
         private DispatcherTimer _focusPeekDelay;   // opóźnienie przytrzymania (jak pasek pełnoekranowy)
         private bool _focusPeeking;                // panel boczny chwilowo wysunięty w trybie skupienia
         private bool? _focusOverride;              // ręczne wł/wył skupienia (null = wg ustawienia); reset po un-maximize
+        private double _savedCaptionHeight = double.NaN;   // CaptionHeight sprzed skupienia (do przywrócenia)
         private RECT _fsMonRect;   // prostokąt monitora w pikselach fizycznych (do wykrycia górnej krawędzi)
 
         public MainWindow()
@@ -344,7 +345,28 @@ namespace RdpManager
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
             if (immersive) { if (_focusPeekPoll != null && !_focusPeekPoll.IsEnabled) _focusPeekPoll.Start(); }
             else { _focusPeekPoll?.Stop(); _focusPeekDelay?.Stop(); }
+            ApplyImmersiveCaption(immersive);
             UpdateToolbarMode();
+        }
+
+        // W skupieniu AppTitleBar znika, ale WindowChrome zostawia strefę caption (~32px) na górze,
+        // więc pasek kart z przyciskami okna w nią wpada. Hit-test caption jest błędny przy DPI≠100%
+        // (znany bug WPF: regiony IsHitTestVisibleInChrome źle skalowane — środek ikon nie łapie,
+        // trafienie tylko przy dolno-bocznym rogu). Zerujemy caption na czas skupienia → cała góra to
+        // obszar klienta, przyciski działają zwykłym hit-testem WPF. Poza skupieniem przywracamy wartość.
+        private void ApplyImmersiveCaption(bool immersive)
+        {
+            var chrome = System.Windows.Shell.WindowChrome.GetWindowChrome(this);
+            if (chrome == null) return;   // brak chrome = brak strefy caption do naprawy
+            if (immersive)
+            {
+                if (double.IsNaN(_savedCaptionHeight)) _savedCaptionHeight = chrome.CaptionHeight;
+                if (chrome.CaptionHeight != 0) chrome.CaptionHeight = 0;
+            }
+            else if (!double.IsNaN(_savedCaptionHeight) && chrome.CaptionHeight != _savedCaptionHeight)
+            {
+                chrome.CaptionHeight = _savedCaptionHeight;
+            }
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku): wł/wył dla bieżącego zmaksymalizowanego okna.
