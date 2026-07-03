@@ -20,8 +20,8 @@ namespace RdpManager.Tests
         }
 
         [Theory]
-        [InlineData("10.10.15.17", "10.10.15.17", 3389)]            // sam host -> port domyślny
-        [InlineData("10.10.15.17:3390", "10.10.15.17", 3390)]       // host:port
+        [InlineData("192.0.2.10", "192.0.2.10", 3389)]              // sam host -> port domyślny (adres z RFC 5737, do przykładów)
+        [InlineData("192.0.2.10:3390", "192.0.2.10", 3390)]         // host:port
         [InlineData("host.example.com:52000", "host.example.com", 52000)]
         [InlineData("  server1  ", "server1", 3389)]                // trymowanie
         [InlineData("host:0", "host:0", 3389)]                      // port poza zakresem -> całość jako host

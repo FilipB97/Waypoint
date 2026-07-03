@@ -62,6 +62,7 @@
     <sys:String x:Key="S.update.confirm">Zaktualizować do wersji {0}? Otwarte połączenia zostaną zamknięte, a Waypoint uruchomi się ponownie (i zaproponuje przywrócenie sesji).</sys:String>
     <sys:String x:Key="S.update.downloading">Pobieranie… {0}%</sys:String>
     <sys:String x:Key="S.update.faildl">Nie udało się pobrać aktualizacji.</sys:String>
+    <sys:String x:Key="S.update.badsig">Pobrana aktualizacja nie ma prawidłowego podpisu wydawcy (nie zgadza się z bieżącą wersją). Instalacja została przerwana — pobierz nową wersję ręcznie ze strony wydań.</sys:String>
     <sys:String x:Key="S.set.traymin">Minimalizuj do zasobnika systemowego</sys:String>
     <sys:String x:Key="S.set.hotkey">Globalny skrót szybkiego połączenia (Ctrl+Alt+Q)</sys:String>
     <sys:String x:Key="S.set.restoreprompt">Pytaj o przywrócenie ostatnich połączeń przy starcie</sys:String>
@@ -241,6 +242,9 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
 
     <sys:String x:Key="S.dash.servers">Serwery</sys:String>
     <sys:String x:Key="S.dash.reachable">Osiągalne</sys:String>
+    <sys:String x:Key="S.status.online">online</sys:String>
+    <sys:String x:Key="S.status.idle">bezczynny</sys:String>
+    <sys:String x:Key="S.status.offline">offline</sys:String>
     <sys:String x:Key="S.dash.opensessions">Otwarte sesje</sys:String>
     <sys:String x:Key="S.dash.recent">Ostatnio używane</sys:String>
     <sys:String x:Key="S.dash.conns7">Połączenia (7 dni)</sys:String>

@@ -58,17 +58,69 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item publish/Waypoint.exe "dist/Waypoint-$env:VERSION-win-x64.exe"
 
-      - name: Release notes
+      # Podpisujemy tylko, gdy sekret PFX jest ustawiony — bez niego build i tak wydaje
+      # (niepodpisany) plik, więc wydania działają zanim skonfigurujesz certyfikat.
+      - name: Detect signing secret
+        id: signing
         shell: bash
+        env:
+          PFX_B64: ${{ secrets.SIGNING_PFX_BASE64 }}
         run: |
-          cat > notes.md <<'EOF'
-          **Waypoint** — a modern RDP manager for Windows (WPF, Fluent / Mica).
+          if [ -n "$PFX_B64" ]; then echo "enabled=true" >> "$GITHUB_OUTPUT"; else echo "enabled=false" >> "$GITHUB_OUTPUT"; fi
 
-          Download the `Waypoint-...-win-x64.exe` asset below and run it — self-contained,
-          no .NET install required (Windows 10/11 x64).
+      - name: Sign (Authenticode)
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          PFX_B64: ${{ secrets.SIGNING_PFX_BASE64 }}
+          PFX_PWD: ${{ secrets.SIGNING_PFX_PASSWORD }}
+        run: |
+          $exe = "dist/Waypoint-$env:VERSION-win-x64.exe"
+          $pfx = Join-Path $env:RUNNER_TEMP "sign.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:PFX_B64))
+          try {
+            $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
+                        Where-Object { $_.FullName -like "*\x64\*" } |
+                        Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+            if (-not $signtool) { throw "signtool.exe not found in the Windows SDK" }
+            # RFC-3161 znacznik czasu — podpis pozostaje ważny po wygaśnięciu certyfikatu.
+            & $signtool sign /f $pfx /p $env:PFX_PWD /fd SHA256 `
+              /tr http://timestamp.digicert.com /td SHA256 $exe
+            if ($LASTEXITCODE -ne 0) { throw "signtool sign failed ($LASTEXITCODE)" }
+            # Potwierdź, że plik faktycznie ma podpis (bez /pa — self-signed nie łączy się z zaufanym rootem).
+            $sig = Get-AuthenticodeSignature $exe
+            Write-Host "Signature status: $($sig.Status); signer: $($sig.SignerCertificate.Subject)"
+            if ($sig.SignerCertificate -eq $null) { throw "file is not signed after signtool run" }
+          }
+          finally {
+            Remove-Item $pfx -Force -ErrorAction SilentlyContinue
+          }
 
-          > Not code-signed yet, so SmartScreen may warn on first run: *More info → Run anyway*.
-          EOF
+      - name: Release notes
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          SIGNED: ${{ steps.signing.outputs.enabled }}
+        run: |
+          $exe  = "dist/Waypoint-$env:VERSION-win-x64.exe"
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
+          $sw = [IO.StreamWriter]::new("notes.md", $false, [Text.UTF8Encoding]::new($false))
+          $sw.WriteLine("**Waypoint** - a modern RDP manager for Windows (WPF, Fluent / Mica).")
+          $sw.WriteLine("")
+          $sw.WriteLine("Download the ``Waypoint-...-win-x64.exe`` asset below and run it - self-contained,")
+          $sw.WriteLine("no .NET install required (Windows 10/11 x64).")
+          $sw.WriteLine("")
+          if ($env:SIGNED -eq "true") {
+            $sw.WriteLine("This build is Authenticode-signed. The certificate is self-signed, so SmartScreen")
+            $sw.WriteLine("may still warn on first run (*More info -> Run anyway*); in-app auto-update verifies")
+            $sw.WriteLine("that each update is signed by the same publisher as your installed copy.")
+          } else {
+            $sw.WriteLine("> Not code-signed, so SmartScreen may warn on first run: *More info -> Run anyway*.")
+          }
+          $sw.WriteLine("")
+          $sw.WriteLine("**SHA-256** ``$hash``")
+          $sw.Close()
 
       - name: Create GitHub release
         shell: bash

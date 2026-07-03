@@ -267,6 +267,19 @@ namespace RdpManager
                 return;
             }
 
+            // Weryfikacja wydawcy (Authenticode „publisher pinning"): pobrany plik musi być podpisany
+            // tym samym certyfikatem, co bieżąca aplikacja. Odrzucamy podmieniony/niepodpisany plik.
+            var verdict = Core.CodeSign.VerifyPublisher(temp, Environment.ProcessPath);
+            if (!Core.CodeSign.IsAcceptable(verdict))
+            {
+                try { System.IO.File.Delete(temp); } catch { }
+                UpdateBtn.IsEnabled = true;
+                UpdateBtn.Content = label;
+                MessageBox.Show(L("S.update.badsig"), L("S.update.title"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             // Uruchom pobrany exe jako „installer": poczeka aż ten proces zniknie, podmieni plik docelowy i wystartuje go.
             try
             {
@@ -1162,6 +1175,10 @@ namespace RdpManager
             _serverActivate.Clear();
             _serverStatusDot.Clear();
 
+            // Dostępność: strzałki i Tab przenoszą fokus między wierszami serwerów.
+            System.Windows.Input.KeyboardNavigation.SetDirectionalNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
+            System.Windows.Input.KeyboardNavigation.SetTabNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
+
             // Sekcja „Przypięte" na górze — ulubione serwery (kolejność z listy), niezależnie od grupy.
             var pinned = _vm.Servers.Where(s => s.Pinned && RdpUtils.MatchesFilter(s, filter)).ToList();
             if (pinned.Count > 0)
@@ -1456,8 +1473,22 @@ namespace RdpManager
         // Wspólne zachowanie wiersza (hover / przeciąganie-zmiana kolejności / klik / menu) — jednakowe w obu stylach.
         private void WireServerRow(Border row, ServerInfo server)
         {
+            // Dostępność (z PR #21): wiersz fokusowalny (nawigacja klawiaturą), nazwa dla czytnika ekranu
+            // (nazwa — host — status), a kropka statusu — swój tekst. Wspólne dla obu stylów listy.
+            row.Focusable = true;
+            System.Windows.Automation.AutomationProperties.SetName(row,
+                server.Name + " — " + DisplayHost(server) + " — " + StatusLabel(server.Status));
+            if (_serverStatusDot.TryGetValue(server, out var statusDot))
+                System.Windows.Automation.AutomationProperties.SetName(statusDot, StatusLabel(server.Status));
+
             row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
-            row.MouseLeave += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
+            row.MouseLeave += (s, e) => { if (_active?.Server != server && !row.IsKeyboardFocused) row.Background = Brushes.Transparent; };
+            row.GotKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
+            row.LostKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
+            row.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter || e.Key == Key.Space) { LaunchServer(server, true); e.Handled = true; }
+            };
 
             // Drag&drop: przeciągnięcie zmienia kolejność (a upuszczenie na inną grupę przenosi do niej).
             row.AllowDrop = true;
@@ -3919,6 +3950,17 @@ namespace RdpManager
                 case ServerStatus.Online: return (Brush)TryFindResource("Online");
                 case ServerStatus.Idle: return (Brush)TryFindResource("Idle");
                 default: return (Brush)TryFindResource("Offline");
+            }
+        }
+
+        /// <summary>Tekstowy odpowiednik statusu (dla czytników ekranu — status nie tylko kolorem).</summary>
+        private static string StatusLabel(ServerStatus status)
+        {
+            switch (status)
+            {
+                case ServerStatus.Online: return LocalizationManager.S("S.status.online");
+                case ServerStatus.Idle: return LocalizationManager.S("S.status.idle");
+                default: return LocalizationManager.S("S.status.offline");
             }
         }
 
