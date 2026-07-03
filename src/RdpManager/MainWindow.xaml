@@ -132,6 +132,9 @@
                         <Button x:Name="NavRecent" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.recent}" Tag="Recent" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoRecent" Symbol="History24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
+                        <Button x:Name="NavTools" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.tools}" Click="OpenPasswordGen_Click">
+                            <ui:SymbolIcon x:Name="IcoTools" Symbol="Key24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
+                        </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">

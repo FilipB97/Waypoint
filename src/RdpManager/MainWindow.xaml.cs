@@ -397,6 +397,24 @@ namespace RdpManager
             ico.Foreground = active ? (Brush)TryFindResource("Accent") : (Brush)TryFindResource("TextTer");
         }
 
+        private PasswordGeneratorWindow _genWindow;
+
+        // Generator haseł/tokenów/GUID — niemodalny, jedno okno (drugie kliknięcie aktywuje istniejące).
+        private void OpenPasswordGen_Click(object sender, RoutedEventArgs e)
+        {
+            if (_genWindow == null)
+            {
+                _genWindow = new PasswordGeneratorWindow { Owner = this };
+                _genWindow.Closed += (s, a) => _genWindow = null;
+                _genWindow.Show();
+            }
+            else
+            {
+                if (_genWindow.WindowState == WindowState.Minimized) _genWindow.WindowState = WindowState.Normal;
+                _genWindow.Activate();
+            }
+        }
+
         private void Avatar_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(

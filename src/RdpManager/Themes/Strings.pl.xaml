@@ -7,6 +7,22 @@
     <sys:String x:Key="S.nav.recent">Ostatnie</sys:String>
     <sys:String x:Key="S.nav.about">O aplikacji</sys:String>
     <sys:String x:Key="S.nav.settings">Ustawienia</sys:String>
+    <sys:String x:Key="S.nav.tools">Generator haseł</sys:String>
+
+    <!-- generator sekretów -->
+    <sys:String x:Key="S.gen.title">Generator haseł</sys:String>
+    <sys:String x:Key="S.gen.type">Typ</sys:String>
+    <sys:String x:Key="S.gen.type.password">Hasło</sys:String>
+    <sys:String x:Key="S.gen.type.hex">Token hex (klucz / API)</sys:String>
+    <sys:String x:Key="S.gen.type.guid">GUID</sys:String>
+    <sys:String x:Key="S.gen.length">Długość</sys:String>
+    <sys:String x:Key="S.gen.bytes">Bajty</sys:String>
+    <sys:String x:Key="S.gen.noambiguous">Bez znaków mylących (O0Il1…)</sys:String>
+    <sys:String x:Key="S.gen.regenerate">Generuj</sys:String>
+    <sys:String x:Key="S.gen.copy">Kopiuj</sys:String>
+    <sys:String x:Key="S.gen.copied">Skopiowano ✓</sys:String>
+    <sys:String x:Key="S.gen.strength">Entropia: ~{0} bitów</sys:String>
+    <sys:String x:Key="S.gen.pickclass">Wybierz co najmniej jedną klasę znaków</sys:String>
 
     <sys:String x:Key="S.search">Szukaj serwera…</sys:String>
     <sys:String x:Key="S.quickConnect">Szybkie połączenie</sys:String>
