@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 
@@ -34,6 +35,26 @@ namespace RdpManager.Core
         {
             try { if (File.Exists(path)) File.Copy(path, path + ".corrupt", overwrite: true); }
             catch { /* najlepszy wysiłek */ }
+        }
+
+        /// <summary>Self-heal: jeśli „.bak" jest WYRAŹNIE nowszy niż sam plik, to plik podmieniono na
+        /// starszą wersję JUŻ PO zrobieniu kopii — czyli cofnięto go z zewnątrz (np. rollback antywirusa
+        /// / ochrony folderów). Normalnie .bak powstaje TUŻ PRZED nadpisaniem, więc plik jest zawsze
+        /// NIE STARSZY niż .bak; odwrotna relacja = rollback. Wtedy przywracamy dobrą kopię z .bak.
+        /// Wołać na początku Load, PRZED odczytem. Najlepszy wysiłek — nie może wywalić startu.</summary>
+        public static void RecoverIfReverted(string path)
+        {
+            try
+            {
+                string bak = path + ".bak";
+                if (!File.Exists(bak)) return;
+                if (!File.Exists(path) ||
+                    File.GetLastWriteTimeUtc(bak) - File.GetLastWriteTimeUtc(path) > TimeSpan.FromSeconds(2))
+                {
+                    File.Copy(bak, path, overwrite: true);
+                }
+            }
+            catch { /* self-heal nie może przerwać startu aplikacji */ }
         }
     }
 }

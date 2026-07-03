@@ -165,5 +165,47 @@ namespace RdpManager.Tests
             Assert.Contains("FutureServerField", json);
             Assert.Contains("keep", json);
         }
+
+        [Fact]
+        public void SettingsStore_RecoversSettingsWhenFileWasRevertedExternally()
+        {
+            // Sygnatura rollbacku z zewnątrz (np. antywirus): .bak NOWSZY niż settings.json.
+            var path = Path.Combine(_dir, "settings.json");
+            File.WriteAllText(path + ".bak", "{\"DefaultPort\":4444}");            // dobra kopia
+            File.WriteAllText(path, "{\"DefaultPort\":3389}");                     // cofnięty plik
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddHours(-1));          // starszy niż .bak
+            File.SetLastWriteTimeUtc(path + ".bak", DateTime.UtcNow);
+
+            var loaded = SettingsStore.Load(_dir);
+            Assert.Equal(4444, loaded.DefaultPort);   // przywrócono z .bak, nie z cofniętego pliku
+        }
+
+        [Fact]
+        public void SettingsStore_KeepsCurrentFileWhenNewerThanBackup()
+        {
+            // Normalna sytuacja: bieżący plik nowszy niż .bak — NIE przywracamy.
+            var path = Path.Combine(_dir, "settings.json");
+            File.WriteAllText(path + ".bak", "{\"DefaultPort\":4444}");
+            File.WriteAllText(path, "{\"DefaultPort\":3389}");
+            File.SetLastWriteTimeUtc(path + ".bak", DateTime.UtcNow.AddHours(-1));
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
+
+            var loaded = SettingsStore.Load(_dir);
+            Assert.Equal(3389, loaded.DefaultPort);   // bieżący plik wygrywa
+        }
+
+        [Fact]
+        public void ServerRepository_RecoversServersWhenFileWasRevertedExternally()
+        {
+            var path = Path.Combine(_dir, "servers.json");
+            File.WriteAllText(path + ".bak", "[{\"Name\":\"prawdziwy\",\"Host\":\"h\"}]");
+            File.WriteAllText(path, "[]");                                         // cofnięty do pustej listy
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddHours(-1));
+            File.SetLastWriteTimeUtc(path + ".bak", DateTime.UtcNow);
+
+            var loaded = ServerRepository.Load(_dir);
+            Assert.Single(loaded);
+            Assert.Equal("prawdziwy", loaded[0].Name);   // przywrócono z .bak, nie seed/pusta lista
+        }
     }
 }

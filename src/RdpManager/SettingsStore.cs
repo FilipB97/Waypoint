@@ -21,6 +21,7 @@ namespace RdpManager
         public static AppSettings Load(string dir)
         {
             var path = FilePath(dir);
+            AtomicFile.RecoverIfReverted(path);   // self-heal: cofnięty z zewnątrz plik → przywróć z .bak (przed odczytem)
             try
             {
                 if (File.Exists(path))
