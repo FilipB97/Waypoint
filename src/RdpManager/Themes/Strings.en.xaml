@@ -212,6 +212,10 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.exported">Exported to {0}</sys:String>
     <sys:String x:Key="S.st.saved">Saved ✓</sys:String>
     <sys:String x:Key="S.st.exportedProfile">Profile exported ✓</sys:String>
+    <sys:String x:Key="S.m.broadcast">Broadcast to all SSH…</sys:String>
+    <sys:String x:Key="S.bc.none">No connected SSH sessions to broadcast to.</sys:String>
+    <sys:String x:Key="S.bc.prompt">Send a command to {0} SSH session(s):</sys:String>
+    <sys:String x:Key="S.bc.sent">Sent to {0} session(s) ✓</sys:String>
     <sys:String x:Key="S.st.importedProfile">Profile imported ✓</sys:String>
     <sys:String x:Key="S.warn.telnet.title">Telnet — unencrypted</sys:String>
     <sys:String x:Key="S.warn.telnet">Telnet transmits everything, including your password, in clear text. Use it only on trusted networks. Prefer SSH where possible.</sys:String>

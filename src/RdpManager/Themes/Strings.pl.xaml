@@ -212,6 +212,10 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.exported">Wyeksportowano do {0}</sys:String>
     <sys:String x:Key="S.st.saved">Zapisano ✓</sys:String>
     <sys:String x:Key="S.st.exportedProfile">Wyeksportowano profil ✓</sys:String>
+    <sys:String x:Key="S.m.broadcast">Broadcast do wszystkich SSH…</sys:String>
+    <sys:String x:Key="S.bc.none">Brak połączonych sesji SSH do broadcastu.</sys:String>
+    <sys:String x:Key="S.bc.prompt">Wyślij komendę do {0} sesji SSH:</sys:String>
+    <sys:String x:Key="S.bc.sent">Wysłano do {0} sesji ✓</sys:String>
     <sys:String x:Key="S.st.importedProfile">Zaimportowano profil ✓</sys:String>
     <sys:String x:Key="S.warn.telnet.title">Telnet — bez szyfrowania</sys:String>
     <sys:String x:Key="S.warn.telnet">Telnet przesyła wszystko, w tym hasło, jawnym tekstem. Używaj tylko w zaufanych sieciach. Tam gdzie się da, wybieraj SSH.</sys:String>

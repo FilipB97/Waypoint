@@ -1814,6 +1814,13 @@ namespace RdpManager
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => RequestCloseSession(session);
+            if (session.IsSsh)
+            {
+                var broadcastItem = new MenuItem { Header = L("S.m.broadcast") };
+                broadcastItem.Click += (s, e) => BroadcastToSsh();
+                tabMenu.Items.Add(broadcastItem);
+                tabMenu.Items.Add(new Separator());
+            }
             if (session.Server.Protocol == RemoteProtocol.Rdp) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
             tabMenu.Items.Add(dupItem);
             tabMenu.Items.Add(new Separator());
@@ -1826,6 +1833,29 @@ namespace RdpManager
 
             _tabUnderline[session] = underline;
             return tab;
+        }
+
+        /// <summary>Wysyła jedną komendę (z Enterem) do wszystkich połączonych sesji SSH naraz.</summary>
+        private void BroadcastToSsh()
+        {
+            var targets = _sessions.Where(s => s.IsSsh && s.Connected).ToList();
+            if (targets.Count == 0)
+            {
+                MessageBox.Show(L("S.bc.none"), L("S.m.broadcast"), MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dlg = new InputDialog(L("S.m.broadcast"), string.Format(L("S.bc.prompt"), targets.Count), "") { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+            string cmd = dlg.Value;
+            if (string.IsNullOrEmpty(cmd)) return;
+
+            int sent = 0;
+            foreach (var s in targets)
+            {
+                try { s.Ssh.SendText(cmd + "\n"); sent++; } catch { /* sesja właśnie padła — pomiń */ }
+            }
+            SetStatus(string.Format(L("S.bc.sent"), sent), StatusKind.Ok);
         }
 
         private void RefreshTabStyles()
