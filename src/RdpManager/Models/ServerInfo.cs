@@ -34,8 +34,11 @@ namespace RdpManager.Models
 
         public string Group { get; set; }
 
-        /// <summary>Inicjały do "awatara" na liście (jak w mockupie).</summary>
+        /// <summary>Inicjały do "awatara" na liście (jak w mockupie). Liczone z nazwy przy renderowaniu.</summary>
         public string Initials { get; set; }
+
+        /// <summary>Kolor awatara (hex, np. „#3B82F6"). Puste = kolor automatyczny wg grupy.</summary>
+        public string AvatarColor { get; set; } = "";
 
         /// <summary>Czy hasło ma być zapisane w Windows Credential Manager.</summary>
         public bool SavePassword { get; set; }
@@ -67,6 +70,16 @@ namespace RdpManager.Models
 
         /// <summary>Sesja administracyjna/konsolowa (mstsc /admin).</summary>
         public bool AdminSession { get; set; }
+
+        /// <summary>
+        /// RemoteApp: program/alias uruchamiany zamiast pełnego pulpitu (mstsc „remoteapplicationprogram").
+        /// Ścieżka („C:\…\app.exe"), sama nazwa („notepad.exe") lub opublikowany alias („||AppAlias").
+        /// Puste = zwykły pulpit zdalny.
+        /// </summary>
+        public string RemoteAppProgram { get; set; } = "";
+
+        /// <summary>RemoteApp: argumenty wiersza poleceń (mstsc „remoteapplicationcmdline").</summary>
+        public string RemoteAppArgs { get; set; } = "";
 
         /// <summary>Adres MAC do Wake-on-LAN (puste = funkcja nieaktywna dla tego serwera).</summary>
         public string MacAddress { get; set; } = "";
@@ -109,7 +122,8 @@ namespace RdpManager.Models
         Ssh,
         Telnet,
         Serial,
-        Http
+        Http,
+        Vnc
     }
 
     /// <summary>Grupa serwerów w drzewie (Produkcja / Staging / Klienci …).</summary>

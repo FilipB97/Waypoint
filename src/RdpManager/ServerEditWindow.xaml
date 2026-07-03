@@ -2,11 +2,39 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="{DynamicResource S.se.title}" Width="440" SizeToContent="Height"
+        Title="{DynamicResource S.se.title}" Width="580" SizeToContent="Height"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
-        MinWidth="440" MinHeight="360"
+        MinWidth="520" MinHeight="360"
         ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+
+    <Window.Resources>
+        <Style x:Key="SeCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Panel}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <Style x:Key="SeHead" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <Style x:Key="SeSub" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,4,0,8"/>
+        </Style>
+        <Style x:Key="SeLbl" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+    </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -19,128 +47,196 @@
 
         <!-- Treść przewija się; stopka z przyciskami jest ZAWSZE widoczna (małe okna / niskie ekrany). -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="18,8,18,8">
-        <StackPanel Orientation="Horizontal" Margin="0,6,0,2">
-            <TextBlock Text="{DynamicResource S.se.protocol}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-            <ComboBox x:Name="ProtocolCombo" Width="140" SelectionChanged="Protocol_Changed">
-                <ComboBoxItem Content="RDP"/>
-                <ComboBoxItem Content="SSH"/>
-                <ComboBoxItem Content="Telnet"/>
-                <ComboBoxItem Content="Serial (COM)"/>
-                <ComboBoxItem Content="WWW (link)"/>
-            </ComboBox>
-        </StackPanel>
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+        <StackPanel Margin="16,8,16,4">
 
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource S.se.name}" VerticalAlignment="Center" Margin="0,6,12,6"/>
-            <ui:TextBox x:Name="NameBox" Grid.Row="0" Grid.Column="1" Margin="0,6"/>
+            <!-- ===== Połączenie ===== -->
+            <Border Style="{StaticResource SeCard}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SeHead}" Text="{DynamicResource S.se.section.conn}"/>
 
-            <TextBlock x:Name="HostLabel" Grid.Row="1" Grid.Column="0" Text="Host" VerticalAlignment="Center" Margin="0,6,12,6"/>
-            <ui:TextBox x:Name="HostBox" Grid.Row="1" Grid.Column="1" Margin="0,6"/>
-
-            <TextBlock x:Name="PortLabel" Grid.Row="2" Grid.Column="0" Text="Port" VerticalAlignment="Center" Margin="0,6,12,6"/>
-            <ui:TextBox x:Name="PortBox" Grid.Row="2" Grid.Column="1" Text="3389" Margin="0,6" HorizontalAlignment="Left" Width="90"/>
-
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource S.se.group}" VerticalAlignment="Center" Margin="0,6,12,6"/>
-            <ui:TextBox x:Name="GroupBox" Grid.Row="3" Grid.Column="1" Margin="0,6"/>
-
-            <CheckBox x:Name="WinAuthCheck" Grid.Row="4" Grid.Column="1" Margin="0,8"
-                      Checked="WinAuth_Changed" Unchecked="WinAuth_Changed">
-                <TextBlock Text="{DynamicResource S.se.winauth}" TextWrapping="Wrap"/>
-            </CheckBox>
-
-            <TextBlock x:Name="UserLabel" Grid.Row="5" Grid.Column="0" Text="{DynamicResource S.se.user}" VerticalAlignment="Center" Margin="0,6,12,6"/>
-            <ui:TextBox x:Name="UserBox" Grid.Row="5" Grid.Column="1" Margin="0,6"/>
-
-            <TextBlock x:Name="DomainLabel" Grid.Row="6" Grid.Column="0" Text="{DynamicResource S.se.domain}" VerticalAlignment="Center" Margin="0,6,12,6"/>
-            <ui:TextBox x:Name="DomainBox" Grid.Row="6" Grid.Column="1" Margin="0,6"/>
-
-            <TextBlock x:Name="PassLabel" Grid.Row="7" Grid.Column="0" Text="{DynamicResource S.pass}" VerticalAlignment="Center" Margin="0,6,12,6"/>
-            <StackPanel x:Name="PassPanel" Grid.Row="7" Grid.Column="1" Margin="0,6">
-                <PasswordBox x:Name="PassBox" VerticalContentAlignment="Center"/>
-                <CheckBox x:Name="SavePassCheck" Margin="0,6,0,0">
-                    <TextBlock Text="{DynamicResource S.se.savepass}" TextWrapping="Wrap"/>
-                </CheckBox>
-                <StackPanel x:Name="KeyPathPanel" Visibility="Collapsed" Margin="0,10,0,0">
-                    <TextBlock Text="{DynamicResource S.se.keypath}" Margin="0,0,0,4"/>
-                    <Grid>
+                    <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <ui:TextBox x:Name="KeyPathBox" Grid.Column="0" PlaceholderText="{DynamicResource S.se.keypath.ph}"/>
-                        <ui:Button Grid.Column="1" Content="{DynamicResource S.se.browse}" Click="BrowseKey_Click" Margin="8,0,0,0"/>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.protocol}"/>
+                            <ComboBox x:Name="ProtocolCombo" HorizontalAlignment="Stretch" SelectionChanged="Protocol_Changed">
+                                <ComboBoxItem Content="RDP"/>
+                                <ComboBoxItem Content="SSH"/>
+                                <ComboBoxItem Content="Telnet"/>
+                                <ComboBoxItem Content="Serial (COM)"/>
+                                <ComboBoxItem Content="WWW (link)"/>
+                                <ComboBoxItem Content="VNC"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.group}"/>
+                            <ui:TextBox x:Name="GroupBox"/>
+                        </StackPanel>
                     </Grid>
-                    <TextBlock Text="{DynamicResource S.se.tunnels}" Margin="0,10,0,4"/>
-                    <ui:TextBox x:Name="TunnelsBox" AcceptsReturn="True" TextWrapping="NoWrap"
-                                MinHeight="64" MaxHeight="140" VerticalScrollBarVisibility="Auto"
-                                PlaceholderText="{DynamicResource S.se.tunnels.ph}"/>
-                </StackPanel>
-            </StackPanel>
 
-            <TextBlock x:Name="RedirHeader" Grid.Row="8" Grid.ColumnSpan="2" Text="{DynamicResource S.se.redir}" FontWeight="SemiBold" Margin="0,16,0,6"/>
-            <StackPanel x:Name="RdpOptionsPanel" Grid.Row="9" Grid.ColumnSpan="2">
-                <WrapPanel>
-                    <CheckBox x:Name="EdClipboard" Content="{DynamicResource S.se.clipboard}" Margin="0,0,18,6"/>
-                    <CheckBox x:Name="EdDrives" Content="{DynamicResource S.se.drives}" Margin="0,0,18,6"/>
-                    <CheckBox x:Name="EdPrinters" Content="{DynamicResource S.se.printers}" Margin="0,0,18,6"/>
-                </WrapPanel>
-                <CheckBox x:Name="EdAdmin" Margin="0,2,0,4">
-                    <TextBlock Text="{DynamicResource S.se.admin}" TextWrapping="Wrap"/>
-                </CheckBox>
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock Text="{DynamicResource S.se.audio}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <ComboBox x:Name="EdAudio" Width="220">
-                        <ComboBoxItem Content="{DynamicResource S.se.audio0}"/>
-                        <ComboBoxItem Content="{DynamicResource S.se.audio1}"/>
-                        <ComboBoxItem Content="{DynamicResource S.se.audio2}"/>
-                    </ComboBox>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                    <TextBlock Text="{DynamicResource S.se.authlvl}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <ComboBox x:Name="EdAuthLevel" Width="220">
-                        <ComboBoxItem Content="{DynamicResource S.se.auth0}"/>
-                        <ComboBoxItem Content="{DynamicResource S.se.auth1}"/>
-                        <ComboBoxItem Content="{DynamicResource S.se.auth2}"/>
-                    </ComboBox>
-                </StackPanel>
+                    <StackPanel Margin="0,0,0,10">
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.name}"/>
+                        <ui:TextBox x:Name="NameBox"/>
+                    </StackPanel>
 
-                <TextBlock Text="{DynamicResource S.se.gateway}" FontWeight="SemiBold" Margin="0,16,0,6"/>
-                <ui:TextBox x:Name="GatewayHostBox" PlaceholderText="{DynamicResource S.se.gateway.ph}"/>
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock Text="{DynamicResource S.se.gwmode}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <ComboBox x:Name="EdGatewayUsage" Width="220">
-                        <ComboBoxItem Content="{DynamicResource S.se.gw0}"/>
-                        <ComboBoxItem Content="{DynamicResource S.se.gw1}"/>
-                        <ComboBoxItem Content="{DynamicResource S.se.gw2}"/>
-                    </ComboBox>
+                    <!-- Host wypełnia wiersz; Port dokowany po prawej (znika przy WWW → Host się rozciąga). -->
+                    <DockPanel Margin="0,0,0,10">
+                        <StackPanel DockPanel.Dock="Right" Margin="14,0,0,0">
+                            <TextBlock x:Name="PortLabel" Style="{StaticResource SeLbl}" Text="Port"/>
+                            <ui:TextBox x:Name="PortBox" Text="3389" Width="110"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock x:Name="HostLabel" Style="{StaticResource SeLbl}" Text="Host"/>
+                            <ui:TextBox x:Name="HostBox"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.mac}"/>
+                        <ui:TextBox x:Name="MacBox" PlaceholderText="{DynamicResource S.se.mac.ph}"
+                                    Width="260" HorizontalAlignment="Left"/>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,10,0,0">
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.iconcolor}"/>
+                        <WrapPanel x:Name="ColorSwatches"/>
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
-        </Grid>
-        <TextBlock Text="{DynamicResource S.se.mac}" Margin="0,10,0,4"/>
-        <ui:TextBox x:Name="MacBox" PlaceholderText="{DynamicResource S.se.mac.ph}" Width="240" HorizontalAlignment="Left"/>
+            </Border>
+
+            <!-- ===== Uwierzytelnianie (RDP/SSH) ===== -->
+            <Border x:Name="AuthCard" Style="{StaticResource SeCard}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SeHead}" Text="{DynamicResource S.se.section.auth}"/>
+
+                    <CheckBox x:Name="WinAuthCheck" Margin="0,0,0,10"
+                              Checked="WinAuth_Changed" Unchecked="WinAuth_Changed">
+                        <TextBlock Text="{DynamicResource S.se.winauth}" TextWrapping="Wrap"/>
+                    </CheckBox>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock x:Name="UserLabel" Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.user}"/>
+                            <ui:TextBox x:Name="UserBox"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock x:Name="DomainLabel" Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.domain}"/>
+                            <ui:TextBox x:Name="DomainBox"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock x:Name="PassLabel" Style="{StaticResource SeLbl}" Text="{DynamicResource S.pass}"/>
+                    <StackPanel x:Name="PassPanel">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <PasswordBox x:Name="PassBox" Grid.Column="0" VerticalContentAlignment="Center"/>
+                            <ui:TextBox x:Name="PassPlain" Grid.Column="0" Visibility="Collapsed" VerticalContentAlignment="Center"/>
+                            <ui:Button x:Name="RevealBtn" Grid.Column="1" Margin="8,0,0,0" Click="RevealPass_Click"
+                                       ToolTip="{DynamicResource S.se.reveal}">
+                                <ui:SymbolIcon x:Name="RevealIcon" Symbol="Eye24"/>
+                            </ui:Button>
+                        </Grid>
+                        <CheckBox x:Name="SavePassCheck" Margin="0,8,0,0">
+                            <TextBlock Text="{DynamicResource S.se.savepass}" TextWrapping="Wrap"/>
+                        </CheckBox>
+                        <StackPanel x:Name="KeyPathPanel" Visibility="Collapsed" Margin="0,12,0,0">
+                            <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.keypath}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBox x:Name="KeyPathBox" Grid.Column="0" PlaceholderText="{DynamicResource S.se.keypath.ph}"/>
+                                <ui:Button Grid.Column="1" Content="{DynamicResource S.se.browse}" Click="BrowseKey_Click" Margin="8,0,0,0"/>
+                            </Grid>
+                            <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.tunnels}" Margin="0,12,0,4"/>
+                            <ui:TextBox x:Name="TunnelsBox" AcceptsReturn="True" TextWrapping="NoWrap"
+                                        MinHeight="64" MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                                        PlaceholderText="{DynamicResource S.se.tunnels.ph}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== Opcje RDP ===== -->
+            <Border x:Name="RdpCard" Style="{StaticResource SeCard}">
+                <StackPanel x:Name="RdpOptionsPanel">
+                    <TextBlock Style="{StaticResource SeHead}" Text="{DynamicResource S.se.section.rdp}"/>
+
+                    <TextBlock x:Name="RedirHeader" Style="{StaticResource SeSub}" Margin="0,0,0,8" Text="{DynamicResource S.se.redir}"/>
+                    <WrapPanel Margin="0,0,0,6">
+                        <CheckBox x:Name="EdClipboard" Content="{DynamicResource S.se.clipboard}" Margin="0,0,20,6"/>
+                        <CheckBox x:Name="EdDrives" Content="{DynamicResource S.se.drives}" Margin="0,0,20,6"/>
+                        <CheckBox x:Name="EdPrinters" Content="{DynamicResource S.se.printers}" Margin="0,0,20,6"/>
+                    </WrapPanel>
+                    <CheckBox x:Name="EdAdmin" Margin="0,2,0,12">
+                        <TextBlock Text="{DynamicResource S.se.admin}" TextWrapping="Wrap"/>
+                    </CheckBox>
+
+                    <TextBlock Style="{StaticResource SeSub}" Margin="0,0,0,8" Text="{DynamicResource S.se.remoteapp}"/>
+                    <StackPanel Margin="0,0,0,4">
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.remoteapp.prog}"/>
+                        <ui:TextBox x:Name="RemoteAppBox" PlaceholderText="{DynamicResource S.se.remoteapp.prog.ph}"/>
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.remoteapp.args}" Margin="0,8,0,4"/>
+                        <ui:TextBox x:Name="RemoteAppArgsBox"/>
+                    </StackPanel>
+
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.audio}"/>
+                            <ComboBox x:Name="EdAudio" HorizontalAlignment="Stretch">
+                                <ComboBoxItem Content="{DynamicResource S.se.audio0}"/>
+                                <ComboBoxItem Content="{DynamicResource S.se.audio1}"/>
+                                <ComboBoxItem Content="{DynamicResource S.se.audio2}"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.authlvl}"/>
+                            <ComboBox x:Name="EdAuthLevel" HorizontalAlignment="Stretch">
+                                <ComboBoxItem Content="{DynamicResource S.se.auth0}"/>
+                                <ComboBoxItem Content="{DynamicResource S.se.auth1}"/>
+                                <ComboBoxItem Content="{DynamicResource S.se.auth2}"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource SeSub}" Margin="0,14,0,8" Text="{DynamicResource S.se.gateway}"/>
+                    <ui:TextBox x:Name="GatewayHostBox" PlaceholderText="{DynamicResource S.se.gateway.ph}"/>
+                    <StackPanel Margin="0,10,0,0" Width="260" HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.gwmode}"/>
+                        <ComboBox x:Name="EdGatewayUsage" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="{DynamicResource S.se.gw0}"/>
+                            <ComboBoxItem Content="{DynamicResource S.se.gw1}"/>
+                            <ComboBoxItem Content="{DynamicResource S.se.gw2}"/>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
         </StackPanel>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,4,18,16">
-            <ui:Button Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="90"/>
-            <ui:Button Content="{DynamicResource S.save}" Appearance="Primary" Click="Save_Click" MinWidth="90"/>
-        </StackPanel>
+        <Border Grid.Row="2" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,12,16,12">
+                <ui:Button Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="96"/>
+                <ui:Button Content="{DynamicResource S.save}" Appearance="Primary" Click="Save_Click" MinWidth="96"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </ui:FluentWindow>

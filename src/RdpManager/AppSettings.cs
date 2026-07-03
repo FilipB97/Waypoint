@@ -55,5 +55,9 @@ namespace RdpManager
 
         /// <summary>Pytaj na starcie o przywrócenie ostatnio otwartych połączeń.</summary>
         public bool RestorePrompt { get; set; } = true;
+
+        /// <summary>Serwery, z którymi łączyć się automatycznie na starcie. Niepuste = ma priorytet
+        /// nad popupem przywracania (łączymy z tymi i popup się nie pokazuje).</summary>
+        public List<string> AutoConnectServerIds { get; set; } = new List<string>();
     }
 }

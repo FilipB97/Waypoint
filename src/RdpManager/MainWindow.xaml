@@ -139,13 +139,7 @@
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">
                         <Button x:Name="AvatarBtn" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.about}" Click="Avatar_Click">
-                            <Ellipse Width="26" Height="26">
-                                <Ellipse.Fill>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#7C6CFB" Offset="0"/><GradientStop Color="#4F3FD1" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Ellipse.Fill>
-                            </Ellipse>
+                            <ui:SymbolIcon Symbol="Info24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                         <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.settings}" Tag="Settings" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="17" Foreground="{DynamicResource TextTer}"/>
@@ -197,6 +191,7 @@
                                         <MenuItem Header="{DynamicResource S.import.rdpfile}" Click="ImportRdp_Click"/>
                                         <MenuItem Header="{DynamicResource S.import.mrng}" Click="ImportMrng_Click"/>
                                         <MenuItem Header="{DynamicResource S.import.rdcman}" Click="ImportRdg_Click"/>
+                                        <MenuItem Header="{DynamicResource S.import.rdm}" Click="ImportRdm_Click"/>
                                     </ContextMenu>
                                 </ui:Button.ContextMenu>
                             </ui:Button>
@@ -421,6 +416,20 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Połącz na starcie -->
+                    <Border Style="{DynamicResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource S.set.autoconnect}" Style="{DynamicResource CardHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.autoconnect.hint}" Foreground="{DynamicResource TextTer}"
+                                       FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="AutoConnectList"/>
+                                </ScrollViewer>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Dane -->
                     <Border Style="{DynamicResource Card}">
                         <StackPanel>
@@ -469,6 +478,20 @@
                             <StackPanel x:Name="QsServers"/>
                         </StackPanel>
                     </ScrollViewer>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Lewy panel w trybie skupienia. Popup = osobny HWND, więc nakłada się na sesję (RDP/WebView2)
+             BEZ zmiany jej rozmiaru — sesja się nie renegocjuje i nie miga. Rail+Sidebar są tu przenoszone
+             na czas peeka (reparenting), a płynne wysunięcie robi animacja TranslateTransform. -->
+        <Popup x:Name="FocusPeekPopup" Placement="Relative" PlacementTarget="{Binding ElementName=BodyGrid}"
+               AllowsTransparency="True" StaysOpen="True" HorizontalOffset="0" VerticalOffset="0">
+            <Border x:Name="FocusPeekClip" ClipToBounds="True" Width="280">
+                <StackPanel x:Name="FocusPeekHost" Orientation="Horizontal" HorizontalAlignment="Left">
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform x:Name="FocusPeekSlide" X="-280"/>
+                    </StackPanel.RenderTransform>
                 </StackPanel>
             </Border>
         </Popup>

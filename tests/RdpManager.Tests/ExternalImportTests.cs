@@ -88,11 +88,69 @@ namespace RdpManager.Tests
             Assert.Equal("Prod", web1.Group);
         }
 
+        private const string RdmXml = @"<?xml version='1.0' encoding='utf-8'?>
+<Connections>
+  <Connection><ConnectionType>Group</ConnectionType><Name>Klienci</Name><Group></Group></Connection>
+  <Connection>
+    <ConnectionType>RDPConfigured</ConnectionType><Name>DC1</Name><Group>Klienci\ACME</Group>
+    <Host>10.2.2.1</Host><Port>3390</Port><Username>admin</Username><Domain>CORP</Domain>
+  </Connection>
+  <Connection>
+    <ConnectionType>RDPConfigured</ConnectionType><Name>web2</Name><Group>Klienci\ACME\Web</Group>
+    <Url>10.2.2.6:3392</Url>
+  </Connection>
+  <Connection>
+    <ConnectionType>SSHShell</ConnectionType><Name>lin1</Name><Group>Klienci\ACME</Group>
+    <Host>10.2.2.2</Host><Username>root</Username>
+  </Connection>
+  <Connection><ConnectionType>Telnet</ConnectionType><Name>switch1</Name><Url>10.2.2.3</Url></Connection>
+  <Connection><ConnectionType>WebBrowser</ConnectionType><Name>Portal</Name><Url>https://portal.example.com</Url></Connection>
+  <Connection><ConnectionType>VNC</ConnectionType><Name>kiosk</Name><Host>10.2.2.9</Host></Connection>
+</Connections>";
+
+        [Fact]
+        public void Rdm_MapsProtocols_SkipsGroups_CountsUnsupported()
+        {
+            var r = ExternalImport.ParseRdm(RdmXml);
+
+            Assert.Equal(5, r.Servers.Count);        // folder pominięty, VNC nie dodany
+            Assert.Equal(1, r.UnsupportedProtocol);  // VNC
+
+            var dc1 = r.Servers.Single(s => s.Name == "DC1");
+            Assert.Equal(RemoteProtocol.Rdp, dc1.Protocol);
+            Assert.Equal("10.2.2.1", dc1.Host);
+            Assert.Equal(3390, dc1.Port);
+            Assert.Equal("admin", dc1.Username);
+            Assert.Equal("CORP", dc1.Domain);
+            Assert.Equal("Klienci / ACME", dc1.Group);   // backslash → " / "
+
+            var web2 = r.Servers.Single(s => s.Name == "web2");
+            Assert.Equal("10.2.2.6", web2.Host);         // host z <Url>, port rozbity
+            Assert.Equal(3392, web2.Port);
+            Assert.Equal("Klienci / ACME / Web", web2.Group);
+
+            var lin1 = r.Servers.Single(s => s.Name == "lin1");
+            Assert.Equal(RemoteProtocol.Ssh, lin1.Protocol);
+            Assert.Equal(22, lin1.Port);                 // brak <Port> → domyślny
+            Assert.Equal("", lin1.Domain);
+
+            var sw = r.Servers.Single(s => s.Name == "switch1");
+            Assert.Equal(RemoteProtocol.Telnet, sw.Protocol);
+            Assert.Equal("10.2.2.3", sw.Host);
+            Assert.Equal(23, sw.Port);
+            Assert.Equal("RDM", sw.Group);               // brak <Group> → domyślna
+
+            var portal = r.Servers.Single(s => s.Name == "Portal");
+            Assert.Equal(RemoteProtocol.Http, portal.Protocol);
+            Assert.Equal("https://portal.example.com", portal.Host);   // WWW: pełny URL w Host
+        }
+
         [Fact]
         public void Parsers_EmptyDocuments_ReturnNoServers()
         {
             Assert.Empty(ExternalImport.ParseMRemoteNg("<Connections/>").Servers);
             Assert.Empty(ExternalImport.ParseRdcMan("<RDCMan/>").Servers);
+            Assert.Empty(ExternalImport.ParseRdm("<Connections/>").Servers);
         }
     }
 }

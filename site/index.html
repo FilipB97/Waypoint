@@ -60,6 +60,8 @@
   .btn.star{background:rgba(255,255,255,.04);color:var(--text);gap:7px}
   .btn.star:hover{background:rgba(255,255,255,.09);border-color:var(--border2)}
   .btn.star svg{fill:#ffd166}
+  .starcount{opacity:.65;font-variant-numeric:tabular-nums}
+  .dlcount{margin-top:14px;font-size:14px;opacity:.62;font-variant-numeric:tabular-nums}
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}
   .chip{font-size:12.5px;font-weight:600;color:var(--text2);background:rgba(255,255,255,.045);
     border:1px solid var(--border);border-radius:999px;padding:5px 13px}
@@ -147,7 +149,7 @@
       <a class="link" href="#security" data-i18n="nav.security">Security</a>
       <a class="btn star" href="https://github.com/FilipB97/Waypoint" title="Star on GitHub">
         <svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        <span data-i18n="nav.star">Star</span>
+        <span data-i18n="nav.star">Star</span><span id="starCount" class="starcount"></span>
       </a>
       <span class="lang"><button data-lang-btn="en">EN</button><button data-lang-btn="pl">PL</button></span>
       <a class="btn primary" href="https://github.com/FilipB97/Waypoint/releases/latest" data-i18n="nav.download">Download</a>
@@ -171,6 +173,7 @@
       </a>
       <a class="btn ghost" href="https://github.com/FilipB97/Waypoint" data-i18n="hero.gh">View on GitHub</a>
     </div>
+    <div class="dlcount" id="dlCount" hidden></div>
     <div class="chips">
       <span class="chip"><b>RDP</b></span><span class="chip"><b>SSH</b></span>
       <span class="chip">SFTP</span><span class="chip">Telnet</span>
@@ -327,7 +330,7 @@
 (function(){
   var I18N = {
     en: {
-      "nav.features":"Features","nav.security":"Security","nav.download":"Download","nav.star":"Star",
+      "nav.features":"Features","nav.security":"Security","nav.download":"Download","nav.star":"Star","stat.downloads":"downloads",
       "hero.badge":"● Open source · MIT",
       "hero.title":"Remote desktop,<br><span class=\"grad\">finally pleasant.</span>",
       "hero.lead":"<b style=\"color:var(--text)\">Waypoint</b> is a modern <b style=\"color:var(--text)\">RDP + SSH</b> connection manager for Windows — tabbed sessions, an embedded terminal with SFTP, multi-monitor and secure passwords. One modern app instead of mstsc, PuTTY and mRemoteNG.",
@@ -354,7 +357,7 @@
       "foot.right":"Built with WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>"
     },
     pl: {
-      "nav.features":"Funkcje","nav.security":"Bezpieczeństwo","nav.download":"Pobierz","nav.star":"Star",
+      "nav.features":"Funkcje","nav.security":"Bezpieczeństwo","nav.download":"Pobierz","nav.star":"Star","stat.downloads":"pobrań",
       "hero.badge":"● Open source · MIT",
       "hero.title":"Zdalny pulpit,<br><span class=\"grad\">wreszcie przyjemny.</span>",
       "hero.lead":"<b style=\"color:var(--text)\">Waypoint</b> to nowoczesny menedżer połączeń <b style=\"color:var(--text)\">RDP + SSH</b> dla Windows — sesje w kartach, wbudowany terminal z SFTP, multi-monitor i bezpieczne hasła. Jedna aplikacja zamiast mstsc, PuTTY i mRemoteNG.",
@@ -383,6 +386,7 @@
   };
   function apply(lang){
     var dict = I18N[lang] || I18N.en;
+    cur = lang;
     document.documentElement.lang = lang;
     document.querySelectorAll('[data-i18n]').forEach(function(el){
       var v = dict[el.getAttribute('data-i18n')]; if(v!=null) el.textContent = v;
@@ -394,6 +398,32 @@
       b.classList.toggle('active', b.getAttribute('data-lang-btn')===lang);
     });
     try{ localStorage.setItem('wp-lang', lang); }catch(e){}
+    renderCounts();
+  }
+
+  // Liczniki z GitHuba (gwiazdki + suma pobrań assetów). Bez klucza API: 60 req/h/IP wystarcza.
+  var cur = 'en', stats = { stars: null, downloads: null };
+  function renderCounts(){
+    var dict = I18N[cur] || I18N.en;
+    var sc = document.getElementById('starCount');
+    if (sc) sc.textContent = stats.stars != null ? ' · ' + stats.stars : '';
+    var dc = document.getElementById('dlCount');
+    if (dc){
+      if (stats.downloads != null){
+        dc.textContent = '↓ ' + stats.downloads.toLocaleString() + ' ' + (dict['stat.downloads'] || 'downloads');
+        dc.hidden = false;
+      } else { dc.hidden = true; }
+    }
+  }
+  function fetchStats(){
+    fetch('https://api.github.com/repos/FilipB97/Waypoint')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ if (j && typeof j.stargazers_count === 'number'){ stats.stars = j.stargazers_count; renderCounts(); } })
+      .catch(function(){});
+    fetch('https://api.github.com/repos/FilipB97/Waypoint/releases')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(a){ if (Array.isArray(a)){ var t = 0; a.forEach(function(rel){ (rel.assets||[]).forEach(function(as){ t += as.download_count || 0; }); }); stats.downloads = t; renderCounts(); } })
+      .catch(function(){});
   }
   var saved=null; try{ saved = localStorage.getItem('wp-lang'); }catch(e){}
   var lang = saved || (((navigator.language||'en').toLowerCase().indexOf('pl')===0) ? 'pl' : 'en');
@@ -401,6 +431,7 @@
     b.addEventListener('click', function(){ apply(b.getAttribute('data-lang-btn')); });
   });
   apply(lang);
+  fetchStats();
 })();
 </script>
 </body>

@@ -20,6 +20,51 @@ namespace RdpManager.Core
             catch { return null; }
         }
 
+        /// <summary>Wersja + adres i rozmiar assetu .exe (win-x64) do auto-aktualizacji. null gdy JSON bez sensu.</summary>
+        public sealed class ReleaseInfo
+        {
+            public Version Version { get; set; }
+            public string ExeUrl { get; set; }
+            public long ExeSize { get; set; }
+            public string HtmlUrl { get; set; }
+        }
+
+        public static ReleaseInfo ParseRelease(string json)
+        {
+            try
+            {
+                using (var doc = JsonDocument.Parse(json))
+                {
+                    var root = doc.RootElement;
+                    var info = new ReleaseInfo
+                    {
+                        Version = ParseTag(root.TryGetProperty("tag_name", out var t) ? t.GetString() : null),
+                        HtmlUrl = root.TryGetProperty("html_url", out var h) ? h.GetString() : null
+                    };
+                    if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
+                    {
+                        string firstUrl = null; long firstSize = 0;
+                        foreach (var a in assets.EnumerateArray())
+                        {
+                            string name = a.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                            if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
+                            string url = a.TryGetProperty("browser_download_url", out var u) ? u.GetString() : null;
+                            long size = a.TryGetProperty("size", out var s) && s.TryGetInt64(out var sz) ? sz : 0;
+                            if (name.IndexOf("x64", StringComparison.OrdinalIgnoreCase) >= 0)   // preferuj win-x64
+                            {
+                                info.ExeUrl = url; info.ExeSize = size;
+                                break;
+                            }
+                            if (firstUrl == null) { firstUrl = url; firstSize = size; }
+                        }
+                        if (info.ExeUrl == null) { info.ExeUrl = firstUrl; info.ExeSize = firstSize; }
+                    }
+                    return info;
+                }
+            }
+            catch { return null; }
+        }
+
         /// <summary>„v1.2.0" / „1.2" → Version; null gdy nieparsowalne.</summary>
         public static Version ParseTag(string tag)
         {

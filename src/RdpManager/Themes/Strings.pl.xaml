@@ -54,10 +54,17 @@
     <sys:String x:Key="S.set.opennewwin">Otwieraj połączenia w osobnym oknie</sys:String>
     <sys:String x:Key="S.set.immersive">Tryb skupienia po zmaksymalizowaniu (ukryj panel boczny)</sys:String>
     <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje przy starcie</sys:String>
-    <sys:String x:Key="S.update.available">Nowa wersja {0} — pobierz</sys:String>
+    <sys:String x:Key="S.update.available">Nowa wersja {0} — aktualizuj</sys:String>
+    <sys:String x:Key="S.update.title">Aktualizacja</sys:String>
+    <sys:String x:Key="S.update.confirm">Zaktualizować do wersji {0}? Otwarte połączenia zostaną zamknięte, a Waypoint uruchomi się ponownie (i zaproponuje przywrócenie sesji).</sys:String>
+    <sys:String x:Key="S.update.downloading">Pobieranie… {0}%</sys:String>
+    <sys:String x:Key="S.update.faildl">Nie udało się pobrać aktualizacji.</sys:String>
     <sys:String x:Key="S.set.traymin">Minimalizuj do zasobnika systemowego</sys:String>
     <sys:String x:Key="S.set.hotkey">Globalny skrót szybkiego połączenia (Ctrl+Alt+Q)</sys:String>
     <sys:String x:Key="S.set.restoreprompt">Pytaj o przywrócenie ostatnich połączeń przy starcie</sys:String>
+    <sys:String x:Key="S.set.autoconnect">Połącz na starcie</sys:String>
+    <sys:String x:Key="S.set.autoconnect.hint">Zaznaczone serwery połączą się automatycznie po uruchomieniu aplikacji. Gdy coś jest zaznaczone, popup przywracania ostatniej sesji się nie pokaże.</sys:String>
+    <sys:String x:Key="S.set.autoconnect.empty">Brak serwerów — najpierw dodaj jakiś serwer.</sys:String>
     <sys:String x:Key="S.restore.title">Przywróć sesję</sys:String>
     <sys:String x:Key="S.restore.msg">Te połączenia były otwarte przy ostatnim zamknięciu. Otworzyć je ponownie?</sys:String>
     <sys:String x:Key="S.restore.dontask">Nie pytaj przy starcie</sys:String>
@@ -98,6 +105,9 @@
 
     <!-- dialog: serwer -->
     <sys:String x:Key="S.se.title">Serwer</sys:String>
+    <sys:String x:Key="S.se.section.conn">Połączenie</sys:String>
+    <sys:String x:Key="S.se.section.auth">Uwierzytelnianie</sys:String>
+    <sys:String x:Key="S.se.section.rdp">Opcje RDP</sys:String>
     <sys:String x:Key="S.se.protocol">Protokół</sys:String>
     <sys:String x:Key="S.se.keypath">Klucz prywatny (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.keypath.ph">ścieżka do pliku klucza — puste = tylko hasło</sys:String>
@@ -134,9 +144,16 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.gw1">Zawsze przez bramę</sys:String>
     <sys:String x:Key="S.se.gw2">Wykryj automatycznie</sys:String>
     <sys:String x:Key="S.se.admin">Sesja administracyjna / konsola (jak mstsc /admin)</sys:String>
+    <sys:String x:Key="S.se.remoteapp">RemoteApp (aplikacja zamiast pulpitu)</sys:String>
+    <sys:String x:Key="S.se.remoteapp.prog">Program / alias</sys:String>
+    <sys:String x:Key="S.se.remoteapp.prog.ph">puste = pełny pulpit; np. notepad.exe, C:\App\a.exe lub ||AliasApp</sys:String>
+    <sys:String x:Key="S.se.remoteapp.args">Argumenty (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.mac">Adres MAC — Wake-on-LAN (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.mac.ph">np. AA:BB:CC:DD:EE:FF</sys:String>
     <sys:String x:Key="S.se.mac.bad">Niepoprawny adres MAC: {0}</sys:String>
+    <sys:String x:Key="S.se.reveal">Pokaż / ukryj hasło</sys:String>
+    <sys:String x:Key="S.se.iconcolor">Kolor ikony</sys:String>
+    <sys:String x:Key="S.se.iconcolor.auto">Automatyczny (wg grupy)</sys:String>
 
     <!-- dialog: poświadczenia -->
     <sys:String x:Key="S.cp.title">Poświadczenia</sys:String>
@@ -164,6 +181,14 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
     <sys:String x:Key="S.m.wol">Obudź (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplikuj serwer…</sys:String>
+    <sys:String x:Key="S.m.copy">Kopiuj</sys:String>
+    <sys:String x:Key="S.m.copy.name">Nazwę</sys:String>
+    <sys:String x:Key="S.m.copy.host">Host / adres</sys:String>
+    <sys:String x:Key="S.m.copy.port">Port</sys:String>
+    <sys:String x:Key="S.m.copy.user">Użytkownika</sys:String>
+    <sys:String x:Key="S.m.copy.domain">Domenę</sys:String>
+    <sys:String x:Key="S.m.copy.pass">Hasło</sys:String>
+    <sys:String x:Key="S.m.copy.userpass">Użytkownik + hasło</sys:String>
     <sys:String x:Key="S.copy.suffix">(kopia)</sys:String>
 
     <!-- pass 2b: ulotne komunikaty z code-behind (statusy, dialogi, prompty, diagnostyka) -->
@@ -181,6 +206,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.multimon">Pełny ekran (wszystkie monitory) — Ctrl+Alt+Break lub pasek połączenia, by wrócić.</sys:String>
     <sys:String x:Key="S.st.diagnosing">Diagnostyka {0}:{1}…</sys:String>
     <sys:String x:Key="S.st.imported">Zaimportowano serwerów: {0}</sys:String>
+    <sys:String x:Key="S.st.copied">Skopiowano do schowka</sys:String>
+    <sys:String x:Key="S.st.copyempty">Brak wartości do skopiowania</sys:String>
     <sys:String x:Key="S.st.importedMstsc">Zaimportowano z mstsc: {0}</sys:String>
     <sys:String x:Key="S.st.exported">Wyeksportowano do {0}</sys:String>
     <sys:String x:Key="S.st.saved">Zapisano ✓</sys:String>
@@ -191,6 +218,11 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dash.reachable">Osiągalne</sys:String>
     <sys:String x:Key="S.dash.opensessions">Otwarte sesje</sys:String>
     <sys:String x:Key="S.dash.recent">Ostatnio używane</sys:String>
+    <sys:String x:Key="S.dash.conns7">Połączenia (7 dni)</sys:String>
+    <sys:String x:Key="S.dash.perday">Połączenia dziennie (14 dni)</sys:String>
+    <sys:String x:Key="S.dash.top">Najczęściej używane</sys:String>
+    <sys:String x:Key="S.dash.nodata">Brak danych w dzienniku połączeń.</sys:String>
+    <sys:String x:Key="S.dash.nohistory">Brak historii.</sys:String>
     <sys:String x:Key="S.dash.norecent">Brak ostatnich połączeń.</sys:String>
 
     <sys:String x:Key="S.group.pinned">PRZYPIĘTE</sys:String>
@@ -200,7 +232,9 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.prompt.quickconnect.label">Adres — host, host:port, user@host albo DOMENA\user@host:</sys:String>
     <sys:String x:Key="S.prompt.connectas">Połącz z innymi poświadczeniami.</sys:String>
 
-    <sys:String x:Key="S.msg.about.desc">Nowoczesny menedżer połączeń RDP (WPF / Fluent).</sys:String>
+    <sys:String x:Key="S.msg.about.desc">Nowoczesny menedżer połączeń RDP i SSH dla Windows (WPF / Fluent / Mica).</sys:String>
+    <sys:String x:Key="S.about.author">Autor: </sys:String>
+    <sys:String x:Key="S.about.repo">Repozytorium ★</sys:String>
     <sys:String x:Key="S.msg.about.datafolder">Folder danych:</sys:String>
     <sys:String x:Key="S.msg.closeapp">Są aktywne połączenia. Zamknąć aplikację?</sys:String>
     <sys:String x:Key="S.msg.closeapp.title">Zamknij</sys:String>
@@ -247,10 +281,13 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.rdpfile">Plik .rdp…</sys:String>
     <sys:String x:Key="S.import.mrng">mRemoteNG (confCons.xml)…</sys:String>
     <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
+    <sys:String x:Key="S.import.rdm">Devolutions RDM (.rdm/.xml)…</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Importuj z mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Importuj z RDCMan</sys:String>
     <sys:String x:Key="S.dlg.rdg.filter">RDCMan (*.rdg)|*.rdg|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importrdm.title">Importuj z Devolutions RDM</sys:String>
+    <sys:String x:Key="S.dlg.rdm.filter">Eksport RDM (*.rdm;*.xml)|*.rdm;*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.msg.import.unsupported">Pominięto nieobsługiwane protokoły: {0}</sys:String>
     <sys:String x:Key="S.msg.import.nopass">Hasła nie są przenoszone — podasz je przy pierwszym połączeniu.</sys:String>
 

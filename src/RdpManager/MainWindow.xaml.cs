@@ -86,6 +86,9 @@ namespace RdpManager
         private DispatcherTimer _focusPeekDelay;   // opóźnienie przytrzymania (jak pasek pełnoekranowy)
         private bool _focusPeeking;                // panel boczny chwilowo wysunięty w trybie skupienia
         private bool? _focusOverride;              // ręczne wł/wył skupienia (null = wg ustawienia); reset po un-maximize
+        private double _savedCaptionHeight = double.NaN;   // CaptionHeight sprzed skupienia (do przywrócenia)
+        private Core.UpdateCheck.ReleaseInfo _update;      // dostępna nowsza wersja (z URL assetu .exe); null gdy brak
+        private bool _updating;                            // trwa auto-aktualizacja — pomiń potwierdzenie zamknięcia
         private RECT _fsMonRect;   // prostokąt monitora w pikselach fizycznych (do wykrycia górnej krawędzi)
 
         public MainWindow()
@@ -143,8 +146,27 @@ namespace RdpManager
             ApplyHotkey();
 
             CheckForUpdatesAsync();
-            // Popup przywracania — po wyrenderowaniu okna (modal potrzebuje widocznego właściciela).
-            Dispatcher.BeginInvoke(new Action(PromptRestoreLastSession), DispatcherPriority.Loaded);
+            // Po wyrenderowaniu okna (modal przywracania potrzebuje widocznego właściciela).
+            Dispatcher.BeginInvoke(new Action(StartupConnect), DispatcherPriority.Loaded);
+        }
+
+        // Start: zdefiniowane serwery „Połącz na starcie" mają priorytet — łączymy z nimi i pomijamy
+        // popup przywracania. Gdy ich brak, wraca stare zachowanie (popup ostatniej sesji).
+        private void StartupConnect()
+        {
+            var ids = _settings.AutoConnectServerIds;
+            if (ids != null && ids.Count > 0)
+            {
+                var toOpen = ids
+                    .Select(id => _vm.Servers.FirstOrDefault(v => v.Id == id))
+                    .Where(s => s != null).Distinct().ToList();
+                if (toOpen.Count > 0)
+                {
+                    foreach (var s in toOpen) OpenServer(s, autoConnect: true);
+                    return;
+                }
+            }
+            PromptRestoreLastSession();
         }
 
         // Na starcie: zaproponuj otwarcie połączeń, które były aktywne przy ostatnim zamknięciu.
@@ -168,6 +190,17 @@ namespace RdpManager
             foreach (var s in dlg.SelectedServers) OpenServer(s, autoConnect: true);
         }
 
+        // Zapisz aktualnie otwarte karty (tylko zapisane serwery — nie Quick Connect) do przywrócenia na starcie.
+        // Wołane przy każdym otwarciu/zamknięciu karty, więc lista przetrwa też ubicie procesu, nie tylko czyste zamknięcie.
+        private void PersistOpenSessions()
+        {
+            _settings.LastOpenServerIds = _sessions
+                .Select(s => s.Server.Id)
+                .Where(id => _vm.Servers.Any(v => v.Id == id))
+                .Distinct().ToList();
+            SettingsStore.Save(_settings);
+        }
+
         // ---------- Aktualizacje ----------
 
         // Ciche sprawdzenie GitHub releases/latest; nowsza wersja → przycisk w panelu bocznym.
@@ -182,12 +215,13 @@ namespace RdpManager
                     http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
                     string json = await http.GetStringAsync(
                         "https://api.github.com/repos/FilipB97/Waypoint/releases/latest");
-                    var latest = Core.UpdateCheck.ParseLatest(json);
+                    var info = Core.UpdateCheck.ParseRelease(json);
                     var cur = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
                     var current = new Version(cur.Major, cur.Minor, Math.Max(cur.Build, 0));
-                    if (Core.UpdateCheck.IsNewer(latest, current))
+                    if (info != null && Core.UpdateCheck.IsNewer(info.Version, current))
                     {
-                        UpdateBtn.Content = string.Format(L("S.update.available"), latest);
+                        _update = info;
+                        UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
                         UpdateBtn.Visibility = Visibility.Visible;
                     }
                 }
@@ -195,14 +229,113 @@ namespace RdpManager
             catch { /* offline / proxy / rate limit — sprawdzimy przy kolejnym starcie */ }
         }
 
-        private void Update_Click(object sender, RoutedEventArgs e)
+        private async void Update_Click(object sender, RoutedEventArgs e)
+        {
+            // Brak assetu .exe w release → tak jak dawniej: otwórz stronę wydania w przeglądarce.
+            if (_update == null || string.IsNullOrEmpty(_update.ExeUrl))
+            {
+                OpenReleasePage();
+                return;
+            }
+
+            if (MessageBox.Show(string.Format(L("S.update.confirm"), _update.Version), L("S.update.title"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                "Waypoint-update-" + _update.Version + ".exe");
+            string label = UpdateBtn.Content as string;
+            UpdateBtn.IsEnabled = false;
+            try
+            {
+                await DownloadFileAsync(_update.ExeUrl, temp, _update.ExeSize);
+                if (!IsValidExe(temp, _update.ExeSize)) throw new Exception("plik pobrany niepoprawnie");
+            }
+            catch (Exception ex)
+            {
+                UpdateBtn.IsEnabled = true;
+                UpdateBtn.Content = label;
+                MessageBox.Show(L("S.update.faildl") + "\n" + ex.Message, L("S.update.title"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Uruchom pobrany exe jako „installer": poczeka aż ten proces zniknie, podmieni plik docelowy i wystartuje go.
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(temp)
+                {
+                    UseShellExecute = false,
+                    Arguments = "--apply-update \"" + Environment.ProcessPath + "\" "
+                                + System.Diagnostics.Process.GetCurrentProcess().Id
+                });
+            }
+            catch (Exception ex)
+            {
+                UpdateBtn.IsEnabled = true;
+                UpdateBtn.Content = label;
+                MessageBox.Show(L("S.update.faildl") + "\n" + ex.Message, L("S.update.title"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _updating = true;   // Window_Closing pominie potwierdzenie i zapisze otwarte sesje do przywrócenia
+            Close();
+        }
+
+        private void OpenReleasePage()
         {
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                    "https://github.com/FilipB97/Waypoint/releases/latest") { UseShellExecute = true });
+                    _update?.HtmlUrl ?? "https://github.com/FilipB97/Waypoint/releases/latest") { UseShellExecute = true });
             }
             catch { /* brak przeglądarki — ignoruj */ }
+        }
+
+        // Pobiera plik strumieniowo z paskiem % na przycisku aktualizacji (kontynuacje async wracają na wątek UI).
+        private async System.Threading.Tasks.Task DownloadFileAsync(string url, string dest, long knownSize)
+        {
+            using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(5) })
+            {
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
+                using (var resp = await http.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead))
+                {
+                    resp.EnsureSuccessStatusCode();
+                    long total = resp.Content.Headers.ContentLength ?? knownSize;
+                    using (var src = await resp.Content.ReadAsStreamAsync())
+                    using (var fs = new System.IO.FileStream(dest, System.IO.FileMode.Create,
+                                        System.IO.FileAccess.Write, System.IO.FileShare.None))
+                    {
+                        var buf = new byte[81920];
+                        long done = 0; int read, lastPct = -1;
+                        while ((read = await src.ReadAsync(buf, 0, buf.Length)) > 0)
+                        {
+                            await fs.WriteAsync(buf, 0, read);
+                            done += read;
+                            if (total > 0)
+                            {
+                                int pct = (int)(done * 100 / total);
+                                if (pct != lastPct) { lastPct = pct; UpdateBtn.Content = string.Format(L("S.update.downloading"), pct); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Zabezpieczenie przed podmianą na uszkodzony/częściowy plik: sensowny rozmiar + nagłówek PE „MZ".
+        private static bool IsValidExe(string path, long expectedSize)
+        {
+            try
+            {
+                var fi = new System.IO.FileInfo(path);
+                if (!fi.Exists || fi.Length < 1_000_000) return false;
+                if (expectedSize > 0 && fi.Length != expectedSize) return false;
+                using (var fs = System.IO.File.OpenRead(path))
+                    return fs.ReadByte() == 'M' && fs.ReadByte() == 'Z';
+            }
+            catch { return false; }
         }
 
         // ---------- Nawigacja (rail) ----------
@@ -324,16 +457,48 @@ namespace RdpManager
         {
             if (_settings == null || _isFullscreen) return;
             bool immersive = IsImmersive();
-            if (!immersive) _focusPeeking = false;   // wyjście ze skupienia kasuje wysunięty panel
+            if (!immersive) HideFocusPeek();   // wyjście ze skupienia: zwiń peek (przenosi Rail/Sidebar z powrotem)
             AppTitleBar.Visibility = immersive ? Visibility.Collapsed : Visibility.Visible;
-            // Panel boczny ukryty w skupieniu — chyba że chwilowo wysunięty przez najechanie na lewą krawędź.
-            var sideVis = (immersive && !_focusPeeking) ? Visibility.Collapsed : Visibility.Visible;
-            Rail.Visibility = sideVis;
-            Sidebar.Visibility = sideVis;
+            // Panel boczny ukryty w skupieniu — chyba że chwilowo wysunięty (wtedy żyje w FocusPeekPopup, nie tu).
+            if (!_focusPeeking)
+            {
+                var sideVis = immersive ? Visibility.Collapsed : Visibility.Visible;
+                Rail.Visibility = sideVis;
+                Sidebar.Visibility = sideVis;
+            }
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
             if (immersive) { if (_focusPeekPoll != null && !_focusPeekPoll.IsEnabled) _focusPeekPoll.Start(); }
             else { _focusPeekPoll?.Stop(); _focusPeekDelay?.Stop(); }
+            ApplyImmersiveCaption(immersive);
             UpdateToolbarMode();
+        }
+
+        // W skupieniu AppTitleBar znika, ale WindowChrome zostawia strefę caption (~32px) na górze,
+        // więc pasek kart z przyciskami okna w nią wpada. Hit-test caption jest błędny przy DPI≠100%
+        // (znany bug WPF: regiony IsHitTestVisibleInChrome źle skalowane — środek ikon nie łapie,
+        // trafienie tylko przy dolno-bocznym rogu). Zerujemy caption na czas skupienia → cała góra to
+        // obszar klienta, przyciski działają zwykłym hit-testem WPF. Poza skupieniem przywracamy wartość.
+        private void ApplyImmersiveCaption(bool immersive)
+        {
+            ApplyCaptionCore(immersive);
+            // WPF-UI przy PIERWSZEJ maksymalizacji przywraca CaptionHeight PO naszym handlerze (stąd „działa
+            // dopiero po przywróceniu i ponownej maksymalizacji"). Re-asercja po jego synchronicznych handlerach.
+            Dispatcher.BeginInvoke(new Action(() => ApplyCaptionCore(IsImmersive())), DispatcherPriority.Loaded);
+        }
+
+        private void ApplyCaptionCore(bool immersive)
+        {
+            var chrome = System.Windows.Shell.WindowChrome.GetWindowChrome(this);
+            if (chrome == null) return;   // brak chrome = brak strefy caption do naprawy
+            if (immersive)
+            {
+                if (double.IsNaN(_savedCaptionHeight)) _savedCaptionHeight = chrome.CaptionHeight;
+                if (chrome.CaptionHeight != 0) chrome.CaptionHeight = 0;
+            }
+            else if (!double.IsNaN(_savedCaptionHeight) && chrome.CaptionHeight != _savedCaptionHeight)
+            {
+                chrome.CaptionHeight = _savedCaptionHeight;
+            }
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku): wł/wył dla bieżącego zmaksymalizowanego okna.
@@ -349,19 +514,45 @@ namespace RdpManager
         }
 
         // Lewy panel w trybie skupienia: pokaż/schowaj (wywoływane z pollingu krawędzi).
+        // Rail+Sidebar są przenoszone do FocusPeekPopup (osobny HWND) — nakłada się na sesję BEZ jej
+        // resize, więc RDP/WebView2 się nie renegocjuje i nie miga. Wejście = płynny slide z lewej.
         private void ShowFocusPeek()
         {
             if (!IsImmersive() || _focusPeeking) return;
             _focusPeeking = true;
+            BodyGrid.Children.Remove(Rail);
+            BodyGrid.Children.Remove(Sidebar);
             Rail.Visibility = Visibility.Visible;
             Sidebar.Visibility = Visibility.Visible;
+            FocusPeekHost.Children.Add(Rail);
+            FocusPeekHost.Children.Add(Sidebar);
+            FocusPeekClip.Height = BodyGrid.ActualHeight;
+            FocusPeekPopup.IsOpen = true;
+
+            var slide = new System.Windows.Media.Animation.DoubleAnimation(-280, 0,
+                new Duration(TimeSpan.FromMilliseconds(160)))
+            {
+                EasingFunction = new System.Windows.Media.Animation.CubicEase
+                { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+            };
+            FocusPeekSlide.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, slide);
         }
 
         private void HideFocusPeek()
         {
             if (!_focusPeeking) return;
             _focusPeeking = false;
-            if (IsImmersive()) { Rail.Visibility = Visibility.Collapsed; Sidebar.Visibility = Visibility.Collapsed; }
+            FocusPeekSlide.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
+            FocusPeekSlide.X = -280;
+            FocusPeekPopup.IsOpen = false;
+            FocusPeekHost.Children.Remove(Rail);
+            FocusPeekHost.Children.Remove(Sidebar);
+            // Wróć do layoutu (Grid.Column zachowane na elementach). W skupieniu ukryte, poza — widoczne.
+            BodyGrid.Children.Add(Rail);
+            BodyGrid.Children.Add(Sidebar);
+            var vis = IsImmersive() ? Visibility.Collapsed : Visibility.Visible;
+            Rail.Visibility = vis;
+            Sidebar.Visibility = vis;
         }
 
         // Polling kursora w trybie skupienia: najechanie na lewą krawędź (i przytrzymanie) wysuwa panel;
@@ -372,10 +563,18 @@ namespace RdpManager
             if (WindowState == WindowState.Minimized || QuickSwitchPopup.IsOpen) return;
             if (!GetCursorPos(out POINT p)) return;
 
+            // Lewa krawędź LICZONA Z PROSTOKĄTA MONITORA (jak pasek pełnoekranowy), nie z PointToScreen(0,0):
+            // zmaksymalizowane okno wystaje ~8px poza monitor, więc PointToScreen dawało ujemny lewy brzeg
+            // i próg poza ekranem — trigger nigdy się nie odpalał.
+            IntPtr mon = MonitorFromWindow(new WindowInteropHelper(this).Handle, MONITOR_DEFAULTTONEAREST);
+            var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
+            if (!GetMonitorInfo(mon, ref mi)) return;
+            var r = mi.rcMonitor;
+
             if (!_focusPeeking)
             {
-                double leftX = PointToScreen(new Point(0, 0)).X;
-                if (p.X <= leftX + 3) { if (!_focusPeekDelay.IsEnabled) _focusPeekDelay.Start(); }
+                bool withinY = p.Y >= r.top && p.Y < r.bottom;
+                if (withinY && p.X <= r.left + 3) { if (!_focusPeekDelay.IsEnabled) _focusPeekDelay.Start(); }
                 else if (_focusPeekDelay.IsEnabled) _focusPeekDelay.Stop();
             }
             else
@@ -416,11 +615,7 @@ namespace RdpManager
         }
 
         private void Avatar_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show(
-                "Waypoint\n" + L("S.msg.about.desc") + "\n\n" + L("S.msg.about.datafolder") + "\n" + SettingsStore.Dir,
-                L("S.nav.about"), MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+            => new AboutWindow { Owner = this }.ShowDialog();
 
         // ---------- Zoom interfejsu (Ctrl + kółko / Ctrl +/- / Ctrl 0) ----------
 
@@ -456,7 +651,7 @@ namespace RdpManager
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (_settings.ConfirmCloseConnected &&
+            if (!_updating && _settings.ConfirmCloseConnected &&
                 (_sessions.Any(s => s.Connected) || _sessionWindows.Any(w => w.IsConnected)) &&
                 MessageBox.Show(L("S.msg.closeapp"), L("S.msg.closeapp.title"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -465,15 +660,9 @@ namespace RdpManager
                 return;
             }
 
-            // Zapamiętaj otwarte karty (tylko zapisane serwery — nie Quick Connect) do przywrócenia na starcie.
-            _settings.LastOpenServerIds = _sessions
-                .Select(s => s.Server.Id)
-                .Where(id => _vm.Servers.Any(v => v.Id == id))
-                .Distinct().ToList();
-
-            // Dograj odroczony zapis ustawień (debounce zoomu) + powyższe, zanim aplikacja zniknie.
+            // Zapamiętaj otwarte karty + dograj odroczony zapis ustawień (debounce zoomu), zanim aplikacja zniknie.
             _settingsSaveTimer?.Stop();
-            SettingsStore.Save(_settings);
+            PersistOpenSessions();
 
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
             try { UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId); } catch { }
@@ -481,6 +670,7 @@ namespace RdpManager
             foreach (var s in _sessions)
             {
                 if (s.IsTerm) { try { s.Term.DisposeTerminal(); } catch { } continue; }
+                if (s.IsVnc) { try { s.Vnc.Client?.Close(); } catch { } try { s.Host.Dispose(); } catch { } continue; }
                 try { s.Resizer?.Dispose(); } catch { }
                 try { s.Rdp.Disconnect(); } catch { }
                 try { s.Host.Dispose(); } catch { }
@@ -512,8 +702,35 @@ namespace RdpManager
             SetMinimizeToTray.IsChecked = _settings.MinimizeToTray;
             SetHotkey.IsChecked = _settings.QuickConnectHotkey;
             SetRestorePrompt.IsChecked = _settings.RestorePrompt;
+            BuildAutoConnectList();
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
+        }
+
+        // Lista serwerów do „Połącz na starcie" — checkbox per serwer, zaznaczone = auto-połączenie.
+        private void BuildAutoConnectList()
+        {
+            AutoConnectList.Children.Clear();
+            var selected = new HashSet<string>(_settings.AutoConnectServerIds ?? new List<string>());
+            var any = false;
+            foreach (var s in _vm.Servers.OrderBy(v => v.Group).ThenBy(v => v.Name))
+            {
+                any = true;
+                AutoConnectList.Children.Add(new CheckBox
+                {
+                    Content = (string.IsNullOrWhiteSpace(s.Name) ? s.Host : s.Name) + "  —  " + DisplayHost(s),
+                    Tag = s.Id,
+                    IsChecked = selected.Contains(s.Id),
+                    Foreground = (Brush)TryFindResource("TextPrim"),
+                    Margin = new Thickness(0, 3, 0, 3)
+                });
+            }
+            if (!any)
+                AutoConnectList.Children.Add(new TextBlock
+                {
+                    Text = L("S.set.autoconnect.empty"),
+                    Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12
+                });
         }
 
         private void SaveSettings_Click(object sender, RoutedEventArgs e)
@@ -533,6 +750,9 @@ namespace RdpManager
             _settings.MinimizeToTray = SetMinimizeToTray.IsChecked == true;
             _settings.QuickConnectHotkey = SetHotkey.IsChecked == true;
             _settings.RestorePrompt = SetRestorePrompt.IsChecked == true;
+            _settings.AutoConnectServerIds = AutoConnectList.Children.OfType<CheckBox>()
+                .Where(cb => cb.IsChecked == true).Select(cb => cb.Tag as string)
+                .Where(id => !string.IsNullOrEmpty(id)).ToList();
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
 
@@ -680,22 +900,33 @@ namespace RdpManager
         {
             DashboardPanel.Children.Clear();
 
-            int total = _vm.Total;
-            int online = _vm.OnlineCount;
             int open = _sessions.Count + _sessionWindows.Count;
+            var stats = LoadConnectionStats(14);
+            int last7 = stats.PerDay.Length >= 7
+                ? stats.PerDay.Skip(stats.PerDay.Length - 7).Sum() : stats.PerDay.Sum();
 
             var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 22) };
-            cards.Children.Add(StatCard(L("S.dash.servers"), total.ToString()));
-            cards.Children.Add(StatCard(L("S.dash.reachable"), online.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.servers"), _vm.Total.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.reachable"), _vm.OnlineCount.ToString()));
             cards.Children.Add(StatCard(L("S.dash.opensessions"), open.ToString()));
+            cards.Children.Add(StatCard(L("S.dash.conns7"), last7.ToString()));
             DashboardPanel.Children.Add(cards);
 
-            DashboardPanel.Children.Add(new TextBlock
-            {
-                Text = L("S.dash.recent"), Foreground = (Brush)TryFindResource("TextSec"),
-                FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8)
-            });
+            // Połączenia / dzień (14 dni) — z dziennika audytu.
+            DashboardPanel.Children.Add(DashSection(L("S.dash.perday")));
+            DashboardPanel.Children.Add(stats.TotalConnects > 0
+                ? DashCard(BuildBarChart(stats.PerDay, DateTime.Now))
+                : DashHint(L("S.dash.nodata")));
 
+            // Najczęściej używane serwery.
+            if (stats.TopServers.Count > 0)
+            {
+                DashboardPanel.Children.Add(DashSection(L("S.dash.top")));
+                DashboardPanel.Children.Add(DashCard(BuildTopServers(stats.TopServers)));
+            }
+
+            // Ostatnie połączenia.
+            DashboardPanel.Children.Add(DashSection(L("S.dash.recent")));
             int shown = 0;
             foreach (var srv in _vm.RecentServers())
             {
@@ -703,8 +934,93 @@ namespace RdpManager
                 DashboardPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => LaunchServer(s, true)));
                 if (++shown >= 5) break;
             }
-            if (shown == 0)
-                DashboardPanel.Children.Add(new TextBlock { Text = "Brak historii.", Foreground = (Brush)TryFindResource("TextTer") });
+            if (shown == 0) DashboardPanel.Children.Add(DashHint(L("S.dash.nohistory")));
+        }
+
+        private Core.ConnectionStats LoadConnectionStats(int days)
+        {
+            try
+            {
+                string path = System.IO.Path.Combine(SettingsStore.Dir, "connections.log");
+                if (System.IO.File.Exists(path))
+                    return Core.ConnectionStats.Compute(System.IO.File.ReadLines(path), DateTime.Now, days);
+            }
+            catch { /* dziennik best-effort */ }
+            return Core.ConnectionStats.Compute(null, DateTime.Now, days);
+        }
+
+        private FrameworkElement DashSection(string text) => new TextBlock
+        {
+            Text = text, Foreground = (Brush)TryFindResource("TextSec"),
+            FontWeight = FontWeights.SemiBold, Margin = new Thickness(2, 0, 0, 8)
+        };
+
+        private FrameworkElement DashCard(FrameworkElement content) => new Border
+        {
+            Background = (Brush)TryFindResource("Panel"), BorderBrush = (Brush)TryFindResource("Border"),
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(16, 14, 16, 14), Margin = new Thickness(0, 0, 0, 22), Child = content
+        };
+
+        private FrameworkElement DashHint(string text) => new TextBlock
+        {
+            Text = text, Foreground = (Brush)TryFindResource("TextTer"), Margin = new Thickness(2, 0, 0, 22)
+        };
+
+        // Wykres słupkowy „połączenia / dzień" — rysowany prostokątami (bez zależności od bibliotek).
+        private FrameworkElement BuildBarChart(int[] values, DateTime endDate)
+        {
+            int max = Math.Max(1, values.Max());
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Height = 108,
+                VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left };
+            var accent = (Brush)TryFindResource("Accent");
+            var dim = (Brush)TryFindResource("Elevated");
+            for (int i = 0; i < values.Length; i++)
+            {
+                var date = endDate.Date.AddDays(-(values.Length - 1 - i));
+                row.Children.Add(new System.Windows.Shapes.Rectangle
+                {
+                    Width = 18, Height = Math.Max(3, 92.0 * values[i] / max), RadiusX = 3, RadiusY = 3,
+                    Fill = values[i] > 0 ? accent : dim, Margin = new Thickness(3, 0, 3, 0),
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    ToolTip = date.ToString("dd.MM") + " — " + values[i]
+                });
+            }
+            return row;
+        }
+
+        // Poziome słupki: nazwa | pasek (proporcjonalny) | liczba.
+        private FrameworkElement BuildTopServers(List<KeyValuePair<string, int>> top)
+        {
+            int max = Math.Max(1, top.Max(t => t.Value));
+            var accent = (Brush)TryFindResource("Accent");
+            var track = (Brush)TryFindResource("Elevated");
+            var panel = new StackPanel();
+            foreach (var kv in top)
+            {
+                var grid = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var name = new TextBlock { Text = kv.Key, Foreground = (Brush)TryFindResource("TextPrim"),
+                    FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis };
+                Grid.SetColumn(name, 0); grid.Children.Add(name);
+
+                var barGrid = new Grid { Width = 200, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 10, 0) };
+                barGrid.Children.Add(new Border { Height = 8, Background = track, CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Stretch });
+                barGrid.Children.Add(new Border { Height = 8, Width = 200.0 * kv.Value / max, Background = accent,
+                    CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Left });
+                Grid.SetColumn(barGrid, 1); grid.Children.Add(barGrid);
+
+                var count = new TextBlock { Text = kv.Value.ToString(), Foreground = (Brush)TryFindResource("TextSec"),
+                    FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, MinWidth = 24, TextAlignment = TextAlignment.Right };
+                Grid.SetColumn(count, 2); grid.Children.Add(count);
+
+                panel.Children.Add(grid);
+            }
+            return panel;
         }
 
         private FrameworkElement StatCard(string label, string value)
@@ -912,10 +1228,10 @@ namespace RdpManager
             var avatar = new Border
             {
                 Width = 22, Height = 22, CornerRadius = new CornerRadius(6),
-                Background = AvatarBrush(server.Group), Margin = new Thickness(8, 0, 0, 0),
+                Background = AvatarBrush(server), Margin = new Thickness(8, 0, 0, 0),
                 Child = new TextBlock
                 {
-                    Text = server.Initials, Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -993,6 +1309,7 @@ namespace RdpManager
             };
 
             var menu = new ContextMenu();
+            bool rdp = server.Protocol == RemoteProtocol.Rdp;
             var pinItem = new MenuItem { Header = L(server.Pinned ? "S.m.unpin" : "S.m.pin") };
             pinItem.Click += (s, e) => TogglePin(server);
             var newWinItem = new MenuItem { Header = L("S.m.newwin") };
@@ -1007,6 +1324,28 @@ namespace RdpManager
             editItem.Click += (s, e) => EditServer(server);
             var dupItem = new MenuItem { Header = L("S.m.dupserver") };
             dupItem.Click += (s, e) => DuplicateServer(server);
+
+            // Kopiuj ▸ — pojedyncze pola (i login+hasło) do schowka. Hasło z Credential Managera na żądanie.
+            var copyMenu = new MenuItem { Header = L("S.m.copy") };
+            void AddCopy(string key, Func<string> value)
+            {
+                var mi = new MenuItem { Header = L(key) };
+                mi.Click += (s, e) => CopyToClipboard(value());
+                copyMenu.Items.Add(mi);
+            }
+            AddCopy("S.m.copy.name", () => server.Name);
+            AddCopy("S.m.copy.host", () => server.Host);
+            if (server.Protocol != RemoteProtocol.Http)
+                AddCopy("S.m.copy.port", () => server.Port.ToString());
+            if (rdp || server.Protocol == RemoteProtocol.Ssh)
+            {
+                AddCopy("S.m.copy.user", () => server.Username);
+                if (rdp) AddCopy("S.m.copy.domain", () => server.Domain);
+                copyMenu.Items.Add(new Separator());
+                AddCopy("S.m.copy.pass", () => ReadPassword(server));
+                AddCopy("S.m.copy.userpass", () => server.Username + "\t" + ReadPassword(server));
+            }
+
             var diagItem = new MenuItem { Header = L("S.m.diag") };
             diagItem.Click += (s, e) => DiagnoseServer(server);
             var wolItem = new MenuItem
@@ -1019,13 +1358,13 @@ namespace RdpManager
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
-            bool rdp = server.Protocol == RemoteProtocol.Rdp;
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
             if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
             if (rdp || server.Protocol == RemoteProtocol.Ssh) menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(dupItem);
+            menu.Items.Add(copyMenu);
             if (server.Protocol != RemoteProtocol.Serial && server.Protocol != RemoteProtocol.Http)
                 menu.Items.Add(diagItem);   // sonda TCP — nie dla COM/URL
             menu.Items.Add(wolItem);
@@ -1199,6 +1538,20 @@ namespace RdpManager
                 session = new Session(server, term);
                 WireTermEvents(session);
             }
+            else if (server.Protocol == RemoteProtocol.Vnc)
+            {
+                // VNC (RemoteViewing) — kontrolka WinForms w hoście WPF, jak RDP. Zdarzenia wiążemy przy połączeniu.
+                var vnc = new RemoteViewing.Windows.Forms.VncControl
+                {
+                    AllowInput = true,
+                    Dock = System.Windows.Forms.DockStyle.Fill,
+                    AllowRemoteCursor = true
+                };
+                var host = new WindowsFormsHost { Child = vnc };
+                SessionContainer.Children.Add(host);
+                host.UpdateLayout();
+                session = new Session(server, vnc, host);
+            }
             else
             {
                 var rdp = new AxMsRdpClient11NotSafeForScripting();
@@ -1227,6 +1580,7 @@ namespace RdpManager
 
             Activate(session);
             if (autoConnect) BeginConnect(session);
+            PersistOpenSessions();
         }
 
         private static bool CanAuto(Session s)
@@ -1246,7 +1600,7 @@ namespace RdpManager
 
         private void Activate(Session session)
         {
-            _focusPeeking = false;   // aktywacja sesji (np. klik z wysuniętego panelu) chowa peek
+            HideFocusPeek();   // aktywacja sesji (np. klik z wysuniętego panelu) chowa peek (i przenosi panel z powrotem)
             _active = session;
             RefreshTabStyles();
             UpdateActiveRows();
@@ -1307,8 +1661,8 @@ namespace RdpManager
 
         private void LoadToolbar(Session s)
         {
-            CfAvatar.Background = AvatarBrush(s.Server.Group);
-            CfAvatarText.Text = s.Server.Initials;
+            CfAvatar.Background = AvatarBrush(s.Server);
+            CfAvatarText.Text = ServerInitials(s.Server);
             CfName.Text = s.Server.Name;
             CfHost.Text = s.Server.Host + ":" + s.Server.Port;
             // Konto Windows tylko dla RDP; Telnet/Serial nie mają pól poświadczeń w ogóle.
@@ -1330,29 +1684,32 @@ namespace RdpManager
                 BorderThickness = new Thickness(1),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
-                Padding = new Thickness(10, 5, 7, 5),
+                Padding = new Thickness(10, 6, 7, 5),
                 Margin = new Thickness(0, 0, 4, 0),
                 Cursor = Cursors.Hand,
                 Tag = session,
                 ToolTip = session.Server.Name + " — " + DisplayHost(session.Server)
             };
 
+            // 2 wiersze: treść (góra) + pasek podświetlenia (dół) z odstępem — pasek nie nachodzi na nazwę.
             var grid = new Grid();
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             var content = new StackPanel { Orientation = Orientation.Horizontal };
             content.Children.Add(new Border
             {
-                Width = 16, Height = 16, CornerRadius = new CornerRadius(4),
-                Background = AvatarBrush(session.Server.Group), VerticalAlignment = VerticalAlignment.Center,
+                Width = 14, Height = 14, CornerRadius = new CornerRadius(4),
+                Background = AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = session.Server.Initials, Foreground = Brushes.White, FontSize = 7, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(session.Server), Foreground = Brushes.White, FontSize = 7, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             });
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5,
+                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -1384,14 +1741,16 @@ namespace RdpManager
             close.MouseLeftButtonUp += (s, e) => { e.Handled = true; RequestCloseSession(session); };
             _tabClose[session] = close;
             content.Children.Add(close);
+            Grid.SetRow(content, 0);
             grid.Children.Add(content);
 
             var underline = new Rectangle
             {
                 Height = 2, Fill = (Brush)TryFindResource("Accent"), RadiusX = 1, RadiusY = 1,
-                VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(4, 0, 4, -3),
-                Visibility = Visibility.Collapsed
+                Margin = new Thickness(2, 4, 2, 0),
+                Visibility = Visibility.Hidden   // Hidden (nie Collapsed): karta ma stałą wysokość aktywna/nie
             };
+            Grid.SetRow(underline, 1);
             grid.Children.Add(underline);
 
             tab.Child = grid;
@@ -1455,7 +1814,7 @@ namespace RdpManager
             closeOthers.Click += (s, e) => CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => RequestCloseSession(session);
-            if (!session.IsTerm) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
+            if (session.Server.Protocol == RemoteProtocol.Rdp) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
             tabMenu.Items.Add(dupItem);
             tabMenu.Items.Add(new Separator());
             tabMenu.Items.Add(moveLeft);
@@ -1475,10 +1834,14 @@ namespace RdpManager
             {
                 if (!(s.TabButton is Border b)) continue;
                 bool active = s == _active;
+                // Lżej: aktywna = subtelne tło + akcent (underline), bez „pudełkowego" obrysu.
                 b.Background = active ? (Brush)TryFindResource("Panel") : Brushes.Transparent;
-                b.BorderBrush = active ? (Brush)TryFindResource("Border") : Brushes.Transparent;
+                b.BorderBrush = Brushes.Transparent;
+                // Hierarchia: nieaktywne karty przygaszone (spokojniejszy pasek).
+                if (_tabName.TryGetValue(s, out var nm))
+                    nm.Foreground = (Brush)TryFindResource(active ? "TextPrim" : "TextSec");
                 if (_tabUnderline.TryGetValue(s, out var u))
-                    u.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+                    u.Visibility = active ? Visibility.Visible : Visibility.Hidden;
                 if (_tabClose.TryGetValue(s, out var c))
                     c.Visibility = active ? Visibility.Visible : Visibility.Hidden;   // ✕ tylko na aktywnej/hoverze
             }
@@ -1581,6 +1944,12 @@ namespace RdpManager
                 try { session.Term.DisposeTerminal(); } catch { }
                 SessionContainer.Children.Remove(session.Term);
             }
+            else if (session.IsVnc)
+            {
+                try { session.Vnc.Client?.Close(); } catch { }
+                SessionContainer.Children.Remove(session.Host);
+                try { session.Host.Dispose(); } catch { }
+            }
             else
             {
                 try { session.Rdp.Disconnect(); } catch { /* nie połączona */ }
@@ -1595,6 +1964,7 @@ namespace RdpManager
             _tabName.Remove(session);
             _tabClose.Remove(session);
             _sessions.Remove(session);
+            PersistOpenSessions();
             RefreshTabTitles();
 
             if (_active == session)
@@ -1666,6 +2036,7 @@ namespace RdpManager
         private void ConnectSession(Session s)
         {
             if (s.IsTerm) { ConnectTerm(s); return; }
+            if (s.IsVnc) { ConnectVnc(s); return; }
 
             try { s.Rdp.Disconnect(); } catch { /* nie połączona */ }
             s.LoggedIn = false;
@@ -1710,6 +2081,22 @@ namespace RdpManager
                     adv.ClearTextPassword = s.Password;
                 }
 
+                // RemoteApp: program/alias zamiast pełnego pulpitu (ustawiane PRZED Connect).
+                try
+                {
+                    var rp = s.Rdp.RemoteProgram2;
+                    bool useApp = !string.IsNullOrWhiteSpace(s.Server.RemoteAppProgram);
+                    rp.RemoteProgramMode = useApp;
+                    if (useApp)
+                    {
+                        rp.RemoteApplicationName = string.IsNullOrWhiteSpace(s.Server.Name)
+                            ? s.Server.RemoteAppProgram.Trim() : s.Server.Name.Trim();
+                        rp.RemoteApplicationProgram = s.Server.RemoteAppProgram.Trim();
+                        rp.RemoteApplicationArgs = s.Server.RemoteAppArgs ?? "";
+                    }
+                }
+                catch { /* starsza kontrolka bez RemoteProgram2 — łączymy jako pełny pulpit */ }
+
                 s.Rdp.Connect();
                 SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
             }
@@ -1717,6 +2104,75 @@ namespace RdpManager
             {
                 SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
             }
+        }
+
+        // ---------- VNC (RemoteViewing) ----------
+
+        /// <summary>Łączy sesję VNC: nowy VncClient, zdarzenia na wątek UI, handshake w tle (blokuje).</summary>
+        private void ConnectVnc(Session s)
+        {
+            try
+            {
+                var client = new RemoteViewing.Vnc.VncClient();
+                client.Connected += (o, e) => Dispatcher.BeginInvoke(new Action(() => { if (ReferenceEquals(s.Vnc?.Client, client)) OnVncConnected(s); }));
+                client.ConnectionFailed += (o, e) => Dispatcher.BeginInvoke(new Action(() => OnVncEnded(s, client)));
+                client.Closed += (o, e) => Dispatcher.BeginInvoke(new Action(() => OnVncEnded(s, client)));
+                s.Vnc.Client = client;
+                s.LoggedIn = false;
+
+                char[] pw = (s.Password ?? "").ToCharArray();
+                var opts = new RemoteViewing.Vnc.VncClientConnectOptions { ShareDesktop = true, Password = pw };
+                opts.PasswordRequiredCallback = c => pw;   // gdy serwer poprosi — to samo hasło (puste => auth padnie)
+
+                SetTabStatus(s, ServerStatus.Idle);
+                SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
+                if (s == _active) UpdateCanvas();
+
+                string host = s.Server.Host;
+                int port = s.Server.Port > 0 ? s.Server.Port : 5900;
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try { client.Connect(host, port, opts); }
+                    catch (Exception ex)
+                    {
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
+                            OnVncEnded(s, client);
+                        }));
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
+            }
+        }
+
+        private void OnVncConnected(Session s)
+        {
+            s.Connected = true;
+            s.LoggedIn = true;
+            RecordRecent(s.Server);
+            ConnectionLog.Append("CONNECTED", s.Server);
+            SetTabStatus(s, ServerStatus.Online);
+            SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
+            if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); try { s.Vnc.Focus(); } catch { } }
+        }
+
+        // Failed i Closed mogą przyjść oba — strażnik po tożsamości klienta wykonuje obsługę raz.
+        private void OnVncEnded(Session s, RemoteViewing.Vnc.VncClient client)
+        {
+            if (s.Vnc == null || !ReferenceEquals(s.Vnc.Client, client)) return;
+            s.Vnc.Client = null;
+            bool was = s.Connected;
+            s.Connected = false;
+            SetTabStatus(s, ServerStatus.Offline);
+            ConnectionLog.Append(was ? "DISCONNECTED" : "FAILED", s.Server);
+            if (!s.Server.SavePassword) s.Password = "";
+            if (was) SetSessionStatus(s, string.Format(L("S.st.disconnected"), "VNC"), StatusKind.Error);
+            else if (s.StatusKind != StatusKind.Error) SetSessionStatus(s, L("S.st.disconnectedShort"), StatusKind.Error);
+            if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
         }
 
         /// <summary>Konfiguruje bramę RD Gateway / jump-host, jeśli serwer ją ma. Bezpieczne dla starszych kontrolek.</summary>
@@ -1748,6 +2204,7 @@ namespace RdpManager
         {
             if (_active == null) return;
             if (_active.IsTerm) { _active.Term.Disconnect(); return; }
+            if (_active.IsVnc) { try { _active.Vnc.Client?.Close(); } catch { } return; }
             try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
         }
 
@@ -2334,10 +2791,10 @@ namespace RdpManager
 
             var avatar = new Border
             {
-                Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = AvatarBrush(server.Group),
+                Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = AvatarBrush(server),
                 Child = new TextBlock
                 {
-                    Text = server.Initials, Foreground = Brushes.White, FontSize = 7.5, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 7.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -2486,6 +2943,10 @@ namespace RdpManager
         private void ImportRdg_Click(object sender, RoutedEventArgs e)
             => ImportExternal(L("S.dlg.importrdg.title"), L("S.dlg.rdg.filter"),
                 text => ExternalImport.ParseRdcMan(text, _settings.DefaultPort));
+
+        private void ImportRdm_Click(object sender, RoutedEventArgs e)
+            => ImportExternal(L("S.dlg.importrdm.title"), L("S.dlg.rdm.filter"),
+                text => ExternalImport.ParseRdm(text));
 
         // Wspólny przebieg importu z innego menedżera: plik → parser → dedup po host:port → zapis.
         // Hasła nie są przenoszone (mRemoteNG/RDCMan szyfrują je własnymi kluczami).
@@ -2676,12 +3137,14 @@ namespace RdpManager
                 Name = ((src.Name ?? "").Trim() + " " + L("S.copy.suffix")).Trim(),
                 Host = src.Host, Port = src.Port, Username = src.Username, Domain = src.Domain,
                 UseWindowsAccount = src.UseWindowsAccount, Group = src.Group, Initials = src.Initials,
+                AvatarColor = src.AvatarColor,
                 Protocol = src.Protocol, PrivateKeyPath = src.PrivateKeyPath,
                 Tunnels = new List<string>(src.Tunnels ?? new List<string>()),
                 RedirectClipboard = src.RedirectClipboard, RedirectDrives = src.RedirectDrives,
                 RedirectPrinters = src.RedirectPrinters, AudioMode = src.AudioMode,
                 AuthenticationLevel = src.AuthenticationLevel, UseAllMonitors = src.UseAllMonitors,
                 AdminSession = src.AdminSession, MacAddress = src.MacAddress,
+                RemoteAppProgram = src.RemoteAppProgram, RemoteAppArgs = src.RemoteAppArgs,
                 GatewayHostname = src.GatewayHostname, GatewayUsageMethod = src.GatewayUsageMethod,
                 SavePassword = src.SavePassword, Status = ServerStatus.Offline
             };
@@ -2747,6 +3210,36 @@ namespace RdpManager
             else
                 CredentialStore.Delete(server.CredTarget);   // nie zapisujemy / kasujemy stare
         }
+
+        // Awatar serwera: własny kolor (hex) → gradient od koloru do jego ciemniejszego wariantu;
+        // brak koloru → automatyczny wg grupy. Inicjały zawsze z NAZWY (nie ze starego zapisu z IP).
+        private Brush AvatarBrush(ServerInfo s)
+        {
+            if (s != null && !string.IsNullOrWhiteSpace(s.AvatarColor))
+            {
+                try
+                {
+                    var c = (Color)ColorConverter.ConvertFromString(s.AvatarColor);
+                    var c2 = Color.FromRgb((byte)(c.R * 0.78), (byte)(c.G * 0.78), (byte)(c.B * 0.78));
+                    var g = new LinearGradientBrush(c, c2, 45); g.Freeze();
+                    return g;
+                }
+                catch { /* zły hex → fallback do grupy */ }
+            }
+            return AvatarBrush(s?.Group);
+        }
+
+        private static string ServerInitials(ServerInfo s) => RdpUtils.MakeInitials(s?.Name);
+
+        private void CopyToClipboard(string text)
+        {
+            if (string.IsNullOrEmpty(text)) { SetStatus(L("S.st.copyempty"), StatusKind.Ok); return; }
+            try { Clipboard.SetText(text); SetStatus(L("S.st.copied"), StatusKind.Ok); }
+            catch { /* schowek chwilowo zajęty przez inny proces */ }
+        }
+
+        private static string ReadPassword(ServerInfo s)
+            => CredentialStore.TryRead(s.CredTarget, out var p) ? (p ?? "") : "";
 
         private Brush AvatarBrush(string group)
         {
