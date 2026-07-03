@@ -229,22 +229,32 @@
                         </ScrollViewer>
                         <!-- Tryb skupienia (zmaksymalizowane): titlebar + pasek stanu znikają, więc pełny ekran
                              i przyciski okna (minimalizuj / przywróć / zamknij) mieszkają tu, na pasku kart. -->
+                        <!-- IsHitTestVisibleInChrome na KAŻDYM przycisku: bez tego środek ikony (SymbolIcon)
+                             ląduje w strefie caption i hover/klik nie łapie (działa tylko brzeg). -->
                         <StackPanel x:Name="FocusControls" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="4,0,6,0" Visibility="Collapsed">
                             <Button x:Name="QuickSwitchBtn" Style="{DynamicResource IconBtn}" Click="QuickSwitch_Click"
-                                    ToolTip="{DynamicResource S.qs.tip}">
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="{DynamicResource S.qs.tip}">
                                 <ui:SymbolIcon Symbol="Add24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
+                            <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="{DynamicResource S.focus.toggle}">
+                                <TextBlock Text="&#x25A3;" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="{DynamicResource S.tip.fullscreen}">
                                 <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="FocusMinimize_Click" ToolTip="{DynamicResource S.tip.minimize}">
+                            <Button Style="{DynamicResource IconBtn}" Click="FocusMinimize_Click"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="{DynamicResource S.tip.minimize}">
                                 <TextBlock Text="&#x2212;" FontSize="15" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="FocusRestore_Click" ToolTip="{DynamicResource S.fs.restore}">
+                            <Button Style="{DynamicResource IconBtn}" Click="FocusRestore_Click"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="{DynamicResource S.fs.restore}">
                                 <TextBlock Text="&#x2750;" FontSize="13" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="FocusClose_Click" ToolTip="{DynamicResource S.m.close}">
+                            <Button Style="{DynamicResource IconBtn}" Click="FocusClose_Click"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="{DynamicResource S.m.close}">
                                 <TextBlock Text="&#x2715;" FontSize="13" Foreground="{DynamicResource Danger}" VerticalAlignment="Center"/>
                             </Button>
                         </StackPanel>
@@ -292,6 +302,9 @@
                                 <Button x:Name="FilesBtn" Style="{DynamicResource IconBtn}" Click="Files_Click"
                                         Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}">
                                     <ui:SymbolIcon Symbol="Folder24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                                </Button>
+                                <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}">
+                                    <TextBlock Text="&#x25A3;" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                                 </Button>
                                 <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
                                     <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
@@ -401,6 +414,7 @@
                             <CheckBox x:Name="SetCheckUpdates" Content="{DynamicResource S.set.checkupdates}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                             <CheckBox x:Name="SetMinimizeToTray" Content="{DynamicResource S.set.traymin}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                             <CheckBox x:Name="SetHotkey" Content="{DynamicResource S.set.hotkey}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
+                            <CheckBox x:Name="SetRestorePrompt" Content="{DynamicResource S.set.restoreprompt}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                         </StackPanel>
                     </Border>
 
