@@ -336,12 +336,15 @@ namespace RdpManager
         {
             if (_settings == null || _isFullscreen) return;
             bool immersive = IsImmersive();
-            if (!immersive) _focusPeeking = false;   // wyjście ze skupienia kasuje wysunięty panel
+            if (!immersive) HideFocusPeek();   // wyjście ze skupienia: zwiń peek (przenosi Rail/Sidebar z powrotem)
             AppTitleBar.Visibility = immersive ? Visibility.Collapsed : Visibility.Visible;
-            // Panel boczny ukryty w skupieniu — chyba że chwilowo wysunięty przez najechanie na lewą krawędź.
-            var sideVis = (immersive && !_focusPeeking) ? Visibility.Collapsed : Visibility.Visible;
-            Rail.Visibility = sideVis;
-            Sidebar.Visibility = sideVis;
+            // Panel boczny ukryty w skupieniu — chyba że chwilowo wysunięty (wtedy żyje w FocusPeekPopup, nie tu).
+            if (!_focusPeeking)
+            {
+                var sideVis = immersive ? Visibility.Collapsed : Visibility.Visible;
+                Rail.Visibility = sideVis;
+                Sidebar.Visibility = sideVis;
+            }
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
             if (immersive) { if (_focusPeekPoll != null && !_focusPeekPoll.IsEnabled) _focusPeekPoll.Start(); }
             else { _focusPeekPoll?.Stop(); _focusPeekDelay?.Stop(); }
@@ -382,19 +385,45 @@ namespace RdpManager
         }
 
         // Lewy panel w trybie skupienia: pokaż/schowaj (wywoływane z pollingu krawędzi).
+        // Rail+Sidebar są przenoszone do FocusPeekPopup (osobny HWND) — nakłada się na sesję BEZ jej
+        // resize, więc RDP/WebView2 się nie renegocjuje i nie miga. Wejście = płynny slide z lewej.
         private void ShowFocusPeek()
         {
             if (!IsImmersive() || _focusPeeking) return;
             _focusPeeking = true;
+            BodyGrid.Children.Remove(Rail);
+            BodyGrid.Children.Remove(Sidebar);
             Rail.Visibility = Visibility.Visible;
             Sidebar.Visibility = Visibility.Visible;
+            FocusPeekHost.Children.Add(Rail);
+            FocusPeekHost.Children.Add(Sidebar);
+            FocusPeekClip.Height = BodyGrid.ActualHeight;
+            FocusPeekPopup.IsOpen = true;
+
+            var slide = new System.Windows.Media.Animation.DoubleAnimation(-280, 0,
+                new Duration(TimeSpan.FromMilliseconds(160)))
+            {
+                EasingFunction = new System.Windows.Media.Animation.CubicEase
+                { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+            };
+            FocusPeekSlide.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, slide);
         }
 
         private void HideFocusPeek()
         {
             if (!_focusPeeking) return;
             _focusPeeking = false;
-            if (IsImmersive()) { Rail.Visibility = Visibility.Collapsed; Sidebar.Visibility = Visibility.Collapsed; }
+            FocusPeekSlide.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
+            FocusPeekSlide.X = -280;
+            FocusPeekPopup.IsOpen = false;
+            FocusPeekHost.Children.Remove(Rail);
+            FocusPeekHost.Children.Remove(Sidebar);
+            // Wróć do layoutu (Grid.Column zachowane na elementach). W skupieniu ukryte, poza — widoczne.
+            BodyGrid.Children.Add(Rail);
+            BodyGrid.Children.Add(Sidebar);
+            var vis = IsImmersive() ? Visibility.Collapsed : Visibility.Visible;
+            Rail.Visibility = vis;
+            Sidebar.Visibility = vis;
         }
 
         // Polling kursora w trybie skupienia: najechanie na lewą krawędź (i przytrzymanie) wysuwa panel;
@@ -1282,7 +1311,7 @@ namespace RdpManager
 
         private void Activate(Session session)
         {
-            _focusPeeking = false;   // aktywacja sesji (np. klik z wysuniętego panelu) chowa peek
+            HideFocusPeek();   // aktywacja sesji (np. klik z wysuniętego panelu) chowa peek (i przenosi panel z powrotem)
             _active = session;
             RefreshTabStyles();
             UpdateActiveRows();

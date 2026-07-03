@@ -474,6 +474,20 @@
             </Border>
         </Popup>
 
+        <!-- Lewy panel w trybie skupienia. Popup = osobny HWND, więc nakłada się na sesję (RDP/WebView2)
+             BEZ zmiany jej rozmiaru — sesja się nie renegocjuje i nie miga. Rail+Sidebar są tu przenoszone
+             na czas peeka (reparenting), a płynne wysunięcie robi animacja TranslateTransform. -->
+        <Popup x:Name="FocusPeekPopup" Placement="Relative" PlacementTarget="{Binding ElementName=BodyGrid}"
+               AllowsTransparency="True" StaysOpen="True" HorizontalOffset="0" VerticalOffset="0">
+            <Border x:Name="FocusPeekClip" ClipToBounds="True" Width="280">
+                <StackPanel x:Name="FocusPeekHost" Orientation="Horizontal" HorizontalAlignment="Left">
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform x:Name="FocusPeekSlide" X="-280"/>
+                    </StackPanel.RenderTransform>
+                </StackPanel>
+            </Border>
+        </Popup>
+
         <!-- floating fullscreen bar (Popup = osobny HWND -> rysuje się nad kontrolką RDP) -->
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
