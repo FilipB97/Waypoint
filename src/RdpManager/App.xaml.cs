@@ -59,6 +59,13 @@ namespace RdpManager
             // Zastosuj zapisany motyw i język ZANIM powstanie okno (bez mignięcia).
             try { var s = SettingsStore.Load(); ThemeManager.Apply(s.Theme); LocalizationManager.Apply(s.Language); } catch { }
 
+            // Zdejmij kolorową (akcentową) obwódkę z KAŻDEGO okna FluentWindow — jednym class-handlerem,
+            // zanim StartupUri utworzy MainWindow. Loaded gwarantuje istniejący uchwyt okna.
+            EventManager.RegisterClassHandler(
+                typeof(Wpf.Ui.Controls.FluentWindow),
+                FrameworkElement.LoadedEvent,
+                new RoutedEventHandler((s, _) => WindowBorder.Neutralize(s as Window)));
+
             CleanupUpdateLeftovers();
         }
 
