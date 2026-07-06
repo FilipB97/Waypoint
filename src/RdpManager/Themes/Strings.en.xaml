@@ -59,7 +59,7 @@
     <sys:String x:Key="S.set.checkupdates">Check for updates at startup</sys:String>
     <sys:String x:Key="S.update.available">New version {0} — update</sys:String>
     <!-- Default group names (localized; a server with an empty group falls into the default bucket). -->
-    <sys:String x:Key="S.group.default">Servers</sys:String>
+    <sys:String x:Key="S.group.serversdefault">Servers</sys:String>
     <sys:String x:Key="S.group.quick">Quick connect</sys:String>
     <sys:String x:Key="S.group.imported">Imported</sys:String>
     <sys:String x:Key="S.group.imported.mstsc">Imported from mstsc</sys:String>

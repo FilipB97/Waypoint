@@ -59,7 +59,7 @@
     <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje przy starcie</sys:String>
     <sys:String x:Key="S.update.available">Nowa wersja {0} — aktualizuj</sys:String>
     <!-- Domyślne nazwy grup (lokalizowane; pusta grupa serwera = domyślny „kosz"). -->
-    <sys:String x:Key="S.group.default">Serwery</sys:String>
+    <sys:String x:Key="S.group.serversdefault">Serwery</sys:String>
     <sys:String x:Key="S.group.quick">Szybkie</sys:String>
     <sys:String x:Key="S.group.imported">Zaimportowane</sys:String>
     <sys:String x:Key="S.group.imported.mstsc">Zaimportowane z mstsc</sys:String>
