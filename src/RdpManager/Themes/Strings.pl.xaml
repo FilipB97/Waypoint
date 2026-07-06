@@ -176,6 +176,14 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.diag">Diagnostyka…</sys:String>
     <sys:String x:Key="S.m.exportrdp">Eksportuj .rdp…</sys:String>
     <sys:String x:Key="S.m.delete">Usuń</sys:String>
+    <!-- Akcje zbiorcze (zaznaczenie wielu serwerów Ctrl/Shift+klik). -->
+    <sys:String x:Key="S.m.bulk.count">Zaznaczono: {0}</sys:String>
+    <sys:String x:Key="S.m.bulk.move">Przenieś do grupy</sys:String>
+    <sys:String x:Key="S.m.bulk.move.new">Nowa grupa…</sys:String>
+    <sys:String x:Key="S.m.bulk.delete">Usuń zaznaczone ({0})</sys:String>
+    <sys:String x:Key="S.msg.bulkdelete">Usunąć zaznaczone serwery ({0})? Tej operacji nie można cofnąć.</sys:String>
+    <sys:String x:Key="S.prompt.newgroup.title">Nowa grupa</sys:String>
+    <sys:String x:Key="S.prompt.newgroup.label">Nazwa grupy:</sys:String>
     <sys:String x:Key="S.m.tearoff">Wyciągnij do osobnego okna</sys:String>
     <sys:String x:Key="S.m.duplicate">Duplikuj</sys:String>
     <sys:String x:Key="S.m.moveleft">Przesuń w lewo</sys:String>

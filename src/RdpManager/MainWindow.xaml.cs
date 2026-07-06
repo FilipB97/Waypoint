@@ -72,6 +72,13 @@ namespace RdpManager
         private Point _dragStartPoint;
         private ServerInfo _dragCandidate;
         private bool _didDrag;
+
+        // Zaznaczenie wielu serwerów (Ctrl/Shift+klik) do akcji zbiorczych. Nietrwałe — czyszczone przy każdej
+        // przebudowie drzewa (filtr, zwinięcie grupy, akcja zbiorcza). _visibleOrder = kolejność wierszy dla Shift.
+        private readonly HashSet<ServerInfo> _multiSelect = new HashSet<ServerInfo>();
+        private ServerInfo _selectAnchor;
+        private readonly List<ServerInfo> _visibleOrder = new List<ServerInfo>();
+
         private InsertionAdorner _dropAdorner;   // linia „tu wyląduje" na krawędzi wiersza
         private Border _dropRow;                  // wiersz, do którego przypięty jest adorner
 
@@ -1242,6 +1249,9 @@ namespace RdpManager
             _serverRows.Clear();
             _serverActivate.Clear();
             _serverStatusDot.Clear();
+            _multiSelect.Clear();
+            _selectAnchor = null;
+            _visibleOrder.Clear();
 
             // Dostępność: strzałki i Tab przenoszą fokus między wierszami serwerów.
             System.Windows.Input.KeyboardNavigation.SetDirectionalNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
@@ -1254,7 +1264,7 @@ namespace RdpManager
                 bool pinCollapsed = _settings.CollapsedGroups.Contains(PinnedGroupKey);
                 ServerTree.Children.Add(BuildGroupHeader(PinnedGroupKey, pinned.Count, pinCollapsed, isPinned: true));
                 if (!pinCollapsed)
-                    foreach (var s in pinned) ServerTree.Children.Add(BuildServerRow(s));
+                    foreach (var s in pinned) { ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
             }
 
             // Zwykłe grupy (bez przypiętych).
@@ -1274,7 +1284,7 @@ namespace RdpManager
                 ServerTree.Children.Add(BuildGroupHeader(g, byGroup[g].Count, collapsed, isPinned: false));
                 if (!collapsed)
                     foreach (var s in byGroup[g])
-                        ServerTree.Children.Add(BuildServerRow(s));
+                    { ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
             }
             UpdateActiveRows();
         }
@@ -1550,9 +1560,9 @@ namespace RdpManager
                 System.Windows.Automation.AutomationProperties.SetName(statusDot, StatusLabel(server.Status));
 
             row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
-            row.MouseLeave += (s, e) => { if (_active?.Server != server && !row.IsKeyboardFocused) row.Background = Brushes.Transparent; };
+            row.MouseLeave += (s, e) => { if (_active?.Server != server && !row.IsKeyboardFocused) row.Background = RowRestBackground(server); };
             row.GotKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
-            row.LostKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
+            row.LostKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = RowRestBackground(server); };
             row.KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Enter || e.Key == Key.Space) { LaunchServer(server, true); e.Handled = true; }
@@ -1592,11 +1602,69 @@ namespace RdpManager
             row.MouseLeftButtonUp += (s, e) =>
             {
                 if (_didDrag) { _didDrag = false; return; }   // to było przeciąganie, nie klik
+                var mods = Keyboard.Modifiers;
+                if (mods.HasFlag(ModifierKeys.Shift) && _selectAnchor != null) { RangeSelect(server); e.Handled = true; return; }
+                if (mods.HasFlag(ModifierKeys.Control) || mods.HasFlag(ModifierKeys.Shift)) { ToggleSelect(server); e.Handled = true; return; }
+                ClearMultiSelect();   // zwykły klik = połącz i wyczyść zaznaczenie
                 LaunchServer(server, true);
             };
 
             row.ContextMenu = BuildServerContextMenu(server);
+            row.ContextMenuOpening += (s, e) =>
+            {
+                // Prawy-klik na zaznaczonym wierszu przy zaznaczeniu ≥2 → menu zbiorcze; inaczej menu pojedyncze
+                // (prawy-klik poza zaznaczeniem czyści zaznaczenie i pokazuje zwykłe menu wiersza).
+                if (_multiSelect.Count >= 2 && _multiSelect.Contains(server))
+                    row.ContextMenu = BuildBulkContextMenu(_multiSelect.ToList());
+                else
+                {
+                    ClearMultiSelect();
+                    row.ContextMenu = BuildServerContextMenu(server);
+                }
+            };
             _serverRows[server] = row;
+        }
+
+        // Tło wiersza w stanie spoczynku (nie hover/focus/aktywny): zaznaczony = AccentSoft, inaczej przezroczysty.
+        private Brush RowRestBackground(ServerInfo s)
+            => _multiSelect.Contains(s) ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+
+        // Ctrl+klik: przełącz pojedynczy wiersz w zaznaczeniu (ustaw kotwicę dla ewentualnego Shift).
+        private void ToggleSelect(ServerInfo server)
+        {
+            if (!_multiSelect.Remove(server)) _multiSelect.Add(server);
+            _selectAnchor = server;
+            RefreshSelectionVisuals();
+        }
+
+        // Shift+klik: zaznacz ciągły zakres od kotwicy do wskazanego wiersza (w kolejności widocznej).
+        private void RangeSelect(ServerInfo server)
+        {
+            int a = _visibleOrder.IndexOf(_selectAnchor), b = _visibleOrder.IndexOf(server);
+            if (a < 0 || b < 0) { ToggleSelect(server); return; }
+            if (a > b) { (a, b) = (b, a); }
+            _multiSelect.Clear();
+            for (int i = a; i <= b; i++) _multiSelect.Add(_visibleOrder[i]);
+            RefreshSelectionVisuals();
+        }
+
+        private void ClearMultiSelect()
+        {
+            _selectAnchor = null;
+            if (_multiSelect.Count == 0) return;
+            _multiSelect.Clear();
+            RefreshSelectionVisuals();
+        }
+
+        // Odśwież tło wierszy wg zaznaczenia. Pomijamy: aktywną sesję (maluje ją UpdateActiveRows) oraz wiersze
+        // pod kursorem / z fokusem (te odświeżą własne handlery MouseLeave/LostKeyboardFocus).
+        private void RefreshSelectionVisuals()
+        {
+            foreach (var kv in _serverRows)
+            {
+                if (_active?.Server == kv.Key || kv.Value.IsMouseOver || kv.Value.IsKeyboardFocused) continue;
+                kv.Value.Background = _multiSelect.Contains(kv.Key) ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+            }
         }
 
         private ContextMenu BuildServerContextMenu(ServerInfo server)
@@ -3928,6 +3996,77 @@ namespace RdpManager
 
             _vm.Remove(server);
             CredentialStore.Delete(server.CredTarget);
+            PersistServers();
+            RenderTree(SearchBox.Text);
+            CheckReachabilityAsync();
+        }
+
+        // Menu zbiorcze dla zaznaczonych serwerów (Ctrl/Shift+klik): przenieś N do grupy / usuń N.
+        private ContextMenu BuildBulkContextMenu(List<ServerInfo> servers)
+        {
+            var menu = new ContextMenu();
+            menu.Items.Add(new MenuItem { Header = string.Format(L("S.m.bulk.count"), servers.Count), IsEnabled = false });
+            menu.Items.Add(new Separator());
+
+            var move = new MenuItem { Header = L("S.m.bulk.move") };
+            foreach (var g in ExistingGroupNames())
+            {
+                string target = g;
+                var mi = new MenuItem { Header = g };
+                mi.Click += (s, e) => MoveServersToGroup(servers, target);
+                move.Items.Add(mi);
+            }
+            if (move.Items.Count > 0) move.Items.Add(new Separator());
+            var newGrp = new MenuItem { Header = L("S.m.bulk.move.new") };
+            newGrp.Click += (s, e) =>
+            {
+                var dlg = new InputDialog(L("S.prompt.newgroup.title"), L("S.prompt.newgroup.label"), "") { Owner = this };
+                if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.Value))
+                    MoveServersToGroup(servers, dlg.Value.Trim());
+            };
+            move.Items.Add(newGrp);
+            menu.Items.Add(move);
+
+            menu.Items.Add(new Separator());
+            var del = new MenuItem { Header = string.Format(L("S.m.bulk.delete"), servers.Count) };
+            del.Click += (s, e) => DeleteServers(servers);
+            menu.Items.Add(del);
+            return menu;
+        }
+
+        // Nazwy istniejących (niepustych) grup — cel dla „przenieś do grupy". Kolejność pojawiania się.
+        private List<string> ExistingGroupNames()
+        {
+            var names = new List<string>();
+            foreach (var s in _vm.Servers)
+                if (!string.IsNullOrWhiteSpace(s.Group) && !names.Contains(s.Group))
+                    names.Add(s.Group);
+            return names;
+        }
+
+        private void MoveServersToGroup(List<ServerInfo> servers, string group)
+        {
+            foreach (var s in servers) s.Group = group;
+            PersistServers();
+            RenderTree(SearchBox.Text);
+        }
+
+        // Usuwa wiele serwerów naraz (JEDNO potwierdzenie). Odzwierciedla czyszczenie z DeleteServer
+        // (zamknięcie otwartych sesji + skasowanie poświadczeń z Credential Managera).
+        private void DeleteServers(List<ServerInfo> servers)
+        {
+            if (servers.Count == 0) return;
+            if (MessageBox.Show(string.Format(L("S.msg.bulkdelete"), servers.Count), L("S.msg.delete.title"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            foreach (var server in servers)
+            {
+                foreach (var open in _sessions.Where(x => x.Server == server).ToList())
+                    CloseSession(open);
+                _vm.Remove(server);
+                CredentialStore.Delete(server.CredTarget);
+            }
             PersistServers();
             RenderTree(SearchBox.Text);
             CheckReachabilityAsync();
