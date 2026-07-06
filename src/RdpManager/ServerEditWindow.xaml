@@ -101,6 +101,11 @@
                     </StackPanel>
 
                     <StackPanel Margin="0,10,0,0">
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.tags}"/>
+                        <ui:TextBox x:Name="TagsBox" PlaceholderText="{DynamicResource S.se.tags.ph}"/>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,10,0,0">
                         <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.iconcolor}"/>
                         <WrapPanel x:Name="ColorSwatches"/>
                     </StackPanel>

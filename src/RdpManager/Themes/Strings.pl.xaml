@@ -180,6 +180,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.remoteapp.args">Argumenty (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.mac">Adres MAC — Wake-on-LAN (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.mac.ph">np. AA:BB:CC:DD:EE:FF</sys:String>
+    <sys:String x:Key="S.se.tags">Tagi (po przecinku) — do filtrowania w wyszukiwarce</sys:String>
+    <sys:String x:Key="S.se.tags.ph">np. prod, klientA, baza</sys:String>
     <sys:String x:Key="S.se.mac.bad">Niepoprawny adres MAC: {0}</sys:String>
     <sys:String x:Key="S.se.port.bad">Port musi być liczbą od 1 do 65535.</sys:String>
     <sys:String x:Key="S.se.keypath.missing">Plik klucza nie istnieje: {0}. Zapiszę mimo to — sprawdź ścieżkę przed połączeniem.</sys:String>

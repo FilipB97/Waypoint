@@ -1674,8 +1674,10 @@ namespace RdpManager
             // Dostępność (z PR #21): wiersz fokusowalny (nawigacja klawiaturą), nazwa dla czytnika ekranu
             // (nazwa — host — status), a kropka statusu — swój tekst. Wspólne dla obu stylów listy.
             row.Focusable = true;
+            string tagText = (server.Tags != null && server.Tags.Count > 0) ? "  #" + string.Join(" #", server.Tags) : "";
             System.Windows.Automation.AutomationProperties.SetName(row,
-                server.Name + " — " + DisplayHost(server) + " — " + StatusLabel(server.Status));
+                server.Name + " — " + DisplayHost(server) + " — " + StatusLabel(server.Status) + tagText);
+            if (tagText.Length > 0) row.ToolTip = server.Name + tagText;   // tagi widoczne po najechaniu (filtr działa też bez tego)
             if (_serverStatusDot.TryGetValue(server, out var statusDot))
                 System.Windows.Automation.AutomationProperties.SetName(statusDot, StatusLabel(server.Status));
 
