@@ -147,6 +147,7 @@ namespace RdpManager
             _focusPeekPoll.Tick += FocusPeekPollTick;
 
             BuildServerTree();
+            WireTreeFileDrop();     // import .rdp: upuść pliki z Eksploratora na drzewo serwerów
             ApplyTabStripStyle();   // margines paska / rozmiar ikon wg stylu (Domyślny/Minimal) — zanim wejdą karty
             UpdateToolbarEnabled();
             UpdateToolbarMode();
@@ -1707,6 +1708,7 @@ namespace RdpManager
             };
             row.DragOver += (s, e) =>
             {
+                if (!e.Data.GetDataPresent(typeof(ServerInfo))) return;   // pliki z Eksploratora → obsłuży ServerTree (import .rdp)
                 e.Effects = DragDropEffects.Move;
                 e.Handled = true;
                 var dragged = e.Data.GetData(typeof(ServerInfo)) as ServerInfo;
@@ -1716,6 +1718,7 @@ namespace RdpManager
             };
             row.Drop += (s, e) =>
             {
+                if (!e.Data.GetDataPresent(typeof(ServerInfo))) return;   // pliki bąbelkują do ServerTree (import .rdp)
                 ClearDropIndicator();
                 bool bottom = e.GetPosition(row).Y > row.ActualHeight / 2;
                 ReorderServer(e.Data.GetData(typeof(ServerInfo)) as ServerInfo, server, bottom);
@@ -3928,9 +3931,15 @@ namespace RdpManager
                 Multiselect = true
             };
             if (dlg.ShowDialog(this) != true) return;
+            ImportRdpFiles(dlg.FileNames);
+        }
 
+        // Import plików .rdp — wspólne dla menu importu i upuszczenia na drzewo (drag&drop z Eksploratora).
+        private void ImportRdpFiles(IEnumerable<string> paths)
+        {
+            if (paths == null) return;
             int imported = 0;
-            foreach (var path in dlg.FileNames)
+            foreach (var path in paths)
             {
                 try
                 {
@@ -3956,6 +3965,26 @@ namespace RdpManager
                 CheckReachabilityAsync();
                 SetStatus(string.Format(L("S.st.imported"), imported), StatusKind.Ok);
             }
+        }
+
+        // Upuszczenie plików .rdp z Eksploratora na drzewo serwerów. Wewnętrzny drag kolejności używa
+        // typeof(ServerInfo) (patrz WireServerRow), więc pliki się z nim nie gryzą — bąbelkują tutaj.
+        private void WireTreeFileDrop()
+        {
+            ServerTree.Background = Brushes.Transparent;   // hit-test także w pustym obszarze drzewa
+            ServerTree.AllowDrop = true;
+            ServerTree.DragOver += (s, e) =>
+            {
+                if (e.Data.GetDataPresent(DataFormats.FileDrop)) { e.Effects = DragDropEffects.Copy; e.Handled = true; }
+            };
+            ServerTree.Drop += (s, e) =>
+            {
+                if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+                if (!(e.Data.GetData(DataFormats.FileDrop) is string[] files)) return;
+                var rdps = files.Where(f => f.EndsWith(".rdp", StringComparison.OrdinalIgnoreCase)).ToArray();
+                ImportRdpFiles(rdps);
+                e.Handled = true;
+            };
         }
 
         // Zaciąga historię połączeń wbudowanego klienta RDP (mstsc) z rejestru: host (+ port) i ostatni login.
