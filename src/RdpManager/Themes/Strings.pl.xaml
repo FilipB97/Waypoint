@@ -58,6 +58,18 @@
     <sys:String x:Key="S.set.immersive">Tryb skupienia po zmaksymalizowaniu (ukryj panel boczny)</sys:String>
     <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje przy starcie</sys:String>
     <sys:String x:Key="S.update.available">Nowa wersja {0} — aktualizuj</sys:String>
+    <!-- Domyślne nazwy grup (lokalizowane; pusta grupa serwera = domyślny „kosz"). -->
+    <sys:String x:Key="S.group.default">Serwery</sys:String>
+    <sys:String x:Key="S.group.quick">Szybkie</sys:String>
+    <sys:String x:Key="S.group.imported">Zaimportowane</sys:String>
+    <sys:String x:Key="S.group.imported.mstsc">Zaimportowane z mstsc</sys:String>
+    <!-- Sygnały samonaprawy konfiguracji (InfoBar w stopce panelu). -->
+    <sys:String x:Key="S.heal.title.ok">Przywrócono konfigurację</sys:String>
+    <sys:String x:Key="S.heal.title.warn">Uszkodzony plik konfiguracji</sys:String>
+    <sys:String x:Key="S.heal.settingsRestored">Ustawienia przywrócono z kopii zapasowej.</sys:String>
+    <sys:String x:Key="S.heal.settingsAfterUpdate">Ustawienia przywrócono z migawki sprzed aktualizacji.</sys:String>
+    <sys:String x:Key="S.heal.serversRestored">Listę serwerów przywrócono z kopii zapasowej.</sys:String>
+    <sys:String x:Key="S.heal.quarantined">Plik „{0}" był uszkodzony — zabezpieczono kopię obok (.corrupt).</sys:String>
     <sys:String x:Key="S.update.title">Aktualizacja</sys:String>
     <sys:String x:Key="S.update.confirm">Zaktualizować do wersji {0}? Otwarte połączenia zostaną zamknięte, a Waypoint uruchomi się ponownie (i zaproponuje przywrócenie sesji).</sys:String>
     <sys:String x:Key="S.update.downloading">Pobieranie… {0}%</sys:String>

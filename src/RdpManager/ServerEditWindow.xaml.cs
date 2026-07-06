@@ -318,16 +318,12 @@ namespace RdpManager
             _server.Name = NameBox.Text.Trim();
             _server.Host = HostBox.Text.Trim();
             _server.Port = int.TryParse(PortBox.Text.Trim(), out var p) ? p : DefaultPortFor(idx);
-            _server.Group = string.IsNullOrWhiteSpace(GroupBox.Text) ? "Serwery" : GroupBox.Text.Trim();
-            // Profil poświadczeń (tylko RDP/SSH): gdy wybrany, login/domena/hasło biorą się z profilu → własne czyścimy.
-            string profileId = SelectedProfileId();
-            _server.CredentialProfileId = (creds && profileId.Length > 0) ? profileId : "";
-            bool useProfile = _server.CredentialProfileId.Length > 0;
-
-            _server.UseWindowsAccount = !useProfile && rdp && WinAuthCheck.IsChecked == true;
-            _server.Username = (useProfile || !creds || _server.UseWindowsAccount) ? "" : UserBox.Text.Trim();
-            _server.Domain = (!useProfile && rdp && !_server.UseWindowsAccount) ? DomainBox.Text.Trim() : "";
-            _server.SavePassword = !useProfile && passProto && !_server.UseWindowsAccount && SavePassCheck.IsChecked == true;
+            // Puste pole grupy = domyślny „kosz" lokalizowany przy wyświetlaniu (nie zapisujemy nazwy PL).
+            _server.Group = string.IsNullOrWhiteSpace(GroupBox.Text) ? "" : GroupBox.Text.Trim();
+            _server.UseWindowsAccount = rdp && WinAuthCheck.IsChecked == true;
+            _server.Username = (!creds || _server.UseWindowsAccount) ? "" : UserBox.Text.Trim();
+            _server.Domain = (rdp && !_server.UseWindowsAccount) ? DomainBox.Text.Trim() : "";
+            _server.SavePassword = passProto && !_server.UseWindowsAccount && SavePassCheck.IsChecked == true;
 
             _server.RedirectClipboard = EdClipboard.IsChecked == true;
             _server.RedirectDrives = EdDrives.IsChecked == true;

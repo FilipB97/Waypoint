@@ -34,6 +34,7 @@ namespace RdpManager
                 {
                     PersistLog.Write(dir, $"settings.Load: SELF-HEAL z .bak (main={(main == null ? -1 : DataScore(main))}, bak={DataScore(bak)})");
                     try { File.Copy(path + ".bak", path, overwrite: true); } catch { /* best-effort */ }
+                    HealthNotices.Add(HealthNoticeKind.SettingsRestored);
                     return bak;
                 }
             }
@@ -54,7 +55,11 @@ namespace RdpManager
             catch
             {
                 // Uszkodzony plik: odłóż na bok (.corrupt) zamiast po cichu stracić.
-                if (preserveCorrupt) AtomicFile.PreserveCorrupt(p);
+                if (preserveCorrupt)
+                {
+                    AtomicFile.PreserveCorrupt(p);
+                    HealthNotices.Add(HealthNoticeKind.FileQuarantined, Path.GetFileName(p));
+                }
             }
             return null;
         }
@@ -108,6 +113,7 @@ namespace RdpManager
                 {
                     PersistLog.Write(dir, $"settings.ConsumeSnapshot: PRZYWRACAM sprzed update (snapshot={DataScore(s)} > bieżące={(current == null ? -1 : DataScore(current))})");
                     chosen = s;
+                    HealthNotices.Add(HealthNoticeKind.SettingsRestoredAfterUpdate);
                     Save(chosen, dir);   // utrwal przywrócone i odśwież .bak dobrą wersją
                 }
                 else

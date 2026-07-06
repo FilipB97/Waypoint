@@ -159,6 +159,7 @@ namespace RdpManager
             if (_settings.ReachabilityEnabled) { _reachTimer.Start(); CheckReachabilityAsync(); }
 
             ShowView("Sessions");
+            ShowHealthNotices();   // nieblokujący sygnał, jeśli przy ładowaniu zadziałała samonaprawa/kwarantanna
 
             InitTray();
             HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndHook);
@@ -167,6 +168,36 @@ namespace RdpManager
             CheckForUpdatesAsync();
             // Po wyrenderowaniu okna (modal przywracania potrzebuje widocznego właściciela).
             Dispatcher.BeginInvoke(new Action(StartupConnect), DispatcherPriority.Loaded);
+        }
+
+        // Nieblokujący sygnał, że przy ładowaniu zadziałała samonaprawa konfiguracji (przywrócenie z kopii
+        // .bak / z migawki sprzed aktualizacji / kwarantanna uszkodzonego pliku jako .corrupt). Dotąd trafiało
+        // to WYŁĄCZNIE do persist.log — użytkownik nic nie widział. Pokazujemy raz, w InfoBar w stopce panelu:
+        // Success = przywrócono dane, Warning = wykryto uszkodzony plik. [[waypoint-persistence-version-mixing]]
+        private void ShowHealthNotices()
+        {
+            var notices = Core.HealthNotices.Drain();
+            if (notices.Count == 0) return;
+
+            bool anyCorrupt = notices.Any(n => n.Kind == Core.HealthNoticeKind.FileQuarantined);
+            var lines = new List<string>();
+            foreach (var n in notices)
+            {
+                switch (n.Kind)
+                {
+                    case Core.HealthNoticeKind.SettingsRestored:            lines.Add(L("S.heal.settingsRestored")); break;
+                    case Core.HealthNoticeKind.SettingsRestoredAfterUpdate: lines.Add(L("S.heal.settingsAfterUpdate")); break;
+                    case Core.HealthNoticeKind.ServersRestored:             lines.Add(L("S.heal.serversRestored")); break;
+                    case Core.HealthNoticeKind.FileQuarantined:             lines.Add(string.Format(L("S.heal.quarantined"), n.Detail)); break;
+                }
+            }
+
+            HealthInfoBar.Severity = anyCorrupt
+                ? Wpf.Ui.Controls.InfoBarSeverity.Warning
+                : Wpf.Ui.Controls.InfoBarSeverity.Success;
+            HealthInfoBar.Title = L(anyCorrupt ? "S.heal.title.warn" : "S.heal.title.ok");
+            HealthInfoBar.Message = string.Join("\n", lines);
+            HealthInfoBar.IsOpen = true;
         }
 
         // Start: zdefiniowane serwery „Połącz na starcie" mają priorytet — łączymy z nimi i pomijamy
@@ -1363,7 +1394,7 @@ namespace RdpManager
             {
                 if (s.Pinned) continue;
                 if (!RdpUtils.MatchesFilter(s, filter)) continue;
-                var g = string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group;
+                var g = string.IsNullOrWhiteSpace(s.Group) ? L("S.group.default") : s.Group;
                 if (!byGroup.ContainsKey(g)) { order.Add(g); byGroup[g] = new List<ServerInfo>(); }
                 byGroup[g].Add(s);
             }
@@ -1455,7 +1486,7 @@ namespace RdpManager
             if (string.IsNullOrWhiteSpace(newName) || newName == oldName) return;
 
             foreach (var s in _vm.Servers)
-                if ((string.IsNullOrWhiteSpace(s.Group) ? "Serwery" : s.Group) == oldName)
+                if ((string.IsNullOrWhiteSpace(s.Group) ? L("S.group.default") : s.Group) == oldName)
                     s.Group = newName;
 
             // Przenieś stan zwinięcia na nową nazwę.
@@ -3794,7 +3825,7 @@ namespace RdpManager
             var srv = new ServerInfo
             {
                 Name = host, Host = host, Port = port, Username = user, Domain = domain,
-                Group = "Szybkie", Status = ServerStatus.Offline
+                Group = L("S.group.quick"), Status = ServerStatus.Offline
             };
             srv.Initials = RdpUtils.MakeInitials(srv.Name);
 
@@ -3805,8 +3836,9 @@ namespace RdpManager
 
         private void AddServer_Click(object sender, RoutedEventArgs e)
         {
-            var server = new ServerInfo { Group = "Serwery", Status = ServerStatus.Offline, Port = _settings.DefaultPort };
-            var dlg = new ServerEditWindow(server, "", _credProfiles) { Owner = this };
+            // Pusta grupa = domyślny „kosz" lokalizowany przy wyświetlaniu (RenderTree), nie zapisujemy tu nazwy PL.
+            var server = new ServerInfo { Group = "", Status = ServerStatus.Offline, Port = _settings.DefaultPort };
+            var dlg = new ServerEditWindow(server, "") { Owner = this };
             if (dlg.ShowDialog() == true)
             {
                 _vm.Add(server);
@@ -3901,7 +3933,7 @@ namespace RdpManager
                 try
                 {
                     var server = RdpFile.Parse(System.IO.File.ReadAllText(path));
-                    server.Group = "Zaimportowane";
+                    server.Group = L("S.group.imported");
                     if (string.IsNullOrWhiteSpace(server.Name))
                         server.Name = System.IO.Path.GetFileNameWithoutExtension(path);
                     server.Status = ServerStatus.Offline;
@@ -3967,7 +3999,7 @@ namespace RdpManager
                     Port = port,
                     Username = user,
                     Domain = domain,
-                    Group = "Zaimportowane z mstsc",
+                    Group = L("S.group.imported.mstsc"),
                     Status = ServerStatus.Offline
                 };
                 srv.Initials = RdpUtils.MakeInitials(srv.Name);

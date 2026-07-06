@@ -39,6 +39,7 @@ namespace RdpManager
                 if (bak != null && (main == null || bak.Count >= main.Count))
                 {
                     try { File.Copy(path + ".bak", path, overwrite: true); } catch { /* best-effort */ }
+                    HealthNotices.Add(HealthNoticeKind.ServersRestored);
                     return bak;
                 }
             }
@@ -66,7 +67,11 @@ namespace RdpManager
             catch
             {
                 // Uszkodzony/niekompatybilny plik z realnymi serwerami — zachowaj kopię (.corrupt).
-                if (preserveCorrupt) AtomicFile.PreserveCorrupt(p);
+                if (preserveCorrupt)
+                {
+                    AtomicFile.PreserveCorrupt(p);
+                    HealthNotices.Add(HealthNoticeKind.FileQuarantined, Path.GetFileName(p));
+                }
             }
             return null;
         }
