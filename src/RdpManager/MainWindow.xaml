@@ -495,6 +495,12 @@
         <Popup x:Name="FocusPeekPopup" Placement="Relative" PlacementTarget="{Binding ElementName=BodyGrid}"
                AllowsTransparency="True" StaysOpen="True" HorizontalOffset="0" VerticalOffset="0">
             <Border x:Name="FocusPeekClip" ClipToBounds="True" Width="280">
+                <!-- Popup to osobny HWND i NIE dziedziczy RootScale (zoom UI). Bez tego przy zoomie ≠100%
+                     peek renderował się w skali 100% (za duży) i był ucięty od dołu. Nadajemy mu tę samą
+                     skalę co panel dokowany — ScaleY ustawiane w ShowFocusPeek. -->
+                <Border.LayoutTransform>
+                    <ScaleTransform x:Name="FocusPeekScale" ScaleX="1" ScaleY="1"/>
+                </Border.LayoutTransform>
                 <StackPanel x:Name="FocusPeekHost" Orientation="Horizontal" HorizontalAlignment="Left">
                     <StackPanel.RenderTransform>
                         <TranslateTransform x:Name="FocusPeekSlide" X="-280"/>

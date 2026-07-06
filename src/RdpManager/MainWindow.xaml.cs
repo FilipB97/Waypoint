@@ -552,6 +552,9 @@ namespace RdpManager
             Sidebar.Visibility = Visibility.Visible;
             FocusPeekHost.Children.Add(Rail);
             FocusPeekHost.Children.Add(Sidebar);
+            // Popup nie dziedziczy RootScale (osobny HWND) — nadaj mu ręcznie zoom UI, żeby peek miał tę
+            // samą skalę co panel dokowany i mieścił się na ekranie (przy <100% był ucięty od dołu).
+            FocusPeekScale.ScaleX = FocusPeekScale.ScaleY = RootScale.ScaleY;
             FocusPeekClip.Height = BodyGrid.ActualHeight;
             FocusPeekPopup.IsOpen = true;
 
