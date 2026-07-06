@@ -35,6 +35,9 @@ namespace RdpManager.Models
 
         public string Group { get; set; }
 
+        /// <summary>Etykiety/tagi do filtrowania w wyszukiwarce (np. „prod", „klientA"). Nie wpływają na łączenie.</summary>
+        public List<string> Tags { get; set; } = new List<string>();
+
         /// <summary>Inicjały do "awatara" na liście (jak w mockupie). Liczone z nazwy przy renderowaniu.</summary>
         public string Initials { get; set; }
 

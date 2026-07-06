@@ -41,6 +41,7 @@ namespace RdpManager
             RemoteAppBox.Text = server.RemoteAppProgram ?? "";
             RemoteAppArgsBox.Text = server.RemoteAppArgs ?? "";
             MacBox.Text = server.MacAddress ?? "";
+            TagsBox.Text = server.Tags == null ? "" : string.Join(", ", server.Tags);
             EdAudio.SelectedIndex = Math.Clamp(server.AudioMode, 0, 2);
             EdAuthLevel.SelectedIndex = Math.Clamp(server.AuthenticationLevel, 0, 2);
             GatewayHostBox.Text = server.GatewayHostname ?? "";
@@ -282,6 +283,19 @@ namespace RdpManager
             if (dlg.ShowDialog(this) == true) KeyPathBox.Text = dlg.FileName;
         }
 
+        // Tagi: rozdzielone przecinkami, przycięte (opcjonalny wiodący #), bez pustych i duplikatów (ignorując wielkość liter).
+        private static List<string> ParseTags(string text)
+        {
+            var list = new List<string>();
+            foreach (var raw in (text ?? "").Split(','))
+            {
+                var t = raw.Trim().TrimStart('#').Trim();
+                if (t.Length > 0 && !list.Exists(x => string.Equals(x, t, StringComparison.OrdinalIgnoreCase)))
+                    list.Add(t);
+            }
+            return list;
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(HostBox.Text))
@@ -357,6 +371,7 @@ namespace RdpManager
             _server.RemoteAppProgram = rdp ? RemoteAppBox.Text.Trim() : "";
             _server.RemoteAppArgs = rdp ? RemoteAppArgsBox.Text.Trim() : "";
             _server.MacAddress = macText;
+            _server.Tags = ParseTags(TagsBox.Text);
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
             _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;
             _server.GatewayHostname = GatewayHostBox.Text.Trim();
