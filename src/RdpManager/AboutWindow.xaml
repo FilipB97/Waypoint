@@ -29,13 +29,11 @@
                        Foreground="{DynamicResource TextSec}" Margin="0,0,0,16"/>
 
             <TextBlock Foreground="{DynamicResource TextSec}">
-                <Run Text="{DynamicResource S.about.author}"/>
-                <Run Text="Filip Benklewski" FontWeight="SemiBold" Foreground="{DynamicResource TextPrim}"/>
+                <Run Text="{DynamicResource S.about.author}"/><Hyperlink Click="Author_Click" Foreground="{DynamicResource Accent}" ToolTip="https://github.com/FilipB97"><Run Text="Filip Benklewski" FontWeight="SemiBold"/></Hyperlink>
             </TextBlock>
 
             <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                <ui:Button Content="GitHub" Appearance="Secondary" Click="Github_Click"/>
-                <ui:Button Content="{DynamicResource S.about.repo}" Appearance="Secondary" Click="Repo_Click" Margin="8,0,0,0"/>
+                <ui:Button Content="{DynamicResource S.about.repo}" Appearance="Secondary" Click="Repo_Click"/>
             </StackPanel>
 
             <TextBlock x:Name="DataPathText" Foreground="{DynamicResource TextTer}" FontSize="10.5"

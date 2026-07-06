@@ -85,6 +85,7 @@
     <sys:String x:Key="S.set.profiles">Profile poświadczeń</sys:String>
     <sys:String x:Key="S.set.profiles.hint">Jeden zapisany login (domena, użytkownik, hasło) współdzielony przez wiele serwerów. Hasło trzymane jest w Windows Credential Manager.</sys:String>
     <sys:String x:Key="S.prof.use">Profil poświadczeń</sys:String>
+    <sys:String x:Key="S.prof.use.tip">Wybrany profil dostarcza loginu, domeny i hasła — nadpisuje własne pola tego serwera.</sys:String>
     <sys:String x:Key="S.prof.none">(brak — własny login)</sys:String>
     <sys:String x:Key="S.prof.edit.title">Profil poświadczeń</sys:String>
     <sys:String x:Key="S.prof.name">Nazwa profilu</sys:String>
@@ -180,6 +181,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.mac">Adres MAC — Wake-on-LAN (opcjonalnie)</sys:String>
     <sys:String x:Key="S.se.mac.ph">np. AA:BB:CC:DD:EE:FF</sys:String>
     <sys:String x:Key="S.se.mac.bad">Niepoprawny adres MAC: {0}</sys:String>
+    <sys:String x:Key="S.se.port.bad">Port musi być liczbą od 1 do 65535.</sys:String>
+    <sys:String x:Key="S.se.keypath.missing">Plik klucza nie istnieje: {0}. Zapiszę mimo to — sprawdź ścieżkę przed połączeniem.</sys:String>
     <sys:String x:Key="S.se.reveal">Pokaż / ukryj hasło</sys:String>
     <sys:String x:Key="S.se.iconcolor">Kolor ikony</sys:String>
     <sys:String x:Key="S.se.iconcolor.auto">Automatyczny (wg grupy)</sys:String>
@@ -253,7 +256,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.ready">Gotowe do połączenia</sys:String>
     <sys:String x:Key="S.st.hint.winauth">Wskazówka: konto Windows może nie mieć dostępu do hosta — odznacz „Konto Windows" i podaj login/hasło.</sys:String>
     <sys:String x:Key="S.st.hint.creds">Wskazówka: sprawdź login, hasło, domenę i dostępność hosta.</sys:String>
-    <sys:String x:Key="S.st.multimon">Pełny ekran (wszystkie monitory) — Ctrl+Alt+Break lub pasek połączenia, by wrócić.</sys:String>
+    <sys:String x:Key="S.st.multimon">Pełny ekran — Ctrl+Alt+Break lub pasek połączenia, by wrócić.</sys:String>
     <sys:String x:Key="S.st.diagnosing">Diagnostyka {0}:{1}…</sys:String>
     <sys:String x:Key="S.st.imported">Zaimportowano serwerów: {0}</sys:String>
     <sys:String x:Key="S.st.copied">Skopiowano do schowka</sys:String>

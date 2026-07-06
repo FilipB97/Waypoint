@@ -1820,11 +1820,11 @@ namespace RdpManager
                 AddCopy("S.m.copy.port", () => server.Port.ToString());
             if (rdp || server.Protocol == RemoteProtocol.Ssh)
             {
-                AddCopy("S.m.copy.user", () => server.Username);
-                if (rdp) AddCopy("S.m.copy.domain", () => server.Domain);
+                AddCopy("S.m.copy.user", () => EffUser(server));
+                if (rdp) AddCopy("S.m.copy.domain", () => EffDomain(server));
                 copyMenu.Items.Add(new Separator());
-                AddCopy("S.m.copy.pass", () => ReadPassword(server));
-                AddCopy("S.m.copy.userpass", () => server.Username + "\t" + ReadPassword(server));
+                AddCopy("S.m.copy.pass", () => ReadEffPassword(server));
+                AddCopy("S.m.copy.userpass", () => EffUser(server) + "\t" + ReadEffPassword(server));
             }
 
             var diagItem = new MenuItem { Header = L("S.m.diag") };
@@ -4235,6 +4235,10 @@ namespace RdpManager
 
         private static string ReadPassword(ServerInfo s)
             => CredentialStore.TryRead(s.CredTarget, out var p) ? (p ?? "") : "";
+
+        // Jak ReadPassword, ale z EFEKTYWNEGO celu (profil poświadczeń albo własny) — do kopiowania z menu.
+        private string ReadEffPassword(ServerInfo s)
+            => CredentialStore.TryRead(EffCredTarget(s), out var p) ? (p ?? "") : "";
 
         // ---------- Profile poświadczeń ----------
         // Serwer może wskazywać współdzielony profil (CredentialProfileId). Gdy wskazuje, login/domena/hasło
