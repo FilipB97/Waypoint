@@ -118,7 +118,7 @@ function New-PngFrame($bmp) {
 }
 
 $src = [System.Drawing.Bitmap]::FromFile($master)
-$src = Frame-ToFill $src 0.92   # przytnij przezroczysty margines glyphu i wyśrodkuj — ikona wypełnia kadr paska zadań
+$src = Frame-ToFill $src 1.0    # kafel wypełnia CAŁY kadr (jak inne ikony na pasku); margines robi już sam Windows
 $frames = @()
 foreach ($spec in $specs) {
     $bmp = Resize-Bitmap $src $spec.s
