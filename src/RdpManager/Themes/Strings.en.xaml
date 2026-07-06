@@ -176,6 +176,14 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.diag">Diagnostics…</sys:String>
     <sys:String x:Key="S.m.exportrdp">Export .rdp…</sys:String>
     <sys:String x:Key="S.m.delete">Delete</sys:String>
+    <!-- Bulk actions (multi-select via Ctrl/Shift+click). -->
+    <sys:String x:Key="S.m.bulk.count">Selected: {0}</sys:String>
+    <sys:String x:Key="S.m.bulk.move">Move to group</sys:String>
+    <sys:String x:Key="S.m.bulk.move.new">New group…</sys:String>
+    <sys:String x:Key="S.m.bulk.delete">Delete selected ({0})</sys:String>
+    <sys:String x:Key="S.msg.bulkdelete">Delete the {0} selected servers? This cannot be undone.</sys:String>
+    <sys:String x:Key="S.prompt.newgroup.title">New group</sys:String>
+    <sys:String x:Key="S.prompt.newgroup.label">Group name:</sys:String>
     <sys:String x:Key="S.m.tearoff">Tear off to a window</sys:String>
     <sys:String x:Key="S.m.duplicate">Duplicate</sys:String>
     <sys:String x:Key="S.m.moveleft">Move left</sys:String>
