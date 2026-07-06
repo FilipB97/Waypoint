@@ -495,6 +495,7 @@ namespace RdpManager
             if (immersive) { if (_focusPeekPoll != null && !_focusPeekPoll.IsEnabled) _focusPeekPoll.Start(); }
             else { _focusPeekPoll?.Stop(); _focusPeekDelay?.Stop(); }
             ApplyImmersiveCaption(immersive);
+            SetCaptionWatch(immersive);   // trzymaj CaptionHeight=0 mimo relayoutów / zmiany zoomu (WPF-UI je przywraca)
             UpdateToolbarMode();
         }
 
@@ -524,6 +525,26 @@ namespace RdpManager
             {
                 chrome.CaptionHeight = _savedCaptionHeight;
             }
+        }
+
+        // Jednorazowe zerowanie nie wystarcza: WPF-UI przywraca CaptionHeight po relayoutach, zmianie DPI
+        // lub zmianie zoomu UI. Gdy wróci w trybie skupienia, strefa caption zakrywa górę paska kart, a że
+        // pasek jest pod RootScale, regiony IsHitTestVisibleInChrome liczą się z błędem rosnącym w prawo
+        // („+"/skupienie łapią, dalsze przyciski dopiero po zjechaniu w dół). Dlatego w skupieniu pilnujemy
+        // CaptionHeight=0 na każdym przebiegu layoutu (ustawiamy tylko gdy „dryfnie" — brak pętli/kosztu).
+        private bool _captionWatchOn;
+        private void SetCaptionWatch(bool on)
+        {
+            if (on == _captionWatchOn) return;
+            _captionWatchOn = on;
+            if (on) LayoutUpdated += CaptionWatchTick;
+            else LayoutUpdated -= CaptionWatchTick;
+        }
+
+        private void CaptionWatchTick(object sender, EventArgs e)
+        {
+            if (!IsImmersive()) { SetCaptionWatch(false); return; }
+            ApplyCaptionCore(true);   // wymuś 0, jeśli coś je przywróciło
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku): wł/wył dla bieżącego zmaksymalizowanego okna.
