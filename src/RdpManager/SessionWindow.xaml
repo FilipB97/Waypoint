@@ -22,7 +22,7 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar x:Name="WinTitleBar" Grid.Row="0" Title="Sesja">
-            <ui:TitleBar.Icon><ui:SymbolIcon Symbol="Desktop24" Foreground="#29C5D6"/></ui:TitleBar.Icon>
+            <ui:TitleBar.Icon><ui:SymbolIcon Symbol="Desktop24" Foreground="#2657D6"/></ui:TitleBar.Icon>
         </ui:TitleBar>
 
         <Border x:Name="Toolbar" Grid.Row="1" Background="{DynamicResource Panel}"

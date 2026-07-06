@@ -218,8 +218,8 @@ const FitCtor  = (typeof FitAddon === 'function') ? FitAddon : FitAddon.FitAddon
 const term = new TermCtor({
   fontFamily: 'Cascadia Code, Cascadia Mono, Consolas, monospace',
   fontSize: 14, cursorBlink: true, scrollback: 5000,
-  theme: { background:'#101216', foreground:'#D6D8DC', cursor:'#29C5D6',
-           selectionBackground:'#2A4A50' }
+  theme: { background:'#101216', foreground:'#D6D8DC', cursor:'#2657D6',
+           selectionBackground:'#2A3A66' }
 });
 const fit = new FitCtor();
 term.loadAddon(fit);

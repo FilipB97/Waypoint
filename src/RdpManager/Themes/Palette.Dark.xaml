@@ -8,8 +8,8 @@
     <SolidColorBrush x:Key="TextPrim"   Color="#F1F2F4"/>
     <SolidColorBrush x:Key="TextSec"    Color="#9DA0A8"/>
     <SolidColorBrush x:Key="TextTer"    Color="#6C6F78"/>
-    <SolidColorBrush x:Key="Accent"     Color="#29C5D6"/>
-    <SolidColorBrush x:Key="AccentSoft" Color="#2629C5D6"/>
+    <SolidColorBrush x:Key="Accent"     Color="#2657D6"/>
+    <SolidColorBrush x:Key="AccentSoft" Color="#262657D6"/>
     <SolidColorBrush x:Key="Online"     Color="#3DDC97"/>
     <SolidColorBrush x:Key="Idle"       Color="#FFB454"/>
     <SolidColorBrush x:Key="Offline"    Color="#5B5D66"/>
@@ -30,7 +30,7 @@
         <GradientStop Color="#36C4CF" Offset="0"/><GradientStop Color="#1F8B94" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="LogoBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#29C5D6" Offset="0"/><GradientStop Color="#1A8A96" Offset="1"/>
+        <GradientStop Color="#3A6BE8" Offset="0"/><GradientStop Color="#2657D6" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="CanvasBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#0F1014" Offset="0"/><GradientStop Color="#1A1B22" Offset="1"/>
