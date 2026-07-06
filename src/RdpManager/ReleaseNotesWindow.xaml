@@ -1,0 +1,46 @@
+<ui:FluentWindow x:Class="RdpManager.ReleaseNotesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="{DynamicResource S.update.title}" Width="560" Height="560" MinWidth="460" MinHeight="380"
+        Icon="pack://application:,,,/Assets/app.ico"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar x:Name="Bar" Grid.Row="0" Title="{DynamicResource S.update.title}"/>
+
+        <TextBlock x:Name="HeaderText" Grid.Row="1" Margin="20,6,20,10" FontSize="18" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrim}" TextWrapping="Wrap"/>
+
+        <!-- Notatki wydania (markdown z GitHuba) — tekst do odczytu, przewijalny. -->
+        <Border Grid.Row="2" Margin="20,0,20,0" Background="{DynamicResource Panel}"
+                BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="10">
+            <TextBox x:Name="NotesBox" IsReadOnly="True" IsTabStop="False" TextWrapping="Wrap"
+                     BorderThickness="0" Background="Transparent" Foreground="{DynamicResource TextSec}"
+                     Padding="14,12" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"/>
+        </Border>
+
+        <StackPanel Grid.Row="3" Margin="20,14,20,18">
+            <TextBlock x:Name="WarnText" Foreground="{DynamicResource TextTer}" FontSize="12" TextWrapping="Wrap"
+                       Margin="0,0,0,12" Visibility="Collapsed" Text="{DynamicResource S.update.willrestart}"/>
+            <Grid>
+                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Left">
+                    <Hyperlink x:Name="GithubLink" Click="Github_Click" Foreground="{DynamicResource Accent}"><Run Text="{DynamicResource S.update.viewgithub}"/></Hyperlink>
+                </TextBlock>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <ui:Button x:Name="CancelBtn" Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="96" Visibility="Collapsed"/>
+                    <ui:Button x:Name="OkBtn" Content="{DynamicResource S.update.now}" Appearance="Primary" Click="Ok_Click" MinWidth="120" IsDefault="True" Visibility="Collapsed"/>
+                    <ui:Button x:Name="CloseBtn" Content="{DynamicResource S.m.close}" Appearance="Primary" Click="Close_Click" MinWidth="96" IsDefault="True" Visibility="Collapsed"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>
