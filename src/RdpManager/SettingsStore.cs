@@ -32,10 +32,12 @@ namespace RdpManager
                 var bak = ReadOrNull(path + ".bak", preserveCorrupt: false);
                 if (bak != null && (main == null || DataScore(bak) >= DataScore(main)))
                 {
+                    PersistLog.Write(dir, $"settings.Load: SELF-HEAL z .bak (main={(main == null ? -1 : DataScore(main))}, bak={DataScore(bak)})");
                     try { File.Copy(path + ".bak", path, overwrite: true); } catch { /* best-effort */ }
                     return bak;
                 }
             }
+            PersistLog.Write(dir, $"settings.Load: główny (score={(main == null ? -1 : DataScore(main))}, istnieje={File.Exists(path)})");
             return main ?? new AppSettings();
         }
 
@@ -68,8 +70,54 @@ namespace RdpManager
         public static void Save(AppSettings settings, string dir)
         {
             var path = FilePath(dir);
+            PersistLog.Write(dir, $"settings.Save: score={DataScore(settings)}");
             AtomicFile.Backup(path);   // kopia poprzedniej wersji na wypadek błędnego zapisu
             AtomicFile.WriteAllText(path, JsonSerializer.Serialize(settings, Options));
+        }
+
+        private static string SnapshotPath(string dir) => Path.Combine(dir, "settings.preupdate.json");
+
+        public static void SnapshotForUpdate(AppSettings settings) => SnapshotForUpdate(settings, Dir);
+
+        /// <summary>Migawka bieżących ustawień PRZED aktualizacją (z PAMIĘCI — źródło prawdy). Po restarcie
+        /// na nową wersję ConsumeUpdateSnapshot przywróci je deterministycznie, niezależnie od tego, co stanie
+        /// się z settings.json podczas podmiany exe.</summary>
+        public static void SnapshotForUpdate(AppSettings settings, string dir)
+        {
+            try
+            {
+                AtomicFile.WriteAllText(SnapshotPath(dir), JsonSerializer.Serialize(settings, Options));
+                PersistLog.Write(dir, $"settings.Snapshot(pre-update): score={DataScore(settings)}");
+            }
+            catch { /* migawka jest best-effort */ }
+        }
+
+        public static AppSettings ConsumeUpdateSnapshot(AppSettings current) => ConsumeUpdateSnapshot(current, Dir);
+
+        /// <summary>Jednorazowo po aktualizacji: jeśli migawka sprzed update jest BOGATSZA niż wczytany stan,
+        /// przywróć ją (wczytany zapewne zubożał w trakcie podmiany). Zawsze usuwa migawkę po użyciu.</summary>
+        public static AppSettings ConsumeUpdateSnapshot(AppSettings current, string dir)
+        {
+            var snap = SnapshotPath(dir);
+            if (!File.Exists(snap)) return current ?? new AppSettings();
+            var chosen = current;
+            try
+            {
+                var s = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(snap));
+                if (s != null && (current == null || DataScore(s) > DataScore(current)))
+                {
+                    PersistLog.Write(dir, $"settings.ConsumeSnapshot: PRZYWRACAM sprzed update (snapshot={DataScore(s)} > bieżące={(current == null ? -1 : DataScore(current))})");
+                    chosen = s;
+                    Save(chosen, dir);   // utrwal przywrócone i odśwież .bak dobrą wersją
+                }
+                else
+                {
+                    PersistLog.Write(dir, $"settings.ConsumeSnapshot: bieżące OK, pomijam (snapshot={(s == null ? -1 : DataScore(s))}, bieżące={(current == null ? -1 : DataScore(current))})");
+                }
+            }
+            catch { /* uszkodzona migawka — zostaje bieżące */ }
+            try { File.Delete(snap); } catch { }
+            return chosen ?? new AppSettings();
         }
     }
 }

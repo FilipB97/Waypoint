@@ -104,6 +104,7 @@ namespace RdpManager
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             _settings = SettingsStore.Load();
+            _settings = SettingsStore.ConsumeUpdateSnapshot(_settings);   // po aktualizacji: przywróć stan sprzed update (migawka)
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
             _vm.UseRecentIds(_settings.RecentIds);   // współdziel listę „ostatnich" z ustawieniami
             LoadTabGroups();                          // grupy kart z poprzedniej sesji (przypisanie po Id serwera)
@@ -279,6 +280,10 @@ namespace RdpManager
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            // Migawka ustawień PRZED podmianą exe (z pamięci — źródło prawdy); po restarcie na nową wersję
+            // ConsumeUpdateSnapshot (w Window_Loaded) przywróci je, nawet jeśli settings.json ucierpi w trakcie.
+            SettingsStore.SnapshotForUpdate(_settings);
 
             // Uruchom pobrany exe jako „installer": poczeka aż ten proces zniknie, podmieni plik docelowy i wystartuje go.
             try

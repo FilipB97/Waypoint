@@ -237,5 +237,37 @@ namespace RdpManager.Tests
             var loaded = ServerRepository.Load(_dir);
             Assert.Single(loaded);   // usunięcie uszanowane (bak starszy → self-heal się nie odpala)
         }
+
+        [Fact]
+        public void ConsumeUpdateSnapshot_RestoresRicherSnapshotAfterUpdate()
+        {
+            // Migawka sprzed update ma autostart; stan „po update" pusty → przywracamy migawkę.
+            SettingsStore.SnapshotForUpdate(new AppSettings { AutoConnectServerIds = new List<string> { "a", "b" } }, _dir);
+
+            var result = SettingsStore.ConsumeUpdateSnapshot(new AppSettings(), _dir);
+
+            Assert.Equal(2, result.AutoConnectServerIds.Count);
+            Assert.False(File.Exists(Path.Combine(_dir, "settings.preupdate.json")), "migawka powinna zostać skonsumowana");
+        }
+
+        [Fact]
+        public void ConsumeUpdateSnapshot_KeepsCurrentWhenNotPoorer()
+        {
+            // Migawka uboga, a bieżące bogatsze → NIE cofamy; migawka i tak znika.
+            SettingsStore.SnapshotForUpdate(new AppSettings(), _dir);
+            var current = new AppSettings { AutoConnectServerIds = new List<string> { "a", "b", "c" } };
+
+            var result = SettingsStore.ConsumeUpdateSnapshot(current, _dir);
+
+            Assert.Equal(3, result.AutoConnectServerIds.Count);
+            Assert.False(File.Exists(Path.Combine(_dir, "settings.preupdate.json")));
+        }
+
+        [Fact]
+        public void ConsumeUpdateSnapshot_NoopWithoutSnapshot()
+        {
+            var result = SettingsStore.ConsumeUpdateSnapshot(new AppSettings { DefaultPort = 3391 }, _dir);
+            Assert.Equal(3391, result.DefaultPort);
+        }
     }
 }
