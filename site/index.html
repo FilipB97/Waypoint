@@ -13,6 +13,16 @@
 <meta property="og:description" content="Tabbed RDP + SSH, embedded terminal with SFTP, Telnet &amp; serial, multi-monitor and secure passwords. A modern replacement for mstsc, PuTTY and mRemoteNG.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://filipb97.github.io/Waypoint/">
+<meta property="og:site_name" content="Waypoint">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://filipb97.github.io/Waypoint/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Waypoint — a modern RDP &amp; SSH manager for Windows">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Waypoint — a modern RDP &amp; SSH manager for Windows">
+<meta name="twitter:description" content="Tabbed RDP + SSH, embedded terminal with SFTP, Telnet &amp; serial, multi-monitor and secure passwords.">
+<meta name="twitter:image" content="https://filipb97.github.io/Waypoint/og-image.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -23,7 +33,7 @@
   "description": "A modern RDP + SSH connection manager for Windows — tabbed sessions, an embedded SSH terminal with SFTP, Telnet and serial consoles, multi-monitor, secure passwords and a built-in password generator.",
   "url": "https://filipb97.github.io/Waypoint/",
   "downloadUrl": "https://github.com/FilipB97/Waypoint/releases/latest",
-  "softwareVersion": "1.1.0",
+  "softwareVersion": "1.4",
   "license": "https://github.com/FilipB97/Waypoint/blob/master/LICENSE",
   "author": { "@type": "Person", "name": "Filip Benklewski" },
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -135,9 +145,54 @@
   footer{border-top:1px solid var(--border);padding:34px 0;margin-top:52px;color:var(--text3);font-size:13.5px;
     display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
   footer a{color:var(--text2)} footer a:hover{color:var(--text)}
+
+  /* a11y: skip link + focus ring */
+  .skip{position:absolute;left:-9999px;top:0;z-index:50;background:var(--accent);color:#fff;
+    padding:10px 16px;border-radius:8px;font-weight:600}
+  .skip:focus{left:12px;top:12px}
+  :focus-visible{outline:2px solid var(--accent2);outline-offset:2px;border-radius:4px}
+
+  /* quick start */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:40px}
+  .step{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+    border-radius:var(--radius);padding:24px}
+  .step .n{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-weight:800;
+    color:var(--accent2);background:rgba(38,87,214,.12);border:1px solid rgba(38,87,214,.22);margin-bottom:14px}
+  .step h3{margin:0 0 6px;font-size:16px} .step p{margin:0;color:var(--text2);font-size:14.5px}
+
+  /* comparison table */
+  .cmp-wrap{margin-top:40px;overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+  table.cmp{width:100%;border-collapse:collapse;font-size:14.5px;min-width:560px}
+  table.cmp th,table.cmp td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--border)}
+  table.cmp thead th{color:var(--text2);font-weight:700;background:rgba(255,255,255,.03)}
+  table.cmp thead th:first-child{background:transparent}
+  table.cmp th[scope=row]{color:var(--text);font-weight:600}
+  table.cmp td.wp{color:var(--text);font-weight:700;background:rgba(38,87,214,.06)}
+  table.cmp thead th.wp{color:var(--accent2);background:rgba(38,87,214,.1)}
+  table.cmp .yes{color:var(--online);font-weight:700} table.cmp .no{color:var(--text3)}
+  table.cmp tbody tr:last-child td,table.cmp tbody tr:last-child th{border-bottom:0}
+
+  /* faq */
+  .faq{margin-top:36px;display:grid;gap:12px}
+  .faq details{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+    border-radius:12px;padding:2px 20px}
+  .faq summary{cursor:pointer;padding:16px 0;font-weight:600;list-style:none;display:flex;
+    justify-content:space-between;align-items:center;gap:12px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";color:var(--accent2);font-weight:800;font-size:20px}
+  .faq details[open] summary::after{content:"\2212"}
+  .faq p{margin:0 0 18px;color:var(--text2);font-size:14.5px}
+
+  /* roadmap */
+  .road{margin-top:36px;display:grid;gap:12px;max-width:720px}
+  .road .r{display:flex;gap:14px;align-items:flex-start;background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--border);border-radius:12px;padding:16px 20px}
+  .road .r .dot{width:9px;height:9px;border-radius:50%;background:var(--accent2);margin-top:7px;flex:none}
+  .road .r p{margin:0;color:var(--text2);font-size:14.5px} .road .r b{color:var(--text)}
 </style>
 </head>
 <body>
+<a href="#features" class="skip" data-i18n="skip">Skip to content</a>
 
 <nav>
   <div class="wrap nav-in">
@@ -148,11 +203,12 @@
     <div class="nav-links">
       <a class="link" href="#features" data-i18n="nav.features">Features</a>
       <a class="link" href="#security" data-i18n="nav.security">Security</a>
+      <a class="link" href="#faq" data-i18n="nav.faq">FAQ</a>
       <a class="btn star" href="https://github.com/FilipB97/Waypoint" title="Star on GitHub">
         <svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         <span data-i18n="nav.star">Star</span><span id="starCount" class="starcount"></span>
       </a>
-      <span class="lang"><button data-lang-btn="en">EN</button><button data-lang-btn="pl">PL</button></span>
+      <span class="lang" role="group" aria-label="Language"><button data-lang-btn="en" aria-label="English">EN</button><button data-lang-btn="pl" aria-label="Polski">PL</button></span>
       <a class="btn primary" href="https://github.com/FilipB97/Waypoint/releases/latest" data-i18n="nav.download">Download</a>
     </div>
   </div>
@@ -292,6 +348,37 @@
   </div>
 </section>
 
+<section id="compare" class="wrap">
+  <span class="eyebrow" data-i18n="cmp.eyebrow">Why Waypoint</span>
+  <h2 data-i18n="cmp.h2">One app instead of three</h2>
+  <p class="sub" data-i18n="cmp.sub">What you'd normally split across mstsc, PuTTY and a separate manager — in one modern window.</p>
+  <div class="cmp-wrap">
+    <table class="cmp">
+      <thead>
+        <tr><th></th><th class="wp" scope="col">Waypoint</th><th scope="col">mstsc</th><th scope="col">PuTTY</th><th scope="col">mRemoteNG</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row" data-i18n="cmp.r1">RDP + SSH in one app</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+        <tr><th scope="row" data-i18n="cmp.r2">Embedded SSH terminal + SFTP</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
+        <tr><th scope="row" data-i18n="cmp.r3">Tabbed sessions + groups</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+        <tr><th scope="row" data-i18n="cmp.r4">Modern Fluent / Mica UI</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
+        <tr><th scope="row" data-i18n="cmp.r5">Shared credential profiles</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+        <tr><th scope="row" data-i18n="cmp.r6">Free &amp; open source</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="wrap">
+  <span class="eyebrow" data-i18n="qs.eyebrow">Quick start</span>
+  <h2 data-i18n="qs.h2">Up and running in a minute</h2>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3 data-i18n="qs.s1t">Download &amp; run</h3><p data-i18n="qs.s1d">One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.</p></div>
+    <div class="step"><div class="n">2</div><h3 data-i18n="qs.s2t">Add a server</h3><p data-i18n="qs.s2d">Add one by hand or import from mstsc, .rdp, mRemoteNG or RDCMan; pick RDP or SSH and save credentials.</p></div>
+    <div class="step"><div class="n">3</div><h3 data-i18n="qs.s3t">Connect</h3><p data-i18n="qs.s3d">Double-click to open a tab. Group, pin, tag and search your connections as they grow.</p></div>
+  </div>
+</section>
+
 <section id="security" class="wrap">
   <div class="band">
     <div class="txt">
@@ -300,6 +387,18 @@
       <p data-i18n-html="sec.p">Waypoint never writes passwords to its own files. They go to <b>Windows Credential Manager</b> (DPAPI, tied to your account) — the same vault mstsc uses. RDP server-identity verification is on by default, and <b>SSH host keys are checked on first use</b> (fingerprint prompt, with a warning if a known key ever changes).</p>
     </div>
     <a class="btn ghost" href="https://github.com/FilipB97/Waypoint/blob/master/SECURITY.md" data-i18n="sec.link">Security model →</a>
+  </div>
+</section>
+
+<section id="faq" class="wrap">
+  <span class="eyebrow" data-i18n="faq.eyebrow">FAQ</span>
+  <h2 data-i18n="faq.h2">Questions &amp; answers</h2>
+  <div class="faq">
+    <details><summary data-i18n="faq.q1">How is it different from mRemoteNG or PuTTY?</summary><p data-i18n="faq.a1">Waypoint puts RDP (Microsoft's official control) and a real SSH terminal in one modern, actively-developed app — with tabs, SFTP, credential profiles and a clean Fluent UI — instead of an aging manager or a terminal-only client.</p></details>
+    <details><summary data-i18n="faq.q2">Does it support SSH keys?</summary><p data-i18n="faq.a2">Yes — password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.</p></details>
+    <details><summary data-i18n="faq.q3">What about Telnet and serial (COM)?</summary><p data-i18n="faq.a3">Both work as terminal sessions, alongside RDP, SSH and web-panel links — all grouped in one tree.</p></details>
+    <details><summary data-i18n="faq.q4">Do I need to install anything?</summary><p data-i18n="faq.a4">No — a single .exe, no .NET install. The embedded SSH terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.</p></details>
+    <details><summary data-i18n="faq.q5">Where are my passwords stored?</summary><p data-i18n="faq.a5">In Windows Credential Manager (DPAPI, tied to your account) — never in the app's own files. The same vault mstsc uses.</p></details>
   </div>
 </section>
 
@@ -319,6 +418,17 @@
       Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen
       may show a warning — click <code>More info → Run anyway</code>.
     </p>
+  </div>
+</section>
+
+<section class="wrap">
+  <span class="eyebrow" data-i18n="road.eyebrow">Roadmap</span>
+  <h2 data-i18n="road.h2">What's next</h2>
+  <div class="road">
+    <div class="r"><span class="dot"></span><p data-i18n-html="road.i1"><b>Code signing</b> — remove the SmartScreen warning on first launch.</p></div>
+    <div class="r"><span class="dot"></span><p data-i18n-html="road.i2"><b>Full multi-monitor RDP</b> — span a session across all displays.</p></div>
+    <div class="r"><span class="dot"></span><p data-i18n-html="road.i3"><b>SSH snippets &amp; session recording</b> — saved commands and terminal transcripts.</p></div>
+    <div class="r"><span class="dot"></span><p data-i18n-html="road.i4"><b>ARM64 build</b> — native for Windows on ARM.</p></div>
   </div>
 </section>
 
@@ -355,7 +465,26 @@
       "dl.dl":"Download for Windows (x64)","dl.source":"Source code",
       "dl.note":"Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.",
       "foot.left":"Waypoint · MIT © 2026 Filip Benklewski",
-      "foot.right":"Built with WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>"
+      "foot.right":"Built with WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>",
+      "skip":"Skip to content","nav.faq":"FAQ",
+      "cmp.eyebrow":"Why Waypoint","cmp.h2":"One app instead of three",
+      "cmp.sub":"What you'd normally split across mstsc, PuTTY and a separate manager — in one modern window.",
+      "cmp.r1":"RDP + SSH in one app","cmp.r2":"Embedded SSH terminal + SFTP","cmp.r3":"Tabbed sessions + groups","cmp.r4":"Modern Fluent / Mica UI","cmp.r5":"Shared credential profiles","cmp.r6":"Free & open source",
+      "qs.eyebrow":"Quick start","qs.h2":"Up and running in a minute",
+      "qs.s1t":"Download & run","qs.s1d":"One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.",
+      "qs.s2t":"Add a server","qs.s2d":"Add one by hand or import from mstsc, .rdp, mRemoteNG or RDCMan; pick RDP or SSH and save credentials.",
+      "qs.s3t":"Connect","qs.s3d":"Double-click to open a tab. Group, pin, tag and search your connections as they grow.",
+      "faq.eyebrow":"FAQ","faq.h2":"Questions & answers",
+      "faq.q1":"How is it different from mRemoteNG or PuTTY?","faq.a1":"Waypoint puts RDP (Microsoft's official control) and a real SSH terminal in one modern, actively-developed app — with tabs, SFTP, credential profiles and a clean Fluent UI — instead of an aging manager or a terminal-only client.",
+      "faq.q2":"Does it support SSH keys?","faq.a2":"Yes — password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.",
+      "faq.q3":"What about Telnet and serial (COM)?","faq.a3":"Both work as terminal sessions, alongside RDP, SSH and web-panel links — all grouped in one tree.",
+      "faq.q4":"Do I need to install anything?","faq.a4":"No — a single .exe, no .NET install. The embedded SSH terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.",
+      "faq.q5":"Where are my passwords stored?","faq.a5":"In Windows Credential Manager (DPAPI, tied to your account) — never in the app's own files. The same vault mstsc uses.",
+      "road.eyebrow":"Roadmap","road.h2":"What's next",
+      "road.i1":"<b>Code signing</b> — remove the SmartScreen warning on first launch.",
+      "road.i2":"<b>Full multi-monitor RDP</b> — span a session across all displays.",
+      "road.i3":"<b>SSH snippets &amp; session recording</b> — saved commands and terminal transcripts.",
+      "road.i4":"<b>ARM64 build</b> — native for Windows on ARM."
     },
     pl: {
       "nav.features":"Funkcje","nav.security":"Bezpieczeństwo","nav.download":"Pobierz","nav.star":"Star","stat.downloads":"pobrań",
@@ -382,7 +511,26 @@
       "dl.dl":"Pobierz na Windows (x64)","dl.source":"Kod źródłowy",
       "dl.note":"Wymagania: Windows 10/11 (x64). Plik nie jest jeszcze podpisany cyfrowo, więc przy pierwszym uruchomieniu SmartScreen może pokazać ostrzeżenie — kliknij <code>Więcej informacji → Uruchom mimo to</code>.",
       "foot.left":"Waypoint · MIT © 2026 Filip Benklewski",
-      "foot.right":"Zbudowane w WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>"
+      "foot.right":"Zbudowane w WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>",
+      "skip":"Przejdź do treści","nav.faq":"FAQ",
+      "cmp.eyebrow":"Dlaczego Waypoint","cmp.h2":"Jedna aplikacja zamiast trzech",
+      "cmp.sub":"To, co zwykle rozdzielasz między mstsc, PuTTY i osobny menedżer — w jednym nowoczesnym oknie.",
+      "cmp.r1":"RDP + SSH w jednej aplikacji","cmp.r2":"Wbudowany terminal SSH + SFTP","cmp.r3":"Sesje w kartach + grupy","cmp.r4":"Nowoczesny UI Fluent / Mica","cmp.r5":"Współdzielone profile poświadczeń","cmp.r6":"Za darmo i open source",
+      "qs.eyebrow":"Szybki start","qs.h2":"Gotowe w minutę",
+      "qs.s1t":"Pobierz i uruchom","qs.s1d":"Jeden plik .exe — bez instalatora, bez instalowania .NET. Gdy pojawi się SmartScreen: Więcej informacji → Uruchom mimo to.",
+      "qs.s2t":"Dodaj serwer","qs.s2d":"Dodaj ręcznie lub zaimportuj z mstsc, .rdp, mRemoteNG albo RDCMan; wybierz RDP lub SSH i zapisz poświadczenia.",
+      "qs.s3t":"Połącz","qs.s3d":"Kliknij dwukrotnie, aby otworzyć kartę. Grupuj, przypinaj, taguj i wyszukuj połączenia, gdy ich przybywa.",
+      "faq.eyebrow":"FAQ","faq.h2":"Pytania i odpowiedzi",
+      "faq.q1":"Czym różni się od mRemoteNG lub PuTTY?","faq.a1":"Waypoint łączy RDP (oficjalna kontrolka Microsoftu) i prawdziwy terminal SSH w jednej nowoczesnej, aktywnie rozwijanej aplikacji — z kartami, SFTP, profilami poświadczeń i czystym UI Fluent — zamiast starzejącego się menedżera czy klienta tylko-terminalowego.",
+      "faq.q2":"Czy obsługuje klucze SSH?","faq.a2":"Tak — logowanie hasłem i kluczem prywatnym (z hasłem do klucza), weryfikacja klucza hosta przy pierwszym połączeniu oraz lokalne tunele (port-forwarding).",
+      "faq.q3":"A Telnet i port szeregowy (COM)?","faq.a3":"Oba działają jako sesje terminalowe, obok RDP, SSH i linków do paneli web — zgrupowane w jednym drzewie.",
+      "faq.q4":"Czy muszę coś instalować?","faq.a4":"Nie — jeden plik .exe, bez instalowania .NET. Wbudowany terminal SSH używa środowiska WebView2, obecnego już w aktualnym Windows 10/11.",
+      "faq.q5":"Gdzie są przechowywane moje hasła?","faq.a5":"W Menedżerze poświadczeń Windows (DPAPI, powiązany z Twoim kontem) — nigdy w plikach aplikacji. Ten sam sejf, którego używa mstsc.",
+      "road.eyebrow":"Plan rozwoju","road.h2":"Co dalej",
+      "road.i1":"<b>Podpis cyfrowy</b> — usunięcie ostrzeżenia SmartScreen przy pierwszym uruchomieniu.",
+      "road.i2":"<b>Pełny RDP wielomonitorowy</b> — rozciągnięcie sesji na wszystkie ekrany.",
+      "road.i3":"<b>Snippety SSH i nagrywanie sesji</b> — zapisane komendy i transkrypty terminala.",
+      "road.i4":"<b>Wersja ARM64</b> — natywnie dla Windows on ARM."
     }
   };
   function apply(lang){
