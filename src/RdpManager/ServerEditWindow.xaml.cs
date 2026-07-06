@@ -272,7 +272,8 @@ namespace RdpManager
             _server.Name = NameBox.Text.Trim();
             _server.Host = HostBox.Text.Trim();
             _server.Port = int.TryParse(PortBox.Text.Trim(), out var p) ? p : DefaultPortFor(idx);
-            _server.Group = string.IsNullOrWhiteSpace(GroupBox.Text) ? "Serwery" : GroupBox.Text.Trim();
+            // Puste pole grupy = domyślny „kosz" lokalizowany przy wyświetlaniu (nie zapisujemy nazwy PL).
+            _server.Group = string.IsNullOrWhiteSpace(GroupBox.Text) ? "" : GroupBox.Text.Trim();
             _server.UseWindowsAccount = rdp && WinAuthCheck.IsChecked == true;
             _server.Username = (!creds || _server.UseWindowsAccount) ? "" : UserBox.Text.Trim();
             _server.Domain = (rdp && !_server.UseWindowsAccount) ? DomainBox.Text.Trim() : "";

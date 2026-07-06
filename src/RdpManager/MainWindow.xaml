@@ -173,6 +173,10 @@
 
                     <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10">
                         <StackPanel>
+                            <!-- Nieblokujący sygnał samonaprawy konfiguracji (przywrócenie z kopii / kwarantanna
+                                 uszkodzonego pliku). Pokazywany raz na starcie, gdy HealthNotices coś zebrało;
+                                 w stopce panelu — zawsze WPF, poza airspace kontrolki RDP. Domyślnie zwinięty. -->
+                            <ui:InfoBar x:Name="HealthInfoBar" IsOpen="False" IsClosable="True" Margin="0,0,0,6"/>
                             <!-- Pojawia się tylko, gdy CheckForUpdatesAsync znajdzie nowszą wersję. -->
                             <ui:Button x:Name="UpdateBtn" Visibility="Collapsed" HorizontalAlignment="Stretch"
                                        Appearance="Info" Margin="0,0,0,6" Click="Update_Click"/>
