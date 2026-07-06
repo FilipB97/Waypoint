@@ -44,6 +44,10 @@ namespace RdpManager.Models
         /// <summary>Czy hasło ma być zapisane w Windows Credential Manager.</summary>
         public bool SavePassword { get; set; }
 
+        /// <summary>Odnośnik do współdzielonego profilu poświadczeń ([[CredentialProfile]]); puste = własny login.
+        /// Gdy ustawiony, przy łączeniu login/domena/hasło pochodzą z profilu, nie z pól tego serwera.</summary>
+        public string CredentialProfileId { get; set; } = "";
+
         /// <summary>Ulubiony / przypięty — pokazywany w sekcji „Przypięte" na górze listy.</summary>
         public bool Pinned { get; set; }
 
@@ -98,6 +102,9 @@ namespace RdpManager.Models
         /// <summary>Klucz w Credential Manager (hasło NIE jest trzymane w tym modelu ani w JSON).</summary>
         [JsonIgnore]
         public string CredTarget => "RdpManager:" + Id;
+
+        /// <summary>Płytka kopia — do łączenia z loginem podmienionym z profilu poświadczeń (transient, nie zapisywana).</summary>
+        public ServerInfo ShallowClone() => (ServerInfo)MemberwiseClone();
 
         /// <summary>
         /// Status prezentacyjny (kropka online/idle/offline). Na razie dane testowe —

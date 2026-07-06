@@ -179,7 +179,14 @@
                             <ui:InfoBar x:Name="HealthInfoBar" IsOpen="False" IsClosable="True" Margin="0,0,0,6"/>
                             <!-- Pojawia się tylko, gdy CheckForUpdatesAsync znajdzie nowszą wersję. -->
                             <ui:Button x:Name="UpdateBtn" Visibility="Collapsed" HorizontalAlignment="Stretch"
-                                       Appearance="Info" Margin="0,0,0,6" Click="Update_Click"/>
+                                       HorizontalContentAlignment="Stretch"
+                                       Appearance="Info" Margin="0,0,0,6" Click="Update_Click">
+                                <ui:Button.ContentTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
+                                    </DataTemplate>
+                                </ui:Button.ContentTemplate>
+                            </ui:Button>
                             <ui:Button Content="{DynamicResource S.quickConnect}" HorizontalAlignment="Stretch"
                                        Appearance="Primary" Click="QuickConnect_Click"
                                        ToolTip="{DynamicResource S.quickConnect.tip}"/>
@@ -438,6 +445,21 @@
                                     <StackPanel x:Name="AutoConnectList"/>
                                 </ScrollViewer>
                             </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Profile poświadczeń -->
+                    <Border Style="{DynamicResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource S.set.profiles}" Style="{DynamicResource CardHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.profiles.hint}" Foreground="{DynamicResource TextTer}"
+                                       FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="ProfilesList"/>
+                                </ScrollViewer>
+                            </Border>
+                            <ui:Button Content="{DynamicResource S.prof.add}" Appearance="Secondary" Click="AddProfile_Click" Margin="0,8,0,0"/>
                         </StackPanel>
                     </Border>
 

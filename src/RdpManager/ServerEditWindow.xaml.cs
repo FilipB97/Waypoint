@@ -12,15 +12,17 @@ namespace RdpManager
     public partial class ServerEditWindow
     {
         private readonly ServerInfo _server;
+        private readonly List<CredentialProfile> _profiles;
         private bool _initializing;
 
         /// <summary>Hasło wpisane w oknie (do zapisania w Credential Manager przez wołającego).</summary>
         public string EnteredPassword { get; private set; } = "";
 
-        public ServerEditWindow(ServerInfo server, string currentPassword)
+        public ServerEditWindow(ServerInfo server, string currentPassword, List<CredentialProfile> profiles)
         {
             InitializeComponent();
             _server = server;
+            _profiles = profiles ?? new List<CredentialProfile>();
 
             NameBox.Text = server.Name ?? "";
             HostBox.Text = server.Host ?? "";
@@ -45,6 +47,10 @@ namespace RdpManager
             EdGatewayUsage.SelectedIndex = Math.Clamp(server.GatewayUsageMethod, 0, 2);
 
             _initializing = true;
+            ProfileCombo.Items.Add(new ComboBoxItem { Content = LocalizationManager.S("S.prof.none"), Tag = "" });
+            foreach (var pr in _profiles)
+                ProfileCombo.Items.Add(new ComboBoxItem { Content = pr.Name, Tag = pr.Id });
+            SelectProfile(server.CredentialProfileId);
             ProtocolCombo.SelectedIndex =
                 server.Protocol == RemoteProtocol.Ssh ? 1 :
                 server.Protocol == RemoteProtocol.Telnet ? 2 :
@@ -55,6 +61,7 @@ namespace RdpManager
             BuildColorSwatches();
             ApplyWinAuthState();
             ApplyProtocolState();
+            ApplyProfileState();
             _initializing = false;
 
             Loaded += (s, e) => ClampToScreen();
@@ -205,6 +212,7 @@ namespace RdpManager
             KeyPathPanel.Visibility = ssh ? Visibility.Visible : Visibility.Collapsed;
 
             AuthCard.Visibility = pass ? Visibility.Visible : Visibility.Collapsed;   // Telnet/Serial/WWW logują się inaczej
+            ProfileRow.Visibility = user ? Visibility.Visible : Visibility.Collapsed; // profil (login/domena) tylko dla RDP/SSH
             var userVis = user ? Visibility.Visible : Visibility.Collapsed;
             UserLabel.Visibility = userVis;
             UserBox.Visibility = userVis;
@@ -220,6 +228,44 @@ namespace RdpManager
                            : http ? LocalizationManager.S("S.se.url") : "Host";
             PortLabel.Text = serial ? LocalizationManager.S("S.se.baud") : "Port";
             HostBox.PlaceholderText = serial ? "COM3" : http ? "https://…" : "";
+        }
+
+        // ---------- Profil poświadczeń ----------
+        private string SelectedProfileId()
+            => (ProfileCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
+
+        private void SelectProfile(string id)
+        {
+            id = id ?? "";
+            foreach (var obj in ProfileCombo.Items)
+                if (obj is ComboBoxItem it && (it.Tag as string ?? "") == id) { ProfileCombo.SelectedItem = it; return; }
+            if (ProfileCombo.Items.Count > 0) ProfileCombo.SelectedIndex = 0;   // profil zniknął → „(brak)"
+        }
+
+        private void Profile_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (_initializing) return;
+            ApplyProfileState();
+        }
+
+        // Gdy wybrany profil dostarcza poświadczeń, własne pola login/domena/hasło są nieaktywne (bierze je profil).
+        private void ApplyProfileState()
+        {
+            if (SelectedProfileId().Length > 0)
+            {
+                WinAuthCheck.IsEnabled = false;
+                UserBox.IsEnabled = false;
+                DomainBox.IsEnabled = false;
+                PassBox.IsEnabled = false;
+                PassPlain.IsEnabled = false;
+                RevealBtn.IsEnabled = false;
+                SavePassCheck.IsEnabled = false;
+            }
+            else
+            {
+                WinAuthCheck.IsEnabled = true;
+                ApplyWinAuthState();   // przywróć stan pól wg „Konto Windows"
+            }
         }
 
         private void BrowseKey_Click(object sender, RoutedEventArgs e)
@@ -294,7 +340,7 @@ namespace RdpManager
             _server.AvatarColor = _avatarColor ?? "";
             _server.Initials = RdpUtils.MakeInitials(_server.Name);   // zawsze z nazwy (leczy stare inicjały z IP)
 
-            EnteredPassword = (passProto && !_server.UseWindowsAccount) ? CurrentPassword() : "";
+            EnteredPassword = (!useProfile && passProto && !_server.UseWindowsAccount) ? CurrentPassword() : "";
             DialogResult = true;
         }
 

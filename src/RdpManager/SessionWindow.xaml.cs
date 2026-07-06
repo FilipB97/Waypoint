@@ -31,6 +31,8 @@ namespace RdpManager
         private readonly Session _session;
         private readonly RdpDynamicResolution _resizer;
         private string _password;
+        private string _username;   // efektywny login (z profilu poświadczeń albo własny) — ustala go MainWindow
+        private string _domain;
         private bool _loggedIn;
 
         /// <summary>Czy sesja jest aktualnie połączona (do potwierdzenia zamknięcia aplikacji).</summary>
@@ -44,13 +46,15 @@ namespace RdpManager
         private RECT _fsMon;
         private readonly DispatcherTimer _fsPoll, _fsDelay;
 
-        public SessionWindow(ServerInfo server, AppSettings settings, string password, Action persist,
-                             Action<ServerInfo, string> dockBack = null)
+        public SessionWindow(ServerInfo server, AppSettings settings, string password, string username, string domain,
+                             Action persist, Action<ServerInfo, string> dockBack = null)
         {
             InitializeComponent();
             _server = server;
             _settings = settings;
             _password = password ?? "";
+            _username = username ?? "";
+            _domain = domain ?? "";
             _persist = persist;
             _dockBack = dockBack;
             Title = server.Name + " — " + server.Host;
@@ -103,6 +107,8 @@ namespace RdpManager
             _server.UseWindowsAccount = false;
             _server.Username = dlg.EnteredUser;
             _server.Domain = dlg.EnteredDomain;
+            _username = dlg.EnteredUser;   // nadpisanie w tym oknie działa też dla serwera z profilem
+            _domain = dlg.EnteredDomain;
             _password = dlg.EnteredPassword;
             _session.Password = _password;
             if (dlg.SavePassword)
@@ -148,7 +154,7 @@ namespace RdpManager
                 }
                 else
                 {
-                    _rdp.UserName = _server.Username; _rdp.Domain = _server.Domain; adv.ClearTextPassword = _password;
+                    _rdp.UserName = _username; _rdp.Domain = _domain; adv.ClearTextPassword = _password;
                 }
                 _rdp.Connect();
                 SetStatus(string.Format(L("S.st.connecting"), _server.Host), StatusKind.Connecting, false);

@@ -81,6 +81,19 @@
     <sys:String x:Key="S.set.autoconnect">Połącz na starcie</sys:String>
     <sys:String x:Key="S.set.autoconnect.hint">Zaznaczone serwery połączą się automatycznie po uruchomieniu aplikacji. Gdy coś jest zaznaczone, popup przywracania ostatniej sesji się nie pokaże.</sys:String>
     <sys:String x:Key="S.set.autoconnect.empty">Brak serwerów — najpierw dodaj jakiś serwer.</sys:String>
+    <!-- Profile poświadczeń -->
+    <sys:String x:Key="S.set.profiles">Profile poświadczeń</sys:String>
+    <sys:String x:Key="S.set.profiles.hint">Jeden zapisany login (domena, użytkownik, hasło) współdzielony przez wiele serwerów. Hasło trzymane jest w Windows Credential Manager.</sys:String>
+    <sys:String x:Key="S.prof.use">Profil poświadczeń</sys:String>
+    <sys:String x:Key="S.prof.none">(brak — własny login)</sys:String>
+    <sys:String x:Key="S.prof.edit.title">Profil poświadczeń</sys:String>
+    <sys:String x:Key="S.prof.name">Nazwa profilu</sys:String>
+    <sys:String x:Key="S.prof.required">Podaj nazwę profilu i login.</sys:String>
+    <sys:String x:Key="S.prof.add">+ Dodaj profil</sys:String>
+    <sys:String x:Key="S.prof.empty">Brak profili poświadczeń.</sys:String>
+    <sys:String x:Key="S.prof.edit">Edytuj</sys:String>
+    <sys:String x:Key="S.prof.delete">Usuń</sys:String>
+    <sys:String x:Key="S.prof.deleteconfirm">Usunąć profil „{0}"? Serwery, które go używają, wrócą do własnego loginu.</sys:String>
     <sys:String x:Key="S.restore.title">Przywróć sesję</sys:String>
     <sys:String x:Key="S.restore.msg">Te połączenia były otwarte przy ostatnim zamknięciu. Otworzyć je ponownie?</sys:String>
     <sys:String x:Key="S.restore.dontask">Nie pytaj przy starcie</sys:String>
@@ -188,6 +201,14 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.diag">Diagnostyka…</sys:String>
     <sys:String x:Key="S.m.exportrdp">Eksportuj .rdp…</sys:String>
     <sys:String x:Key="S.m.delete">Usuń</sys:String>
+    <!-- Akcje zbiorcze (zaznaczenie wielu serwerów Ctrl/Shift+klik). -->
+    <sys:String x:Key="S.m.bulk.count">Zaznaczono: {0}</sys:String>
+    <sys:String x:Key="S.m.bulk.move">Przenieś do grupy</sys:String>
+    <sys:String x:Key="S.m.bulk.move.new">Nowa grupa…</sys:String>
+    <sys:String x:Key="S.m.bulk.delete">Usuń zaznaczone ({0})</sys:String>
+    <sys:String x:Key="S.msg.bulkdelete">Usunąć zaznaczone serwery ({0})? Tej operacji nie można cofnąć.</sys:String>
+    <sys:String x:Key="S.prompt.newgroup.title">Nowa grupa</sys:String>
+    <sys:String x:Key="S.prompt.newgroup.label">Nazwa grupy:</sys:String>
     <sys:String x:Key="S.m.tearoff">Wyciągnij do osobnego okna</sys:String>
     <sys:String x:Key="S.m.duplicate">Duplikuj</sys:String>
     <sys:String x:Key="S.m.moveleft">Przesuń w lewo</sys:String>

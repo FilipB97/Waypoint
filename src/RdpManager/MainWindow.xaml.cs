@@ -72,8 +72,18 @@ namespace RdpManager
         private Point _dragStartPoint;
         private ServerInfo _dragCandidate;
         private bool _didDrag;
+
+        // Zaznaczenie wielu serwerów (Ctrl/Shift+klik) do akcji zbiorczych. Nietrwałe — czyszczone przy każdej
+        // przebudowie drzewa (filtr, zwinięcie grupy, akcja zbiorcza). _visibleOrder = kolejność wierszy dla Shift.
+        private readonly HashSet<ServerInfo> _multiSelect = new HashSet<ServerInfo>();
+        private ServerInfo _selectAnchor;
+        private readonly List<ServerInfo> _visibleOrder = new List<ServerInfo>();
+
         private InsertionAdorner _dropAdorner;   // linia „tu wyląduje" na krawędzi wiersza
         private Border _dropRow;                  // wiersz, do którego przypięty jest adorner
+
+        // Współdzielone profile poświadczeń (login/domena + hasło w Credential Manager), wskazywane przez serwery.
+        private List<CredentialProfile> _credProfiles = new List<CredentialProfile>();
 
         // Klucz sekcji „Przypięte" w AppSettings.CollapsedGroups (nie koliduje z nazwami grup użytkownika).
         private const string PinnedGroupKey = "__pinned__";
@@ -106,6 +116,7 @@ namespace RdpManager
             _settings = SettingsStore.Load();
             _settings = SettingsStore.ConsumeUpdateSnapshot(_settings);   // po aktualizacji: przywróć stan sprzed update (migawka)
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
+            _credProfiles = CredentialProfileRepository.Load();
             _vm.UseRecentIds(_settings.RecentIds);   // współdziel listę „ostatnich" z ustawieniami
             LoadTabGroups();                          // grupy kart z poprzedniej sesji (przypisanie po Id serwera)
             ApplyUiScale(_settings.UiScale);
@@ -810,6 +821,7 @@ namespace RdpManager
             SetHotkey.IsChecked = _settings.QuickConnectHotkey;
             SetRestorePrompt.IsChecked = _settings.RestorePrompt;
             BuildAutoConnectList();
+            BuildProfilesList();
             SetDataPath.Text = SettingsStore.Dir;
             SettingsStatus.Text = "";
             _loadingSettings = false;
@@ -844,6 +856,90 @@ namespace RdpManager
 
             foreach (var s in ordered)
                 AutoConnectList.Children.Add(BuildAutoConnectRow(s, selected.Contains(s.Id)));
+        }
+
+        // ---------- Profile poświadczeń (lista w Ustawieniach) ----------
+        private void BuildProfilesList()
+        {
+            ProfilesList.Children.Clear();
+            if (_credProfiles.Count == 0)
+            {
+                ProfilesList.Children.Add(new TextBlock
+                {
+                    Text = L("S.prof.empty"),
+                    Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12
+                });
+                return;
+            }
+            foreach (var pr in _credProfiles)
+                ProfilesList.Children.Add(BuildProfileRow(pr));
+        }
+
+        private FrameworkElement BuildProfileRow(CredentialProfile profile)
+        {
+            var row = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            string login = string.IsNullOrWhiteSpace(profile.Domain) ? profile.Username : profile.Domain + "\\" + profile.Username;
+            var info = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            info.Children.Add(new TextBlock { Text = profile.Name, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+            info.Children.Add(new TextBlock { Text = "   " + login, Foreground = (Brush)TryFindResource("TextTer"), VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(info);
+
+            var btns = new StackPanel { Orientation = Orientation.Horizontal };
+            Grid.SetColumn(btns, 1);
+            var edit = new Wpf.Ui.Controls.Button { Content = L("S.prof.edit"), Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary };
+            edit.Click += (s, e) => EditProfile(profile);
+            var del = new Wpf.Ui.Controls.Button { Content = L("S.prof.delete"), Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary, Margin = new Thickness(8, 0, 0, 0) };
+            del.Click += (s, e) => DeleteProfile(profile);
+            btns.Children.Add(edit);
+            btns.Children.Add(del);
+            row.Children.Add(btns);
+            return row;
+        }
+
+        private void AddProfile_Click(object sender, RoutedEventArgs e)
+        {
+            var profile = new CredentialProfile();
+            var dlg = new CredentialProfileWindow(profile, "") { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+            _credProfiles.Add(profile);
+            CredentialProfileRepository.Save(_credProfiles);
+            SaveProfilePassword(profile, dlg.EnteredPassword);
+            BuildProfilesList();
+        }
+
+        private void EditProfile(CredentialProfile profile)
+        {
+            CredentialStore.TryRead(profile.CredTarget, out var cur);
+            var dlg = new CredentialProfileWindow(profile, cur ?? "") { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+            CredentialProfileRepository.Save(_credProfiles);
+            SaveProfilePassword(profile, dlg.EnteredPassword);
+            BuildProfilesList();
+        }
+
+        private void DeleteProfile(CredentialProfile profile)
+        {
+            if (MessageBox.Show(string.Format(L("S.prof.deleteconfirm"), profile.Name), L("S.prof.edit.title"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            _credProfiles.Remove(profile);
+            CredentialProfileRepository.Save(_credProfiles);
+            CredentialStore.Delete(profile.CredTarget);
+            // Serwery używające tego profilu wracają do własnego (pustego) loginu — wyczyść odnośnik.
+            bool changed = false;
+            foreach (var s in _vm.Servers)
+                if (s.CredentialProfileId == profile.Id) { s.CredentialProfileId = ""; changed = true; }
+            if (changed) PersistServers();
+            BuildProfilesList();
+        }
+
+        private static void SaveProfilePassword(CredentialProfile profile, string password)
+        {
+            if (string.IsNullOrEmpty(password)) CredentialStore.Delete(profile.CredTarget);
+            else CredentialStore.Save(profile.CredTarget, profile.Username, password);
         }
 
         private Point _acDragStart;
@@ -1273,6 +1369,9 @@ namespace RdpManager
             _serverRows.Clear();
             _serverActivate.Clear();
             _serverStatusDot.Clear();
+            _multiSelect.Clear();
+            _selectAnchor = null;
+            _visibleOrder.Clear();
 
             // Dostępność: strzałki i Tab przenoszą fokus między wierszami serwerów.
             System.Windows.Input.KeyboardNavigation.SetDirectionalNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
@@ -1285,7 +1384,7 @@ namespace RdpManager
                 bool pinCollapsed = _settings.CollapsedGroups.Contains(PinnedGroupKey);
                 ServerTree.Children.Add(BuildGroupHeader(PinnedGroupKey, pinned.Count, pinCollapsed, isPinned: true));
                 if (!pinCollapsed)
-                    foreach (var s in pinned) ServerTree.Children.Add(BuildServerRow(s));
+                    foreach (var s in pinned) { ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
             }
 
             // Zwykłe grupy (bez przypiętych).
@@ -1305,7 +1404,7 @@ namespace RdpManager
                 ServerTree.Children.Add(BuildGroupHeader(g, byGroup[g].Count, collapsed, isPinned: false));
                 if (!collapsed)
                     foreach (var s in byGroup[g])
-                        ServerTree.Children.Add(BuildServerRow(s));
+                    { ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
             }
             UpdateActiveRows();
         }
@@ -1581,9 +1680,9 @@ namespace RdpManager
                 System.Windows.Automation.AutomationProperties.SetName(statusDot, StatusLabel(server.Status));
 
             row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
-            row.MouseLeave += (s, e) => { if (_active?.Server != server && !row.IsKeyboardFocused) row.Background = Brushes.Transparent; };
+            row.MouseLeave += (s, e) => { if (_active?.Server != server && !row.IsKeyboardFocused) row.Background = RowRestBackground(server); };
             row.GotKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
-            row.LostKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = Brushes.Transparent; };
+            row.LostKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = RowRestBackground(server); };
             row.KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Enter || e.Key == Key.Space) { LaunchServer(server, true); e.Handled = true; }
@@ -1623,11 +1722,69 @@ namespace RdpManager
             row.MouseLeftButtonUp += (s, e) =>
             {
                 if (_didDrag) { _didDrag = false; return; }   // to było przeciąganie, nie klik
+                var mods = Keyboard.Modifiers;
+                if (mods.HasFlag(ModifierKeys.Shift) && _selectAnchor != null) { RangeSelect(server); e.Handled = true; return; }
+                if (mods.HasFlag(ModifierKeys.Control) || mods.HasFlag(ModifierKeys.Shift)) { ToggleSelect(server); e.Handled = true; return; }
+                ClearMultiSelect();   // zwykły klik = połącz i wyczyść zaznaczenie
                 LaunchServer(server, true);
             };
 
             row.ContextMenu = BuildServerContextMenu(server);
+            row.ContextMenuOpening += (s, e) =>
+            {
+                // Prawy-klik na zaznaczonym wierszu przy zaznaczeniu ≥2 → menu zbiorcze; inaczej menu pojedyncze
+                // (prawy-klik poza zaznaczeniem czyści zaznaczenie i pokazuje zwykłe menu wiersza).
+                if (_multiSelect.Count >= 2 && _multiSelect.Contains(server))
+                    row.ContextMenu = BuildBulkContextMenu(_multiSelect.ToList());
+                else
+                {
+                    ClearMultiSelect();
+                    row.ContextMenu = BuildServerContextMenu(server);
+                }
+            };
             _serverRows[server] = row;
+        }
+
+        // Tło wiersza w stanie spoczynku (nie hover/focus/aktywny): zaznaczony = AccentSoft, inaczej przezroczysty.
+        private Brush RowRestBackground(ServerInfo s)
+            => _multiSelect.Contains(s) ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+
+        // Ctrl+klik: przełącz pojedynczy wiersz w zaznaczeniu (ustaw kotwicę dla ewentualnego Shift).
+        private void ToggleSelect(ServerInfo server)
+        {
+            if (!_multiSelect.Remove(server)) _multiSelect.Add(server);
+            _selectAnchor = server;
+            RefreshSelectionVisuals();
+        }
+
+        // Shift+klik: zaznacz ciągły zakres od kotwicy do wskazanego wiersza (w kolejności widocznej).
+        private void RangeSelect(ServerInfo server)
+        {
+            int a = _visibleOrder.IndexOf(_selectAnchor), b = _visibleOrder.IndexOf(server);
+            if (a < 0 || b < 0) { ToggleSelect(server); return; }
+            if (a > b) { (a, b) = (b, a); }
+            _multiSelect.Clear();
+            for (int i = a; i <= b; i++) _multiSelect.Add(_visibleOrder[i]);
+            RefreshSelectionVisuals();
+        }
+
+        private void ClearMultiSelect()
+        {
+            _selectAnchor = null;
+            if (_multiSelect.Count == 0) return;
+            _multiSelect.Clear();
+            RefreshSelectionVisuals();
+        }
+
+        // Odśwież tło wierszy wg zaznaczenia. Pomijamy: aktywną sesję (maluje ją UpdateActiveRows) oraz wiersze
+        // pod kursorem / z fokusem (te odświeżą własne handlery MouseLeave/LostKeyboardFocus).
+        private void RefreshSelectionVisuals()
+        {
+            foreach (var kv in _serverRows)
+            {
+                if (_active?.Server == kv.Key || kv.Value.IsMouseOver || kv.Value.IsKeyboardFocused) continue;
+                kv.Value.Background = _multiSelect.Contains(kv.Key) ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+            }
         }
 
         private ContextMenu BuildServerContextMenu(ServerInfo server)
@@ -1886,7 +2043,7 @@ namespace RdpManager
                 session.Resizer = new RdpDynamicResolution(session, host);
                 WireEvents(session);
             }
-            if (server.SavePassword && CredentialStore.TryRead(server.CredTarget, out var savedPw))
+            if (EffSavedPw(server) && CredentialStore.TryRead(EffCredTarget(server), out var savedPw))
                 session.Password = savedPw;
 
             _sessions.Add(session);
@@ -1899,7 +2056,7 @@ namespace RdpManager
             PersistOpenSessions();
         }
 
-        private static bool CanAuto(Session s)
+        private bool CanAuto(Session s)
         {
             switch (s.Server.Protocol)
             {
@@ -1907,7 +2064,7 @@ namespace RdpManager
                 case RemoteProtocol.Serial:
                     return true;   // logowanie (jeśli jest) dzieje się w terminalu
                 case RemoteProtocol.Ssh:
-                    return !string.IsNullOrWhiteSpace(s.Server.Username)
+                    return !string.IsNullOrWhiteSpace(EffUser(s.Server))
                            && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath));
                 default:
                     return s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
@@ -2753,6 +2910,9 @@ namespace RdpManager
             if (dlg.ShowDialog() != true) return;
 
             s.Server.UseWindowsAccount = false;
+            // Jawne „Połącz jako…" (reason != null) = porzuć profil i użyj wpisanych poświadczeń. Prompt-fallback
+            // przy braku hasła (reason == null) profil ZOSTAWIA — łączymy loginem z profilu + wpisanym hasłem.
+            if (reason != null) s.Server.CredentialProfileId = "";
             s.Server.Username = dlg.EnteredUser;
             s.Server.Domain = dlg.EnteredDomain;
             s.Password = dlg.EnteredPassword;
@@ -2821,8 +2981,8 @@ namespace RdpManager
                 }
                 else
                 {
-                    s.Rdp.UserName = s.Server.Username;
-                    s.Rdp.Domain = s.Server.Domain;
+                    s.Rdp.UserName = EffUser(s.Server);
+                    s.Rdp.Domain = EffDomain(s.Server);
                     adv.ClearTextPassword = s.Password;
                 }
 
@@ -2974,7 +3134,7 @@ namespace RdpManager
         private async void ConnectTerm(Session s)
         {
             // SSH wymaga loginu (nie ma odpowiednika konta Windows) — dopytaj, jeśli brak.
-            if (s.IsSsh && string.IsNullOrWhiteSpace(s.Server.Username)) { PromptAndConnect(s, null); return; }
+            if (s.IsSsh && string.IsNullOrWhiteSpace(EffUser(s.Server))) { PromptAndConnect(s, null); return; }
             if (s.Server.Protocol == RemoteProtocol.Telnet) WarnUnencrypted(RemoteProtocol.Telnet);
             try
             {
@@ -2984,7 +3144,7 @@ namespace RdpManager
 
                 var (cols, rows) = await s.Term.InitAsync();
                 string target = s.IsSsh
-                    ? s.Server.Username + "@" + s.Server.Host + ":" + s.Server.Port
+                    ? EffUser(s.Server) + "@" + s.Server.Host + ":" + s.Server.Port
                     : s.Server.Host + (s.Server.Protocol == RemoteProtocol.Serial ? " @" + s.Server.Port : ":" + s.Server.Port);
                 s.Term.WriteLocal("\x1b[90m" + string.Format(L("S.st.connecting"), target) + "\x1b[0m\r\n");
 
@@ -2997,7 +3157,7 @@ namespace RdpManager
                         await ((SerialTerminalControl)s.Term).ConnectAsync(s.Server.Host, s.Server.Port);
                         break;
                     default:
-                        await s.Ssh.ConnectAsync(s.Server, s.Password, cols, rows);
+                        await s.Ssh.ConnectAsync(ConnectIdentity(s.Server), s.Password, cols, rows);
                         break;
                 }
             }
@@ -3174,8 +3334,8 @@ namespace RdpManager
             if (server == null) return;
             RecordRecent(server);
             string pw = password ?? "";
-            if (string.IsNullOrEmpty(pw) && server.SavePassword) CredentialStore.TryRead(server.CredTarget, out pw);
-            var win = new SessionWindow(server, _settings, pw, PersistServers, DockSessionFromWindow);
+            if (string.IsNullOrEmpty(pw) && EffSavedPw(server)) CredentialStore.TryRead(EffCredTarget(server), out pw);
+            var win = new SessionWindow(server, _settings, pw, EffUser(server), EffDomain(server), PersistServers, DockSessionFromWindow);
             _sessionWindows.Add(win);
             win.Closed += (s, e) => _sessionWindows.Remove(win);
             win.Show();
@@ -3916,7 +4076,7 @@ namespace RdpManager
             string pw = "";
             if (src.SavePassword) CredentialStore.TryRead(src.CredTarget, out pw);
 
-            var dlg = new ServerEditWindow(copy, pw) { Owner = this };
+            var dlg = new ServerEditWindow(copy, pw, _credProfiles) { Owner = this };
             if (dlg.ShowDialog() != true) return;
             _vm.Add(copy);
             PersistServers();
@@ -3930,7 +4090,7 @@ namespace RdpManager
             string current = "";
             if (server.SavePassword) CredentialStore.TryRead(server.CredTarget, out current);
 
-            var dlg = new ServerEditWindow(server, current) { Owner = this };
+            var dlg = new ServerEditWindow(server, current, _credProfiles) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
                 PersistServers();
@@ -3960,6 +4120,77 @@ namespace RdpManager
 
             _vm.Remove(server);
             CredentialStore.Delete(server.CredTarget);
+            PersistServers();
+            RenderTree(SearchBox.Text);
+            CheckReachabilityAsync();
+        }
+
+        // Menu zbiorcze dla zaznaczonych serwerów (Ctrl/Shift+klik): przenieś N do grupy / usuń N.
+        private ContextMenu BuildBulkContextMenu(List<ServerInfo> servers)
+        {
+            var menu = new ContextMenu();
+            menu.Items.Add(new MenuItem { Header = string.Format(L("S.m.bulk.count"), servers.Count), IsEnabled = false });
+            menu.Items.Add(new Separator());
+
+            var move = new MenuItem { Header = L("S.m.bulk.move") };
+            foreach (var g in ExistingGroupNames())
+            {
+                string target = g;
+                var mi = new MenuItem { Header = g };
+                mi.Click += (s, e) => MoveServersToGroup(servers, target);
+                move.Items.Add(mi);
+            }
+            if (move.Items.Count > 0) move.Items.Add(new Separator());
+            var newGrp = new MenuItem { Header = L("S.m.bulk.move.new") };
+            newGrp.Click += (s, e) =>
+            {
+                var dlg = new InputDialog(L("S.prompt.newgroup.title"), L("S.prompt.newgroup.label"), "") { Owner = this };
+                if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.Value))
+                    MoveServersToGroup(servers, dlg.Value.Trim());
+            };
+            move.Items.Add(newGrp);
+            menu.Items.Add(move);
+
+            menu.Items.Add(new Separator());
+            var del = new MenuItem { Header = string.Format(L("S.m.bulk.delete"), servers.Count) };
+            del.Click += (s, e) => DeleteServers(servers);
+            menu.Items.Add(del);
+            return menu;
+        }
+
+        // Nazwy istniejących (niepustych) grup — cel dla „przenieś do grupy". Kolejność pojawiania się.
+        private List<string> ExistingGroupNames()
+        {
+            var names = new List<string>();
+            foreach (var s in _vm.Servers)
+                if (!string.IsNullOrWhiteSpace(s.Group) && !names.Contains(s.Group))
+                    names.Add(s.Group);
+            return names;
+        }
+
+        private void MoveServersToGroup(List<ServerInfo> servers, string group)
+        {
+            foreach (var s in servers) s.Group = group;
+            PersistServers();
+            RenderTree(SearchBox.Text);
+        }
+
+        // Usuwa wiele serwerów naraz (JEDNO potwierdzenie). Odzwierciedla czyszczenie z DeleteServer
+        // (zamknięcie otwartych sesji + skasowanie poświadczeń z Credential Managera).
+        private void DeleteServers(List<ServerInfo> servers)
+        {
+            if (servers.Count == 0) return;
+            if (MessageBox.Show(string.Format(L("S.msg.bulkdelete"), servers.Count), L("S.msg.delete.title"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            foreach (var server in servers)
+            {
+                foreach (var open in _sessions.Where(x => x.Server == server).ToList())
+                    CloseSession(open);
+                _vm.Remove(server);
+                CredentialStore.Delete(server.CredTarget);
+            }
             PersistServers();
             RenderTree(SearchBox.Text);
             CheckReachabilityAsync();
@@ -4004,6 +4235,31 @@ namespace RdpManager
 
         private static string ReadPassword(ServerInfo s)
             => CredentialStore.TryRead(s.CredTarget, out var p) ? (p ?? "") : "";
+
+        // ---------- Profile poświadczeń ----------
+        // Serwer może wskazywać współdzielony profil (CredentialProfileId). Gdy wskazuje, login/domena/hasło
+        // przy łączeniu pochodzą z PROFILU, nie z pól serwera. Poniższe „Eff*" rozwiązują to w jednym miejscu.
+        private CredentialProfile ProfileFor(ServerInfo s)
+            => string.IsNullOrEmpty(s?.CredentialProfileId) ? null
+               : _credProfiles.FirstOrDefault(p => p.Id == s.CredentialProfileId);
+
+        private string EffUser(ServerInfo s)       { var p = ProfileFor(s); return p != null ? p.Username : s.Username; }
+        private string EffDomain(ServerInfo s)     { var p = ProfileFor(s); return p != null ? p.Domain   : s.Domain; }
+        private string EffCredTarget(ServerInfo s) { var p = ProfileFor(s); return p != null ? p.CredTarget : s.CredTarget; }
+        private bool   EffSavedPw(ServerInfo s)    { var p = ProfileFor(s); return p != null || s.SavePassword; }
+
+        // Tożsamość do łączenia: kontrolka SSH czyta server.Username WEWNĘTRZNIE (auth + SFTP), więc gdy jest
+        // profil, podajemy płytką kopię serwera z podmienionym loginem/domeną (transient) — bez ruszania kodu
+        // uwierzytelniania w SshTerminalControl. Dla RDP ustawiamy UserName/Domain wprost (EffUser/EffDomain).
+        private ServerInfo ConnectIdentity(ServerInfo s)
+        {
+            var p = ProfileFor(s);
+            if (p == null) return s;
+            var c = s.ShallowClone();
+            c.Username = p.Username;
+            c.Domain = p.Domain;
+            return c;
+        }
 
         private Brush AvatarBrush(string group)
         {

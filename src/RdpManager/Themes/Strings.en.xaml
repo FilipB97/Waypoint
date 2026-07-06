@@ -81,6 +81,19 @@
     <sys:String x:Key="S.set.autoconnect">Connect on startup</sys:String>
     <sys:String x:Key="S.set.autoconnect.hint">The checked servers connect automatically when the app starts. When anything is checked, the "restore last session" popup won't appear.</sys:String>
     <sys:String x:Key="S.set.autoconnect.empty">No servers yet — add one first.</sys:String>
+    <!-- Credential profiles -->
+    <sys:String x:Key="S.set.profiles">Credential profiles</sys:String>
+    <sys:String x:Key="S.set.profiles.hint">One saved login (domain, username, password) shared by many servers. The password is kept in Windows Credential Manager.</sys:String>
+    <sys:String x:Key="S.prof.use">Credential profile</sys:String>
+    <sys:String x:Key="S.prof.none">(none — own login)</sys:String>
+    <sys:String x:Key="S.prof.edit.title">Credential profile</sys:String>
+    <sys:String x:Key="S.prof.name">Profile name</sys:String>
+    <sys:String x:Key="S.prof.required">Enter a profile name and username.</sys:String>
+    <sys:String x:Key="S.prof.add">+ Add profile</sys:String>
+    <sys:String x:Key="S.prof.empty">No credential profiles yet.</sys:String>
+    <sys:String x:Key="S.prof.edit">Edit</sys:String>
+    <sys:String x:Key="S.prof.delete">Delete</sys:String>
+    <sys:String x:Key="S.prof.deleteconfirm">Delete profile “{0}”? Servers using it will fall back to their own login.</sys:String>
     <sys:String x:Key="S.restore.title">Restore session</sys:String>
     <sys:String x:Key="S.restore.msg">These connections were open last time. Reopen them?</sys:String>
     <sys:String x:Key="S.restore.dontask">Don't ask at startup</sys:String>
@@ -188,6 +201,14 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.diag">Diagnostics…</sys:String>
     <sys:String x:Key="S.m.exportrdp">Export .rdp…</sys:String>
     <sys:String x:Key="S.m.delete">Delete</sys:String>
+    <!-- Bulk actions (multi-select via Ctrl/Shift+click). -->
+    <sys:String x:Key="S.m.bulk.count">Selected: {0}</sys:String>
+    <sys:String x:Key="S.m.bulk.move">Move to group</sys:String>
+    <sys:String x:Key="S.m.bulk.move.new">New group…</sys:String>
+    <sys:String x:Key="S.m.bulk.delete">Delete selected ({0})</sys:String>
+    <sys:String x:Key="S.msg.bulkdelete">Delete the {0} selected servers? This cannot be undone.</sys:String>
+    <sys:String x:Key="S.prompt.newgroup.title">New group</sys:String>
+    <sys:String x:Key="S.prompt.newgroup.label">Group name:</sys:String>
     <sys:String x:Key="S.m.tearoff">Tear off to a window</sys:String>
     <sys:String x:Key="S.m.duplicate">Duplicate</sys:String>
     <sys:String x:Key="S.m.moveleft">Move left</sys:String>
