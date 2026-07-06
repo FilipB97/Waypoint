@@ -74,16 +74,21 @@ namespace RdpManager.Core
         }
 
         /// <summary>
-        /// Czy serwer pasuje do filtra (po nazwie lub hoście, bez uwzględniania wielkości liter).
-        /// Źródło: MainWindow.MatchesFilter.
+        /// Czy serwer pasuje do filtra (po nazwie, hoście lub tagu; bez uwzględniania wielkości liter).
+        /// Składnia „#tag" — wiodący # jest ignorowany przy porównaniu. Źródło: MainWindow.MatchesFilter.
         /// </summary>
         public static bool MatchesFilter(ServerInfo s, string filter)
         {
             if (s == null) return false;
             filter = (filter ?? "").Trim().ToLowerInvariant();
             if (filter.Length == 0) return true;
-            return (s.Name ?? "").ToLowerInvariant().Contains(filter)
-                || (s.Host ?? "").ToLowerInvariant().Contains(filter);
+            if ((s.Name ?? "").ToLowerInvariant().Contains(filter)) return true;
+            if ((s.Host ?? "").ToLowerInvariant().Contains(filter)) return true;
+            string needle = filter.StartsWith("#") ? filter.Substring(1) : filter;
+            if (needle.Length > 0 && s.Tags != null)
+                foreach (var t in s.Tags)
+                    if ((t ?? "").ToLowerInvariant().Contains(needle)) return true;
+            return false;
         }
 
         /// <summary>

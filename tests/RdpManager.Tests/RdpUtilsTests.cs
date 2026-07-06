@@ -82,6 +82,17 @@ namespace RdpManager.Tests
             Assert.False(RdpUtils.MatchesFilter(null, "web"));
         }
 
+        [Fact]
+        public void MatchesFilter_MatchesTags()
+        {
+            var s = new ServerInfo { Name = "srv1", Host = "h", Tags = new System.Collections.Generic.List<string> { "prod", "klientA" } };
+            Assert.True(RdpUtils.MatchesFilter(s, "prod"));    // po tagu
+            Assert.True(RdpUtils.MatchesFilter(s, "PROD"));    // bez uwzględniania wielkości liter
+            Assert.True(RdpUtils.MatchesFilter(s, "#prod"));   // składnia #tag
+            Assert.True(RdpUtils.MatchesFilter(s, "klient"));  // fragment taga
+            Assert.False(RdpUtils.MatchesFilter(s, "staging"));
+        }
+
         [Theory]
         [InlineData("16", 16)]
         [InlineData("24", 24)]
