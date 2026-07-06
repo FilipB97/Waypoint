@@ -1219,11 +1219,32 @@ namespace RdpManager
                 ? DashCard(BuildBarChart(stats.PerDay, DateTime.Now))
                 : DashHint(L("S.dash.nodata")));
 
+            // Aktywność wg dnia tygodnia (z dziennika audytu) — te same poziome słupki co „najczęściej używane".
+            if (stats.TotalConnects > 0)
+            {
+                var wdLabels = L("S.dash.weekdays").Split(',');
+                var wd = new List<KeyValuePair<string, int>>();
+                for (int i = 0; i < 7 && i < stats.PerWeekday.Length; i++)
+                    wd.Add(new KeyValuePair<string, int>(i < wdLabels.Length ? wdLabels[i].Trim() : (i + 1).ToString(), stats.PerWeekday[i]));
+                DashboardPanel.Children.Add(DashSection(L("S.dash.weekday")));
+                DashboardPanel.Children.Add(DashCard(BuildTopServers(wd)));
+            }
+
             // Najczęściej używane serwery.
             if (stats.TopServers.Count > 0)
             {
                 DashboardPanel.Children.Add(DashSection(L("S.dash.top")));
                 DashboardPanel.Children.Add(DashCard(BuildTopServers(stats.TopServers)));
+            }
+
+            // Rozkład protokołów (z konfiguracji serwerów) — poziome słupki jak wyżej.
+            if (_vm.Total > 0)
+            {
+                var protos = _vm.Servers.GroupBy(s => s.Protocol)
+                    .Select(g => new KeyValuePair<string, int>(ProtocolLabel(g.Key), g.Count()))
+                    .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key).ToList();
+                DashboardPanel.Children.Add(DashSection(L("S.dash.protocols")));
+                DashboardPanel.Children.Add(DashCard(BuildTopServers(protos)));
             }
 
             // Ostatnie połączenia.
@@ -1323,6 +1344,17 @@ namespace RdpManager
             }
             return panel;
         }
+
+        private static string ProtocolLabel(RemoteProtocol p) => p switch
+        {
+            RemoteProtocol.Rdp => "RDP",
+            RemoteProtocol.Ssh => "SSH",
+            RemoteProtocol.Telnet => "Telnet",
+            RemoteProtocol.Serial => "Serial (COM)",
+            RemoteProtocol.Http => "WWW",
+            RemoteProtocol.Vnc => "VNC",
+            _ => p.ToString()
+        };
 
         private FrameworkElement StatCard(string label, string value)
         {
