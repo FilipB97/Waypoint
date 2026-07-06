@@ -27,6 +27,7 @@ namespace RdpManager.Core
             public string ExeUrl { get; set; }
             public long ExeSize { get; set; }
             public string HtmlUrl { get; set; }
+            public string Notes { get; set; }   // treść wydania (markdown „body") = changelog
         }
 
         public static ReleaseInfo ParseRelease(string json)
@@ -39,7 +40,8 @@ namespace RdpManager.Core
                     var info = new ReleaseInfo
                     {
                         Version = ParseTag(root.TryGetProperty("tag_name", out var t) ? t.GetString() : null),
-                        HtmlUrl = root.TryGetProperty("html_url", out var h) ? h.GetString() : null
+                        HtmlUrl = root.TryGetProperty("html_url", out var h) ? h.GetString() : null,
+                        Notes = root.TryGetProperty("body", out var b) ? b.GetString() : null
                     };
                     if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
                     {

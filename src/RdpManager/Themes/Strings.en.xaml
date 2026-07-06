@@ -72,6 +72,12 @@
     <sys:String x:Key="S.heal.quarantined">File “{0}” was damaged — a copy was preserved next to it (.corrupt).</sys:String>
     <sys:String x:Key="S.update.title">Update</sys:String>
     <sys:String x:Key="S.update.confirm">Update to version {0}? Open connections will close and Waypoint will restart (and offer to restore your session).</sys:String>
+    <sys:String x:Key="S.update.newtitle">New version {0}</sys:String>
+    <sys:String x:Key="S.update.whatsnew">Updated to version {0}</sys:String>
+    <sys:String x:Key="S.update.now">Update</sys:String>
+    <sys:String x:Key="S.update.nonotes">No changelog for this version.</sys:String>
+    <sys:String x:Key="S.update.viewgithub">View on GitHub</sys:String>
+    <sys:String x:Key="S.update.willrestart">Open connections will close; Waypoint will restart and offer to restore your session.</sys:String>
     <sys:String x:Key="S.update.downloading">Downloading… {0}%</sys:String>
     <sys:String x:Key="S.update.faildl">Failed to download the update.</sys:String>
     <sys:String x:Key="S.update.badsig">The downloaded update is not validly signed by the publisher (it does not match the current version). Installation was cancelled — download the new version manually from the releases page.</sys:String>

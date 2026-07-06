@@ -50,6 +50,9 @@ namespace RdpManager
         /// <summary>Przy starcie sprawdź w tle, czy na GitHubie jest nowsza wersja (tylko powiadomienie).</summary>
         public bool CheckUpdates { get; set; } = true;
 
+        /// <summary>Wersja aplikacji przy ostatnim starcie — do wykrycia „właśnie zaktualizowano" i pokazania „co nowego".</summary>
+        public string LastRunVersion { get; set; } = "";
+
         /// <summary>Minimalizacja chowa okno do zasobnika (powrót przez ikonę).</summary>
         public bool MinimizeToTray { get; set; }
 

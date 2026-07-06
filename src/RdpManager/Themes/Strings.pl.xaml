@@ -72,6 +72,12 @@
     <sys:String x:Key="S.heal.quarantined">Plik „{0}" był uszkodzony — zabezpieczono kopię obok (.corrupt).</sys:String>
     <sys:String x:Key="S.update.title">Aktualizacja</sys:String>
     <sys:String x:Key="S.update.confirm">Zaktualizować do wersji {0}? Otwarte połączenia zostaną zamknięte, a Waypoint uruchomi się ponownie (i zaproponuje przywrócenie sesji).</sys:String>
+    <sys:String x:Key="S.update.newtitle">Nowa wersja {0}</sys:String>
+    <sys:String x:Key="S.update.whatsnew">Zaktualizowano do wersji {0}</sys:String>
+    <sys:String x:Key="S.update.now">Aktualizuj</sys:String>
+    <sys:String x:Key="S.update.nonotes">Brak informacji o zmianach dla tej wersji.</sys:String>
+    <sys:String x:Key="S.update.viewgithub">Zobacz na GitHub</sys:String>
+    <sys:String x:Key="S.update.willrestart">Otwarte połączenia zostaną zamknięte; Waypoint uruchomi się ponownie i zaproponuje przywrócenie sesji.</sys:String>
     <sys:String x:Key="S.update.downloading">Pobieranie… {0}%</sys:String>
     <sys:String x:Key="S.update.faildl">Nie udało się pobrać aktualizacji.</sys:String>
     <sys:String x:Key="S.update.badsig">Pobrana aktualizacja nie ma prawidłowego podpisu wydawcy (nie zgadza się z bieżącą wersją). Instalacja została przerwana — pobierz nową wersję ręcznie ze strony wydań.</sys:String>

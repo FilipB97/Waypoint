@@ -116,6 +116,9 @@ namespace RdpManager
             _settings = SettingsStore.Load();
             _settings = SettingsStore.ConsumeUpdateSnapshot(_settings);   // po aktualizacji: przywróć stan sprzed update (migawka)
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
+            _prevRunVersion = _settings.LastRunVersion ?? "";           // zapamiętaj wersję sprzed tego startu
+            var curVer = CurrentVersion().ToString();
+            if (_settings.LastRunVersion != curVer) { _settings.LastRunVersion = curVer; SettingsStore.Save(_settings); }
             _credProfiles = CredentialProfileRepository.Load();
             _vm.UseRecentIds(_settings.RecentIds);   // współdziel listę „ostatnich" z ustawieniami
             LoadTabGroups();                          // grupy kart z poprzedniej sesji (przypisanie po Id serwera)
@@ -256,6 +259,14 @@ namespace RdpManager
 
         // Ciche sprawdzenie GitHub releases/latest; nowsza wersja → przycisk w panelu bocznym.
         // Bez sieci / rate limitu / złego JSON-a — po prostu nic się nie pokazuje.
+        private string _prevRunVersion = "";   // wersja z poprzedniego startu (do wykrycia „właśnie zaktualizowano")
+
+        private static Version CurrentVersion()
+        {
+            var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            return new Version(v.Major, v.Minor, Math.Max(v.Build, 0));
+        }
+
         private async void CheckForUpdatesAsync()
         {
             if (!_settings.CheckUpdates) return;
@@ -267,13 +278,20 @@ namespace RdpManager
                     string json = await http.GetStringAsync(
                         "https://api.github.com/repos/FilipB97/Waypoint/releases/latest");
                     var info = Core.UpdateCheck.ParseRelease(json);
-                    var cur = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-                    var current = new Version(cur.Major, cur.Minor, Math.Max(cur.Build, 0));
-                    if (info != null && Core.UpdateCheck.IsNewer(info.Version, current))
+                    if (info == null) return;
+                    var current = CurrentVersion();
+                    if (Core.UpdateCheck.IsNewer(info.Version, current))
                     {
                         _update = info;
                         UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
                         UpdateBtn.Visibility = Visibility.Visible;
+                    }
+                    else if (Core.UpdateCheck.ParseTag(_prevRunVersion) is Version prev && prev < current
+                             && !string.IsNullOrWhiteSpace(info.Notes))
+                    {
+                        // Wersja wzrosła od ostatniego startu → właśnie zaktualizowano: pokaż „co nowego" (raz).
+                        new ReleaseNotesWindow(string.Format(L("S.update.whatsnew"), current),
+                            current, info.Notes, info.HtmlUrl, confirm: false) { Owner = this }.ShowDialog();
                     }
                 }
             }
@@ -289,9 +307,10 @@ namespace RdpManager
                 return;
             }
 
-            if (MessageBox.Show(string.Format(L("S.update.confirm"), _update.Version), L("S.update.title"),
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return;
+            // Pokaż changelog i potwierdzenie PRZED aktualizacją (zamiast zwykłego MessageBox).
+            var notesDlg = new ReleaseNotesWindow(string.Format(L("S.update.newtitle"), _update.Version),
+                _update.Version, _update.Notes, _update.HtmlUrl, confirm: true) { Owner = this };
+            if (notesDlg.ShowDialog() != true) return;
 
             string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
                 "Waypoint-update-" + _update.Version + ".exe");
