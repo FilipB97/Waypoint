@@ -12,10 +12,18 @@ namespace RdpManager
     /// </summary>
     public static class ThemeManager
     {
+        // Marka = kobalt #2657D6. WPF-UI domyślnie bierze akcent SYSTEMOWY (stąd „szare" przyciski Primary,
+        // ProgressRing, focus, przełączniki) — wymuszamy własny akcent PO zastosowaniu motywu, żeby akcentowe
+        // kontrolki były kobaltowe i UI przestało wyglądać monochromatycznie.
+        private static readonly System.Windows.Media.Color BrandAccent =
+            System.Windows.Media.Color.FromRgb(0x26, 0x57, 0xD6);
+
         public static void Apply(string theme)
         {
             bool light = theme == "Light" || (theme == "System" && SystemIsLight());
-            ApplicationThemeManager.Apply(light ? ApplicationTheme.Light : ApplicationTheme.Dark);
+            var appTheme = light ? ApplicationTheme.Light : ApplicationTheme.Dark;
+            ApplicationThemeManager.Apply(appTheme);
+            ApplicationAccentColorManager.Apply(BrandAccent, appTheme);   // nadpisz akcent systemowy marką (kobalt)
             SwapPalette(light);
         }
 
