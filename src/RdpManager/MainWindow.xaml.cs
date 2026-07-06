@@ -1394,7 +1394,7 @@ namespace RdpManager
             {
                 if (s.Pinned) continue;
                 if (!RdpUtils.MatchesFilter(s, filter)) continue;
-                var g = string.IsNullOrWhiteSpace(s.Group) ? L("S.group.default") : s.Group;
+                var g = string.IsNullOrWhiteSpace(s.Group) ? L("S.group.serversdefault") : s.Group;
                 if (!byGroup.ContainsKey(g)) { order.Add(g); byGroup[g] = new List<ServerInfo>(); }
                 byGroup[g].Add(s);
             }
@@ -1486,7 +1486,7 @@ namespace RdpManager
             if (string.IsNullOrWhiteSpace(newName) || newName == oldName) return;
 
             foreach (var s in _vm.Servers)
-                if ((string.IsNullOrWhiteSpace(s.Group) ? L("S.group.default") : s.Group) == oldName)
+                if ((string.IsNullOrWhiteSpace(s.Group) ? L("S.group.serversdefault") : s.Group) == oldName)
                     s.Group = newName;
 
             // Przenieś stan zwinięcia na nową nazwę.
@@ -3838,7 +3838,7 @@ namespace RdpManager
         {
             // Pusta grupa = domyślny „kosz" lokalizowany przy wyświetlaniu (RenderTree), nie zapisujemy tu nazwy PL.
             var server = new ServerInfo { Group = "", Status = ServerStatus.Offline, Port = _settings.DefaultPort };
-            var dlg = new ServerEditWindow(server, "") { Owner = this };
+            var dlg = new ServerEditWindow(server, "", _credProfiles) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
                 _vm.Add(server);
