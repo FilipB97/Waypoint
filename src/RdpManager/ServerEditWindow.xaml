@@ -115,7 +115,8 @@
                     <!-- Profil poświadczeń: gdy wybrany, login/domena/hasło biorą się z profilu (pola niżej wyszarzone). -->
                     <StackPanel x:Name="ProfileRow" Margin="0,0,0,12">
                         <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.prof.use}"/>
-                        <ComboBox x:Name="ProfileCombo" HorizontalAlignment="Stretch" SelectionChanged="Profile_Changed"/>
+                        <ComboBox x:Name="ProfileCombo" HorizontalAlignment="Stretch" SelectionChanged="Profile_Changed"
+                                  ToolTip="{DynamicResource S.prof.use.tip}"/>
                     </StackPanel>
 
                     <CheckBox x:Name="WinAuthCheck" Margin="0,0,0,10"

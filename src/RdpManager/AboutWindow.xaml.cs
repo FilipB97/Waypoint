@@ -15,7 +15,7 @@ namespace RdpManager
             DataPathText.Text = LocalizationManager.S("S.msg.about.datafolder") + " " + SettingsStore.Dir;
         }
 
-        private void Github_Click(object sender, RoutedEventArgs e) => Open("https://github.com/FilipB97");
+        private void Author_Click(object sender, RoutedEventArgs e) => Open("https://github.com/FilipB97");
         private void Repo_Click(object sender, RoutedEventArgs e) => Open("https://github.com/FilipB97/Waypoint");
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
 

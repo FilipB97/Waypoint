@@ -251,8 +251,13 @@ namespace RdpManager
         // Gdy wybrany profil dostarcza poświadczeń, własne pola login/domena/hasło są nieaktywne (bierze je profil).
         private void ApplyProfileState()
         {
-            if (SelectedProfileId().Length > 0)
+            var pid = SelectedProfileId();
+            if (pid.Length > 0)
             {
+                // Podgląd: pokaż login/domenę z profilu w (wyszarzonych) polach, żeby było widać, czym się połączy.
+                CredentialProfile prof = null;
+                foreach (var x in _profiles) if (x.Id == pid) { prof = x; break; }
+                if (prof != null) { UserBox.Text = prof.Username ?? ""; DomainBox.Text = prof.Domain ?? ""; }
                 WinAuthCheck.IsEnabled = false;
                 UserBox.IsEnabled = false;
                 DomainBox.IsEnabled = false;
@@ -263,6 +268,9 @@ namespace RdpManager
             }
             else
             {
+                // Wróć do własnych danych serwera (mogły zostać nadpisane podglądem profilu).
+                UserBox.Text = _server.Username ?? "";
+                DomainBox.Text = _server.Domain ?? "";
                 WinAuthCheck.IsEnabled = true;
                 ApplyWinAuthState();   // przywróć stan pól wg „Konto Windows"
             }
@@ -310,6 +318,18 @@ namespace RdpManager
                     LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+            // Port sieciowy 1–65535 (RDP/SSH/Telnet/VNC). Serial = baud (dowolna liczba), WWW = brak portu — pomijamy.
+            bool netPort = rdp || ssh || vnc || protocol == RemoteProtocol.Telnet;
+            if (netPort && (!int.TryParse(PortBox.Text.Trim(), out var portVal) || portVal < 1 || portVal > 65535))
+            {
+                MessageBox.Show(LocalizationManager.S("S.se.port.bad"),
+                    LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            // Klucz SSH: informacja (nie blokada) gdy podany plik nie istnieje — ścieżka bywa środowiskowa/sieciowa.
+            if (ssh && KeyPathBox.Text.Trim().Length > 0 && !System.IO.File.Exists(KeyPathBox.Text.Trim()))
+                MessageBox.Show(string.Format(LocalizationManager.S("S.se.keypath.missing"), KeyPathBox.Text.Trim()),
+                    LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Information);
 
             _server.Protocol = protocol;
             _server.PrivateKeyPath = ssh ? KeyPathBox.Text.Trim() : "";
