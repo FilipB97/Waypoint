@@ -288,6 +288,9 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dash.conns7">Connections (7 days)</sys:String>
     <sys:String x:Key="S.dash.perday">Connections per day (14 days)</sys:String>
     <sys:String x:Key="S.dash.top">Most used</sys:String>
+    <sys:String x:Key="S.dash.weekday">Activity by weekday</sys:String>
+    <sys:String x:Key="S.dash.weekdays">Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday</sys:String>
+    <sys:String x:Key="S.dash.protocols">Protocols</sys:String>
     <sys:String x:Key="S.dash.nodata">No data in the connection log yet.</sys:String>
     <sys:String x:Key="S.dash.nohistory">No history.</sys:String>
     <sys:String x:Key="S.dash.norecent">No recent connections.</sys:String>

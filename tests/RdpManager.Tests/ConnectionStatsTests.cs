@@ -36,6 +36,18 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void Compute_CountsConnectedPerWeekday()
+        {
+            var now = new DateTime(2026, 7, 3, 12, 0, 0);   // 07-03 = piątek (index 4), 07-02 = czwartek (index 3)
+            var s = ConnectionStats.Compute(Lines, now, 7);
+
+            Assert.Equal(7, s.PerWeekday.Length);
+            Assert.Equal(2, s.PerWeekday[4]);   // piątek — 2x CONNECTED (web1)
+            Assert.Equal(1, s.PerWeekday[3]);   // czwartek — 1x CONNECTED (db1)
+            Assert.Equal(0, s.PerWeekday[0]);   // poniedziałek — pusto
+        }
+
+        [Fact]
         public void Compute_EmptyOrNull_IsSafe()
         {
             var s = ConnectionStats.Compute(null, new DateTime(2026, 7, 3), 14);

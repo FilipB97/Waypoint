@@ -21,9 +21,13 @@ namespace RdpManager.Core
         /// <summary>Najczęściej używane serwery (nazwa → liczba połączeń), malejąco.</summary>
         public List<KeyValuePair<string, int>> TopServers { get; set; } = new List<KeyValuePair<string, int>>();
 
+        /// <summary>Liczba połączeń wg dnia tygodnia z CAŁEGO dziennika; indeks 0 = poniedziałek … 6 = niedziela.</summary>
+        public int[] PerWeekday { get; set; } = new int[7];
+
         public static ConnectionStats Compute(IEnumerable<string> lines, DateTime now, int days, int topCount = 5)
         {
             var perDay = new int[Math.Max(1, days)];
+            var weekday = new int[7];
             var byServer = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             int total = 0;
             DateTime start = now.Date.AddDays(-(perDay.Length - 1));
@@ -41,6 +45,7 @@ namespace RdpManager.Core
                 if (!afterTs.Substring(0, sp).Equals("CONNECTED", StringComparison.OrdinalIgnoreCase)) continue;
 
                 total++;
+                weekday[((int)ts.DayOfWeek + 6) % 7]++;               // .NET: niedziela=0 → nasze: poniedziałek=0
                 string rest = afterTs.Substring(sp).TrimStart();     // "name (host:port) user=…"
                 int par = rest.IndexOf(" (", StringComparison.Ordinal);
                 string name = (par > 0 ? rest.Substring(0, par) : rest).Trim();
@@ -54,6 +59,7 @@ namespace RdpManager.Core
             return new ConnectionStats
             {
                 PerDay = perDay,
+                PerWeekday = weekday,
                 TotalConnects = total,
                 TopServers = byServer.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key)
                                      .Take(Math.Max(0, topCount)).ToList()

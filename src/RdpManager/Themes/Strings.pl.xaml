@@ -288,6 +288,9 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dash.conns7">Połączenia (7 dni)</sys:String>
     <sys:String x:Key="S.dash.perday">Połączenia dziennie (14 dni)</sys:String>
     <sys:String x:Key="S.dash.top">Najczęściej używane</sys:String>
+    <sys:String x:Key="S.dash.weekday">Aktywność wg dnia tygodnia</sys:String>
+    <sys:String x:Key="S.dash.weekdays">Poniedziałek,Wtorek,Środa,Czwartek,Piątek,Sobota,Niedziela</sys:String>
+    <sys:String x:Key="S.dash.protocols">Protokoły</sys:String>
     <sys:String x:Key="S.dash.nodata">Brak danych w dzienniku połączeń.</sys:String>
     <sys:String x:Key="S.dash.nohistory">Brak historii.</sys:String>
     <sys:String x:Key="S.dash.norecent">Brak ostatnich połączeń.</sys:String>
