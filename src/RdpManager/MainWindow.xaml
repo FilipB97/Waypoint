@@ -173,9 +173,18 @@
 
                     <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10">
                         <StackPanel>
-                            <!-- Pojawia się tylko, gdy CheckForUpdatesAsync znajdzie nowszą wersję. -->
+                            <!-- Pojawia się tylko, gdy CheckForUpdatesAsync znajdzie nowszą wersję.
+                                 HorizontalContentAlignment=Stretch + zawijany TextBlock: długi tekst
+                                 („Nowa wersja X — aktualizuj") zawija się w kilka linii zamiast się urywać. -->
                             <ui:Button x:Name="UpdateBtn" Visibility="Collapsed" HorizontalAlignment="Stretch"
-                                       Appearance="Info" Margin="0,0,0,6" Click="Update_Click"/>
+                                       HorizontalContentAlignment="Stretch"
+                                       Appearance="Info" Margin="0,0,0,6" Click="Update_Click">
+                                <ui:Button.ContentTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
+                                    </DataTemplate>
+                                </ui:Button.ContentTemplate>
+                            </ui:Button>
                             <ui:Button Content="{DynamicResource S.quickConnect}" HorizontalAlignment="Stretch"
                                        Appearance="Primary" Click="QuickConnect_Click"
                                        ToolTip="{DynamicResource S.quickConnect.tip}"/>
