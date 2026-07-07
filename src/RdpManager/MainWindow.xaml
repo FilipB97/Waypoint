@@ -202,6 +202,7 @@
                                         <MenuItem Header="{DynamicResource S.import.mrng}" Click="ImportMrng_Click"/>
                                         <MenuItem Header="{DynamicResource S.import.rdcman}" Click="ImportRdg_Click"/>
                                         <MenuItem Header="{DynamicResource S.import.rdm}" Click="ImportRdm_Click"/>
+                                        <MenuItem Header="{DynamicResource S.import.filezilla}" Click="ImportFileZilla_Click"/>
                                     </ContextMenu>
                                 </ui:Button.ContextMenu>
                             </ui:Button>

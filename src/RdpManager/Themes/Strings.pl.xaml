@@ -170,6 +170,7 @@
     <sys:String x:Key="S.se.ftp.tls.explicit">Jawne FTPS</sys:String>
     <sys:String x:Key="S.se.ftp.tls.implicit">Niejawne FTPS</sys:String>
     <sys:String x:Key="S.se.ftp.tls.none">Bez szyfrowania (zwykły FTP)</sys:String>
+    <sys:String x:Key="S.se.ftp.tls.auto">Auto (FTPS jeśli dostępne)</sys:String>
     <sys:String x:Key="S.se.tunnels.bad">Niepoprawna reguła tunelu: {0}
 Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.browse">Przeglądaj…</sys:String>
@@ -386,14 +387,18 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.mrng">mRemoteNG (confCons.xml)…</sys:String>
     <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
     <sys:String x:Key="S.import.rdm">Devolutions RDM (.rdm/.xml)…</sys:String>
+    <sys:String x:Key="S.import.filezilla">FileZilla (sitemanager.xml)…</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Importuj z mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Importuj z RDCMan</sys:String>
     <sys:String x:Key="S.dlg.rdg.filter">RDCMan (*.rdg)|*.rdg|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdm.title">Importuj z Devolutions RDM</sys:String>
     <sys:String x:Key="S.dlg.rdm.filter">Eksport RDM (*.rdm;*.xml)|*.rdm;*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importfz.title">Importuj z FileZilli</sys:String>
+    <sys:String x:Key="S.dlg.fz.filter">Menedżer stron FileZilla (sitemanager.xml)|sitemanager.xml|XML (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.msg.import.unsupported">Pominięto nieobsługiwane protokoły: {0}</sys:String>
     <sys:String x:Key="S.msg.import.nopass">Hasła nie są przenoszone — podasz je przy pierwszym połączeniu.</sys:String>
+    <sys:String x:Key="S.msg.import.withpass">Zaimportowano hasła do Menedżera poświadczeń Windows: {0}.</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">Terminal SSH wymaga składnika WebView2 Runtime (wbudowany w Windows 11; na starszych systemach doinstaluj go ze strony Microsoft).</sys:String>
     <!-- panel plików SFTP -->

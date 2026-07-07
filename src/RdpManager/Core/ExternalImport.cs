@@ -18,6 +18,10 @@ namespace RdpManager.Core
         {
             public List<ServerInfo> Servers { get; } = new List<ServerInfo>();
             public int UnsupportedProtocol { get; set; }
+
+            /// <summary>Hasła do zapisania w Credential Managerze (klucz = ServerInfo.Id). Puste dla źródeł
+            /// szyfrujących hasła własnym kluczem (mRemoteNG/RDCMan/RDM); wypełniane przez import FileZilli.</summary>
+            public Dictionary<string, string> Passwords { get; } = new Dictionary<string, string>();
         }
 
         // ---------- mRemoteNG (confCons.xml) ----------
@@ -191,6 +195,89 @@ namespace RdpManager.Core
                 });
             }
             return result;
+        }
+
+        // ---------- FileZilla (sitemanager.xml) ----------
+
+        /// <summary>
+        /// Parsuje FileZilla sitemanager.xml. Protokoły: FTP(0)→FTP(Auto), SFTP(1)→SFTP,
+        /// FTPS implicit(4)→FTP niejawne, FTPES explicit(5)→FTP jawne, plain(6)→FTP bez TLS; reszta pominięta.
+        /// W przeciwieństwie do pozostałych źródeł FileZilla trzyma hasła odzyskiwalnie
+        /// (Pass encoding="base64", gdy nie ustawiono hasła głównego) — dekodujemy je do <see cref="Result.Passwords"/>.
+        /// Klucz SFTP z &lt;Keyfile&gt;; foldery → ścieżka grupy.
+        /// </summary>
+        public static Result ParseFileZilla(string xml)
+        {
+            var result = new Result();
+            var servers = XDocument.Parse(xml).Root?.Element("Servers");
+            if (servers != null) DescendFz(servers, "", result);
+            return result;
+        }
+
+        private static void DescendFz(XElement parent, string path, Result result)
+        {
+            foreach (var node in parent.Elements())
+            {
+                if (string.Equals(node.Name.LocalName, "Folder", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Nazwa folderu = bezpośredni tekst (mieszana zawartość: nazwa + zagnieżdżone <Server>).
+                    string fname = string.Concat(node.Nodes().OfType<XText>().Select(t => t.Value)).Trim();
+                    DescendFz(node, string.IsNullOrEmpty(path) ? fname : path + " / " + fname, result);
+                    continue;
+                }
+                if (!string.Equals(node.Name.LocalName, "Server", StringComparison.OrdinalIgnoreCase)) continue;
+
+                string host = Elem(node, "Host");
+                if (host.Length == 0) continue;
+
+                int proto = int.TryParse(Elem(node, "Protocol"), out var pr) ? pr : 0;
+                RemoteProtocol rp; int enc = 0; int defPort;
+                switch (proto)
+                {
+                    case 0: rp = RemoteProtocol.Ftp;  enc = 3; defPort = 21;  break;   // FTP → Auto (FTPS jeśli dostępne)
+                    case 1: rp = RemoteProtocol.Sftp;          defPort = 22;  break;
+                    case 4: rp = RemoteProtocol.Ftp;  enc = 1; defPort = 990; break;   // implicit FTPS
+                    case 5: rp = RemoteProtocol.Ftp;  enc = 0; defPort = 21;  break;   // explicit FTPES
+                    case 6: rp = RemoteProtocol.Ftp;  enc = 2; defPort = 21;  break;   // plain FTP
+                    default: result.UnsupportedProtocol++; continue;                    // HTTP/HTTPS/S3/…
+                }
+
+                int port = int.TryParse(Elem(node, "Port"), out var p) && p >= 1 && p <= 65535 ? p : defPort;
+                bool anon = int.TryParse(Elem(node, "Logontype"), out var lt) && lt == 0;
+
+                string name = Elem(node, "Name");
+                string display = name.Length > 0 ? name : host;
+                var srv = new ServerInfo
+                {
+                    Name = display,
+                    Host = host,
+                    Port = port,
+                    Protocol = rp,
+                    Username = anon ? "" : Elem(node, "User"),
+                    FtpEncryption = rp == RemoteProtocol.Ftp ? enc : 0,
+                    FtpAnonymous = rp == RemoteProtocol.Ftp && anon,
+                    PrivateKeyPath = rp == RemoteProtocol.Sftp ? Elem(node, "Keyfile") : "",
+                    Group = string.IsNullOrEmpty(path) ? "FileZilla" : path,
+                    Initials = RdpUtils.MakeInitials(display),
+                    Status = ServerStatus.Offline
+                };
+
+                // Hasło: base64(UTF-8). Pomijamy, gdy chronione hasłem głównym FileZilli (encoding="crypt").
+                var pass = node.Elements().FirstOrDefault(e =>
+                    string.Equals(e.Name.LocalName, "Pass", StringComparison.OrdinalIgnoreCase));
+                if (!anon && pass != null &&
+                    string.Equals((string)pass.Attribute("encoding"), "base64", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        string pw = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(pass.Value.Trim()));
+                        if (pw.Length > 0) result.Passwords[srv.Id] = pw;
+                    }
+                    catch { /* uszkodzony base64 — pomiń samo hasło, serwer i tak importujemy */ }
+                }
+
+                result.Servers.Add(srv);
+            }
         }
 
         private static bool LocalIs(XElement e, string name) =>

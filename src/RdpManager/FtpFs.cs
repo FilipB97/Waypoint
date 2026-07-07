@@ -35,6 +35,7 @@ namespace RdpManager
             _c = new FtpClient(_server.Host, user, pass, port);
             _c.Config.EncryptionMode = _server.FtpEncryption == 1 ? FtpEncryptionMode.Implicit
                                      : _server.FtpEncryption == 2 ? FtpEncryptionMode.None
+                                     : _server.FtpEncryption == 3 ? FtpEncryptionMode.Auto
                                      : FtpEncryptionMode.Explicit;   // domyślnie jawne FTPS
             _c.Config.ValidateAnyCertificate = true;   // akceptuj self-signed (wewn. FTPS); pinowanie poza zakresem v1
             _c.Connect();

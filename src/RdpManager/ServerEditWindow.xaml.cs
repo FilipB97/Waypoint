@@ -63,7 +63,7 @@ namespace RdpManager
                 server.Protocol == RemoteProtocol.Ftp ? 7 : 0;
             KeyPathBox.Text = server.PrivateKeyPath ?? "";
             TunnelsBox.Text = server.Tunnels == null ? "" : string.Join(Environment.NewLine, server.Tunnels);
-            FtpTlsCombo.SelectedIndex = Math.Clamp(server.FtpEncryption, 0, 2);
+            FtpTlsCombo.SelectedIndex = Math.Clamp(server.FtpEncryption, 0, 3);
             FtpAnonCheck.IsChecked = server.FtpAnonymous;
             BuildColorSwatches();
             ApplyWinAuthState();

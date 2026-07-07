@@ -198,6 +198,7 @@
                             <ComboBoxItem Content="{DynamicResource S.se.ftp.tls.explicit}"/>
                             <ComboBoxItem Content="{DynamicResource S.se.ftp.tls.implicit}"/>
                             <ComboBoxItem Content="{DynamicResource S.se.ftp.tls.none}"/>
+                            <ComboBoxItem Content="{DynamicResource S.se.ftp.tls.auto}"/>
                         </ComboBox>
                     </StackPanel>
                 </StackPanel>

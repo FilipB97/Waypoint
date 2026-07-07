@@ -4336,11 +4336,17 @@ namespace RdpManager
             => ImportExternal(L("S.dlg.importrdm.title"), L("S.dlg.rdm.filter"),
                 text => ExternalImport.ParseRdm(text));
 
+        private void ImportFileZilla_Click(object sender, RoutedEventArgs e)
+            => ImportExternal(L("S.dlg.importfz.title"), L("S.dlg.fz.filter"),
+                text => ExternalImport.ParseFileZilla(text),
+                System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FileZilla"));
+
         // Wspólny przebieg importu z innego menedżera: plik → parser → dedup po host:port → zapis.
         // Hasła nie są przenoszone (mRemoteNG/RDCMan szyfrują je własnymi kluczami).
-        private void ImportExternal(string title, string filter, Func<string, ExternalImport.Result> parse)
+        private void ImportExternal(string title, string filter, Func<string, ExternalImport.Result> parse, string initialDir = null)
         {
             var dlg = new Microsoft.Win32.OpenFileDialog { Title = title, Filter = filter };
+            if (!string.IsNullOrEmpty(initialDir) && System.IO.Directory.Exists(initialDir)) dlg.InitialDirectory = initialDir;
             if (dlg.ShowDialog(this) != true) return;
 
             ExternalImport.Result result;
@@ -4355,12 +4361,18 @@ namespace RdpManager
 
             var existing = new HashSet<string>(
                 _vm.Servers.Select(s => (s.Host ?? "") + ":" + s.Port), StringComparer.OrdinalIgnoreCase);
-            int added = 0, skipped = 0;
+            int added = 0, skipped = 0, withPass = 0;
             foreach (var srv in result.Servers)
             {
                 if (!existing.Add(srv.Host + ":" + srv.Port)) { skipped++; continue; }
                 _vm.Add(srv);
                 added++;
+                if (result.Passwords.TryGetValue(srv.Id, out var pw) && !string.IsNullOrEmpty(pw))
+                {
+                    srv.SavePassword = true;
+                    SaveCredential(srv, pw);   // hasło → Credential Manager (DPAPI), nigdy do JSON
+                    withPass++;
+                }
             }
 
             if (added > 0)
@@ -4376,7 +4388,7 @@ namespace RdpManager
                 + (skipped > 0 ? "\n" + string.Format(L("S.msg.mstsc.skipped"), skipped) : "")
                 + (result.UnsupportedProtocol > 0
                     ? "\n" + string.Format(L("S.msg.import.unsupported"), result.UnsupportedProtocol) : "")
-                + "\n\n" + L("S.msg.import.nopass"),
+                + "\n\n" + (withPass > 0 ? string.Format(L("S.msg.import.withpass"), withPass) : L("S.msg.import.nopass")),
                 title, MessageBoxButton.OK,
                 added > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
