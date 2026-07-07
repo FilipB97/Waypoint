@@ -28,6 +28,9 @@ namespace RdpManager
     {
         private readonly List<Session> _sessions = new List<Session>();
         private Session _active;
+        // Podział ekranu (split-screen): dwie sesje RDP obok siebie. null/null = brak podziału.
+        // _active wskazuje panel z fokusem (podświetlenie karty / toolbar).
+        private Session _paneLeft, _paneRight;
 
         private readonly Dictionary<ServerInfo, Border> _serverRows = new Dictionary<ServerInfo, Border>();
         // Jak wiersz odzwierciedla stan „aktywny" — różni się między stylami (Domyślny: obrys+tło,
@@ -2160,6 +2163,10 @@ namespace RdpManager
         {
             HideFocusPeek();   // aktywacja sesji (np. klik z wysuniętego panelu) chowa peek (i przenosi panel z powrotem)
             _active = session;
+            // W podziale: aktywacja karty NIEbędącej panelem kończy podział (pokaż tę sesję pojedynczo).
+            // Klik w kartę panelu tylko przenosi fokus (podział zostaje).
+            if ((_paneLeft != null || _paneRight != null) && session != _paneLeft && session != _paneRight)
+            { _paneLeft = null; _paneRight = null; }
             // Zwinięta grupa pokazuje aktywną kartę — po zmianie aktywnej trzeba przebudować pasek.
             if (_tabGroups.Any(g => g.Collapsed)) RebuildTabStrip();
             RefreshTabStyles();
@@ -2173,6 +2180,31 @@ namespace RdpManager
             UpdateImmersive();
         }
 
+        // ---------- Podział ekranu (split-screen) ----------
+
+        /// <summary>Wchodzi w podział: sesja `right` w prawym panelu, aktywna (lub pierwsza inna) RDP w lewym.
+        /// Tylko RDP; wymaga dwóch różnych sesji RDP.</summary>
+        private void EnterSplit(Session right)
+        {
+            if (right == null || right.Server.Protocol != RemoteProtocol.Rdp) return;
+            Session left = (_active != null && _active != right && _active.Server.Protocol == RemoteProtocol.Rdp)
+                ? _active
+                : _sessions.FirstOrDefault(s => s != right && s.Server.Protocol == RemoteProtocol.Rdp);
+            if (left == null) return;   // potrzebne dwie sesje RDP
+            _paneLeft = left;
+            _paneRight = right;
+            Activate(right);            // fokus na nowy panel; Activate odświeży pasek/toolbar/status + UpdateCanvas (podział)
+        }
+
+        /// <summary>Kończy podział — pozostaje pojedynczy widok aktywnej sesji.</summary>
+        private void ExitSplit()
+        {
+            if (_paneLeft == null && _paneRight == null) return;
+            _paneLeft = null;
+            _paneRight = null;
+            UpdateCanvas();
+        }
+
         /// <summary>
         /// Steruje kanwą: aktywna kontrolka RDP widoczna tylko gdy połączona; w przeciwnym razie
         /// nakładka (spinner „Łączenie…" albo „Rozłączono" + przycisk ponownego połączenia).
@@ -2182,9 +2214,33 @@ namespace RdpManager
             bool has = _active != null;
             EmptyHint.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
 
+            // Tryb podziału: dwie sesje RDP widoczne naraz (lewy panel = kol.0, prawy = kol.2, splitter w kol.1).
+            if (_paneLeft != null && _paneRight != null)
+            {
+                foreach (var s in _sessions)
+                {
+                    bool pane = s == _paneLeft || s == _paneRight;
+                    if (pane) Grid.SetColumn(s.View, s == _paneRight ? 2 : 0);
+                    s.View.Visibility = (pane && s.Connected) ? Visibility.Visible : Visibility.Collapsed;
+                }
+                if (PaneColRight.Width.GridUnitType != GridUnitType.Star)   // wejście w podział = 50/50; drag splittera zachowany
+                    PaneColRight.Width = new GridLength(1, GridUnitType.Star);
+                PaneSplitter.Visibility = Visibility.Visible;
+                SessionOverlay.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // Bez podziału: pojedynczy widok w kol.0 (przywróć pełną szerokość po ewentualnym dragu splittera).
+            PaneColLeft.Width = new GridLength(1, GridUnitType.Star);
+            PaneColRight.Width = new GridLength(0);
+            PaneSplitter.Visibility = Visibility.Collapsed;
+
             // Terminale (SSH/Telnet/Serial): widoczne od razu — statusy łączenia piszą do siebie.
             foreach (var s in _sessions)
+            {
+                Grid.SetColumn(s.View, 0);
                 s.View.Visibility = (s == _active && (s.Connected || s.IsTerm)) ? Visibility.Visible : Visibility.Collapsed;
+            }
 
             if (!has)
             {
@@ -2444,7 +2500,17 @@ namespace RdpManager
                 tabMenu.Items.Add(broadcastItem);
                 tabMenu.Items.Add(new Separator());
             }
-            if (session.Server.Protocol == RemoteProtocol.Rdp) tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
+            MenuItem splitItem = null, unsplitItem = null;
+            if (session.Server.Protocol == RemoteProtocol.Rdp)
+            {
+                tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
+                splitItem = new MenuItem { Header = L("S.m.split") };      // ta sesja w prawym panelu, aktywna w lewym
+                splitItem.Click += (s, e) => EnterSplit(session);
+                unsplitItem = new MenuItem { Header = L("S.m.unsplit") };
+                unsplitItem.Click += (s, e) => ExitSplit();
+                tabMenu.Items.Add(splitItem);
+                tabMenu.Items.Add(unsplitItem);
+            }
             tabMenu.Items.Add(dupItem);
             tabMenu.Items.Add(new Separator());
             tabMenu.Items.Add(moveLeft);
@@ -2454,7 +2520,17 @@ namespace RdpManager
             tabMenu.Items.Add(closeThis);
             tab.ContextMenu = tabMenu;
             // Pozycje dot. grup zależą od bieżącego stanu (jakie grupy istnieją) — wstrzykiwane przy otwarciu.
-            tabMenu.Opened += (s, e) => PopulateTabGroupItems(tabMenu, session);
+            tabMenu.Opened += (s, e) =>
+            {
+                PopulateTabGroupItems(tabMenu, session);
+                if (splitItem != null)   // „Podziel" gdy są ≥2 sesje RDP i nie ma podziału; „Zakończ podział" w podziale
+                {
+                    bool split = _paneLeft != null && _paneRight != null;
+                    int rdp = _sessions.Count(x => x.Server.Protocol == RemoteProtocol.Rdp);
+                    splitItem.Visibility = (!split && rdp >= 2) ? Visibility.Visible : Visibility.Collapsed;
+                    unsplitItem.Visibility = split ? Visibility.Visible : Visibility.Collapsed;
+                }
+            };
         }
 
         /// <summary>Wysyła jedną komendę (z Enterem) do wszystkich połączonych sesji SSH naraz.</summary>
@@ -2954,6 +3030,14 @@ namespace RdpManager
             RebuildTabStrip();               // przebuduj pasek (kontenery grup + tytuły)
             PersistOpenSessions();
 
+            // Zamknięcie panelu podziału → zakończ podział i pokaż drugi panel pojedynczo.
+            Session survivingPane = session == _paneLeft ? _paneRight : (session == _paneRight ? _paneLeft : null);
+            if (survivingPane != null)
+            {
+                _paneLeft = null; _paneRight = null;
+                if (_sessions.Contains(survivingPane)) { _active = null; Activate(survivingPane); return; }
+            }
+
             if (_active == session)
             {
                 _active = null;
@@ -3267,7 +3351,8 @@ namespace RdpManager
             {
                 s.LoggedIn = true;
                 s.Resizer?.ApplyInitial();
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); try { s.Rdp.Focus(); } catch { } }
+                // Odśwież kanwę także dla panelu podziału (nie tylko aktywnej sesji), by po zalogowaniu stał się widoczny.
+                if (s == _active || s == _paneLeft || s == _paneRight) { UpdateToolbarMode(); UpdateCanvas(); try { s.Rdp.Focus(); } catch { } }
             };
             s.Rdp.OnDisconnected += (o, a) =>
             {
