@@ -615,6 +615,11 @@ namespace RdpManager
             if (hwnd == IntPtr.Zero) return;
             SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            // Klik już trafia, ale WPF nie odświeża sam stanu „mysz nad" (IsMouseOver) po zmianie ramki — przycisk
+            // nie podświetla się, dopóki nie zmusi go resize. Wymuszamy ponowną synchronizację myszy (re-hit-test
+            // pod kursorem), żeby podświetlenie działało od razu, bez zmniejszania/maksymalizowania okna.
+            Dispatcher.BeginInvoke(new Action(() => System.Windows.Input.Mouse.Synchronize()),
+                System.Windows.Threading.DispatcherPriority.Input);
         }
 
         // Jednorazowe zerowanie nie wystarcza: WPF-UI przywraca CaptionHeight po relayoutach, zmianie DPI
