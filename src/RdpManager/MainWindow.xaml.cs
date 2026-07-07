@@ -2130,6 +2130,9 @@ namespace RdpManager
                 session = new Session(server, rdp, host);
                 session.Resizer = new RdpDynamicResolution(session, host);
                 WireEvents(session);
+                // W podziale: klik w panel (RDP przejmuje fokus klawiatury) czyni go aktywnym — karta i toolbar podążają.
+                var focusTarget = session;
+                host.GotKeyboardFocus += (s, e) => OnPaneFocused(focusTarget);
             }
             if (EffSavedPw(server) && CredentialStore.TryRead(EffCredTarget(server), out var savedPw))
                 session.Password = savedPw;
@@ -2203,6 +2206,19 @@ namespace RdpManager
             _paneLeft = null;
             _paneRight = null;
             UpdateCanvas();
+        }
+
+        /// <summary>Klik w panel podziału (RDP przejął fokus klawiatury) → uczyń go aktywnym: podświetlenie
+        /// karty i toolbar podążają za panelem, w którym pracujesz.</summary>
+        private void OnPaneFocused(Session s)
+        {
+            if (_paneLeft == null && _paneRight == null) return;   // działa tylko w podziale
+            if ((s != _paneLeft && s != _paneRight) || _active == s) return;
+            _active = s;
+            RefreshTabStyles();
+            LoadToolbar(s);
+            UpdateToolbarEnabled();
+            SetStatus(s.Status, s.StatusKind);
         }
 
         /// <summary>
