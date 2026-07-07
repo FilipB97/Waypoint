@@ -31,6 +31,7 @@ namespace RdpManager
         // Podział ekranu (split-screen): dwie sesje RDP obok siebie. null/null = brak podziału.
         // _active wskazuje panel z fokusem (podświetlenie karty / toolbar).
         private Session _paneLeft, _paneRight;
+        private Session _splitDropSession;   // sesja przeciągana nad strefę upuszczenia podziału (fallback dla Drop)
 
         private readonly Dictionary<ServerInfo, Border> _serverRows = new Dictionary<ServerInfo, Border>();
         // Jak wiersz odzwierciedla stan „aktywny" — różni się między stylami (Domyślny: obrys+tło,
@@ -177,6 +178,15 @@ namespace RdpManager
             // Podświetlanie ikon paska kart w trybie skupienia (patrz StartTabStripRepaintPulse): przy ruchu
             // myszy nad paskiem wymuszamy przerysowanie, bo WPF sam go w tym trybie nie maluje.
             TabStripHost.MouseMove += (_, __) => StartTabStripRepaintPulse();
+            // Strefa upuszczenia podziału ekranu (pokazywana przy przeciąganiu karty w obszar sesji).
+            SplitDropBorder.DragOver += (s, e) => { e.Effects = DragDropEffects.Move; e.Handled = true; };
+            SplitDropBorder.Drop += (s, e) =>
+            {
+                e.Handled = true;
+                var dragged = (e.Data.GetData(typeof(Session)) as Session) ?? _splitDropSession;
+                HideSplitDropZone();
+                if (dragged != null) EnterSplit(dragged);
+            };
 
             CheckForUpdatesAsync();
             // Po wyrenderowaniu okna (modal przywracania potrzebuje widocznego właściciela).
@@ -2130,6 +2140,9 @@ namespace RdpManager
                 session = new Session(server, rdp, host);
                 session.Resizer = new RdpDynamicResolution(session, host);
                 WireEvents(session);
+                // W podziale: klik w panel (RDP przejmuje fokus klawiatury) czyni go aktywnym — karta i toolbar podążają.
+                var focusTarget = session;
+                host.GotKeyboardFocus += (s, e) => OnPaneFocused(focusTarget);
             }
             if (EffSavedPw(server) && CredentialStore.TryRead(EffCredTarget(server), out var savedPw))
                 session.Password = savedPw;
@@ -2205,6 +2218,40 @@ namespace RdpManager
             UpdateCanvas();
         }
 
+        /// <summary>Klik w panel podziału (RDP przejął fokus klawiatury) → uczyń go aktywnym: podświetlenie
+        /// karty i toolbar podążają za panelem, w którym pracujesz.</summary>
+        private void OnPaneFocused(Session s)
+        {
+            if (_paneLeft == null && _paneRight == null) return;   // działa tylko w podziale
+            if ((s != _paneLeft && s != _paneRight) || _active == s) return;
+            _active = s;
+            RefreshTabStyles();
+            LoadToolbar(s);
+            UpdateToolbarEnabled();
+            SetStatus(s.Status, s.StatusKind);
+        }
+
+        /// <summary>Pokazuje strefę upuszczenia podziału na czas przeciągania karty (tylko RDP, ≥2 sesje RDP,
+        /// bez aktywnego podziału, gdy jest gdzie ją położyć). Zwraca true, jeśli pokazano.</summary>
+        private bool ShowSplitDropZone(Session dragged)
+        {
+            if (dragged == null || dragged.Server.Protocol != RemoteProtocol.Rdp) return false;
+            if (_paneLeft != null || _paneRight != null) return false;                 // już podzielone
+            if (_sessions.Count(x => x.Server.Protocol == RemoteProtocol.Rdp) < 2) return false;
+            if (SessionContainer.ActualWidth < 100 || SessionContainer.ActualHeight < 100) return false;
+            SplitDropBorder.Width = SessionContainer.ActualWidth;    // dopasuj do obszaru sesji (host renderuje 1:1)
+            SplitDropBorder.Height = SessionContainer.ActualHeight;
+            _splitDropSession = dragged;
+            SplitDropZone.IsOpen = true;
+            return true;
+        }
+
+        private void HideSplitDropZone()
+        {
+            SplitDropZone.IsOpen = false;
+            _splitDropSession = null;
+        }
+
         /// <summary>
         /// Steruje kanwą: aktywna kontrolka RDP widoczna tylko gdy połączona; w przeciwnym razie
         /// nakładka (spinner „Łączenie…" albo „Rozłączono" + przycisk ponownego połączenia).
@@ -2221,6 +2268,7 @@ namespace RdpManager
                 {
                     bool pane = s == _paneLeft || s == _paneRight;
                     if (pane) Grid.SetColumn(s.View, s == _paneRight ? 2 : 0);
+                    if (s.Resizer != null) s.Resizer.FitToWindow = pane;   // panele skalują pulpit do swojej połówki (zawsze się mieści)
                     s.View.Visibility = (pane && s.Connected) ? Visibility.Visible : Visibility.Collapsed;
                 }
                 if (PaneColRight.Width.GridUnitType != GridUnitType.Star)   // wejście w podział = 50/50; drag splittera zachowany
@@ -2239,6 +2287,7 @@ namespace RdpManager
             foreach (var s in _sessions)
             {
                 Grid.SetColumn(s.View, 0);
+                if (s.Resizer != null) s.Resizer.FitToWindow = false;   // pojedynczy widok = natywna, ostra rozdzielczość
                 s.View.Visibility = (s == _active && (s.Connected || s.IsTerm)) ? Visibility.Visible : Visibility.Collapsed;
             }
 
@@ -2457,9 +2506,10 @@ namespace RdpManager
                     Math.Abs(pos.Y - _tabDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
                 _tabDidDrag = true;
                 tab.Opacity = 0.5;
+                bool zone = ShowSplitDropZone(session);   // „upuść w obszar sesji, aby podzielić" (tylko RDP, ≥2 sesje)
                 try { DragDrop.DoDragDrop(tab, session, DragDropEffects.Move); }
                 catch { }
-                finally { tab.Opacity = 1.0; _tabDragSession = null; }
+                finally { tab.Opacity = 1.0; _tabDragSession = null; if (zone) HideSplitDropZone(); }
             };
             tab.DragOver += (s, e) =>
             {

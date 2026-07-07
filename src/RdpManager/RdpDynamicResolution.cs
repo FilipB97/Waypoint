@@ -52,6 +52,23 @@ namespace RdpManager
         /// <summary>Wołać z OnLoginComplete/OnConnected — pierwszy legalny moment na resize.</summary>
         public void ApplyInitial() => Kick();
 
+        private bool _fit;
+        /// <summary>„Dopasuj do okna": host skaluje pulpit do swojego rozmiaru (SmartSizing), więc pulpit zawsze
+        /// się mieści — także gdy serwer nie renegocjuje rozdzielczości (wąski panel podziału ekranu). Gdy
+        /// rozdzielczość i tak pasuje do panelu, SmartSizing nic nie skaluje → ostry render. Ustawiane przez
+        /// UpdateCanvas wg trybu podziału (panele = true, pojedynczy widok = false).</summary>
+        public bool FitToWindow
+        {
+            get => _fit;
+            set
+            {
+                if (_fit == value) return;
+                _fit = value;
+                TrySetSmartSizing(_session.Rdp, value);   // zastosuj od razu
+                if (!value) Kick();                        // powrót do natywnej rozdzielczości (re-negocjacja)
+            }
+        }
+
         /// <summary>
         /// Ustawia rozdzielczość sesji DOKŁADNIE na podane piksele fizyczne, z pominięciem pomiaru
         /// hosta (DIP×DPI). Używane przy wejściu w pełny ekran, gdzie znamy natywny rozmiar monitora
@@ -121,7 +138,7 @@ namespace RdpManager
             {
                 // Piksele fizyczne "wbite" w rozdzielczość => serwer bez dodatkowego skalowania (100/100).
                 rdp.UpdateSessionDisplaySettings((uint)w, (uint)h, 0u, 0u, 0u, 100u, 100u);
-                TrySetSmartSizing(rdp, false);   // happy-path: natywny, ostry render
+                TrySetSmartSizing(rdp, _fit);   // natywny (ostry); w „dopasuj do okna" SmartSizing dobija resztę
                 _lastW = w; _lastH = h;
             }
             catch (COMException)
