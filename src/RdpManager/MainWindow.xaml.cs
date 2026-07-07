@@ -1469,6 +1469,7 @@ namespace RdpManager
             RemoteProtocol.Serial => "Serial (COM)",
             RemoteProtocol.Http => "WWW",
             RemoteProtocol.Vnc => "VNC",
+            RemoteProtocol.Sftp => "SFTP",
             _ => p.ToString()
         };
 
@@ -1972,7 +1973,7 @@ namespace RdpManager
             AddCopy("S.m.copy.host", () => server.Host);
             if (server.Protocol != RemoteProtocol.Http)
                 AddCopy("S.m.copy.port", () => server.Port.ToString());
-            if (rdp || server.Protocol == RemoteProtocol.Ssh)
+            if (rdp || server.Protocol == RemoteProtocol.Ssh || server.Protocol == RemoteProtocol.Sftp)
             {
                 AddCopy("S.m.copy.user", () => EffUser(server));
                 if (rdp) AddCopy("S.m.copy.domain", () => EffDomain(server));
@@ -1996,7 +1997,7 @@ namespace RdpManager
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
             if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
-            if (rdp || server.Protocol == RemoteProtocol.Ssh) menu.Items.Add(connectAsItem);
+            if (rdp || server.Protocol == RemoteProtocol.Ssh || server.Protocol == RemoteProtocol.Sftp) menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(dupItem);
             menu.Items.Add(copyMenu);
@@ -2146,24 +2147,24 @@ namespace RdpManager
             {
                 // SSH: terminal (WebView2 + xterm.js) zamiast kontrolki RDP; reszta cyklu życia wspólna.
                 var term = new SshTerminalControl();
-                // TOFU: pytanie o klucz hosta przychodzi z wątku SSH — pokaż dialog na wątku UI.
-                term.TrustHostKey = (hostPort, fp, changed) => (bool)Dispatcher.Invoke(new Func<bool>(() =>
-                    MessageBox.Show(this,
-                        string.Format(L(changed ? "S.ssh.hostkey.changed" : "S.ssh.hostkey.new"), hostPort, fp),
-                        L("S.ssh.hostkey.title"), MessageBoxButton.YesNo,
-                        changed ? MessageBoxImage.Warning : MessageBoxImage.Question,
-                        changed ? MessageBoxResult.No : MessageBoxResult.Yes) == MessageBoxResult.Yes));
-                // Zaszyfrowany klucz prywatny → maskowany prompt o passphrase (null = anuluj).
-                term.RequestKeyPassphrase = path => (string)Dispatcher.Invoke(new Func<string>(() =>
-                {
-                    var dlg = new InputDialog(L("S.ssh.keypass.title"),
-                        string.Format(L("S.ssh.keypass.label"), System.IO.Path.GetFileName(path)),
-                        "", masked: true) { Owner = this };
-                    return dlg.ShowDialog() == true ? dlg.Value : null;
-                }));
+                term.TrustHostKey = AskTrustHostKey;              // TOFU klucza hosta (dialog na wątku UI)
+                term.RequestKeyPassphrase = AskKeyPassphrase;     // zaszyfrowany klucz → prompt o passphrase
                 SessionContainer.Children.Add(term);
                 session = new Session(server, term);
                 WireTermEvents(session);
+            }
+            else if (server.Protocol == RemoteProtocol.Sftp)
+            {
+                // SFTP jako osobny protokół: panel plików = widok sesji; łączy się leniwie (jak terminal).
+                var conn = new SshConnectionFactory
+                {
+                    TrustHostKey = AskTrustHostKey,
+                    RequestKeyPassphrase = AskKeyPassphrase
+                };
+                var panel = new FileTransferPanel(() => conn.NewFs());
+                SessionContainer.Children.Add(panel);
+                session = new Session(server, panel, conn);
+                WireFilesEvents(session);
             }
             else if (server.Protocol == RemoteProtocol.Vnc)
             {
@@ -2221,6 +2222,7 @@ namespace RdpManager
                 case RemoteProtocol.Serial:
                     return true;   // logowanie (jeśli jest) dzieje się w terminalu
                 case RemoteProtocol.Ssh:
+                case RemoteProtocol.Sftp:
                     return !string.IsNullOrWhiteSpace(EffUser(s.Server))
                            && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath));
                 default:
@@ -2344,7 +2346,7 @@ namespace RdpManager
             {
                 Grid.SetColumn(s.View, 0);
                 if (s.Resizer != null) s.Resizer.FitToWindow = false;   // pojedynczy widok = natywna, ostra rozdzielczość
-                s.View.Visibility = (s == _active && (s.Connected || s.IsTerm)) ? Visibility.Visible : Visibility.Collapsed;
+                s.View.Visibility = (s == _active && (s.Connected || s.IsTerm || s.IsFiles)) ? Visibility.Visible : Visibility.Collapsed;
             }
 
             if (!has)
@@ -2353,8 +2355,8 @@ namespace RdpManager
                 return;
             }
 
-            // Nakładka nie dla terminali — ich HWND i tak by ją zakrył; komunikaty idą do terminala.
-            if (_active.Connected || _active.IsTerm)
+            // Nakładka nie dla terminali (HWND by ją zakrył) ani plików (panel ma własny pasek statusu).
+            if (_active.Connected || _active.IsTerm || _active.IsFiles)
             {
                 SessionOverlay.Visibility = Visibility.Collapsed;
                 return;
@@ -2745,6 +2747,7 @@ namespace RdpManager
                 case RemoteProtocol.Ssh: return "ssh://" + s.Host;
                 case RemoteProtocol.Telnet: return "telnet://" + s.Host;
                 case RemoteProtocol.Vnc: return "vnc://" + s.Host;
+                case RemoteProtocol.Sftp: return "sftp://" + s.Host;
                 case RemoteProtocol.Serial: return s.Host + " @" + s.Port;   // COM3 @115200
                 default: return s.Host;
             }
@@ -3122,6 +3125,11 @@ namespace RdpManager
                 SessionContainer.Children.Remove(session.Host);
                 try { session.Host.Dispose(); } catch { }
             }
+            else if (session.IsFiles)
+            {
+                try { session.Files.DisposePanel(); } catch { }
+                SessionContainer.Children.Remove(session.Files);
+            }
             else
             {
                 try { session.Rdp.Disconnect(); } catch { /* nie połączona */ }
@@ -3220,6 +3228,7 @@ namespace RdpManager
         {
             if (s.IsTerm) { ConnectTerm(s); return; }
             if (s.IsVnc) { ConnectVnc(s); return; }
+            if (s.IsFiles) { ConnectFiles(s); return; }
 
             try { s.Rdp.Disconnect(); } catch { /* nie połączona */ }
             s.LoggedIn = false;
@@ -3460,6 +3469,58 @@ namespace RdpManager
                     string.IsNullOrWhiteSpace(reason) ? s.Server.Protocol.ToString().ToLowerInvariant() : reason);
                 s.Term.WriteLocal("\r\n\x1b[91m" + msg + "\x1b[0m\r\n");
                 SetSessionStatus(s, msg, StatusKind.Error);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
+            }));
+        }
+
+        // Wspólne prompty klucza hosta (TOFU) i passphrase — używane przez sesje SSH i SFTP.
+        private bool AskTrustHostKey(string hostPort, string fp, bool changed) => (bool)Dispatcher.Invoke(new Func<bool>(() =>
+            MessageBox.Show(this,
+                string.Format(L(changed ? "S.ssh.hostkey.changed" : "S.ssh.hostkey.new"), hostPort, fp),
+                L("S.ssh.hostkey.title"), MessageBoxButton.YesNo,
+                changed ? MessageBoxImage.Warning : MessageBoxImage.Question,
+                changed ? MessageBoxResult.No : MessageBoxResult.Yes) == MessageBoxResult.Yes));
+
+        private string AskKeyPassphrase(string path) => (string)Dispatcher.Invoke(new Func<string>(() =>
+        {
+            var dlg = new InputDialog(L("S.ssh.keypass.title"),
+                string.Format(L("S.ssh.keypass.label"), System.IO.Path.GetFileName(path)),
+                "", masked: true) { Owner = this };
+            return dlg.ShowDialog() == true ? dlg.Value : null;
+        }));
+
+        // SFTP jako osobny protokół: panel łączy się leniwie; identyczność (login z profilu) + hasło ustawiamy tutaj.
+        private void ConnectFiles(Session s)
+        {
+            if (string.IsNullOrWhiteSpace(EffUser(s.Server))) { PromptAndConnect(s, null); return; }
+            SetTabStatus(s, ServerStatus.Idle);
+            SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
+            if (s == _active) UpdateCanvas();
+            s.FilesConn.SetIdentity(ConnectIdentity(s.Server), s.Password);
+            s.Files.RefreshAsync();   // łączy leniwie; Connected/Failed aktualizują kartę i status
+        }
+
+        /// <summary>Zdarzenia panelu plików (SFTP/FTP) → stan sesji/karty (marshalowane na wątek UI).</summary>
+        private void WireFilesEvents(Session s)
+        {
+            s.Files.Connected += () => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                s.Connected = true;
+                RecordRecent(s.Server);
+                ConnectionLog.Append("CONNECTED", s.Server);
+                SetTabStatus(s, ServerStatus.Online);
+                SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
+                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
+            }));
+            s.Files.Failed += reason => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                bool was = s.Connected;
+                s.Connected = false;
+                SetTabStatus(s, ServerStatus.Offline);
+                ConnectionLog.Append(was ? "DISCONNECTED" : "FAILED", s.Server);
+                if (!s.Server.SavePassword) s.Password = "";   // hasło nie zostaje w pamięci (jak przy RDP/SSH)
+                SetSessionStatus(s, string.Format(L("S.st.disconnected"),
+                    string.IsNullOrWhiteSpace(reason) ? "sftp" : reason), StatusKind.Error);
                 if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
             }));
         }

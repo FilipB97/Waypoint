@@ -28,8 +28,17 @@ namespace RdpManager
         public SshTerminalControl Ssh => Term as SshTerminalControl;
         public bool IsSsh => Term is SshTerminalControl;
 
-        /// <summary>Element wizualny sesji w kontenerze (host RDP albo terminal).</summary>
-        public FrameworkElement View => IsTerm ? (FrameworkElement)Term : Host;
+        /// <summary>Panel plików (SFTP/FTP) — null dla pozostałych protokołów.</summary>
+        public FileTransferPanel Files { get; }
+        public bool IsFiles => Files != null;
+
+        /// <summary>Konektor sesji plikowej: poświadczenia + fabryka <see cref="IRemoteFs"/> (null poza SFTP/FTP).</summary>
+        public IFileConnector FilesConn { get; }
+
+        /// <summary>Element wizualny sesji w kontenerze (host RDP/VNC, terminal albo panel plików).</summary>
+        public FrameworkElement View => IsTerm ? (FrameworkElement)Term
+                                      : IsFiles ? (FrameworkElement)Files
+                                      : Host;
 
         public FrameworkElement TabButton { get; set; }
         public bool Connected { get; set; }
@@ -66,6 +75,14 @@ namespace RdpManager
             Server = server;
             Vnc = vnc;
             Host = host;
+        }
+
+        /// <summary>Sesja plikowa (SFTP/FTP) — panel plików zamiast kontrolki/terminala; łączy się leniwie.</summary>
+        public Session(ServerInfo server, FileTransferPanel files, IFileConnector conn)
+        {
+            Server = server;
+            Files = files;
+            FilesConn = conn;
         }
     }
 

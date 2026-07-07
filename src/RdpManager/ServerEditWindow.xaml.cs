@@ -57,7 +57,9 @@ namespace RdpManager
                 server.Protocol == RemoteProtocol.Ssh ? 1 :
                 server.Protocol == RemoteProtocol.Telnet ? 2 :
                 server.Protocol == RemoteProtocol.Serial ? 3 :
-                server.Protocol == RemoteProtocol.Http ? 4 : 0;
+                server.Protocol == RemoteProtocol.Http ? 4 :
+                server.Protocol == RemoteProtocol.Vnc ? 5 :
+                server.Protocol == RemoteProtocol.Sftp ? 6 : 0;
             KeyPathBox.Text = server.PrivateKeyPath ?? "";
             TunnelsBox.Text = server.Tunnels == null ? "" : string.Join(Environment.NewLine, server.Tunnels);
             BuildColorSwatches();
@@ -191,7 +193,7 @@ namespace RdpManager
 
         private static int DefaultPortFor(int protocolIndex)
             => protocolIndex == 1 ? 22 : protocolIndex == 2 ? 23 : protocolIndex == 3 ? 115200
-             : protocolIndex == 4 ? 443 : protocolIndex == 5 ? 5900 : 3389;
+             : protocolIndex == 4 ? 443 : protocolIndex == 5 ? 5900 : protocolIndex == 6 ? 22 : 3389;
 
         // Widoczność pól zależnie od protokołu: RDP = wszystko; SSH = poświadczenia + klucz + tunele;
         // Telnet/Serial = bez poświadczeń (logowanie w terminalu); WWW = tylko URL (bez portu).
@@ -199,9 +201,9 @@ namespace RdpManager
         private void ApplyProtocolState()
         {
             int idx = ProtocolCombo.SelectedIndex;
-            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3, http = idx == 4, vnc = idx == 5;
-            bool user = rdp || ssh;          // login/domena (VNC uwierzytelnia samym hasłem)
-            bool pass = rdp || ssh || vnc;   // pole hasła
+            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3, http = idx == 4, vnc = idx == 5, sftp = idx == 6;
+            bool user = rdp || ssh || sftp;  // login (VNC uwierzytelnia samym hasłem; SFTP ma login)
+            bool pass = rdp || ssh || vnc || sftp;   // pole hasła
 
             var rdpVis = rdp ? Visibility.Visible : Visibility.Collapsed;
             RdpCard.Visibility = rdpVis;               // cała karta „Opcje RDP" (bez pustego nagłówka dla nie-RDP)
@@ -211,7 +213,8 @@ namespace RdpManager
             RedirHeader.Visibility = rdpVis;
             RdpOptionsPanel.Visibility = rdpVis;
 
-            KeyPathPanel.Visibility = ssh ? Visibility.Visible : Visibility.Collapsed;
+            KeyPathPanel.Visibility = (ssh || sftp) ? Visibility.Visible : Visibility.Collapsed;   // klucz: SSH i SFTP
+            TunnelsPanel.Visibility = ssh ? Visibility.Visible : Visibility.Collapsed;             // tunele ssh -L: tylko powłoka SSH
 
             AuthCard.Visibility = pass ? Visibility.Visible : Visibility.Collapsed;   // Telnet/Serial/WWW logują się inaczej
             ProfileRow.Visibility = user ? Visibility.Visible : Visibility.Collapsed; // profil (login/domena) tylko dla RDP/SSH
@@ -315,7 +318,8 @@ namespace RdpManager
             bool ssh = protocol == RemoteProtocol.Ssh;
             bool rdp = protocol == RemoteProtocol.Rdp;
             bool vnc = protocol == RemoteProtocol.Vnc;
-            bool creds = rdp || ssh;         // login/domena — Telnet/Serial/WWW/VNC nie mają loginu w modelu
+            bool sftp = protocol == RemoteProtocol.Sftp;
+            bool creds = rdp || ssh || sftp; // login — Telnet/Serial/WWW/VNC nie mają loginu w modelu
             bool passProto = creds || vnc;   // hasło (VNC uwierzytelnia samym hasłem)
 
             // Tunele i MAC: waliduj PRZED zapisem czegokolwiek (błąd = nic się nie zmienia).
@@ -334,7 +338,7 @@ namespace RdpManager
                 return;
             }
             // Port sieciowy 1–65535 (RDP/SSH/Telnet/VNC). Serial = baud (dowolna liczba), WWW = brak portu — pomijamy.
-            bool netPort = rdp || ssh || vnc || protocol == RemoteProtocol.Telnet;
+            bool netPort = rdp || ssh || vnc || sftp || protocol == RemoteProtocol.Telnet;
             if (netPort && (!int.TryParse(PortBox.Text.Trim(), out var portVal) || portVal < 1 || portVal > 65535))
             {
                 MessageBox.Show(LocalizationManager.S("S.se.port.bad"),
@@ -342,12 +346,12 @@ namespace RdpManager
                 return;
             }
             // Klucz SSH: informacja (nie blokada) gdy podany plik nie istnieje — ścieżka bywa środowiskowa/sieciowa.
-            if (ssh && KeyPathBox.Text.Trim().Length > 0 && !System.IO.File.Exists(KeyPathBox.Text.Trim()))
+            if ((ssh || sftp) && KeyPathBox.Text.Trim().Length > 0 && !System.IO.File.Exists(KeyPathBox.Text.Trim()))
                 MessageBox.Show(string.Format(LocalizationManager.S("S.se.keypath.missing"), KeyPathBox.Text.Trim()),
                     LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Information);
 
             _server.Protocol = protocol;
-            _server.PrivateKeyPath = ssh ? KeyPathBox.Text.Trim() : "";
+            _server.PrivateKeyPath = (ssh || sftp) ? KeyPathBox.Text.Trim() : "";
             _server.Tunnels = ssh ? tunnels : new List<string>();
 
             _server.Name = NameBox.Text.Trim();
