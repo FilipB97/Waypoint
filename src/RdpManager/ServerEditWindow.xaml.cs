@@ -42,6 +42,7 @@ namespace RdpManager
             RemoteAppArgsBox.Text = server.RemoteAppArgs ?? "";
             MacBox.Text = server.MacAddress ?? "";
             TagsBox.Text = server.Tags == null ? "" : string.Join(", ", server.Tags);
+            NotesBox.Text = server.Notes ?? "";
             EdAudio.SelectedIndex = Math.Clamp(server.AudioMode, 0, 2);
             EdAuthLevel.SelectedIndex = Math.Clamp(server.AuthenticationLevel, 0, 2);
             GatewayHostBox.Text = server.GatewayHostname ?? "";
@@ -372,6 +373,7 @@ namespace RdpManager
             _server.RemoteAppArgs = rdp ? RemoteAppArgsBox.Text.Trim() : "";
             _server.MacAddress = macText;
             _server.Tags = ParseTags(TagsBox.Text);
+            _server.Notes = NotesBox.Text.Trim();
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
             _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;
             _server.GatewayHostname = GatewayHostBox.Text.Trim();

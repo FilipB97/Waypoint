@@ -38,6 +38,9 @@ namespace RdpManager.Models
         /// <summary>Etykiety/tagi do filtrowania w wyszukiwarce (np. „prod", „klientA"). Nie wpływają na łączenie.</summary>
         public List<string> Tags { get; set; } = new List<string>();
 
+        /// <summary>Dowolna notatka o serwerze (widoczna w tooltipie wiersza i w edytorze). Nie wpływa na łączenie.</summary>
+        public string Notes { get; set; } = "";
+
         /// <summary>Inicjały do "awatara" na liście (jak w mockupie). Liczone z nazwy przy renderowaniu.</summary>
         public string Initials { get; set; }
 

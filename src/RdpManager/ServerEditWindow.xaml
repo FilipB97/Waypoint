@@ -109,6 +109,13 @@
                         <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.iconcolor}"/>
                         <WrapPanel x:Name="ColorSwatches"/>
                     </StackPanel>
+
+                    <StackPanel Margin="0,10,0,0">
+                        <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.notes}"/>
+                        <ui:TextBox x:Name="NotesBox" AcceptsReturn="True" TextWrapping="Wrap"
+                                    MinHeight="60" MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                                    PlaceholderText="{DynamicResource S.se.notes.ph}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
