@@ -31,5 +31,18 @@ namespace RdpManager
             try { DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref none, sizeof(uint)); }
             catch { /* starszy DWM bez tego atrybutu — bez znaczenia */ }
         }
+
+        /// <summary>Zdejmuje ramkę TERAZ i UTRZYMUJE ją zdjętą. Jednorazowe zdjęcie (na Loaded) potrafiło
+        /// „wrócić": WPF-UI po zastosowaniu motywu/akcentu (kobalt z #49) oraz sam Windows przemalowują
+        /// krawędź okna PO Loaded i przy każdej aktywacji. Dobijamy więc ramkę po pełnym wyrenderowaniu
+        /// (ApplicationIdle — po tym, jak WPF-UI skończy) oraz przy każdej ponownej aktywacji okna.</summary>
+        public static void Keep(Window window)
+        {
+            if (window == null) return;
+            Neutralize(window);
+            window.Activated += (_, __) => Neutralize(window);
+            window.Dispatcher.BeginInvoke(new Action(() => Neutralize(window)),
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
     }
 }
