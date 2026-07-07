@@ -450,7 +450,7 @@ namespace RdpManager
 
             if (view == "Dashboard") BuildDashboard();
             else if (view == "Recent") BuildRecent();
-            else if (view == "Settings") LoadSettingsForm();
+            else if (view == "Settings") { LoadSettingsForm(); SettingsSearch.Text = ""; }   // wejście = wyczyść filtr (pokaż wszystkie karty)
 
             UpdateImmersive();
         }
@@ -1118,6 +1118,31 @@ namespace RdpManager
             // Styl widoku (Domyślny/Minimalny) i motyw zmieniają wygląd wierszy/kart — przerysuj oba na żywo.
             RenderTree(SearchBox.Text);
             RebuildTabStrip();
+        }
+
+        // Filtr Ustawień: chowa karty, których zagregowany (zlokalizowany) tekst nie zawiera zapytania.
+        // Tekst czytamy z drzewa LOGICZNEGO (działa bez rozwijania list i bez renderu; łapie etykiety,
+        // treści checkboxów i pozycje list rozwijanych). Kilka kart — koszt pomijalny, bez cache.
+        private void SettingsSearch_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string q = (SettingsSearch.Text ?? "").Trim().ToLowerInvariant();
+            foreach (var child in SettingsPanel.Children)
+            {
+                if (!(child is Border card)) continue;   // pomiń tytuł i samo pole wyszukiwania
+                if (q.Length == 0) { card.Visibility = Visibility.Visible; continue; }
+                var sb = new System.Text.StringBuilder();
+                CollectSettingsText(card, sb);
+                card.Visibility = sb.ToString().ToLowerInvariant().Contains(q) ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        private static void CollectSettingsText(object node, System.Text.StringBuilder sb)
+        {
+            if (node is string s) sb.Append(s).Append(' ');
+            else if (node is TextBlock tb) sb.Append(tb.Text).Append(' ');
+            if (node is DependencyObject d)
+                foreach (var kid in LogicalTreeHelper.GetChildren(d))
+                    CollectSettingsText(kid, sb);
         }
 
         // Ustawienia interfejsu (motyw / język / styl listy) działają OD RAZU po zmianie — bez scrollowania do
