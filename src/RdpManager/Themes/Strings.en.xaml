@@ -34,6 +34,7 @@
 
     <sys:String x:Key="S.view.recent">Recent connections</sys:String>
 
+    <sys:String x:Key="S.set.search">Search settings…</sys:String>
     <sys:String x:Key="S.set.iface">Interface</sys:String>
     <sys:String x:Key="S.set.uiscale">UI scale (%) — also Ctrl + mouse wheel</sys:String>
     <sys:String x:Key="S.set.bardelay">Fullscreen bar delay (ms)</sys:String>

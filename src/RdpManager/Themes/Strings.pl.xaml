@@ -34,6 +34,7 @@
 
     <sys:String x:Key="S.view.recent">Ostatnie połączenia</sys:String>
 
+    <sys:String x:Key="S.set.search">Szukaj w ustawieniach…</sys:String>
     <sys:String x:Key="S.set.iface">Interfejs</sys:String>
     <sys:String x:Key="S.set.uiscale">Skala interfejsu (%) — także Ctrl + kółko myszy</sys:String>
     <sys:String x:Key="S.set.bardelay">Opóźnienie paska pełnoekranowego (ms)</sys:String>

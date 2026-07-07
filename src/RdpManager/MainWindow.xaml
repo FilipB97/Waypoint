@@ -370,8 +370,12 @@
 
             <!-- Ustawienia -->
             <ScrollViewer x:Name="SettingsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">
-                <StackPanel Margin="28,24" MaxWidth="600" HorizontalAlignment="Left">
+                <StackPanel x:Name="SettingsPanel" Margin="28,24" MaxWidth="600" HorizontalAlignment="Left">
                     <TextBlock Text="{DynamicResource S.nav.settings}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+                    <ui:TextBox x:Name="SettingsSearch" PlaceholderText="{DynamicResource S.set.search}" Margin="0,0,0,14"
+                                MaxWidth="360" HorizontalAlignment="Left" TextChanged="SettingsSearch_TextChanged">
+                        <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
+                    </ui:TextBox>
 
                     <!-- Interfejs -->
                     <Border Style="{DynamicResource Card}">
