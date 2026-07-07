@@ -134,6 +134,9 @@
     <sys:String x:Key="S.fs.restore">Przywróć okno</sys:String>
     <sys:String x:Key="S.fs.opensessions">OTWARTE SESJE</sys:String>
     <sys:String x:Key="S.fs.allservers">WSZYSTKIE SERWERY</sys:String>
+    <sys:String x:Key="S.cmd.placeholder">Szukaj sesji, serwera lub polecenia…</sys:String>
+    <sys:String x:Key="S.cmd.actions">POLECENIA</sys:String>
+    <sys:String x:Key="S.cmd.toggletheme">Przełącz motyw (jasny/ciemny)</sys:String>
 
     <!-- okno sesji -->
     <sys:String x:Key="S.dock">Zadokuj do karty</sys:String>

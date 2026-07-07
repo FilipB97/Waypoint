@@ -3685,9 +3685,16 @@ namespace RdpManager
 
         // ---------- Szybkie przełączanie z paska kart (tryb skupienia) ----------
 
-        private Action _qsFirstAction;   // Enter w szukajce = pierwsze trafienie
+        private Action _qsFirstAction;   // Enter w szukajce (bez zaznaczenia strzałkami) = pierwsze trafienie
 
-        private void QuickSwitch_Click(object sender, RoutedEventArgs e)
+        // Paleta poleceń (Ctrl+P): płaska lista wierszy do nawigacji klawiaturą (Góra/Dół) + indeks zaznaczenia.
+        private readonly List<(Border row, Brush rest, Action go)> _paletteFlat = new List<(Border, Brush, Action)>();
+        private int _paletteSel = -1;
+
+        // Wspólne wejście do palety poleceń: z przycisku na pasku (tryb skupienia) i z Ctrl+P (tryb zwykły).
+        private void QuickSwitch_Click(object sender, RoutedEventArgs e) => OpenCommandPalette();
+
+        private void OpenCommandPalette()
         {
             QuickSwitchSearch.Text = "";
             BuildQuickSwitchLists("");
@@ -3700,35 +3707,156 @@ namespace RdpManager
 
         private void QuickSwitchSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (e.Key == Key.Enter && _qsFirstAction != null) { _qsFirstAction(); e.Handled = true; }
+            if (e.Key == Key.Down) { MovePaletteSel(1); e.Handled = true; }
+            else if (e.Key == Key.Up) { MovePaletteSel(-1); e.Handled = true; }
+            else if (e.Key == Key.Enter)
+            {
+                var go = (_paletteSel >= 0 && _paletteSel < _paletteFlat.Count) ? _paletteFlat[_paletteSel].go : _qsFirstAction;
+                if (go != null) { go(); e.Handled = true; }
+            }
             else if (e.Key == Key.Escape) { QuickSwitchPopup.IsOpen = false; e.Handled = true; }
         }
 
         private void BuildQuickSwitchLists(string filter)
         {
-            filter = (filter ?? "").Trim().ToLowerInvariant();
+            string f = (filter ?? "").Trim().ToLowerInvariant();
             QsSessions.Children.Clear();
             QsServers.Children.Clear();
+            QsActions.Children.Clear();
+            _paletteFlat.Clear();
+            _paletteSel = -1;
             _qsFirstAction = null;
 
-            foreach (var s in _sessions)
+            foreach (var s in RankServers(_sessions, x => x.Server, f))
             {
-                if (!RdpUtils.MatchesFilter(s.Server, filter)) continue;
                 var session = s;
                 Action go = () => { QuickSwitchPopup.IsOpen = false; Activate(session); };
                 if (_qsFirstAction == null && s != _active) _qsFirstAction = go;
-                QsSessions.Children.Add(BuildFlyoutRow(s.Server,
-                    s.Connected ? ServerStatus.Online : ServerStatus.Offline, s == _active, go));
+                AddPaletteRow(QsSessions, (Border)BuildFlyoutRow(s.Server,
+                    s.Connected ? ServerStatus.Online : ServerStatus.Offline, s == _active, go), go);
             }
 
-            foreach (var server in _vm.Servers)
+            foreach (var server in RankServers(_vm.Servers, x => x, f))
             {
-                if (!RdpUtils.MatchesFilter(server, filter)) continue;
                 var srv = server;
                 Action go = () => { QuickSwitchPopup.IsOpen = false; LaunchServer(srv, true); };
                 if (_qsFirstAction == null) _qsFirstAction = go;
-                QsServers.Children.Add(BuildFlyoutRow(server, server.Status, false, go));
+                AddPaletteRow(QsServers, (Border)BuildFlyoutRow(server, server.Status, false, go), go);
             }
+
+            foreach (var item in RankActions(f))
+            {
+                var act = item.act;
+                Action go = () => { QuickSwitchPopup.IsOpen = false; act(); };
+                if (_qsFirstAction == null) _qsFirstAction = go;
+                AddPaletteRow(QsActions, (Border)BuildActionRow(item.label, go), go);
+            }
+
+            // Chowaj nagłówek pustej grupy (mniej szumu przy filtrowaniu).
+            QsSessionsHeader.Visibility = QsSessions.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            QsServersHeader.Visibility = QsServers.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            QsActionsHeader.Visibility = QsActions.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Gating po nazwie/hoście/#tag (MatchesFilter) + ranking po Score (dokładne>prefiks>granica>podciąg).
+        private IEnumerable<T> RankServers<T>(IEnumerable<T> items, Func<T, ServerInfo> sel, string filter)
+        {
+            var matched = new List<(T item, int score)>();
+            foreach (var it in items)
+            {
+                var srv = sel(it);
+                if (!RdpUtils.MatchesFilter(srv, filter)) continue;
+                int score = Math.Max(Core.CommandPalette.Score(srv.Name ?? "", filter),
+                                     Core.CommandPalette.Score(srv.Host ?? "", filter));
+                matched.Add((it, score));
+            }
+            return matched.OrderByDescending(m => m.score).Select(m => m.item);
+        }
+
+        // Akcje palety: nawigacja + dodaj/szybkie/import + motyw, oraz akcje aktywnego serwera (gdy jest).
+        private IEnumerable<(string label, Action act)> RankActions(string filter)
+        {
+            var all = new List<(string label, Action act)>
+            {
+                (L("S.nav.dashboard"),   () => ShowView("Dashboard")),
+                (L("S.nav.sessions"),    () => ShowView("Sessions")),
+                (L("S.nav.recent"),      () => ShowView("Recent")),
+                (L("S.nav.settings"),    () => ShowView("Settings")),
+                (L("S.quickConnect"),    () => QuickConnect_Click(this, null)),
+                (L("S.addServer"),       () => AddServer_Click(this, null)),
+                (L("S.importRdp"),       () => ImportRdp_Click(this, null)),
+                (L("S.cmd.toggletheme"), ToggleTheme),
+            };
+
+            var srv = _active?.Server;
+            if (srv != null)
+            {
+                all.Add((L("S.m.edit"), () => EditServer(srv)));
+                all.Add((L("S.m.diag"), () => DiagnoseServer(srv)));
+                if (!string.IsNullOrWhiteSpace(srv.MacAddress)) all.Add((L("S.m.wol"), () => WakeServer(srv)));
+            }
+
+            if (filter.Length == 0) return all;
+            return all
+                .Select(a => new { a, score = Core.CommandPalette.Score(a.label, filter) })
+                .Where(x => x.score >= 0)
+                .OrderByDescending(x => x.score)
+                .Select(x => x.a);
+        }
+
+        private void AddPaletteRow(Panel group, Border row, Action go)
+        {
+            group.Children.Add(row);
+            _paletteFlat.Add((row, row.Background, go));
+        }
+
+        // Góra/Dół po płaskiej liście wierszy (sesje -> serwery -> polecenia), z zawijaniem. Zaznaczenie = tło „Elevated".
+        private void MovePaletteSel(int dir)
+        {
+            if (_paletteFlat.Count == 0) return;
+            if (_paletteSel >= 0 && _paletteSel < _paletteFlat.Count)
+                _paletteFlat[_paletteSel].row.Background = _paletteFlat[_paletteSel].rest;   // przywróć poprzednio zaznaczony
+
+            _paletteSel = _paletteSel < 0
+                ? (dir > 0 ? 0 : _paletteFlat.Count - 1)
+                : ((_paletteSel + dir) % _paletteFlat.Count + _paletteFlat.Count) % _paletteFlat.Count;
+
+            var sel = _paletteFlat[_paletteSel];
+            sel.row.Background = (Brush)TryFindResource("Elevated");
+            sel.row.BringIntoView();
+        }
+
+        // Wiersz AKCJI w palecie (sama etykieta, bez awatara/kropki). Hover/klik jak w BuildFlyoutRow.
+        private FrameworkElement BuildActionRow(string label, Action onClick)
+        {
+            var row = new Border
+            {
+                Padding = new Thickness(7, 6, 7, 6),
+                CornerRadius = new CornerRadius(7),
+                Background = Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                Margin = new Thickness(0, 1, 0, 1),
+                Child = new TextBlock
+                {
+                    Text = label, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 0, 0)
+                }
+            };
+            row.MouseEnter += (s, e) => row.Background = (Brush)TryFindResource("Elevated");
+            row.MouseLeave += (s, e) => row.Background = Brushes.Transparent;
+            row.MouseLeftButtonUp += (s, e) => { e.Handled = true; onClick(); };
+            return row;
+        }
+
+        // Przełącz motyw Ciemny <-> Jasny z palety (System też ląduje w Ciemny/Jasny). Bez round-tripu przez combo
+        // Ustawień (jego handler czyta też język/styl listy — mogłoby je nadpisać, gdy Ustawienia nie były otwarte).
+        private void ToggleTheme()
+        {
+            _settings.Theme = _settings.Theme == "Light" ? "Dark" : "Light";
+            ThemeManager.Apply(_settings.Theme);
+            RenderTree(SearchBox.Text);   // wiersze/karty zależą od motywu
+            RebuildTabStrip();
+            QueueSettingsSave();
         }
 
         private void BuildFlyoutLists(string filter)
@@ -3846,6 +3974,7 @@ namespace RdpManager
                 if (e.Key == Key.Tab) { CycleSession((mods & ModifierKeys.Shift) != 0 ? -1 : 1); e.Handled = true; }
                 else if (e.Key == Key.W) { if (_active != null) RequestCloseSession(_active); e.Handled = true; }
                 else if (e.Key == Key.F || e.Key == Key.K) { ShowView("Sessions"); SearchBox.Focus(); e.Handled = true; }
+                else if (e.Key == Key.P) { OpenCommandPalette(); e.Handled = true; }   // paleta poleceń (tryb zwykły)
                 else if (e.Key == Key.D0 || e.Key == Key.NumPad0) { ZoomTo(1.0); e.Handled = true; }
                 else if (e.Key == Key.OemPlus || e.Key == Key.Add) { ZoomTo(_settings.UiScale + 0.1); e.Handled = true; }
                 else if (e.Key == Key.OemMinus || e.Key == Key.Subtract) { ZoomTo(_settings.UiScale - 0.1); e.Handled = true; }
