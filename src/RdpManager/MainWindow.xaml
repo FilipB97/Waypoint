@@ -282,6 +282,10 @@
                                     Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}">
                                 <ui:SymbolIcon Symbol="Folder24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
                             </Button>
+                            <Button x:Name="CadBtn" Style="{DynamicResource IconBtn}" Click="SendCtrlAltDel_Click"
+                                    Visibility="Collapsed" ToolTip="{DynamicResource S.tip.cad}">
+                                <ui:SymbolIcon Symbol="Keyboard24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                            </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}">
                                 <TextBlock Text="&#x25A3;" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                             </Button>

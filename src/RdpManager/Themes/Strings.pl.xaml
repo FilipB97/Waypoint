@@ -129,6 +129,7 @@
     <sys:String x:Key="S.reconnect">Połącz ponownie</sys:String>
     <sys:String x:Key="S.connected">● Połączono</sys:String>
     <sys:String x:Key="S.tip.fullscreen">Pełny ekran (na tym monitorze)</sys:String>
+    <sys:String x:Key="S.tip.cad">Wyślij Ctrl+Alt+Del</sys:String>
     <sys:String x:Key="S.tip.minimize">Minimalizuj</sys:String>
     <sys:String x:Key="S.emptyhint">Wybierz serwer z listy po lewej, aby otworzyć sesję.</sys:String>
     <sys:String x:Key="S.fs.drag">Przeciągnij, aby przesunąć pasek</sys:String>
@@ -231,6 +232,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.prompt.newgroup.title">Nowa grupa</sys:String>
     <sys:String x:Key="S.prompt.newgroup.label">Nazwa grupy:</sys:String>
     <sys:String x:Key="S.m.tearoff">Wyciągnij do osobnego okna</sys:String>
+    <sys:String x:Key="S.m.cad">Wyślij Ctrl+Alt+Del</sys:String>
     <sys:String x:Key="S.m.split">Podziel ekran z tą sesją</sys:String>
     <sys:String x:Key="S.m.unsplit">Zakończ podział ekranu</sys:String>
     <sys:String x:Key="S.split.drop">Upuść, aby podzielić ekran</sys:String>
