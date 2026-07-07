@@ -9,17 +9,17 @@ using System.Windows.Media;
 namespace RdpManager
 {
     /// <summary>
-    /// Panel plików zdalnego systemu (<see cref="IRemoteFs"/>): nawigacja, wyślij/pobierz, nowy folder,
-    /// usuwanie. Działa dla SFTP (i docelowo FTP/FTPS) — źródło dostarcza fabryka. Operacje w tle,
-    /// UI przez Dispatcher, jedna naraz. Jako samodzielna sesja zgłasza zdarzenia
-    /// <see cref="Connected"/>/<see cref="Failed"/> (stan karty/sesji); błąd pojedynczej operacji
-    /// NIE zrywa sesji — tylko błąd łączenia.
+    /// Panel plików zdalnego systemu (<see cref="IRemoteFs"/>): nawigacja (breadcrumb), wyślij/pobierz,
+    /// nowy folder, usuwanie oraz upuszczanie plików z Eksploratora (upload). Działa dla SFTP i FTP/FTPS —
+    /// źródło dostarcza fabryka. Operacje w tle, UI przez Dispatcher, jedna naraz. Jako samodzielna sesja
+    /// zgłasza <see cref="Connected"/>/<see cref="Failed"/>; błąd pojedynczej operacji NIE zrywa sesji.
     /// </summary>
-    public class FileTransferPanel : Border
+    public partial class FileTransferPanel : UserControl
     {
         private sealed class Row
         {
-            public string Display { get; set; }    // „📁 nazwa" / „📄 nazwa"
+            public Wpf.Ui.Controls.SymbolRegular Icon { get; set; }
+            public Brush IconBrush { get; set; }
             public string Name { get; set; }
             public string FullName { get; set; }
             public bool IsDir { get; set; }
@@ -38,106 +38,13 @@ namespace RdpManager
         /// <summary>Nieudane łączenie (nie: błąd operacji) — dla sesji plikowej: karta „offline".</summary>
         public event Action<string> Failed;
 
-        private readonly TextBlock _pathText;
-        private readonly TextBlock _status;
-        private readonly ListView _list;
-
         private static string L(string key) => LocalizationManager.S(key);
         private static Brush Res(string key) => Application.Current.TryFindResource(key) as Brush ?? Brushes.Gray;
 
         public FileTransferPanel(Func<IRemoteFs> factory)
         {
+            InitializeComponent();
             _factory = factory;
-            Background = Res("Panel");
-            BorderBrush = Res("Border");
-            BorderThickness = new Thickness(1, 0, 0, 0);
-
-            var root = new Grid();
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // ścieżka
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // przyciski
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // status
-
-            _pathText = new TextBlock
-            {
-                Foreground = Res("TextSec"),
-                FontFamily = Application.Current.TryFindResource("Mono") as FontFamily,
-                FontSize = 11.5,
-                Margin = new Thickness(10, 8, 10, 4),
-                TextTrimming = TextTrimming.CharacterEllipsis
-            };
-            Grid.SetRow(_pathText, 0);
-            root.Children.Add(_pathText);
-
-            var bar = new WrapPanel { Margin = new Thickness(8, 0, 8, 6) };
-            bar.Children.Add(MakeBtn("↑", L("S.sftp.up"), (s, e) => GoUp()));
-            bar.Children.Add(MakeBtn("⟳", L("S.sftp.refresh"), (s, e) => RefreshAsync()));
-            bar.Children.Add(MakeBtn(L("S.sftp.upload"), null, (s, e) => UploadAsync()));
-            bar.Children.Add(MakeBtn(L("S.sftp.download"), null, (s, e) => DownloadSelectedAsync()));
-            bar.Children.Add(MakeBtn(L("S.sftp.newfolder"), null, (s, e) => NewFolderAsync()));
-            bar.Children.Add(MakeBtn(L("S.sftp.delete"), null, (s, e) => DeleteSelectedAsync()));
-            Grid.SetRow(bar, 1);
-            root.Children.Add(bar);
-
-            _list = new ListView
-            {
-                BorderThickness = new Thickness(0),
-                Background = Brushes.Transparent,
-                Foreground = Res("TextPrim"),
-                FontSize = 12
-            };
-            var gv = new GridView();
-            gv.Columns.Add(new GridViewColumn
-            { Header = L("S.sftp.name"), Width = 170, DisplayMemberBinding = new System.Windows.Data.Binding("Display") });
-            gv.Columns.Add(new GridViewColumn
-            { Header = L("S.sftp.size"), Width = 70, DisplayMemberBinding = new System.Windows.Data.Binding("SizeText") });
-            gv.Columns.Add(new GridViewColumn
-            { Header = L("S.sftp.modified"), Width = 105, DisplayMemberBinding = new System.Windows.Data.Binding("Modified") });
-            _list.View = gv;
-            _list.MouseDoubleClick += (s, e) =>
-            {
-                if (_list.SelectedItem is Row r)
-                {
-                    if (r.IsDir) { _path = r.FullName; RefreshAsync(); }
-                    else DownloadSelectedAsync();
-                }
-            };
-            Grid.SetRow(_list, 2);
-            root.Children.Add(_list);
-
-            _status = new TextBlock
-            {
-                Foreground = Res("TextTer"),
-                FontSize = 11,
-                Margin = new Thickness(10, 4, 10, 8),
-                TextTrimming = TextTrimming.CharacterEllipsis
-            };
-            Grid.SetRow(_status, 3);
-            root.Children.Add(_status);
-
-            Child = root;
-        }
-
-        private static Wpf.Ui.Controls.Button MakeBtn(string content, string tip, RoutedEventHandler click)
-        {
-            var b = new Wpf.Ui.Controls.Button
-            {
-                Content = content,
-                Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary,
-                FontSize = 11.5,
-                Padding = new Thickness(8, 4, 8, 4),
-                Margin = new Thickness(0, 0, 4, 4),
-                ToolTip = tip
-            };
-            b.Click += click;
-            return b;
-        }
-
-        private void SetStatus(string text, bool error = false)
-        {
-            _status.Text = text ?? "";
-            _status.Foreground = error ? Res("Danger") : Res("TextTer");
-            _status.ToolTip = string.IsNullOrEmpty(text) ? null : text;
         }
 
         // Jedna operacja naraz; łączy przy pierwszym użyciu (dispatcher wolny — praca w tle).
@@ -183,9 +90,18 @@ namespace RdpManager
             finally { _busy = false; }
         }
 
+        private void SetStatus(string text, bool error = false)
+        {
+            StatusText.Text = text ?? "";
+            StatusText.Foreground = error ? Res("Danger") : Res("TextTer");
+            StatusText.ToolTip = string.IsNullOrEmpty(text) ? null : text;
+        }
+
         /// <summary>Odświeża listing bieżącego katalogu (łączy przy pierwszym wywołaniu).</summary>
         public async void RefreshAsync()
         {
+            var folder = Res("Accent");
+            var fileBr = Res("TextSec");
             List<Row> rows = null;
             bool ok = await RunAsync(L("S.sftp.connecting"), fs =>
             {
@@ -194,7 +110,8 @@ namespace RdpManager
                     .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
                     .Select(f => new Row
                     {
-                        Display = (f.IsDir ? "\U0001F4C1 " : "\U0001F4C4 ") + f.Name,
+                        Icon = f.IsDir ? Wpf.Ui.Controls.SymbolRegular.Folder24 : Wpf.Ui.Controls.SymbolRegular.Document24,
+                        IconBrush = f.IsDir ? folder : fileBr,
                         Name = f.Name,
                         FullName = f.FullName,
                         IsDir = f.IsDir,
@@ -204,13 +121,40 @@ namespace RdpManager
                     .ToList();
             });
             if (!ok) return;
-            _list.ItemsSource = rows;
-            _pathText.Text = _path;
-            _pathText.ToolTip = _path;
+            FileList.ItemsSource = rows;
+            BuildBreadcrumb();
             SetStatus("");
         }
 
-        private void GoUp()
+        // Ścieżka jako klikalne okruszki: „/" › katalog › podkatalog.
+        private void BuildBreadcrumb()
+        {
+            Breadcrumb.Children.Clear();
+            Breadcrumb.Children.Add(MakeCrumb("/", "/"));
+            string acc = "";
+            foreach (var seg in _path.Split('/'))
+            {
+                if (seg.Length == 0) continue;
+                acc += "/" + seg;
+                Breadcrumb.Children.Add(new TextBlock
+                {
+                    Text = "›",
+                    Foreground = Res("TextTer"),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(1, 0, 1, 0)
+                });
+                Breadcrumb.Children.Add(MakeCrumb(seg, acc));
+            }
+        }
+
+        private System.Windows.Controls.Button MakeCrumb(string label, string target)
+        {
+            var b = new System.Windows.Controls.Button { Content = label, Style = (Style)FindResource("FtCrumbBtn") };
+            b.Click += (s, e) => { if (_path != target) { _path = target; RefreshAsync(); } };
+            return b;
+        }
+
+        private void Up_Click(object sender, RoutedEventArgs e)
         {
             string p = _path.TrimEnd('/');
             int i = p.LastIndexOf('/');
@@ -218,28 +162,38 @@ namespace RdpManager
             RefreshAsync();
         }
 
-        private async void UploadAsync()
+        private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshAsync();
+
+        private async void Upload_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new Microsoft.Win32.OpenFileDialog { Multiselect = true };
             if (dlg.ShowDialog() != true) return;
+            await UploadPaths(dlg.FileNames);
+        }
 
+        // Wysyła podane pliki do bieżącego katalogu (wspólne dla przycisku i upuszczenia z Eksploratora).
+        private async Task UploadPaths(IEnumerable<string> files)
+        {
             string dir = _path.TrimEnd('/');
-            foreach (var file in dlg.FileNames)
+            bool any = false;
+            foreach (var file in files)
             {
+                if (!System.IO.File.Exists(file)) continue;   // foldery w tej fazie pomijamy
+                any = true;
                 string name = System.IO.Path.GetFileName(file);
                 bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name), fs =>
                 {
                     using (var s = System.IO.File.OpenRead(file))
                         fs.Upload(s, dir + "/" + name, true);
                 });
-                if (!ok) return;   // błąd przerywa serię (status już pokazuje powód)
+                if (!ok) return;   // błąd przerywa serię (status pokazuje powód)
             }
-            RefreshAsync();
+            if (any) RefreshAsync();
         }
 
-        private async void DownloadSelectedAsync()
+        private async void Download_Click(object sender, RoutedEventArgs e)
         {
-            if (!(_list.SelectedItem is Row r) || r.IsDir) return;
+            if (!(FileList.SelectedItem is Row r) || r.IsDir) return;
             var dlg = new Microsoft.Win32.SaveFileDialog { FileName = r.Name };
             if (dlg.ShowDialog() != true) return;
 
@@ -250,7 +204,7 @@ namespace RdpManager
             });
         }
 
-        private async void NewFolderAsync()
+        private async void NewFolder_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new InputDialog(L("S.sftp.newfolder"), L("S.sftp.newfolder.label"), "")
             { Owner = Window.GetWindow(this) };
@@ -261,14 +215,45 @@ namespace RdpManager
             if (ok) RefreshAsync();
         }
 
-        private async void DeleteSelectedAsync()
+        private async void Delete_Click(object sender, RoutedEventArgs e)
         {
-            if (!(_list.SelectedItem is Row r)) return;
+            if (!(FileList.SelectedItem is Row r)) return;
             if (MessageBox.Show(string.Format(L("S.sftp.delete.confirm"), r.Name), L("S.sftp.delete"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
             bool ok = await RunAsync(L("S.sftp.connecting"), fs => fs.Delete(r.FullName, r.IsDir));   // katalog: tylko pusty
             if (ok) RefreshAsync();
+        }
+
+        private void List_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (FileList.SelectedItem is Row r)
+            {
+                if (r.IsDir) { _path = r.FullName; RefreshAsync(); }
+                else Download_Click(sender, null);
+            }
+        }
+
+        // ---------- Drag&drop z Eksploratora (upload) ----------
+
+        private void Panel_DragEnter(object sender, DragEventArgs e) => UpdateDropEffect(e);
+        private void Panel_DragOver(object sender, DragEventArgs e) => UpdateDropEffect(e);
+        private void Panel_DragLeave(object sender, DragEventArgs e) => DropOverlay.Visibility = Visibility.Collapsed;
+
+        private void UpdateDropEffect(DragEventArgs e)
+        {
+            bool files = e.Data.GetDataPresent(DataFormats.FileDrop);
+            e.Effects = files ? DragDropEffects.Copy : DragDropEffects.None;
+            DropOverlay.Visibility = files ? Visibility.Visible : Visibility.Collapsed;
+            e.Handled = true;
+        }
+
+        private async void Panel_Drop(object sender, DragEventArgs e)
+        {
+            DropOverlay.Visibility = Visibility.Collapsed;
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            var paths = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (paths != null) await UploadPaths(paths);
         }
 
         private static string FormatSize(long bytes)

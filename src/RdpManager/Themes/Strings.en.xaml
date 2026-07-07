@@ -420,6 +420,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.uploading">Uploading {0}…</sys:String>
     <sys:String x:Key="S.sftp.downloading">Downloading {0}…</sys:String>
     <sys:String x:Key="S.sftp.done">Done ✓</sys:String>
+    <sys:String x:Key="S.sftp.drophint">Drop files here to upload</sys:String>
 
     <sys:String x:Key="S.ssh.tunnel.up">tunnel {0} up — listening on 127.0.0.1</sys:String>
     <sys:String x:Key="S.ssh.tunnel.fail">tunnel {0}: {1}</sys:String>
