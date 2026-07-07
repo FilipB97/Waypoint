@@ -18,6 +18,10 @@ namespace RdpManager
         /// <summary>Motyw interfejsu: „Dark" | „Light" | „System".</summary>
         public string Theme { get; set; } = "Dark";
 
+        /// <summary>Kolor obwódki (krawędzi) okien: "" = brak kolorowej ramki (domyślnie), "System" = akcent
+        /// Windows, "#RRGGBB" = wybrany kolor. Steruje atrybutem DWMWA_BORDER_COLOR na Windows 11.</summary>
+        public string WindowBorderColor { get; set; } = "";
+
         /// <summary>Język interfejsu: „pl" | „en".</summary>
         public string Language { get; set; } = "pl";
 

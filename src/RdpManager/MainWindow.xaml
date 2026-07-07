@@ -397,6 +397,12 @@
                                 <ComboBoxItem Content="{DynamicResource S.liststyle.default}" Tag="Default"/>
                                 <ComboBoxItem Content="{DynamicResource S.liststyle.minimal}" Tag="Minimal"/>
                             </ComboBox>
+                            <TextBlock Text="{DynamicResource S.set.border}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
+                            <ComboBox x:Name="SetBorder" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
+                                <ComboBoxItem Content="{DynamicResource S.border.none}" Tag=""/>
+                                <ComboBoxItem Content="{DynamicResource S.border.cobalt}" Tag="#2657D6"/>
+                                <ComboBoxItem Content="{DynamicResource S.border.system}" Tag="System"/>
+                            </ComboBox>
                         </StackPanel>
                     </Border>
 

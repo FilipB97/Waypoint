@@ -24,22 +24,8 @@ namespace RdpManager
             var appTheme = light ? ApplicationTheme.Light : ApplicationTheme.Dark;
             ApplicationThemeManager.Apply(appTheme);
             ApplicationAccentColorManager.Apply(BrandAccent, appTheme);   // nadpisz akcent systemowy marką (kobalt)
-            ReneutralizeBorders();   // WPF-UI po zmianie motywu/akcentu przemalowuje krawędź okien na akcent — zdejmij ją ponownie
+            WindowBorder.ReapplyAll();   // WPF-UI po zmianie motywu/akcentu przemalowuje krawędź — przywróć wybraną obwódkę
             SwapPalette(light);
-        }
-
-        // Po (ponownym) zastosowaniu motywu/akcentu WPF-UI potrafi przemalować krawędź otwartych okien na
-        // akcent. Zdejmujemy ją ponownie (deferred — po zmianach WPF-UI). Przy starcie Apply leci PRZED
-        // StartupUri, więc lista okien jest pusta (no-op); istotne przy zmianie motywu w locie.
-        private static void ReneutralizeBorders()
-        {
-            if (Application.Current == null) return;
-            foreach (Window w in Application.Current.Windows)
-            {
-                var win = w;
-                win.Dispatcher.BeginInvoke(new Action(() => WindowBorder.Neutralize(win)),
-                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-            }
         }
 
         /// <summary>Czy Windows jest ustawiony na jasny motyw aplikacji (klucz Personalize).</summary>

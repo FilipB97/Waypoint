@@ -45,6 +45,10 @@
     <sys:String x:Key="S.set.liststyle">List view style</sys:String>
     <sys:String x:Key="S.liststyle.default">Default</sys:String>
     <sys:String x:Key="S.liststyle.minimal">Minimal</sys:String>
+    <sys:String x:Key="S.set.border">Window border</sys:String>
+    <sys:String x:Key="S.border.none">None</sys:String>
+    <sys:String x:Key="S.border.cobalt">Cobalt</sys:String>
+    <sys:String x:Key="S.border.system">System</sys:String>
     <sys:String x:Key="S.set.conn">Connection</sys:String>
     <sys:String x:Key="S.set.port">Default RDP port</sys:String>
     <sys:String x:Key="S.set.colordepth">Default color depth (bit)</sys:String>

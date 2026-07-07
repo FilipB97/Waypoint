@@ -45,6 +45,10 @@
     <sys:String x:Key="S.set.liststyle">Styl widoku listy</sys:String>
     <sys:String x:Key="S.liststyle.default">Domyślny</sys:String>
     <sys:String x:Key="S.liststyle.minimal">Minimalistyczny</sys:String>
+    <sys:String x:Key="S.set.border">Obwódka okna</sys:String>
+    <sys:String x:Key="S.border.none">Brak</sys:String>
+    <sys:String x:Key="S.border.cobalt">Kobalt</sys:String>
+    <sys:String x:Key="S.border.system">Systemowa</sys:String>
     <sys:String x:Key="S.set.conn">Połączenie</sys:String>
     <sys:String x:Key="S.set.port">Domyślny port RDP</sys:String>
     <sys:String x:Key="S.set.colordepth">Domyślna głębia kolorów (bit)</sys:String>
