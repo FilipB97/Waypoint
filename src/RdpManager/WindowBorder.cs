@@ -62,7 +62,15 @@ namespace RdpManager
         {
             if (window == null) return;
             Apply(window);
-            window.Activated += (_, __) => Apply(window);
+            // WPF-UI przemalowuje krawędź na akcent PO aktywacji — m.in. gdy zamknie się okno potomne
+            // (np. „O aplikacji") i główne okno wraca na wierzch. Sam Apply w handlerze aktywacji bywa ZA
+            // wcześnie (repaint WPF-UI leci później), więc dobijamy jeszcze raz deferred (ApplicationIdle).
+            window.Activated += (_, __) =>
+            {
+                Apply(window);
+                window.Dispatcher.BeginInvoke(new Action(() => Apply(window)),
+                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            };
             window.Dispatcher.BeginInvoke(new Action(() => Apply(window)),
                 System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
