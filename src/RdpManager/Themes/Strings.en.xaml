@@ -134,6 +134,9 @@
     <sys:String x:Key="S.fs.restore">Restore window</sys:String>
     <sys:String x:Key="S.fs.opensessions">OPEN SESSIONS</sys:String>
     <sys:String x:Key="S.fs.allservers">ALL SERVERS</sys:String>
+    <sys:String x:Key="S.cmd.placeholder">Search sessions, servers, or commands…</sys:String>
+    <sys:String x:Key="S.cmd.actions">COMMANDS</sys:String>
+    <sys:String x:Key="S.cmd.toggletheme">Toggle theme (light/dark)</sys:String>
 
     <!-- session window -->
     <sys:String x:Key="S.dock">Dock to a tab</sys:String>

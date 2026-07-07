@@ -491,24 +491,27 @@
         </Grid>
 
         <!-- Szybkie przełączanie z paska kart (tryb skupienia): popup = osobny HWND, rysuje się nad sesją -->
-        <Popup x:Name="QuickSwitchPopup" Placement="Bottom" PlacementTarget="{Binding ElementName=QuickSwitchBtn}"
+        <Popup x:Name="QuickSwitchPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
                StaysOpen="False" AllowsTransparency="True">
-            <Border Background="{DynamicResource RailBg}" CornerRadius="10" Padding="8" Margin="0,4,12,12"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="300">
+            <Border Background="{DynamicResource RailBg}" CornerRadius="10" Padding="8"
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="460">
                 <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45"/></Border.Effect>
                 <StackPanel>
-                    <ui:TextBox x:Name="QuickSwitchSearch" PlaceholderText="{DynamicResource S.search}"
+                    <ui:TextBox x:Name="QuickSwitchSearch" PlaceholderText="{DynamicResource S.cmd.placeholder}"
                                 Margin="0,0,0,6" TextChanged="QuickSwitchSearch_TextChanged" KeyDown="QuickSwitchSearch_KeyDown">
                         <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
                     </ui:TextBox>
-                    <ScrollViewer MaxHeight="340" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource S.fs.opensessions}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                            <TextBlock x:Name="QsSessionsHeader" Text="{DynamicResource S.fs.opensessions}" Foreground="{DynamicResource TextTer}" FontSize="10"
                                        FontWeight="SemiBold" Margin="6,6,6,4"/>
                             <StackPanel x:Name="QsSessions"/>
-                            <TextBlock Text="{DynamicResource S.fs.allservers}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                            <TextBlock x:Name="QsServersHeader" Text="{DynamicResource S.fs.allservers}" Foreground="{DynamicResource TextTer}" FontSize="10"
                                        FontWeight="SemiBold" Margin="6,8,6,4"/>
                             <StackPanel x:Name="QsServers"/>
+                            <TextBlock x:Name="QsActionsHeader" Text="{DynamicResource S.cmd.actions}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                                       FontWeight="SemiBold" Margin="6,8,6,4"/>
+                            <StackPanel x:Name="QsActions"/>
                         </StackPanel>
                     </ScrollViewer>
                 </StackPanel>
