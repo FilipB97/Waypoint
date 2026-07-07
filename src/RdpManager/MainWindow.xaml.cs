@@ -53,6 +53,7 @@ namespace RdpManager
         private DispatcherTimer _reachTimer;
         private bool _reachBusy;
         private DispatcherTimer _updateTimer;   // cykliczne sprawdzanie aktualizacji (co 6 h)
+        private bool _updateChecking;           // trwa sprawdzanie — blokuje nakładające się żądania (timer + przycisk)
 
         // Stabilne, odrębne kolory awatarów dla dowolnych (także własnych) grup.
         private readonly Dictionary<string, LinearGradientBrush> _avatarCache = new Dictionary<string, LinearGradientBrush>();
@@ -294,7 +295,8 @@ namespace RdpManager
         // Automatyczne sprawdzenie (start aplikacji + cykliczny timer). Bramkowane ustawieniem, bez UI błędów.
         private async void CheckForUpdatesAsync()
         {
-            if (!_settings.CheckUpdates) return;
+            if (!_settings.CheckUpdates || _updateChecking) return;   // bez nakładających się sprawdzeń
+            _updateChecking = true;
             try
             {
                 var info = await FetchLatestReleaseAsync();
@@ -315,6 +317,7 @@ namespace RdpManager
                 }
             }
             catch { /* offline / proxy / rate limit — sprawdzimy przy kolejnym cyklu */ }
+            finally { _updateChecking = false; }
         }
 
         // Pobiera najnowsze wydanie z GitHuba (bez UI/bramek). Rzuca przy błędzie sieci; null gdy brak/parsowanie.
@@ -332,13 +335,20 @@ namespace RdpManager
         // Ręczne sprawdzenie z Ustawień — bez bramki CheckUpdates, z informacją zwrotną w etykiecie statusu.
         private async void CheckUpdatesNow_Click(object sender, RoutedEventArgs e)
         {
+            if (_updateChecking) return;
+            _updateChecking = true;
             UpdateCheckStatus.Foreground = Res("TextSec");
             UpdateCheckStatus.Text = L("S.update.checking");
             try
             {
                 var info = await FetchLatestReleaseAsync();
                 var current = CurrentVersion();
-                if (info != null && Core.UpdateCheck.IsNewer(info.Version, current))
+                if (info == null)   // pobrano, ale nie dało się odczytać wydania → to NIE „aktualne", tylko błąd
+                {
+                    UpdateCheckStatus.Foreground = Res("Danger");
+                    UpdateCheckStatus.Text = L("S.update.checkfailed");
+                }
+                else if (Core.UpdateCheck.IsNewer(info.Version, current))
                 {
                     _update = info;
                     UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
@@ -357,6 +367,7 @@ namespace RdpManager
                 UpdateCheckStatus.Foreground = Res("Danger");
                 UpdateCheckStatus.Text = L("S.update.checkfailed");
             }
+            finally { _updateChecking = false; }
         }
 
         private async void Update_Click(object sender, RoutedEventArgs e)
