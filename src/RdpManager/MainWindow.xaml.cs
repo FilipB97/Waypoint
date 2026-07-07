@@ -591,15 +591,30 @@ namespace RdpManager
         {
             var chrome = System.Windows.Shell.WindowChrome.GetWindowChrome(this);
             if (chrome == null) return;   // brak chrome = brak strefy caption do naprawy
+            bool changed = false;
             if (immersive)
             {
                 if (double.IsNaN(_savedCaptionHeight)) _savedCaptionHeight = chrome.CaptionHeight;
-                if (chrome.CaptionHeight != 0) chrome.CaptionHeight = 0;
+                if (chrome.CaptionHeight != 0) { chrome.CaptionHeight = 0; changed = true; }
             }
             else if (!double.IsNaN(_savedCaptionHeight) && chrome.CaptionHeight != _savedCaptionHeight)
             {
                 chrome.CaptionHeight = _savedCaptionHeight;
+                changed = true;
             }
+            // Sama zmiana CaptionHeight NIE odświeża stref hit-testu — WindowChrome przelicza je dopiero przy
+            // zmianie RAMKI okna. Przy przełączeniu skupienia (bez zmiany stanu okna) stara strefa caption
+            // zostaje, więc środek ikon paska kart nie łapie (a un-maximize→maximize „naprawia", bo tamto
+            // wymusza przeliczenie ramki). Wymuszamy je sami przez SetWindowPos(SWP_FRAMECHANGED).
+            if (changed) ForceFrameRecalc();
+        }
+
+        private void ForceFrameRecalc()
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         }
 
         // Jednorazowe zerowanie nie wystarcza: WPF-UI przywraca CaptionHeight po relayoutach, zmianie DPI
@@ -3523,6 +3538,8 @@ namespace RdpManager
                           SM_CXVIRTUALSCREEN = 78, SM_CYVIRTUALSCREEN = 79;
 
         private const uint SWP_SHOWWINDOW = 0x0040;
+        private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004,
+                           SWP_NOACTIVATE = 0x0010, SWP_FRAMECHANGED = 0x0020;
 
         [DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
