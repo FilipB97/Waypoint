@@ -569,6 +569,41 @@ namespace RdpManager
             ApplyImmersiveCaption(immersive);
             SetCaptionWatch(immersive);   // trzymaj CaptionHeight=0 mimo relayoutów / zmiany zoomu (WPF-UI je przywraca)
             UpdateToolbarMode();
+
+            if (immersive != _wasImmersive)
+            {
+                _wasImmersive = immersive;
+                LogFocusDiag(immersive);
+                // Przełączenie skupienia przebudowuje pasek kart BEZ zmiany rozmiaru okna (brak WM_SIZE), więc WPF
+                // nie odświeża „mysz nad"/hit-testu nowo pokazanych ikon (hover łapie dopiero po realnym resize
+                // un-maximize→maximize). Wymuszamy re-hit-test PO ustaleniu layoutu (Background = po Render), bez
+                // bramki na CaptionHeight — ta jest 0 (WPF-UI tak ją tworzy), więc stara ścieżka ForceFrameRecalc
+                // nigdy nie odpalała.
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    UpdateLayout();
+                    System.Windows.Input.Mouse.Synchronize();
+                }), System.Windows.Threading.DispatcherPriority.Background);
+            }
+        }
+
+        // TYMCZASOWA diagnostyka trybu skupienia (do usunięcia po potwierdzeniu przyczyny hover-buga @125% DPI).
+        // Zapisuje realny stan okna przy każdej zmianie trybu → %APPDATA%\RdpManager\focusdiag.log. Best-effort.
+        private void LogFocusDiag(bool immersive)
+        {
+            try
+            {
+                double caption = System.Windows.Shell.WindowChrome.GetWindowChrome(this)?.CaptionHeight ?? double.NaN;
+                double dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this).DpiScaleX;
+                string line = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "{0:yyyy-MM-dd HH:mm:ss}  immersive={1} caption={2} state={3} dpi={4} rootScale={5}",
+                    DateTime.Now, immersive, caption, WindowState, dpi, RootScale.ScaleX);
+                string dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RdpManager");
+                System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "focusdiag.log"), line + Environment.NewLine);
+            }
+            catch { /* diagnostyka jest best-effort — nie przerywamy pracy aplikacji */ }
         }
 
         // W skupieniu AppTitleBar znika, ale WindowChrome zostawia strefę caption (~32px) na górze,
@@ -628,6 +663,7 @@ namespace RdpManager
         // („+"/skupienie łapią, dalsze przyciski dopiero po zjechaniu w dół). Dlatego w skupieniu pilnujemy
         // CaptionHeight=0 na każdym przebiegu layoutu (ustawiamy tylko gdy „dryfnie" — brak pętli/kosztu).
         private bool _captionWatchOn;
+        private bool _wasImmersive;   // ostatni znany stan skupienia — resync hit-testu odpalamy tylko przy realnej zmianie
         private void SetCaptionWatch(bool on)
         {
             if (on == _captionWatchOn) return;
