@@ -145,12 +145,69 @@ namespace RdpManager.Tests
             Assert.Equal("https://portal.example.com", portal.Host);   // WWW: pełny URL w Host
         }
 
+        private const string FzXml = @"<?xml version='1.0'?>
+<FileZilla3 version='3.66.1' platform='windows'>
+  <Servers>
+    <Server>
+      <Host>ftp.example.com</Host><Port>21</Port><Protocol>0</Protocol><Type>0</Type>
+      <User>alice</User><Pass encoding='base64'>c2VjcmV0</Pass><Logontype>1</Logontype><Name>Prod FTP</Name>
+    </Server>
+    <Server>
+      <Host>sftp.example.com</Host><Port>2222</Port><Protocol>1</Protocol>
+      <User>bob</User><Pass encoding='base64'>cHc=</Pass><Logontype>1</Logontype><Keyfile>C:\keys\id</Keyfile><Name>Box</Name>
+    </Server>
+    <Folder expanded='1'>Klienci
+      <Server>
+        <Host>ftps.example.com</Host><Port>990</Port><Protocol>4</Protocol><Logontype>0</Logontype><Name>Public</Name>
+      </Server>
+    </Folder>
+    <Server>
+      <Host>web.example.com</Host><Port>443</Port><Protocol>3</Protocol><Name>Site</Name>
+    </Server>
+  </Servers>
+</FileZilla3>";
+
+        [Fact]
+        public void FileZilla_MapsProtocols_ImportsPasswords_HandlesFoldersAndAnonymous()
+        {
+            var r = ExternalImport.ParseFileZilla(FzXml);
+
+            Assert.Equal(3, r.Servers.Count);        // HTTPS (protokół 3) pominięty
+            Assert.Equal(1, r.UnsupportedProtocol);
+
+            var ftp = r.Servers.Single(s => s.Name == "Prod FTP");
+            Assert.Equal(RemoteProtocol.Ftp, ftp.Protocol);
+            Assert.Equal("ftp.example.com", ftp.Host);
+            Assert.Equal(21, ftp.Port);
+            Assert.Equal("alice", ftp.Username);
+            Assert.Equal(3, ftp.FtpEncryption);       // FTP(0) → Auto
+            Assert.False(ftp.FtpAnonymous);
+            Assert.Equal("FileZilla", ftp.Group);     // serwer w korzeniu
+            Assert.Equal("secret", r.Passwords[ftp.Id]);   // base64 zdekodowane
+
+            var sftp = r.Servers.Single(s => s.Name == "Box");
+            Assert.Equal(RemoteProtocol.Sftp, sftp.Protocol);
+            Assert.Equal(2222, sftp.Port);
+            Assert.Equal("bob", sftp.Username);
+            Assert.Equal(@"C:\keys\id", sftp.PrivateKeyPath);   // <Keyfile> → klucz SFTP
+            Assert.Equal("pw", r.Passwords[sftp.Id]);
+
+            var pub = r.Servers.Single(s => s.Name == "Public");
+            Assert.Equal(RemoteProtocol.Ftp, pub.Protocol);
+            Assert.Equal(1, pub.FtpEncryption);       // FTPS implicit(4)
+            Assert.True(pub.FtpAnonymous);            // Logontype 0
+            Assert.Equal("", pub.Username);
+            Assert.Equal("Klienci", pub.Group);       // folder → grupa
+            Assert.False(r.Passwords.ContainsKey(pub.Id));   // anonimowy → bez hasła
+        }
+
         [Fact]
         public void Parsers_EmptyDocuments_ReturnNoServers()
         {
             Assert.Empty(ExternalImport.ParseMRemoteNg("<Connections/>").Servers);
             Assert.Empty(ExternalImport.ParseRdcMan("<RDCMan/>").Servers);
             Assert.Empty(ExternalImport.ParseRdm("<Connections/>").Servers);
+            Assert.Empty(ExternalImport.ParseFileZilla("<FileZilla3/>").Servers);
         }
     }
 }

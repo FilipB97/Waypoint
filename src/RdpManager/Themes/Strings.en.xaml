@@ -170,6 +170,7 @@
     <sys:String x:Key="S.se.ftp.tls.explicit">Explicit FTPS</sys:String>
     <sys:String x:Key="S.se.ftp.tls.implicit">Implicit FTPS</sys:String>
     <sys:String x:Key="S.se.ftp.tls.none">None (plain FTP)</sys:String>
+    <sys:String x:Key="S.se.ftp.tls.auto">Auto (FTPS if available)</sys:String>
     <sys:String x:Key="S.se.tunnels.bad">Invalid tunnel rule: {0}
 Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.browse">Browse…</sys:String>
@@ -386,14 +387,18 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.mrng">mRemoteNG (confCons.xml)…</sys:String>
     <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
     <sys:String x:Key="S.import.rdm">Devolutions RDM (.rdm/.xml)…</sys:String>
+    <sys:String x:Key="S.import.filezilla">FileZilla (sitemanager.xml)…</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Import from mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Import from RDCMan</sys:String>
     <sys:String x:Key="S.dlg.rdg.filter">RDCMan (*.rdg)|*.rdg|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdm.title">Import from Devolutions RDM</sys:String>
     <sys:String x:Key="S.dlg.rdm.filter">RDM export (*.rdm;*.xml)|*.rdm;*.xml|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importfz.title">Import from FileZilla</sys:String>
+    <sys:String x:Key="S.dlg.fz.filter">FileZilla Site Manager (sitemanager.xml)|sitemanager.xml|XML (*.xml)|*.xml|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.msg.import.unsupported">Skipped unsupported protocols: {0}</sys:String>
     <sys:String x:Key="S.msg.import.nopass">Passwords are not migrated — you'll enter them on first connect.</sys:String>
+    <sys:String x:Key="S.msg.import.withpass">{0} password(s) imported into Windows Credential Manager.</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">The SSH terminal requires the WebView2 Runtime (built into Windows 11; on older systems install it from Microsoft).</sys:String>
     <!-- SFTP file panel -->
