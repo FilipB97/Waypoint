@@ -882,6 +882,7 @@ namespace RdpManager
         private void LoadSettingsForm()
         {
             _loadingSettings = true;
+            SettingsCats.SelectedIndex = 0;   // domyślna kategoria (Interfejs) → pokazuje pierwszą kartę
             SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
             SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
@@ -1176,13 +1177,35 @@ namespace RdpManager
         private void SettingsSearch_TextChanged(object sender, TextChangedEventArgs e)
         {
             string q = (SettingsSearch.Text ?? "").Trim().ToLowerInvariant();
-            foreach (var child in SettingsPanel.Children)
+            if (q.Length == 0) { ShowSettingsCategory(SettingsCats.SelectedIndex); return; }   // pusto → tryb kategorii
+            foreach (var child in SettingsCards.Children)   // wyszukiwanie: tryb wyników — pasujące karty ze wszystkich kategorii
             {
-                if (!(child is Border card)) continue;   // pomiń tytuł i samo pole wyszukiwania
-                if (q.Length == 0) { card.Visibility = Visibility.Visible; continue; }
+                if (!(child is Border card)) continue;
                 var sb = new System.Text.StringBuilder();
                 CollectSettingsText(card, sb);
                 card.Visibility = sb.ToString().ToLowerInvariant().Contains(q) ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        // Lewa nawigacja Ustawień: klik kategorii wychodzi z ewentualnego wyszukiwania i pokazuje jej kartę.
+        private void SettingsCat_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (SettingsSearch == null || SettingsCards == null) return;   // może zostać wywołane w trakcie inicjalizacji
+            if (!string.IsNullOrEmpty(SettingsSearch.Text)) { SettingsSearch.Text = ""; return; }   // TextChanged pokaże kategorię
+            ShowSettingsCategory(SettingsCats.SelectedIndex);
+        }
+
+        // Pokazuje jedną kartę: kolejność kart w SettingsCards = kolejność pozycji w SettingsCats.
+        private void ShowSettingsCategory(int index)
+        {
+            if (SettingsCards == null) return;
+            if (index < 0) index = 0;
+            int i = 0;
+            foreach (var child in SettingsCards.Children)
+            {
+                if (!(child is Border card)) continue;
+                card.Visibility = (i == index) ? Visibility.Visible : Visibility.Collapsed;
+                i++;
             }
         }
 

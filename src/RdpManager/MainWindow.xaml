@@ -389,13 +389,66 @@
             </ScrollViewer>
 
             <!-- Ustawienia -->
-            <ScrollViewer x:Name="SettingsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">
-                <StackPanel x:Name="SettingsPanel" Margin="28,24" MaxWidth="600" HorizontalAlignment="Left">
-                    <TextBlock Text="{DynamicResource S.nav.settings}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
-                    <ui:TextBox x:Name="SettingsSearch" PlaceholderText="{DynamicResource S.set.search}" Margin="0,0,0,14"
-                                MaxWidth="360" HorizontalAlignment="Left" TextChanged="SettingsSearch_TextChanged">
+            <Grid x:Name="SettingsView" Visibility="Collapsed" Background="{DynamicResource CanvasBrush}">
+                <Grid.Resources>
+                    <!-- Pozycja lewej nawigacji Ustawień: przezroczysta; hover/zaznaczenie = tło Panel + pasek akcentu. -->
+                    <Style x:Key="SettingsNavItem" TargetType="ListBoxItem">
+                        <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+                        <Setter Property="Margin" Value="0,1"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bd" CornerRadius="7" Background="Transparent" Padding="12,9">
+                                        <Grid>
+                                            <Border x:Name="Bar" Width="3" CornerRadius="2" HorizontalAlignment="Left"
+                                                    Background="{DynamicResource Accent}" Visibility="Collapsed"/>
+                                            <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Panel}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Panel}"/>
+                                            <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Grid.Resources>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Lewa kolumna: tytuł + wyszukiwanie + kategorie -->
+                <StackPanel Grid.Column="0" Width="214" Margin="20,24,6,16">
+                    <TextBlock Text="{DynamicResource S.nav.settings}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="4,0,0,16"/>
+                    <ui:TextBox x:Name="SettingsSearch" PlaceholderText="{DynamicResource S.set.search}" Margin="0,0,0,12"
+                                TextChanged="SettingsSearch_TextChanged">
                         <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
                     </ui:TextBox>
+                    <ListBox x:Name="SettingsCats" SelectionChanged="SettingsCat_Changed"
+                             Background="Transparent" BorderThickness="0"
+                             ItemContainerStyle="{StaticResource SettingsNavItem}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBoxItem Content="{DynamicResource S.set.iface}"/>
+                        <ListBoxItem Content="{DynamicResource S.set.conn}"/>
+                        <ListBoxItem Content="{DynamicResource S.set.behavior}"/>
+                        <ListBoxItem Content="{DynamicResource S.set.autoconnect}"/>
+                        <ListBoxItem Content="{DynamicResource S.set.profiles}"/>
+                        <ListBoxItem Content="{DynamicResource S.set.data}"/>
+                    </ListBox>
+                </StackPanel>
+
+                <!-- Prawa kolumna: treść wybranej kategorii (lub wyniki wyszukiwania) -->
+                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="SettingsCards" Margin="12,24,28,24" MaxWidth="640" HorizontalAlignment="Left">
 
                     <!-- Interfejs -->
                     <Border Style="{DynamicResource Card}">
@@ -520,7 +573,8 @@
                         <TextBlock x:Name="SettingsStatus" Foreground="{DynamicResource Online}" VerticalAlignment="Center" Margin="14,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
-            </ScrollViewer>
+                </ScrollViewer>
+            </Grid>
             </Grid>
         </Grid>
 
