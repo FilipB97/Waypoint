@@ -60,11 +60,12 @@ namespace RdpManager
             try { var s = SettingsStore.Load(); ThemeManager.Apply(s.Theme); LocalizationManager.Apply(s.Language); } catch { }
 
             // Zdejmij kolorową (akcentową) obwódkę z KAŻDEGO okna FluentWindow — jednym class-handlerem,
-            // zanim StartupUri utworzy MainWindow. Loaded gwarantuje istniejący uchwyt okna.
+            // zanim StartupUri utworzy MainWindow. Keep (a nie jednorazowe Neutralize) dobija ją też po
+            // wyrenderowaniu i przy aktywacji — WPF-UI przemalowuje krawędź na akcent PO Loaded (kobalt z #49).
             EventManager.RegisterClassHandler(
                 typeof(Wpf.Ui.Controls.FluentWindow),
                 FrameworkElement.LoadedEvent,
-                new RoutedEventHandler((s, _) => WindowBorder.Neutralize(s as Window)));
+                new RoutedEventHandler((s, _) => WindowBorder.Keep(s as Window)));
 
             CleanupUpdateLeftovers();
         }
