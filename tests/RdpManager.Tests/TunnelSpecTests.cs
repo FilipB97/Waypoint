@@ -103,5 +103,23 @@ namespace RdpManager.Tests
             Assert.Equal(new System.Version("1.4.0"), info.Version);
             Assert.Null(info.ExeUrl);
         }
+
+        [Fact]
+        public void ParseRelease_FallsBackToFirstExe_WhenNoX64()
+        {
+            string json = @"{""tag_name"":""v2.0.0"",""assets"":[
+                {""name"":""checksums.txt"",""browser_download_url"":""https://gh/txt"",""size"":5},
+                {""name"":""Waypoint-Setup.exe"",""browser_download_url"":""https://gh/setup"",""size"":900},
+                {""name"":""source.zip"",""browser_download_url"":""https://gh/zip"",""size"":42}]}";
+            var info = UpdateCheck.ParseRelease(json);
+            Assert.Equal("https://gh/setup", info.ExeUrl);   // brak x64 -> pierwszy .exe; .txt/.zip pominięte
+            Assert.Equal(900, info.ExeSize);
+        }
+
+        [Fact]
+        public void ParseRelease_MalformedJson_ReturnsNull()
+        {
+            Assert.Null(UpdateCheck.ParseRelease("{ to nie json"));
+        }
     }
 }
