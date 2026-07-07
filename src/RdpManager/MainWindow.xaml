@@ -196,12 +196,15 @@
                                        Appearance="Secondary" Margin="0,6,0,0" Click="ImportMenu_Click">
                                 <ui:Button.ContextMenu>
                                     <ContextMenu>
+                                        <MenuItem Header="{DynamicResource S.import.hdr.remote}" IsEnabled="False"/>
                                         <MenuItem Header="{DynamicResource S.import.mstsc}" Click="ImportMstsc_Click"
                                                   ToolTip="{DynamicResource S.importMstsc.tip}"/>
                                         <MenuItem Header="{DynamicResource S.import.rdpfile}" Click="ImportRdp_Click"/>
                                         <MenuItem Header="{DynamicResource S.import.mrng}" Click="ImportMrng_Click"/>
                                         <MenuItem Header="{DynamicResource S.import.rdcman}" Click="ImportRdg_Click"/>
                                         <MenuItem Header="{DynamicResource S.import.rdm}" Click="ImportRdm_Click"/>
+                                        <Separator/>
+                                        <MenuItem Header="{DynamicResource S.import.hdr.files}" IsEnabled="False"/>
                                         <MenuItem Header="{DynamicResource S.import.filezilla}" Click="ImportFileZilla_Click"/>
                                     </ContextMenu>
                                 </ui:Button.ContextMenu>

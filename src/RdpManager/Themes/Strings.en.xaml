@@ -386,6 +386,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
     <sys:String x:Key="S.import.rdm">Devolutions RDM (.rdm/.xml)…</sys:String>
     <sys:String x:Key="S.import.filezilla">FileZilla (sitemanager.xml)…</sys:String>
+    <sys:String x:Key="S.import.hdr.remote">Desktops &amp; terminals</sys:String>
+    <sys:String x:Key="S.import.hdr.files">File transfer</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Import from mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Import from RDCMan</sys:String>
