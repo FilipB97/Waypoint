@@ -212,17 +212,18 @@ namespace RdpManager
             bool pass = (rdp || ssh || vnc || sftp || ftp) && !ftpAnon;   // pole hasła
 
             var rdpVis = rdp ? Visibility.Visible : Visibility.Collapsed;
-            RdpCard.Visibility = rdpVis;               // cała karta „Opcje RDP" (bez pustego nagłówka dla nie-RDP)
+            TabRdp.Visibility = rdpVis;                 // zakładka „Opcje RDP" tylko dla RDP
             WinAuthCheck.Visibility = rdpVis;
             DomainLabel.Visibility = rdpVis;
             DomainBox.Visibility = rdpVis;
-            RedirHeader.Visibility = rdpVis;
-            RdpOptionsPanel.Visibility = rdpVis;
 
             KeyPathPanel.Visibility = (ssh || sftp) ? Visibility.Visible : Visibility.Collapsed;   // klucz: SSH i SFTP
             TunnelsPanel.Visibility = ssh ? Visibility.Visible : Visibility.Collapsed;             // tunele ssh -L: tylko powłoka SSH
 
-            AuthCard.Visibility = (pass || ftp) ? Visibility.Visible : Visibility.Collapsed;   // Telnet/Serial/WWW inaczej; FTP: karta też dla anonimowego (opcje FTP)
+            TabAuth.Visibility = (pass || ftp) ? Visibility.Visible : Visibility.Collapsed;   // Telnet/Serial/WWW inaczej; FTP: zakładka też dla anonimowego (opcje FTP)
+            // Aktywna zakładka mogła właśnie zniknąć (byłeś na „Opcje RDP"/„Uwierzytelnianie" i zmieniłeś protokół) → wróć na pierwszą.
+            if (EditorTabs.SelectedItem is System.Windows.Controls.TabItem sel && sel.Visibility != Visibility.Visible)
+                EditorTabs.SelectedIndex = 0;
             FtpOptionsPanel.Visibility = ftp ? Visibility.Visible : Visibility.Collapsed;
             ProfileRow.Visibility = user ? Visibility.Visible : Visibility.Collapsed; // profil (login/domena) tylko dla RDP/SSH
             var userVis = user ? Visibility.Visible : Visibility.Collapsed;
