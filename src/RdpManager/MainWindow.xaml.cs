@@ -104,7 +104,6 @@ namespace RdpManager
         private DispatcherTimer _focusPeekDelay;   // opóźnienie przytrzymania (jak pasek pełnoekranowy)
         private bool _focusPeeking;                // panel boczny chwilowo wysunięty w trybie skupienia
         private bool? _focusOverride;              // ręczne wł/wył skupienia (null = wg ustawienia); reset po un-maximize
-        private double _savedCaptionHeight = double.NaN;   // CaptionHeight sprzed skupienia (do przywrócenia)
         private Core.UpdateCheck.ReleaseInfo _update;      // dostępna nowsza wersja (z URL assetu .exe); null gdy brak
         private bool _updating;                            // trwa auto-aktualizacja — pomiń potwierdzenie zamknięcia
         private RECT _fsMonRect;   // prostokąt monitora w pikselach fizycznych (do wykrycia górnej krawędzi)
@@ -566,190 +565,7 @@ namespace RdpManager
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
             if (immersive) { if (_focusPeekPoll != null && !_focusPeekPoll.IsEnabled) _focusPeekPoll.Start(); }
             else { _focusPeekPoll?.Stop(); _focusPeekDelay?.Stop(); }
-            ApplyImmersiveCaption(immersive);
-            SetCaptionWatch(immersive);   // trzymaj CaptionHeight=0 mimo relayoutów / zmiany zoomu (WPF-UI je przywraca)
             UpdateToolbarMode();
-
-            if (immersive != _wasImmersive)
-            {
-                _wasImmersive = immersive;
-                LogFocusDiag(immersive);
-                // TYMCZASOWA sonda hover: loguje mapowanie kursor→element nad paskiem kart, żeby ustalić offset
-                // hit-testu przy DPI 1.25 + RootScale 0.9 (do usunięcia po diagnozie).
-                if (immersive) PreviewMouseMove += HoverDiag_MouseMove;
-                else PreviewMouseMove -= HoverDiag_MouseMove;
-                // Re-hit-test po ustaleniu layoutu (z #65) — zostaje jako tania asekuracja. Właściwa przyczyna
-                // (brak hover) była w IsHitTestVisibleInChrome na pasku kart — zdjęte w XAML.
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    UpdateLayout();
-                    // Hit-test i IsMouseOver są OK po re-wejściu, ale zmiana tła „bd" (podświetlenie) nie jest
-                    // MALOWANA, dopóki realny resize nie odświeży renderu paska kart. Wymuszamy przerysowanie
-                    // poddrzewa — to samo, co robi resize, tylko bez zmiany rozmiaru okna.
-                    TabStripHost.InvalidateVisual();
-                    foreach (System.Windows.UIElement c in FocusControls.Children) c.InvalidateVisual();
-                    System.Windows.Input.Mouse.Synchronize();
-                    if (immersive) LogButtonRects();   // fizyczne prostokąty przycisków (po layoucie)
-                }), System.Windows.Threading.DispatcherPriority.Background);
-            }
-        }
-
-        // ===== TYMCZASOWA diagnostyka hover-buga trybu skupienia (@125% DPI + RootScale). Cała do usunięcia. =====
-        private int _hoverDiagCount;
-
-        private void LogFocusDiag(bool immersive)
-        {
-            double caption = System.Windows.Shell.WindowChrome.GetWindowChrome(this)?.CaptionHeight ?? double.NaN;
-            double dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this).DpiScaleX;
-            _hoverDiagCount = 0;   // świeża próbka po każdej zmianie trybu
-            AppendFocusDiag(string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                "--- immersive={0} caption={1} state={2} dpi={3} rootScale={4}",
-                immersive, caption, WindowState, dpi, RootScale.ScaleX));
-        }
-
-        // Fizyczne (ekranowe, px) prostokąty przycisków paska kart — do porównania z fizyczną pozycją kursora.
-        private void LogButtonRects()
-        {
-            try
-            {
-                for (int i = 0; i < FocusControls.Children.Count; i++)
-                {
-                    if (FocusControls.Children[i] is FrameworkElement fe && fe.ActualWidth > 0)
-                    {
-                        Point tl = fe.PointToScreen(new Point(0, 0));
-                        Point br = fe.PointToScreen(new Point(fe.ActualWidth, fe.ActualHeight));
-                        AppendFocusDiag(string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                            "rect btn#{0} phys tl=({1:0},{2:0}) br=({3:0},{4:0}) tip={5}",
-                            i, tl.X, tl.Y, br.X, br.Y, (fe as System.Windows.Controls.Button)?.ToolTip));
-                    }
-                }
-            }
-            catch { }
-        }
-
-        // Loguje pozycję kursora (fizyczną + wg WPF) i co InputHitTest zwraca nad pasmem paska kart. Max 80 wpisów.
-        private void HoverDiag_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-        {
-            if (_hoverDiagCount >= 80) return;
-            try
-            {
-                Point pWin = e.GetPosition(this);
-                double tabBottom = TabStripHost.TranslatePoint(new Point(0, TabStripHost.ActualHeight), this).Y;
-                if (pWin.Y > tabBottom + 6) return;   // tylko pasmo paska kart
-                GetCursorPos(out POINT cur);          // fizyczny kursor (px)
-                var hit = InputHitTest(pWin) as DependencyObject;                       // świeży hit-test (geometria)
-                var over = System.Windows.Input.Mouse.DirectlyOver as DependencyObject; // stan śledzony przez WPF
-                _hoverDiagCount++;
-                AppendFocusDiag(string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                    "move curPhys=({0},{1}) win=({2:0.0},{3:0.0}) hit={4} over={5}",
-                    cur.X, cur.Y, pWin.X, pWin.Y, DescribeHit(hit), DescribeHit(over)));
-            }
-            catch { }
-        }
-
-        // Zwraca który przycisk FocusControls (indeks + tooltip) odpowiada trafionemu elementowi, albo typ elementu.
-        private string DescribeHit(DependencyObject hit)
-        {
-            var d = hit;
-            while (d != null)
-            {
-                if (d is System.Windows.Controls.Button b && b.Parent == FocusControls)
-                {
-                    // mo = czy WPF uważa, że mysz jest nad przyciskiem (steruje triggerem podświetlenia);
-                    // bd = realny Background wewnętrznego Bordera „bd" (czy trigger nałożył pędzel Elevated).
-                    var bd = b.Template?.FindName("bd", b) as System.Windows.Controls.Border;
-                    string bg = bd?.Background is System.Windows.Media.SolidColorBrush s ? s.Color.ToString() : (bd?.Background?.ToString() ?? "?");
-                    return "btn#" + FocusControls.Children.IndexOf(b) + "[mo=" + b.IsMouseOver + ",bd=" + bg + "]";
-                }
-                d = System.Windows.Media.VisualTreeHelper.GetParent(d);
-            }
-            return hit == null ? "null" : hit.GetType().Name;
-        }
-
-        private void AppendFocusDiag(string body)
-        {
-            try
-            {
-                string dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RdpManager");
-                System.IO.Directory.CreateDirectory(dir);
-                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "focusdiag.log"),
-                    string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                        "{0:HH:mm:ss} {1}{2}", DateTime.Now, body, Environment.NewLine));
-            }
-            catch { /* best-effort */ }
-        }
-
-        // W skupieniu AppTitleBar znika, ale WindowChrome zostawia strefę caption (~32px) na górze,
-        // więc pasek kart z przyciskami okna w nią wpada. Hit-test caption jest błędny przy DPI≠100%
-        // (znany bug WPF: regiony IsHitTestVisibleInChrome źle skalowane — środek ikon nie łapie,
-        // trafienie tylko przy dolno-bocznym rogu). Zerujemy caption na czas skupienia → cała góra to
-        // obszar klienta, przyciski działają zwykłym hit-testem WPF. Poza skupieniem przywracamy wartość.
-        private void ApplyImmersiveCaption(bool immersive)
-        {
-            ApplyCaptionCore(immersive);
-            // WPF-UI przywraca CaptionHeight PO naszym handlerze — i to na RÓŻNych etapach: raz zaraz po Loaded,
-            // a po sekwencji „sesja do osobnego okna → ponowna maksymalizacja" jeszcze PÓŹNIEJ (i bez layoutu,
-            // więc watch tego nie łapie). Dlatego dobijamy na DWÓCH priorytetach — Loaded oraz ApplicationIdle
-            // (po wszystkim, co WPF-UI zdąży zrobić w tej turze dispatchera).
-            Dispatcher.BeginInvoke(new Action(() => ApplyCaptionCore(IsImmersive())), DispatcherPriority.Loaded);
-            Dispatcher.BeginInvoke(new Action(() => ApplyCaptionCore(IsImmersive())), DispatcherPriority.ApplicationIdle);
-        }
-
-        private void ApplyCaptionCore(bool immersive)
-        {
-            var chrome = System.Windows.Shell.WindowChrome.GetWindowChrome(this);
-            if (chrome == null) return;   // brak chrome = brak strefy caption do naprawy
-            bool changed = false;
-            if (immersive)
-            {
-                if (double.IsNaN(_savedCaptionHeight)) _savedCaptionHeight = chrome.CaptionHeight;
-                if (chrome.CaptionHeight != 0) { chrome.CaptionHeight = 0; changed = true; }
-            }
-            else if (!double.IsNaN(_savedCaptionHeight) && chrome.CaptionHeight != _savedCaptionHeight)
-            {
-                chrome.CaptionHeight = _savedCaptionHeight;
-                changed = true;
-            }
-            // Sama zmiana CaptionHeight NIE odświeża stref hit-testu — WindowChrome przelicza je dopiero przy
-            // zmianie RAMKI okna. Przy przełączeniu skupienia (bez zmiany stanu okna) stara strefa caption
-            // zostaje, więc środek ikon paska kart nie łapie (a un-maximize→maximize „naprawia", bo tamto
-            // wymusza przeliczenie ramki). Wymuszamy je sami przez SetWindowPos(SWP_FRAMECHANGED).
-            if (changed) ForceFrameRecalc();
-        }
-
-        private void ForceFrameRecalc()
-        {
-            var hwnd = new WindowInteropHelper(this).Handle;
-            if (hwnd == IntPtr.Zero) return;
-            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-            // Klik już trafia, ale WPF nie odświeża sam stanu „mysz nad" (IsMouseOver) po zmianie ramki — przycisk
-            // nie podświetla się, dopóki nie zmusi go resize. Wymuszamy ponowną synchronizację myszy (re-hit-test
-            // pod kursorem), żeby podświetlenie działało od razu, bez zmniejszania/maksymalizowania okna.
-            Dispatcher.BeginInvoke(new Action(() => System.Windows.Input.Mouse.Synchronize()),
-                System.Windows.Threading.DispatcherPriority.Input);
-        }
-
-        // Jednorazowe zerowanie nie wystarcza: WPF-UI przywraca CaptionHeight po relayoutach, zmianie DPI
-        // lub zmianie zoomu UI. Gdy wróci w trybie skupienia, strefa caption zakrywa górę paska kart, a że
-        // pasek jest pod RootScale, regiony IsHitTestVisibleInChrome liczą się z błędem rosnącym w prawo
-        // („+"/skupienie łapią, dalsze przyciski dopiero po zjechaniu w dół). Dlatego w skupieniu pilnujemy
-        // CaptionHeight=0 na każdym przebiegu layoutu (ustawiamy tylko gdy „dryfnie" — brak pętli/kosztu).
-        private bool _captionWatchOn;
-        private bool _wasImmersive;   // ostatni znany stan skupienia — resync hit-testu odpalamy tylko przy realnej zmianie
-        private void SetCaptionWatch(bool on)
-        {
-            if (on == _captionWatchOn) return;
-            _captionWatchOn = on;
-            if (on) LayoutUpdated += CaptionWatchTick;
-            else LayoutUpdated -= CaptionWatchTick;
-        }
-
-        private void CaptionWatchTick(object sender, EventArgs e)
-        {
-            if (!IsImmersive()) { SetCaptionWatch(false); return; }
-            ApplyCaptionCore(true);   // wymuś 0, jeśli coś je przywróciło
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku): wł/wył dla bieżącego zmaksymalizowanego okna.
@@ -3678,8 +3494,6 @@ namespace RdpManager
                           SM_CXVIRTUALSCREEN = 78, SM_CYVIRTUALSCREEN = 79;
 
         private const uint SWP_SHOWWINDOW = 0x0040;
-        private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004,
-                           SWP_NOACTIVATE = 0x0010, SWP_FRAMECHANGED = 0x0020;
 
         [DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
