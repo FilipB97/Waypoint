@@ -2221,6 +2221,7 @@ namespace RdpManager
                 {
                     bool pane = s == _paneLeft || s == _paneRight;
                     if (pane) Grid.SetColumn(s.View, s == _paneRight ? 2 : 0);
+                    if (s.Resizer != null) s.Resizer.FitToWindow = pane;   // panele skalują pulpit do swojej połówki (zawsze się mieści)
                     s.View.Visibility = (pane && s.Connected) ? Visibility.Visible : Visibility.Collapsed;
                 }
                 if (PaneColRight.Width.GridUnitType != GridUnitType.Star)   // wejście w podział = 50/50; drag splittera zachowany
@@ -2239,6 +2240,7 @@ namespace RdpManager
             foreach (var s in _sessions)
             {
                 Grid.SetColumn(s.View, 0);
+                if (s.Resizer != null) s.Resizer.FitToWindow = false;   // pojedynczy widok = natywna, ostra rozdzielczość
                 s.View.Visibility = (s == _active && (s.Connected || s.IsTerm)) ? Visibility.Visible : Visibility.Collapsed;
             }
 
