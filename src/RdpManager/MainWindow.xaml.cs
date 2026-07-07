@@ -578,14 +578,8 @@ namespace RdpManager
                 // hit-testu przy DPI 1.25 + RootScale 0.9 (do usunięcia po diagnozie).
                 if (immersive) PreviewMouseMove += HoverDiag_MouseMove;
                 else PreviewMouseMove -= HoverDiag_MouseMove;
-                // WŁAŚCIWA POPRAWKA: hover pada tylko po ponownym wejściu w skupienie na JUŻ zmaksymalizowanym
-                // oknie (brak WM_SIZE → nieodświeżona strefa non-client hit-testu; klik działa, hover nie).
-                // ForceFrameRecalc (SetWindowPos SWP_FRAMECHANGED → WM_NCCALCSIZE) odświeża non-client — to samo
-                // co robi realny resize (un-maximize→maximize, który „naprawiał"). Dotąd był MARTWYM kodem:
-                // wołany tylko z ApplyCaptionCore pod bramką `if (changed)`, a CaptionHeight jest stale 0, więc
-                // nigdy się nie wykonał. Tu wołamy bezwarunkowo przy każdej realnej zmianie trybu.
-                ForceFrameRecalc();
-                // Dodatkowy re-hit-test po ustaleniu layoutu (Background = po Render) — z #65; sam nie wystarczył.
+                // Re-hit-test po ustaleniu layoutu (z #65) — zostaje jako tania asekuracja. Właściwa przyczyna
+                // (brak hover) była w IsHitTestVisibleInChrome na pasku kart — zdjęte w XAML.
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     UpdateLayout();
@@ -638,11 +632,12 @@ namespace RdpManager
                 double tabBottom = TabStripHost.TranslatePoint(new Point(0, TabStripHost.ActualHeight), this).Y;
                 if (pWin.Y > tabBottom + 6) return;   // tylko pasmo paska kart
                 GetCursorPos(out POINT cur);          // fizyczny kursor (px)
-                var hit = InputHitTest(pWin) as DependencyObject;
+                var hit = InputHitTest(pWin) as DependencyObject;                       // świeży hit-test (geometria)
+                var over = System.Windows.Input.Mouse.DirectlyOver as DependencyObject; // stan śledzony przez WPF
                 _hoverDiagCount++;
                 AppendFocusDiag(string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                    "move curPhys=({0},{1}) win=({2:0.0},{3:0.0}) hit={4}",
-                    cur.X, cur.Y, pWin.X, pWin.Y, DescribeHit(hit)));
+                    "move curPhys=({0},{1}) win=({2:0.0},{3:0.0}) hit={4} over={5}",
+                    cur.X, cur.Y, pWin.X, pWin.Y, DescribeHit(hit), DescribeHit(over)));
             }
             catch { }
         }
