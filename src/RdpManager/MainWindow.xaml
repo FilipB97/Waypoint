@@ -334,11 +334,24 @@
                     <Grid.LayoutTransform>
                         <ScaleTransform x:Name="SessionScale" ScaleX="1" ScaleY="1"/>
                     </Grid.LayoutTransform>
-                    <TextBlock x:Name="EmptyHint" Text="{DynamicResource S.emptyhint}"
+                    <!-- Podział ekranu (split-screen): kol.0 = lewy panel, kol.1 = GridSplitter, kol.2 = prawy panel.
+                         Bez podziału: splitter zwinięty i kol.2=0, więc hosty sesji (Grid.Column domyślnie 0) wypełniają
+                         kol.0 = pełną szerokość — zachowanie bez zmian. W podziale kol.2 dostaje "*". -->
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="PaneColLeft" Width="*"/>
+                        <ColumnDefinition x:Name="PaneColSplit" Width="Auto"/>
+                        <ColumnDefinition x:Name="PaneColRight" Width="0"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="EmptyHint" Grid.ColumnSpan="3" Text="{DynamicResource S.emptyhint}"
                                Foreground="{DynamicResource TextTer}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
+                    <!-- Uchwyt podziału między panelami (leży w nieprzykrytej kol.1 → działa mimo airspace hostów). -->
+                    <GridSplitter x:Name="PaneSplitter" Grid.Column="1" Width="6" Visibility="Collapsed"
+                                  HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                                  ResizeBehavior="PreviousAndNext" Background="{DynamicResource Border}"/>
+
                     <!-- Stan sesji gdy kontrolka RDP jest schowana (łączenie / rozłączono) -->
-                    <Border x:Name="SessionOverlay" Visibility="Collapsed" Background="{DynamicResource CanvasBrush}">
+                    <Border x:Name="SessionOverlay" Grid.ColumnSpan="3" Visibility="Collapsed" Background="{DynamicResource CanvasBrush}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
                             <ui:ProgressRing x:Name="OverlaySpinner" IsIndeterminate="True" Width="46" Height="46"
                                              Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,0,0,18"/>

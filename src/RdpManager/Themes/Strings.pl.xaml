@@ -231,6 +231,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.prompt.newgroup.title">Nowa grupa</sys:String>
     <sys:String x:Key="S.prompt.newgroup.label">Nazwa grupy:</sys:String>
     <sys:String x:Key="S.m.tearoff">Wyciągnij do osobnego okna</sys:String>
+    <sys:String x:Key="S.m.split">Podziel ekran z tą sesją</sys:String>
+    <sys:String x:Key="S.m.unsplit">Zakończ podział ekranu</sys:String>
     <sys:String x:Key="S.m.duplicate">Duplikuj</sys:String>
     <sys:String x:Key="S.m.moveleft">Przesuń w lewo</sys:String>
     <sys:String x:Key="S.m.moveright">Przesuń w prawo</sys:String>
