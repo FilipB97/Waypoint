@@ -114,7 +114,9 @@ namespace RdpManager
             if (dlg.SavePassword)
             {
                 _server.SavePassword = true;
-                CredentialStore.Save(_server.CredTarget, _server.Username, _password);
+                if (!CredentialStore.TrySave(_server.CredTarget, _server.Username, _password))
+                    MessageBox.Show(L("S.cred.saveFailed"), L("S.cred.saveFailed.title"),
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             else
             {

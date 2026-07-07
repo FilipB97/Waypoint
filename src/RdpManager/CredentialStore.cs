@@ -16,6 +16,15 @@ namespace RdpManager
 
         public static void Save(string target, string username, string password)
         {
+            if (!TrySave(target, username, password))
+                throw new InvalidOperationException("CredWrite nie powiódł się.");
+        }
+
+        /// <summary>Zapis do sejfu BEZ wyjątku: true = zapisano, false = CredWrite odmówił. Wołający musi
+        /// obsłużyć false i ostrzec użytkownika — dotąd Save rzucał wyjątek, który globalny handler po cichu
+        /// połykał (hasło nie trafiało do sejfu, a metoda bywała przerwana przed zapisem metadanych).</summary>
+        public static bool TrySave(string target, string username, string password)
+        {
             byte[] blob = Encoding.Unicode.GetBytes(password ?? "");
             var cred = new CREDENTIAL
             {
@@ -29,8 +38,7 @@ namespace RdpManager
             try
             {
                 if (blob.Length > 0) Marshal.Copy(blob, 0, cred.CredentialBlob, blob.Length);
-                if (!CredWrite(ref cred, 0))
-                    throw new InvalidOperationException("CredWrite nie powiódł się: " + Marshal.GetLastWin32Error());
+                return CredWrite(ref cred, 0);
             }
             finally
             {

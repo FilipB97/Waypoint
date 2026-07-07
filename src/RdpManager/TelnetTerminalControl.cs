@@ -25,6 +25,7 @@ namespace RdpManager
             return Task.Run(() =>
             {
                 DisposeConnection();
+                lock (_utf8) _utf8.Reset();   // rekonekt: porzuć niedokończony znak wielobajtowy z poprzedniej sesji
                 _userClosed = false;
                 _state = 0;
 

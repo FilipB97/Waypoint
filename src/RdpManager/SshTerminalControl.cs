@@ -120,6 +120,7 @@ namespace RdpManager
             return Task.Run(() =>
             {
                 DisposeClient();   // rekonekt: sprzątnij poprzednie połączenie
+                lock (_utf8) _utf8.Reset();   // porzuć niedokończony znak wielobajtowy z poprzedniej sesji
 
                 _server = server;
                 _password = password;
@@ -250,24 +251,33 @@ namespace RdpManager
             try
             {
                 string fp = KnownHosts.Fingerprint(e.HostKey);
-                // Cała operacja odczyt→sprawdzenie→zapis pod jednym lockiem: terminal i SFTP
-                // (oraz wiele sesji) potrafią trafić tu równolegle i pogubić/uciąć plik.
+
+                // Odczyt→sprawdzenie pod lockiem, ale lock ZWALNIAMY przed pytaniem o zaufanie: ask(...)
+                // marshaluje na wątek UI (Dispatcher.Invoke, blokująco), a trzymanie KnownHosts.Sync przez
+                // ten czas potrafiło zakleszczyć równoległe sesje/SFTP dobijające się o ten sam lock.
+                bool changed;
                 lock (KnownHosts.Sync)
                 {
                     var store = KnownHosts.Load(SettingsStore.Dir);
                     var status = KnownHosts.Check(store, _hostKeyHost, _hostKeyPort, fp);
                     if (status == KnownHosts.Status.Match) { e.CanTrust = true; return; }
+                    changed = status == KnownHosts.Status.Mismatch;
+                }
 
-                    bool changed = status == KnownHosts.Status.Mismatch;
-                    var ask = TrustHostKey;
-                    bool trust = ask != null ? ask(_hostKeyHost + ":" + _hostKeyPort, fp, changed) : !changed;
-                    if (trust)
+                var ask = TrustHostKey;
+                bool trust = ask != null ? ask(_hostKeyHost + ":" + _hostKeyPort, fp, changed) : !changed;
+                if (trust)
+                {
+                    // Ponowny odczyt świeżego stanu i zapis pod lockiem. TOCTOU nieszkodliwe: inna sesja mogła
+                    // w międzyczasie dopisać ten sam host — zapiszemy ten sam odcisk (idempotentnie).
+                    lock (KnownHosts.Sync)
                     {
+                        var store = KnownHosts.Load(SettingsStore.Dir);
                         store[KnownHosts.EntryKey(_hostKeyHost, _hostKeyPort)] = fp;
                         KnownHosts.Save(SettingsStore.Dir, store);
                     }
-                    e.CanTrust = trust;
                 }
+                e.CanTrust = trust;
             }
             catch { e.CanTrust = false; }   // wątpliwość = odmowa (bezpieczny domyślny)
         }

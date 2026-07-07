@@ -282,6 +282,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.warn.telnet">Telnet transmits everything, including your password, in clear text. Use it only on trusted networks. Prefer SSH where possible.</sys:String>
     <sys:String x:Key="S.warn.vnc.title">VNC — unencrypted</sys:String>
     <sys:String x:Key="S.warn.vnc">Classic VNC has weak authentication and no session encryption. Use it only on trusted networks or tunnel it through SSH.</sys:String>
+    <sys:String x:Key="S.cred.saveFailed">Couldn't save the password to Windows Credential Manager. The session will still work, but the password wasn't stored — you'll need to enter it again next time.</sys:String>
+    <sys:String x:Key="S.cred.saveFailed.title">Password not saved</sys:String>
     <sys:String x:Key="S.st.wolsent">Wake-on-LAN packet sent to {0}</sys:String>
 
     <sys:String x:Key="S.dash.servers">Servers</sys:String>
