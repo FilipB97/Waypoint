@@ -215,7 +215,6 @@ namespace RdpManager
                 switch (n.Kind)
                 {
                     case Core.HealthNoticeKind.SettingsRestored:            lines.Add(L("S.heal.settingsRestored")); break;
-                    case Core.HealthNoticeKind.SettingsRestoredAfterUpdate: lines.Add(L("S.heal.settingsAfterUpdate")); break;
                     case Core.HealthNoticeKind.ServersRestored:             lines.Add(L("S.heal.serversRestored")); break;
                     case Core.HealthNoticeKind.FileQuarantined:             lines.Add(string.Format(L("S.heal.quarantined"), n.Detail)); break;
                 }

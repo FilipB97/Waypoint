@@ -72,9 +72,7 @@
     <!-- Configuration self-heal notices (InfoBar in the sidebar footer). -->
     <sys:String x:Key="S.heal.title.ok">Configuration restored</sys:String>
     <sys:String x:Key="S.heal.title.warn">Damaged configuration file</sys:String>
-    <sys:String x:Key="S.heal.settingsRestored">Settings were restored from a backup.</sys:String>
-    <sys:String x:Key="S.heal.settingsAfterUpdate">Settings were restored from the pre-update snapshot.</sys:String>
-    <sys:String x:Key="S.heal.serversRestored">The server list was restored from a backup.</sys:String>
+    <sys:String x:Key="S.heal.settingsRestored">Settings were restored from a backup.</sys:String>    <sys:String x:Key="S.heal.serversRestored">The server list was restored from a backup.</sys:String>
     <sys:String x:Key="S.heal.quarantined">File “{0}” was damaged — a copy was preserved next to it (.corrupt).</sys:String>
     <sys:String x:Key="S.update.title">Update</sys:String>
     <sys:String x:Key="S.update.confirm">Update to version {0}? Open connections will close and Waypoint will restart (and offer to restore your session).</sys:String>
