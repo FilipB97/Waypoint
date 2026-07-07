@@ -1,0 +1,182 @@
+<UserControl x:Class="RdpManager.FileTransferPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             AllowDrop="True" DragEnter="Panel_DragEnter" DragOver="Panel_DragOver"
+             DragLeave="Panel_DragLeave" Drop="Panel_Drop">
+    <UserControl.Resources>
+        <!-- Pasek narzędzi: przezroczysty przycisk-ikona z podświetleniem akcentem (bez przygaszania ikony). -->
+        <Style x:Key="FtIconBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="Bd" CornerRadius="6" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.12"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.20"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Segment ścieżki (breadcrumb): link-owy przycisk. -->
+        <Style x:Key="FtCrumbBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+            <Setter Property="Padding" Value="5,2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="5" Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Border}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Wiersz listy: przezroczysty; hover/zaznaczenie = akcent (tło osobną warstwą, nie przygasza tekstu). -->
+        <Style x:Key="FtRow" TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Grid>
+                            <Border x:Name="Bd" CornerRadius="6" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <ContentPresenter Margin="8,5" VerticalAlignment="Center"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.08"/></Trigger>
+                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.16"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Szablon wiersza: ikona + nazwa (rozciąga się) + rozmiar (do prawej) + data. -->
+        <DataTemplate x:Key="FtRowTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="24"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="88"/>
+                    <ColumnDefinition Width="140"/>
+                </Grid.ColumnDefinitions>
+                <ui:SymbolIcon Grid.Column="0" Symbol="{Binding Icon}" FontSize="16" Foreground="{Binding IconBrush}" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="{DynamicResource TextPrim}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="6,0,8,0"/>
+                <TextBlock Grid.Column="2" Text="{Binding SizeText}" Foreground="{DynamicResource TextSec}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,12,0" FontSize="11.5"/>
+                <TextBlock Grid.Column="3" Text="{Binding Modified}" Foreground="{DynamicResource TextTer}"
+                           VerticalAlignment="Center" FontSize="11.5"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1,0,0,0">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>   <!-- pasek: breadcrumb + akcje -->
+                <RowDefinition Height="Auto"/>   <!-- nagłówek kolumn -->
+                <RowDefinition Height="*"/>      <!-- lista -->
+                <RowDefinition Height="Auto"/>   <!-- status -->
+            </Grid.RowDefinitions>
+
+            <!-- Pasek narzędzi -->
+            <Grid Grid.Row="0" Margin="6,8,8,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.up}" Click="Up_Click">
+                        <ui:SymbolIcon Symbol="ArrowUp24"/>
+                    </Button>
+                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.refresh}" Click="Refresh_Click">
+                        <ui:SymbolIcon Symbol="ArrowClockwise24"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Ścieżka jako okruszki (klik = nawigacja) -->
+                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="4,0">
+                    <StackPanel x:Name="Breadcrumb" Orientation="Horizontal" VerticalAlignment="Center"/>
+                </ScrollViewer>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.upload}" Click="Upload_Click">
+                        <ui:SymbolIcon Symbol="ArrowUpload24"/>
+                    </Button>
+                    <Button x:Name="DownloadBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.download}" Click="Download_Click">
+                        <ui:SymbolIcon Symbol="ArrowDownload24"/>
+                    </Button>
+                    <Border Width="1" Margin="4,4" Background="{DynamicResource Border}"/>
+                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.newfolder}" Click="NewFolder_Click">
+                        <ui:SymbolIcon Symbol="FolderAdd24"/>
+                    </Button>
+                    <Button x:Name="DeleteBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.delete}" Click="Delete_Click">
+                        <ui:SymbolIcon Symbol="Delete24"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- Nagłówek kolumn -->
+            <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Margin="12,0,14,0" Padding="0,0,0,5">
+                <Grid Margin="12,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="24"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="88"/>
+                        <ColumnDefinition Width="140"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="1" Text="{DynamicResource S.sftp.name}" Foreground="{DynamicResource TextTer}" FontSize="11" Margin="6,0,0,0"/>
+                    <TextBlock Grid.Column="2" Text="{DynamicResource S.sftp.size}" Foreground="{DynamicResource TextTer}" FontSize="11" HorizontalAlignment="Right" Margin="0,0,12,0"/>
+                    <TextBlock Grid.Column="3" Text="{DynamicResource S.sftp.modified}" Foreground="{DynamicResource TextTer}" FontSize="11"/>
+                </Grid>
+            </Border>
+
+            <!-- Lista + nakładka „upuść, aby wysłać" -->
+            <Grid Grid.Row="2">
+                <ListView x:Name="FileList" BorderThickness="0" Background="Transparent" Margin="4,4,6,2"
+                          ItemContainerStyle="{StaticResource FtRow}" ItemTemplate="{StaticResource FtRowTemplate}"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          MouseDoubleClick="List_DoubleClick"/>
+                <Border x:Name="DropOverlay" Visibility="Collapsed" Margin="6" CornerRadius="10"
+                        Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Accent}" BorderThickness="2" Opacity="0.96">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="ArrowUpload24" FontSize="34" Foreground="{DynamicResource Accent}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource S.sftp.drophint}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Status -->
+            <TextBlock x:Name="StatusText" Grid.Row="3" Foreground="{DynamicResource TextTer}" FontSize="11"
+                       Margin="14,4,14,8" TextTrimming="CharacterEllipsis"/>
+        </Grid>
+    </Border>
+</UserControl>
