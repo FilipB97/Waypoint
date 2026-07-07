@@ -3308,6 +3308,9 @@ namespace RdpManager
             // Po przetworzeniu fokusu (Input) wstrzykujemy Ctrl↓ Alt↓ End↓ End↑ Alt↑ Ctrl↑.
             Dispatcher.BeginInvoke(new Action(() =>
             {
+                // keybd_event jest globalny — wyślij TYLKO gdy nasze okno jest na pierwszym planie, inaczej
+                // klawisze trafiłyby do aplikacji, na którą użytkownik zdążył przełączyć (iniekcja jest odroczona).
+                if (GetForegroundWindow() != new WindowInteropHelper(this).Handle) return;
                 keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
                 keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
                 keybd_event(VK_END, 0, 0, UIntPtr.Zero);
