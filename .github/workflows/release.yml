@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # pełna historia + tagi — do wygenerowania listy zmian od poprzedniego wydania
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -101,11 +103,32 @@ jobs:
         shell: pwsh
         env:
           VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
           SIGNED: ${{ steps.signing.outputs.enabled }}
         run: |
           $exe  = "dist/Waypoint-$env:VERSION-win-x64.exe"
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
+
+          # Realne zmiany = commity od POPRZEDNIEGO wydania do HEAD, bez merge-commitów (czyli same
+          # commity z gałęzi PR-ów). Poprzedni tag = najwyższy wg wersji, który NIE jest bieżącym
+          # (bieżący istnieje tylko przy wyzwoleniu przez push taga; przy workflow_dispatch jeszcze nie).
+          $tags = @(git tag --sort=-v:refname)
+          $prev = ($tags | Where-Object { $_ -and $_ -ne $env:TAG } | Select-Object -First 1)
+          $changes = @()
+          if ($prev) { $changes = @(git log "$prev..HEAD" --no-merges --pretty=format:"- %s") | Where-Object { $_ } }
+
           $sw = [IO.StreamWriter]::new("notes.md", $false, [Text.UTF8Encoding]::new($false))
+          $sw.WriteLine("## What's changed")
+          $sw.WriteLine("")
+          if ($changes.Count -gt 0) {
+            foreach ($c in $changes) { $sw.WriteLine($c) }
+            if ($prev) { $sw.WriteLine(""); $sw.WriteLine("_Since $prev._") }
+          } else {
+            $sw.WriteLine("- See the commit history for details.")
+          }
+          $sw.WriteLine("")
+          $sw.WriteLine("---")
+          $sw.WriteLine("")
           $sw.WriteLine("**Waypoint** - a modern RDP manager for Windows (WPF, Fluent / Mica).")
           $sw.WriteLine("")
           $sw.WriteLine("Download the ``Waypoint-...-win-x64.exe`` asset below and run it - self-contained,")
