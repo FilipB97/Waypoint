@@ -578,7 +578,14 @@ namespace RdpManager
                 // hit-testu przy DPI 1.25 + RootScale 0.9 (do usunięcia po diagnozie).
                 if (immersive) PreviewMouseMove += HoverDiag_MouseMove;
                 else PreviewMouseMove -= HoverDiag_MouseMove;
-                // Re-hit-test po ustaleniu layoutu (Background = po Render) — z #65; nie wystarczył sam, ale zostaje.
+                // WŁAŚCIWA POPRAWKA: hover pada tylko po ponownym wejściu w skupienie na JUŻ zmaksymalizowanym
+                // oknie (brak WM_SIZE → nieodświeżona strefa non-client hit-testu; klik działa, hover nie).
+                // ForceFrameRecalc (SetWindowPos SWP_FRAMECHANGED → WM_NCCALCSIZE) odświeża non-client — to samo
+                // co robi realny resize (un-maximize→maximize, który „naprawiał"). Dotąd był MARTWYM kodem:
+                // wołany tylko z ApplyCaptionCore pod bramką `if (changed)`, a CaptionHeight jest stale 0, więc
+                // nigdy się nie wykonał. Tu wołamy bezwarunkowo przy każdej realnej zmianie trybu.
+                ForceFrameRecalc();
+                // Dodatkowy re-hit-test po ustaleniu layoutu (Background = po Render) — z #65; sam nie wystarczył.
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     UpdateLayout();
