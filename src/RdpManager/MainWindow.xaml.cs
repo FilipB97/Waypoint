@@ -171,6 +171,9 @@ namespace RdpManager
             InitTray();
             HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndHook);
             ApplyHotkey();
+            // Podświetlanie ikon paska kart w trybie skupienia (patrz StartTabStripRepaintPulse): przy ruchu
+            // myszy nad paskiem wymuszamy przerysowanie, bo WPF sam go w tym trybie nie maluje.
+            TabStripHost.MouseMove += (_, __) => StartTabStripRepaintPulse();
 
             CheckForUpdatesAsync();
             // Po wyrenderowaniu okna (modal przywracania potrzebuje widocznego właściciela).
@@ -566,6 +569,38 @@ namespace RdpManager
             if (immersive) { if (_focusPeekPoll != null && !_focusPeekPoll.IsEnabled) _focusPeekPoll.Start(); }
             else { _focusPeekPoll?.Stop(); _focusPeekDelay?.Stop(); }
             UpdateToolbarMode();
+            if (immersive) StartTabStripRepaintPulse();   // od razu po wejściu (mysz może już być nad paskiem)
+        }
+
+        // Obejście quirku WPF: w trybie skupienia (pasek kart pod LayoutTransform, obok airspace WindowsFormsHost)
+        // zmiana tła podświetlenia ikon (IsMouseOver) jest USTAWIANA, ale WPF jej nie MALUJE — dopóki pętla renderu
+        // nie zostanie „obudzona" (robił to dopiero realny resize okna). Gdy mysz jest nad paskiem kart, trzymamy
+        // pętlę renderu aktywną (CompositionTarget.Rendering) i znaczymy przyciski „brudne", więc hover maluje się
+        // od razu. Po zejściu myszy dogaszamy kilka klatek i odpinamy — brak stałego kosztu renderowania.
+        private bool _tabPulseOn;
+        private int _tabPulseCooldown;
+
+        private void StartTabStripRepaintPulse()
+        {
+            if (!IsImmersive()) return;
+            _tabPulseCooldown = 15;
+            if (_tabPulseOn) return;
+            _tabPulseOn = true;
+            System.Windows.Media.CompositionTarget.Rendering += TabStripRepaintPulse;
+        }
+
+        private void TabStripRepaintPulse(object sender, EventArgs e)
+        {
+            if (TabStripHost.IsMouseOver && IsImmersive())
+            {
+                _tabPulseCooldown = 15;
+                foreach (System.Windows.UIElement c in FocusControls.Children) c.InvalidateVisual();
+            }
+            else if (--_tabPulseCooldown <= 0)
+            {
+                System.Windows.Media.CompositionTarget.Rendering -= TabStripRepaintPulse;
+                _tabPulseOn = false;
+            }
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku): wł/wył dla bieżącego zmaksymalizowanego okna.
