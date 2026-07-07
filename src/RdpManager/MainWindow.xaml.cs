@@ -505,6 +505,7 @@ namespace RdpManager
         }
 
         private const int WM_HOTKEY = 0x0312;
+        private const int WM_NCACTIVATE = 0x0086;   // krawędź (non-client) jest przemalowywana przy (de)aktywacji
         private const int HotkeyId = 0x5751;   // 'WQ'
         private const uint MOD_ALT = 0x0001, MOD_CONTROL = 0x0002;
 
@@ -526,6 +527,11 @@ namespace RdpManager
                 RestoreFromTray();
                 QuickConnect_Click(this, null);
                 handled = true;
+            }
+            else if (msg == WM_NCACTIVATE)
+            {
+                // Windows/WPF-UI przemalowują krawędź okna przy (de)aktywacji — od razu przywróć wybraną obwódkę.
+                WindowBorder.Apply(this);
             }
             return IntPtr.Zero;
         }
@@ -829,6 +835,8 @@ namespace RdpManager
             SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
             SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
+            SetBorder.SelectedIndex = _settings.WindowBorderColor == "System" ? 2
+                                    : string.IsNullOrEmpty(_settings.WindowBorderColor) ? 0 : 1;
             SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
             SetListStyle.SelectedIndex = _settings.ListStyle == "Minimal" ? 1 : 0;
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
@@ -1117,6 +1125,8 @@ namespace RdpManager
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
             _settings.ListStyle = (SetListStyle.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Default";
+            _settings.WindowBorderColor = (SetBorder.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "";
+            WindowBorder.SetSpec(_settings.WindowBorderColor);
             ApplySettings();
             QueueSettingsSave();
         }

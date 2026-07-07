@@ -56,12 +56,12 @@ namespace RdpManager
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
                 LogCrash("AppDomain", args.ExceptionObject as Exception);
 
-            // Zastosuj zapisany motyw i język ZANIM powstanie okno (bez mignięcia).
-            try { var s = SettingsStore.Load(); ThemeManager.Apply(s.Theme); LocalizationManager.Apply(s.Language); } catch { }
+            // Zastosuj zapisany motyw, obwódkę i język ZANIM powstanie okno (bez mignięcia).
+            try { var s = SettingsStore.Load(); ThemeManager.Apply(s.Theme); WindowBorder.SetSpec(s.WindowBorderColor); LocalizationManager.Apply(s.Language); } catch { }
 
-            // Zdejmij kolorową (akcentową) obwódkę z KAŻDEGO okna FluentWindow — jednym class-handlerem,
-            // zanim StartupUri utworzy MainWindow. Keep (a nie jednorazowe Neutralize) dobija ją też po
-            // wyrenderowaniu i przy aktywacji — WPF-UI przemalowuje krawędź na akcent PO Loaded (kobalt z #49).
+            // Nałóż wybraną obwódkę (z ustawień; domyślnie „brak") na KAŻDE okno FluentWindow — jednym
+            // class-handlerem, zanim StartupUri utworzy MainWindow. Keep dobija ją po wyrenderowaniu i przy
+            // aktywacji, bo WPF-UI przemalowuje krawędź na akcent PO Loaded (kobalt z #49).
             EventManager.RegisterClassHandler(
                 typeof(Wpf.Ui.Controls.FluentWindow),
                 FrameworkElement.LoadedEvent,
