@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
@@ -34,11 +35,18 @@ namespace RdpManager
             _singleInstance = new Mutex(true, "Waypoint.SingleInstance", out bool firstInstance);
             if (!firstInstance)
             {
-                var hwnd = FindWindow(null, "Waypoint");
-                if (hwnd != IntPtr.Zero) { ShowWindow(hwnd, SW_RESTORE); SetForegroundWindow(hwnd); }
+                // Poproś działającą instancję o pokazanie okna (nazwany potok — działa też, gdy okno jest schowane
+                // w zasobniku, gdzie FindWindow/ShowWindow bywało zawodne dla okna ukrytego przez WPF Hide()).
+                if (!SignalExistingInstance())
+                {
+                    var hwnd = FindWindow(null, "Waypoint");   // fallback, gdyby potok nie odpowiedział
+                    if (hwnd != IntPtr.Zero) { ShowWindow(hwnd, SW_RESTORE); SetForegroundWindow(hwnd); }
+                }
                 Shutdown();
                 return;
             }
+
+            StartSingleInstanceServer();   // pierwsza instancja nasłuchuje „show" od kolejnych uruchomień
 
             Core.PersistLog.Write(SettingsStore.Dir,
                 "=== app start v" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " ===");
@@ -68,6 +76,48 @@ namespace RdpManager
                 new RoutedEventHandler((s, _) => WindowBorder.Keep(s as Window)));
 
             CleanupUpdateLeftovers();
+        }
+
+        private const string PipeName = "Waypoint.SingleInstance.pipe";
+
+        // Druga instancja: przez nazwany potok prosi pierwszą o pokazanie okna. true = dostarczono.
+        private static bool SignalExistingInstance()
+        {
+            try
+            {
+                using (var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out))
+                {
+                    client.Connect(1000);
+                    using (var w = new StreamWriter(client)) { w.WriteLine("show"); w.Flush(); }
+                    return true;
+                }
+            }
+            catch { return false; }
+        }
+
+        // Pierwsza instancja: nasłuchuje kolejnych uruchomień i na „show" przywraca okno z zasobnika.
+        private void StartSingleInstanceServer()
+        {
+            var t = new Thread(() =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        using (var server = new NamedPipeServerStream(PipeName, PipeDirection.In, 1,
+                                   PipeTransmissionMode.Byte, PipeOptions.None))
+                        {
+                            server.WaitForConnection();
+                            using (var r = new StreamReader(server))
+                                if (r.ReadLine() == "show")
+                                    Dispatcher.Invoke(new Action(() => (Current.MainWindow as MainWindow)?.RestoreFromTray()));
+                        }
+                    }
+                    catch { try { Thread.Sleep(500); } catch { } }   // błąd potoku — chwila przerwy i nasłuchuj dalej
+                }
+            })
+            { IsBackground = true, Name = "Waypoint-SingleInstance" };
+            t.Start();
         }
 
         // Po auto-aktualizacji zostaje pobrany exe w %TEMP% i ewentualny plik .new obok celu — posprzątaj.

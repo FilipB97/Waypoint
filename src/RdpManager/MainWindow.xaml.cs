@@ -497,7 +497,7 @@ namespace RdpManager
             _tray.ContextMenuStrip = menu;
         }
 
-        private void RestoreFromTray()
+        internal void RestoreFromTray()   // internal: woła też App (druga instancja przez nazwany potok)
         {
             Show();
             if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
