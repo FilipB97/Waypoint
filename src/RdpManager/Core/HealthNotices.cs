@@ -8,7 +8,6 @@ namespace RdpManager.Core
     public enum HealthNoticeKind
     {
         SettingsRestored,             // ustawienia przywrócone z kopii .bak (cofnięte z zewnątrz)
-        SettingsRestoredAfterUpdate,  // ustawienia przywrócone z migawki sprzed aktualizacji
         ServersRestored,              // lista serwerów przywrócona z kopii .bak
         FileQuarantined               // uszkodzony plik odłożony jako .corrupt (Detail = nazwa pliku)
     }

@@ -113,7 +113,8 @@ namespace RdpManager
                 {
                     PersistLog.Write(dir, $"settings.ConsumeSnapshot: PRZYWRACAM sprzed update (snapshot={DataScore(s)} > bieżące={(current == null ? -1 : DataScore(current))})");
                     chosen = s;
-                    HealthNotices.Add(HealthNoticeKind.SettingsRestoredAfterUpdate);
+                    // Bez HealthNotice: przywrócenie z migawki to NORMALNA ścieżka aktualizacji (przenosimy stan
+                    // przez podmianę exe), nie anomalia — nie zawracamy użytkownikowi głowy. Ślad zostaje w persist.log.
                     Save(chosen, dir);   // utrwal przywrócone i odśwież .bak dobrą wersją
                 }
                 else

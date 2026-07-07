@@ -72,9 +72,7 @@
     <!-- Sygnały samonaprawy konfiguracji (InfoBar w stopce panelu). -->
     <sys:String x:Key="S.heal.title.ok">Przywrócono konfigurację</sys:String>
     <sys:String x:Key="S.heal.title.warn">Uszkodzony plik konfiguracji</sys:String>
-    <sys:String x:Key="S.heal.settingsRestored">Ustawienia przywrócono z kopii zapasowej.</sys:String>
-    <sys:String x:Key="S.heal.settingsAfterUpdate">Ustawienia przywrócono z migawki sprzed aktualizacji.</sys:String>
-    <sys:String x:Key="S.heal.serversRestored">Listę serwerów przywrócono z kopii zapasowej.</sys:String>
+    <sys:String x:Key="S.heal.settingsRestored">Ustawienia przywrócono z kopii zapasowej.</sys:String>    <sys:String x:Key="S.heal.serversRestored">Listę serwerów przywrócono z kopii zapasowej.</sys:String>
     <sys:String x:Key="S.heal.quarantined">Plik „{0}" był uszkodzony — zabezpieczono kopię obok (.corrupt).</sys:String>
     <sys:String x:Key="S.update.title">Aktualizacja</sys:String>
     <sys:String x:Key="S.update.confirm">Zaktualizować do wersji {0}? Otwarte połączenia zostaną zamknięte, a Waypoint uruchomi się ponownie (i zaproponuje przywrócenie sesji).</sys:String>
