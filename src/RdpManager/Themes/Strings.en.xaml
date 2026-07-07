@@ -61,7 +61,8 @@
     <sys:String x:Key="S.set.connlog">Keep a connection audit log (no passwords)</sys:String>
     <sys:String x:Key="S.set.opennewwin">Open connections in a separate window</sys:String>
     <sys:String x:Key="S.set.immersive">Focus mode when maximized (hide the side panel)</sys:String>
-    <sys:String x:Key="S.set.checkupdates">Check for updates at startup</sys:String>
+    <sys:String x:Key="S.set.checkupdates">Check for updates (at startup and periodically)</sys:String>
+    <sys:String x:Key="S.set.checkupdatesnow">Check now</sys:String>
     <sys:String x:Key="S.update.available">New version {0} — update</sys:String>
     <!-- Default group names (localized; a server with an empty group falls into the default bucket). -->
     <sys:String x:Key="S.group.serversdefault">Servers</sys:String>
@@ -79,6 +80,9 @@
     <sys:String x:Key="S.update.confirm">Update to version {0}? Open connections will close and Waypoint will restart (and offer to restore your session).</sys:String>
     <sys:String x:Key="S.update.newtitle">New version {0}</sys:String>
     <sys:String x:Key="S.update.whatsnew">Updated to version {0}</sys:String>
+    <sys:String x:Key="S.update.checking">Checking…</sys:String>
+    <sys:String x:Key="S.update.uptodate">You have the latest version</sys:String>
+    <sys:String x:Key="S.update.checkfailed">Update check failed</sys:String>
     <sys:String x:Key="S.update.now">Update</sys:String>
     <sys:String x:Key="S.update.nonotes">No changelog for this version.</sys:String>
     <sys:String x:Key="S.update.viewgithub">View on GitHub</sys:String>

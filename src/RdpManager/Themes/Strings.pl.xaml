@@ -61,7 +61,8 @@
     <sys:String x:Key="S.set.connlog">Zapisuj dziennik audytu połączeń (bez haseł)</sys:String>
     <sys:String x:Key="S.set.opennewwin">Otwieraj połączenia w osobnym oknie</sys:String>
     <sys:String x:Key="S.set.immersive">Tryb skupienia po zmaksymalizowaniu (ukryj panel boczny)</sys:String>
-    <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje przy starcie</sys:String>
+    <sys:String x:Key="S.set.checkupdates">Sprawdzaj aktualizacje (przy starcie i cyklicznie)</sys:String>
+    <sys:String x:Key="S.set.checkupdatesnow">Sprawdź teraz</sys:String>
     <sys:String x:Key="S.update.available">Nowa wersja {0} — aktualizuj</sys:String>
     <!-- Domyślne nazwy grup (lokalizowane; pusta grupa serwera = domyślny „kosz"). -->
     <sys:String x:Key="S.group.serversdefault">Serwery</sys:String>
@@ -79,6 +80,9 @@
     <sys:String x:Key="S.update.confirm">Zaktualizować do wersji {0}? Otwarte połączenia zostaną zamknięte, a Waypoint uruchomi się ponownie (i zaproponuje przywrócenie sesji).</sys:String>
     <sys:String x:Key="S.update.newtitle">Nowa wersja {0}</sys:String>
     <sys:String x:Key="S.update.whatsnew">Zaktualizowano do wersji {0}</sys:String>
+    <sys:String x:Key="S.update.checking">Sprawdzam…</sys:String>
+    <sys:String x:Key="S.update.uptodate">Masz najnowszą wersję</sys:String>
+    <sys:String x:Key="S.update.checkfailed">Nie udało się sprawdzić aktualizacji</sys:String>
     <sys:String x:Key="S.update.now">Aktualizuj</sys:String>
     <sys:String x:Key="S.update.nonotes">Brak informacji o zmianach dla tej wersji.</sys:String>
     <sys:String x:Key="S.update.viewgithub">Zobacz na GitHub</sys:String>

@@ -52,6 +52,7 @@ namespace RdpManager
         // Sprawdzanie osiągalności serwerów w tle (TCP na porcie RDP) -> kropki statusu.
         private DispatcherTimer _reachTimer;
         private bool _reachBusy;
+        private DispatcherTimer _updateTimer;   // cykliczne sprawdzanie aktualizacji (co 6 h)
 
         // Stabilne, odrębne kolory awatarów dla dowolnych (także własnych) grup.
         private readonly Dictionary<string, LinearGradientBrush> _avatarCache = new Dictionary<string, LinearGradientBrush>();
@@ -189,6 +190,10 @@ namespace RdpManager
             };
 
             CheckForUpdatesAsync();
+            // Cyklicznie w tle (co 6 h), nie tylko przy starcie — długo działające okno też złapie nowe wydanie.
+            _updateTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher) { Interval = TimeSpan.FromHours(6) };
+            _updateTimer.Tick += (s, a) => CheckForUpdatesAsync();
+            if (_settings.CheckUpdates) _updateTimer.Start();
             // Po wyrenderowaniu okna (modal przywracania potrzebuje widocznego właściciela).
             Dispatcher.BeginInvoke(new Action(StartupConnect), DispatcherPriority.Loaded);
         }
@@ -286,35 +291,72 @@ namespace RdpManager
             return new Version(v.Major, v.Minor, Math.Max(v.Build, 0));
         }
 
+        // Automatyczne sprawdzenie (start aplikacji + cykliczny timer). Bramkowane ustawieniem, bez UI błędów.
         private async void CheckForUpdatesAsync()
         {
             if (!_settings.CheckUpdates) return;
             try
             {
-                using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) })
+                var info = await FetchLatestReleaseAsync();
+                if (info == null) return;
+                var current = CurrentVersion();
+                if (Core.UpdateCheck.IsNewer(info.Version, current))
                 {
-                    http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
-                    string json = await http.GetStringAsync(
-                        "https://api.github.com/repos/FilipB97/Waypoint/releases/latest");
-                    var info = Core.UpdateCheck.ParseRelease(json);
-                    if (info == null) return;
-                    var current = CurrentVersion();
-                    if (Core.UpdateCheck.IsNewer(info.Version, current))
-                    {
-                        _update = info;
-                        UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
-                        UpdateBtn.Visibility = Visibility.Visible;
-                    }
-                    else if (Core.UpdateCheck.ParseTag(_prevRunVersion) is Version prev && prev < current
-                             && !string.IsNullOrWhiteSpace(info.Notes))
-                    {
-                        // Wersja wzrosła od ostatniego startu → właśnie zaktualizowano: pokaż „co nowego" (raz).
-                        new ReleaseNotesWindow(string.Format(L("S.update.whatsnew"), current),
-                            current, info.Notes, info.HtmlUrl, confirm: false) { Owner = this }.ShowDialog();
-                    }
+                    _update = info;
+                    UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
+                    UpdateBtn.Visibility = Visibility.Visible;
+                }
+                else if (Core.UpdateCheck.ParseTag(_prevRunVersion) is Version prev && prev < current
+                         && !string.IsNullOrWhiteSpace(info.Notes))
+                {
+                    // Wersja wzrosła od ostatniego startu → właśnie zaktualizowano: pokaż „co nowego" (raz).
+                    new ReleaseNotesWindow(string.Format(L("S.update.whatsnew"), current),
+                        current, info.Notes, info.HtmlUrl, confirm: false) { Owner = this }.ShowDialog();
                 }
             }
-            catch { /* offline / proxy / rate limit — sprawdzimy przy kolejnym starcie */ }
+            catch { /* offline / proxy / rate limit — sprawdzimy przy kolejnym cyklu */ }
+        }
+
+        // Pobiera najnowsze wydanie z GitHuba (bez UI/bramek). Rzuca przy błędzie sieci; null gdy brak/parsowanie.
+        private async Task<Core.UpdateCheck.ReleaseInfo> FetchLatestReleaseAsync()
+        {
+            using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) })
+            {
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
+                string json = await http.GetStringAsync(
+                    "https://api.github.com/repos/FilipB97/Waypoint/releases/latest");
+                return Core.UpdateCheck.ParseRelease(json);
+            }
+        }
+
+        // Ręczne sprawdzenie z Ustawień — bez bramki CheckUpdates, z informacją zwrotną w etykiecie statusu.
+        private async void CheckUpdatesNow_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateCheckStatus.Foreground = Res("TextSec");
+            UpdateCheckStatus.Text = L("S.update.checking");
+            try
+            {
+                var info = await FetchLatestReleaseAsync();
+                var current = CurrentVersion();
+                if (info != null && Core.UpdateCheck.IsNewer(info.Version, current))
+                {
+                    _update = info;
+                    UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
+                    UpdateBtn.Visibility = Visibility.Visible;
+                    UpdateCheckStatus.Foreground = Res("Online");
+                    UpdateCheckStatus.Text = string.Format(L("S.update.available"), info.Version);
+                }
+                else
+                {
+                    UpdateCheckStatus.Foreground = Res("TextSec");
+                    UpdateCheckStatus.Text = L("S.update.uptodate");
+                }
+            }
+            catch
+            {
+                UpdateCheckStatus.Foreground = Res("Danger");
+                UpdateCheckStatus.Text = L("S.update.checkfailed");
+            }
         }
 
         private async void Update_Click(object sender, RoutedEventArgs e)
@@ -1103,6 +1145,9 @@ namespace RdpManager
             {
                 _reachTimer.Stop();
             }
+
+            // Cykliczne sprawdzanie aktualizacji wg tego samego przełącznika co start.
+            if (_updateTimer != null) { if (_settings.CheckUpdates) _updateTimer.Start(); else _updateTimer.Stop(); }
 
             ThemeManager.Apply(_settings.Theme);
             LocalizationManager.Apply(_settings.Language);
