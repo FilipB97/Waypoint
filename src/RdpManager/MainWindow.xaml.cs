@@ -91,6 +91,9 @@ namespace RdpManager
         // Skrót do lokalizowanego tekstu (dla UI budowanego w kodzie: menu, komunikaty).
         private static string L(string key) => LocalizationManager.S(key);
 
+        /// <summary>Skrót do pędzla z zasobów motywu; null gdy brak (te same semantyki co dotychczasowy rzut).</summary>
+        private Brush Res(string key) => TryFindResource(key) as Brush;
+
         // Otwarte, samodzielne okna sesji (model wielookienny).
         private readonly System.Collections.Generic.List<SessionWindow> _sessionWindows = new System.Collections.Generic.List<SessionWindow>();
 
@@ -715,8 +718,8 @@ namespace RdpManager
 
         private void SetNav(Button b, Wpf.Ui.Controls.SymbolIcon ico, bool active)
         {
-            b.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
-            ico.Foreground = active ? (Brush)TryFindResource("Accent") : (Brush)TryFindResource("TextTer");
+            b.Background = active ? Res("AccentSoft") : Brushes.Transparent;
+            ico.Foreground = active ? Res("Accent") : Res("TextTer");
         }
 
         private PasswordGeneratorWindow _genWindow;
@@ -859,7 +862,7 @@ namespace RdpManager
                 AutoConnectList.Children.Add(new TextBlock
                 {
                     Text = L("S.set.autoconnect.empty"),
-                    Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12
+                    Foreground = Res("TextTer"), FontSize = 12
                 });
                 return;
             }
@@ -888,7 +891,7 @@ namespace RdpManager
                 ProfilesList.Children.Add(new TextBlock
                 {
                     Text = L("S.prof.empty"),
-                    Foreground = (Brush)TryFindResource("TextTer"), FontSize = 12
+                    Foreground = Res("TextTer"), FontSize = 12
                 });
                 return;
             }
@@ -905,7 +908,7 @@ namespace RdpManager
             string login = string.IsNullOrWhiteSpace(profile.Domain) ? profile.Username : profile.Domain + "\\" + profile.Username;
             var info = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             info.Children.Add(new TextBlock { Text = profile.Name, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
-            info.Children.Add(new TextBlock { Text = "   " + login, Foreground = (Brush)TryFindResource("TextTer"), VerticalAlignment = VerticalAlignment.Center });
+            info.Children.Add(new TextBlock { Text = "   " + login, Foreground = Res("TextTer"), VerticalAlignment = VerticalAlignment.Center });
             row.Children.Add(info);
 
             var btns = new StackPanel { Orientation = Orientation.Horizontal };
@@ -983,14 +986,14 @@ namespace RdpManager
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
             sp.Children.Add(new TextBlock
             {
-                Text = "⠿", Foreground = (Brush)TryFindResource("TextTer"), FontSize = 13, Cursor = Cursors.SizeAll,
+                Text = "⠿", Foreground = Res("TextTer"), FontSize = 13, Cursor = Cursors.SizeAll,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 8, 0)
             });
             sp.Children.Add(new CheckBox
             {
                 Content = (string.IsNullOrWhiteSpace(server.Name) ? server.Host : server.Name) + "  —  " + DisplayHost(server),
                 Tag = server.Id, IsChecked = isChecked,
-                Foreground = (Brush)TryFindResource("TextPrim"), VerticalAlignment = VerticalAlignment.Center
+                Foreground = Res("TextPrim"), VerticalAlignment = VerticalAlignment.Center
             });
             row.Child = sp;
 
@@ -1031,7 +1034,7 @@ namespace RdpManager
         {
             if (_acDropRow != null && _acDropRow != row) _acDropRow.BorderThickness = new Thickness(0);
             _acDropRow = row;
-            row.BorderBrush = (Brush)TryFindResource("Accent");
+            row.BorderBrush = Res("Accent");
             row.BorderThickness = bottom ? new Thickness(0, 0, 0, 2) : new Thickness(0, 2, 0, 0);
         }
 
@@ -1219,7 +1222,7 @@ namespace RdpManager
                 RecentPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => LaunchServer(s, true)));
             }
             if (!any)
-                RecentPanel.Children.Add(new TextBlock { Text = L("S.dash.norecent"), Foreground = (Brush)TryFindResource("TextTer") });
+                RecentPanel.Children.Add(new TextBlock { Text = L("S.dash.norecent"), Foreground = Res("TextTer") });
         }
 
         private void BuildDashboard()
@@ -1298,20 +1301,20 @@ namespace RdpManager
 
         private FrameworkElement DashSection(string text) => new TextBlock
         {
-            Text = text, Foreground = (Brush)TryFindResource("TextSec"),
+            Text = text, Foreground = Res("TextSec"),
             FontWeight = FontWeights.SemiBold, Margin = new Thickness(2, 0, 0, 8)
         };
 
         private FrameworkElement DashCard(FrameworkElement content) => new Border
         {
-            Background = (Brush)TryFindResource("Panel"), BorderBrush = (Brush)TryFindResource("Border"),
+            Background = Res("Panel"), BorderBrush = Res("Border"),
             BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10),
             Padding = new Thickness(16, 14, 16, 14), Margin = new Thickness(0, 0, 0, 22), Child = content
         };
 
         private FrameworkElement DashHint(string text) => new TextBlock
         {
-            Text = text, Foreground = (Brush)TryFindResource("TextTer"), Margin = new Thickness(2, 0, 0, 22)
+            Text = text, Foreground = Res("TextTer"), Margin = new Thickness(2, 0, 0, 22)
         };
 
         // Wykres słupkowy „połączenia / dzień" — rysowany prostokątami (bez zależności od bibliotek).
@@ -1320,8 +1323,8 @@ namespace RdpManager
             int max = Math.Max(1, values.Max());
             var row = new StackPanel { Orientation = Orientation.Horizontal, Height = 108,
                 VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left };
-            var accent = (Brush)TryFindResource("Accent");
-            var dim = (Brush)TryFindResource("Elevated");
+            var accent = Res("Accent");
+            var dim = Res("Elevated");
             for (int i = 0; i < values.Length; i++)
             {
                 var date = endDate.Date.AddDays(-(values.Length - 1 - i));
@@ -1340,8 +1343,8 @@ namespace RdpManager
         private FrameworkElement BuildTopServers(List<KeyValuePair<string, int>> top)
         {
             int max = Math.Max(1, top.Max(t => t.Value));
-            var accent = (Brush)TryFindResource("Accent");
-            var track = (Brush)TryFindResource("Elevated");
+            var accent = Res("Accent");
+            var track = Res("Elevated");
             var panel = new StackPanel();
             foreach (var kv in top)
             {
@@ -1350,7 +1353,7 @@ namespace RdpManager
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-                var name = new TextBlock { Text = kv.Key, Foreground = (Brush)TryFindResource("TextPrim"),
+                var name = new TextBlock { Text = kv.Key, Foreground = Res("TextPrim"),
                     FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center,
                     TextTrimming = TextTrimming.CharacterEllipsis };
                 Grid.SetColumn(name, 0); grid.Children.Add(name);
@@ -1361,7 +1364,7 @@ namespace RdpManager
                     CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Left });
                 Grid.SetColumn(barGrid, 1); grid.Children.Add(barGrid);
 
-                var count = new TextBlock { Text = kv.Value.ToString(), Foreground = (Brush)TryFindResource("TextSec"),
+                var count = new TextBlock { Text = kv.Value.ToString(), Foreground = Res("TextSec"),
                     FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, MinWidth = 24, TextAlignment = TextAlignment.Right };
                 Grid.SetColumn(count, 2); grid.Children.Add(count);
 
@@ -1385,12 +1388,12 @@ namespace RdpManager
         {
             var card = new Border
             {
-                Background = (Brush)TryFindResource("Panel"), BorderBrush = (Brush)TryFindResource("Border"), BorderThickness = new Thickness(1),
+                Background = Res("Panel"), BorderBrush = Res("Border"), BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(10), Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
             };
             var sp = new StackPanel();
-            sp.Children.Add(new TextBlock { Text = value, Foreground = (Brush)TryFindResource("Accent"), FontSize = 26, FontWeight = FontWeights.Bold });
-            sp.Children.Add(new TextBlock { Text = label, Foreground = (Brush)TryFindResource("TextSec"), FontSize = 12 });
+            sp.Children.Add(new TextBlock { Text = value, Foreground = Res("Accent"), FontSize = 26, FontWeight = FontWeights.Bold });
+            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = 12 });
             card.Child = sp;
             return card;
         }
@@ -1484,14 +1487,14 @@ namespace RdpManager
             sp.Children.Add(new TextBlock
             {
                 Text = collapsed ? "▸" : "▾",
-                Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10, Width = 12,
+                Foreground = Res("TextTer"), FontSize = 10, Width = 12,
                 VerticalAlignment = VerticalAlignment.Center
             });
 
             if (isPinned)
                 sp.Children.Add(new TextBlock
                 {
-                    Text = "★", Foreground = (Brush)TryFindResource("Idle"), FontSize = 11,
+                    Text = "★", Foreground = Res("Idle"), FontSize = 11,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
             else
@@ -1504,7 +1507,7 @@ namespace RdpManager
             sp.Children.Add(new TextBlock
             {
                 Text = (isPinned ? L("S.group.pinned") : name.ToUpperInvariant()) + "  ·  " + count,
-                Foreground = (Brush)TryFindResource("TextSec"),
+                Foreground = Res("TextSec"),
                 FontSize = 11.5, FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
             });
@@ -1590,7 +1593,7 @@ namespace RdpManager
 
             var accent = new Rectangle
             {
-                Width = 3, RadiusX = 1.5, RadiusY = 1.5, Fill = (Brush)TryFindResource("Accent"),
+                Width = 3, RadiusX = 1.5, RadiusY = 1.5, Fill = Res("Accent"),
                 VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(0, 2, 0, 2),
                 Visibility = Visibility.Collapsed
             };
@@ -1611,10 +1614,10 @@ namespace RdpManager
             grid.Children.Add(avatar);
 
             var meta = new StackPanel { Margin = new Thickness(9, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12.5 });
+            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12.5 });
             meta.Children.Add(new TextBlock
             {
-                Text = DisplayHost(server), Foreground = (Brush)TryFindResource("TextTer"), FontSize = 10.5,
+                Text = DisplayHost(server), Foreground = Res("TextTer"), FontSize = 10.5,
                 FontFamily = (FontFamily)TryFindResource("Mono"), TextTrimming = TextTrimming.CharacterEllipsis
             });
             Grid.SetColumn(meta, 2);
@@ -1631,7 +1634,7 @@ namespace RdpManager
             if (server.Pinned)
                 right.Children.Add(new TextBlock
                 {
-                    Text = "★", Foreground = (Brush)TryFindResource("Idle"), FontSize = 10,
+                    Text = "★", Foreground = Res("Idle"), FontSize = 10,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
             right.Children.Add(status);
@@ -1642,7 +1645,7 @@ namespace RdpManager
 
             _serverActivate[server] = active =>
             {
-                row.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+                row.Background = active ? Res("AccentSoft") : Brushes.Transparent;
                 accent.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
             };
             WireServerRow(row, server);
@@ -1689,7 +1692,7 @@ namespace RdpManager
 
             var name = new TextBlock
             {
-                Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 13, FontWeight = FontWeights.Medium,
+                Text = server.Name, Foreground = Res("TextPrim"), FontSize = 13, FontWeight = FontWeights.Medium,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(9, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis
             };
             Grid.SetColumn(name, 2);
@@ -1703,12 +1706,12 @@ namespace RdpManager
             if (server.Pinned)
                 rightPanel.Children.Add(new TextBlock
                 {
-                    Text = "★", Foreground = (Brush)TryFindResource("Idle"), FontSize = 9,
+                    Text = "★", Foreground = Res("Idle"), FontSize = 9,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
             rightPanel.Children.Add(new TextBlock
             {
-                Text = DisplayHost(server), Foreground = (Brush)TryFindResource("TextTer"), FontSize = 11.5,
+                Text = DisplayHost(server), Foreground = Res("TextTer"), FontSize = 11.5,
                 FontFamily = (FontFamily)TryFindResource("Mono"), VerticalAlignment = VerticalAlignment.Center,
                 MaxWidth = 100, TextTrimming = TextTrimming.CharacterEllipsis
             });
@@ -1719,8 +1722,8 @@ namespace RdpManager
 
             _serverActivate[server] = active =>
             {
-                row.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
-                bar.Fill = active ? (Brush)TryFindResource("Accent") : serverColor;
+                row.Background = active ? Res("AccentSoft") : Brushes.Transparent;
+                bar.Fill = active ? Res("Accent") : serverColor;
             };
             WireServerRow(row, server);
             return row;
@@ -1740,9 +1743,9 @@ namespace RdpManager
             if (_serverStatusDot.TryGetValue(server, out var statusDot))
                 System.Windows.Automation.AutomationProperties.SetName(statusDot, StatusLabel(server.Status));
 
-            row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
+            row.MouseEnter += (s, e) => { if (_active?.Server != server) row.Background = Res("Elevated"); };
             row.MouseLeave += (s, e) => { if (_active?.Server != server && !row.IsKeyboardFocused) row.Background = RowRestBackground(server); };
-            row.GotKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = (Brush)TryFindResource("Elevated"); };
+            row.GotKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = Res("Elevated"); };
             row.LostKeyboardFocus += (s, e) => { if (_active?.Server != server) row.Background = RowRestBackground(server); };
             row.KeyDown += (s, e) =>
             {
@@ -1810,7 +1813,7 @@ namespace RdpManager
 
         // Tło wiersza w stanie spoczynku (nie hover/focus/aktywny): zaznaczony = AccentSoft, inaczej przezroczysty.
         private Brush RowRestBackground(ServerInfo s)
-            => _multiSelect.Contains(s) ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+            => _multiSelect.Contains(s) ? Res("AccentSoft") : Brushes.Transparent;
 
         // Ctrl+klik: przełącz pojedynczy wiersz w zaznaczeniu (ustaw kotwicę dla ewentualnego Shift).
         private void ToggleSelect(ServerInfo server)
@@ -1846,7 +1849,7 @@ namespace RdpManager
             foreach (var kv in _serverRows)
             {
                 if (_active?.Server == kv.Key || kv.Value.IsMouseOver || kv.Value.IsKeyboardFocused) continue;
-                kv.Value.Background = _multiSelect.Contains(kv.Key) ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+                kv.Value.Background = _multiSelect.Contains(kv.Key) ? Res("AccentSoft") : Brushes.Transparent;
             }
         }
 
@@ -1959,7 +1962,7 @@ namespace RdpManager
                 return;
             }
             ClearDropIndicator();
-            _dropAdorner = new InsertionAdorner(row, (Brush)TryFindResource("Accent")) { AtBottom = bottom };
+            _dropAdorner = new InsertionAdorner(row, Res("Accent")) { AtBottom = bottom };
             layer.Add(_dropAdorner);
             _dropRow = row;
         }
@@ -1990,7 +1993,7 @@ namespace RdpManager
             anim.Completed += (s, e) =>
             {
                 bool active = _active != null && _active.Server == server;
-                row.Background = active ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent;
+                row.Background = active ? Res("AccentSoft") : Brushes.Transparent;
             };
             brush.BeginAnimation(SolidColorBrush.ColorProperty, anim);
         }
@@ -2249,7 +2252,7 @@ namespace RdpManager
             });
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
+                Text = session.Server.Name, Foreground = Res("TextPrim"), FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -2307,7 +2310,7 @@ namespace RdpManager
             content.Children.Add(tabDot);
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
+                Text = session.Server.Name, Foreground = Res("TextPrim"), FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -2331,13 +2334,13 @@ namespace RdpManager
         {
             var close = new TextBlock
             {
-                Text = "✕", Foreground = (Brush)TryFindResource("TextTer"), FontSize = 11,
+                Text = "✕", Foreground = Res("TextTer"), FontSize = 11,
                 Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(3, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand,
                 Visibility = Visibility.Hidden
             };
-            close.MouseEnter += (s, e) => close.Foreground = (Brush)TryFindResource("Danger");
-            close.MouseLeave += (s, e) => close.Foreground = (Brush)TryFindResource("TextTer");
+            close.MouseEnter += (s, e) => close.Foreground = Res("Danger");
+            close.MouseLeave += (s, e) => close.Foreground = Res("TextTer");
             close.MouseLeftButtonUp += (s, e) => { e.Handled = true; RequestCloseSession(session); };
             _tabClose[session] = close;
             return close;
@@ -2345,7 +2348,7 @@ namespace RdpManager
 
         private Rectangle BuildTabUnderline(Thickness margin) => new Rectangle
         {
-            Height = 2, Fill = (Brush)TryFindResource("Accent"), RadiusX = 1, RadiusY = 1,
+            Height = 2, Fill = Res("Accent"), RadiusX = 1, RadiusY = 1,
             Margin = margin, Visibility = Visibility.Hidden   // Hidden: karta ma stałą wysokość aktywna/nie
         };
 
@@ -2354,7 +2357,7 @@ namespace RdpManager
         {
             tab.MouseEnter += (s, e) =>
             {
-                if (session != _active) tab.Background = (Brush)TryFindResource("Elevated") ?? Brushes.Transparent;
+                if (session != _active) tab.Background = Res("Elevated") ?? Brushes.Transparent;
                 if (_tabClose.TryGetValue(session, out var c)) c.Visibility = Visibility.Visible;
             };
             tab.MouseLeave += (s, e) => RefreshTabStyles();
@@ -2465,11 +2468,11 @@ namespace RdpManager
                 if (!(s.TabButton is Border b)) continue;
                 bool active = s == _active;
                 // Lżej: aktywna = subtelne tło + akcent (underline), bez „pudełkowego" obrysu.
-                b.Background = active ? (Brush)TryFindResource("Panel") : Brushes.Transparent;
+                b.Background = active ? Res("Panel") : Brushes.Transparent;
                 b.BorderBrush = Brushes.Transparent;
                 // Hierarchia: nieaktywne karty przygaszone (spokojniejszy pasek).
                 if (_tabName.TryGetValue(s, out var nm))
-                    nm.Foreground = (Brush)TryFindResource(active ? "TextPrim" : "TextSec");
+                    nm.Foreground = Res(active ? "TextPrim" : "TextSec");
                 if (_tabUnderline.TryGetValue(s, out var u))
                     u.Visibility = active ? Visibility.Visible : Visibility.Hidden;
                 if (_tabClose.TryGetValue(s, out var c))
@@ -2701,13 +2704,13 @@ namespace RdpManager
             _tabDropTarget = tab;
             if (group)
             {
-                tab.Background = (Brush)TryFindResource("AccentSoft");
-                tab.BorderBrush = (Brush)TryFindResource("Accent");
+                tab.Background = Res("AccentSoft");
+                tab.BorderBrush = Res("Accent");
                 tab.BorderThickness = new Thickness(1);
             }
             else
             {
-                tab.BorderBrush = (Brush)TryFindResource("Accent");
+                tab.BorderBrush = Res("Accent");
                 tab.BorderThickness = after ? new Thickness(0, 0, 2, 0) : new Thickness(2, 0, 0, 0);
             }
         }
@@ -2796,9 +2799,9 @@ namespace RdpManager
             if (g.Collapsed)
                 pillRow.Children.Add(new Border
                 {
-                    CornerRadius = new CornerRadius(9), Background = (Brush)TryFindResource("Elevated"),
+                    CornerRadius = new CornerRadius(9), Background = Res("Elevated"),
                     Padding = new Thickness(6, 0, 6, 1), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
-                    Child = new TextBlock { Text = members.Count.ToString(), Foreground = (Brush)TryFindResource("TextSec"), FontSize = 10.5 }
+                    Child = new TextBlock { Text = members.Count.ToString(), Foreground = Res("TextSec"), FontSize = 10.5 }
                 });
             pill.Child = pillRow;
             // e.Handled: klik przebudowuje pasek (usuwa tę pastylkę) — nie pozwól zdarzeniu bąbelkować dalej.
@@ -3011,43 +3014,7 @@ namespace RdpManager
 
             try
             {
-                IMsRdpClientAdvancedSettings8 adv = s.Rdp.AdvancedSettings9;
-                adv.RDPPort = s.Server.Port;
-                // Weryfikacja tożsamości serwera (domyślnie 2 = ostrzegaj) — chroni przed MITM.
-                adv.AuthenticationLevel = (uint)Math.Clamp(s.Server.AuthenticationLevel, 0, 2);
-                adv.EnableCredSspSupport = true;
-                adv.ConnectToAdministerServer = s.Server.AdminSession;   // sesja konsolowa (mstsc /admin)
-                adv.SmartSizing = false;   // dynamiczna rozdzielczość zajmie się dopasowaniem
-                adv.EnableAutoReconnect = _settings.AutoReconnect;
-                s.Rdp.ColorDepth = _settings.ColorDepth;
-                adv.RedirectClipboard = s.Server.RedirectClipboard;
-                adv.RedirectDrives = s.Server.RedirectDrives;
-                adv.RedirectPrinters = s.Server.RedirectPrinters;
-                adv.AudioRedirectionMode = (uint)Math.Clamp(s.Server.AudioMode, 0, 2);
-                try { s.Rdp.SecuredSettings2.KeyboardHookMode = 2; } catch { }  // Alt+Tab/Win -> zdalna w pełnym ekranie
-
-                // Multi-monitor realizujemy przez rozpięcie NASZEGO okna na wirtualny pulpit
-                // (span, w EnterFullscreen) — pełny ekran kontrolki (FullScreen + UseMultimon)
-                // crashuje w WindowsFormsHost (SEH w DispatchMessage, 2026-07-02). UseMultimon
-                // trzymamy na false, żeby Ctrl+Alt+Break nie wszedł w tę ścieżkę przypadkiem.
-                try { ((IMsRdpClientNonScriptable5)s.Rdp.GetOcx()).UseMultimon = false; }
-                catch { /* starsza kontrolka bez multimon — pomijamy */ }
-
-                ApplyGateway(s);
-
-                s.Rdp.Server = s.Server.Host;
-                if (s.Server.UseWindowsAccount)
-                {
-                    s.Rdp.UserName = "";
-                    s.Rdp.Domain = "";
-                    adv.ClearTextPassword = "";
-                }
-                else
-                {
-                    s.Rdp.UserName = EffUser(s.Server);
-                    s.Rdp.Domain = EffDomain(s.Server);
-                    adv.ClearTextPassword = s.Password;
-                }
+                RdpConnect.Apply(s.Rdp, s.Server, _settings, EffUser(s.Server), EffDomain(s.Server), s.Password);
 
                 // RemoteApp: program/alias zamiast pełnego pulpitu (ustawiane PRZED Connect).
                 try
@@ -3156,25 +3123,6 @@ namespace RdpManager
             if (was) SetSessionStatus(s, string.Format(L("S.st.disconnected"), "VNC"), StatusKind.Error);
             else if (s.StatusKind != StatusKind.Error) SetSessionStatus(s, L("S.st.disconnectedShort"), StatusKind.Error);
             if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-        }
-
-        /// <summary>Konfiguruje bramę RD Gateway / jump-host, jeśli serwer ją ma. Bezpieczne dla starszych kontrolek.</summary>
-        private static void ApplyGateway(Session s)
-        {
-            try
-            {
-                var ts = s.Rdp.TransportSettings;
-                if (string.IsNullOrWhiteSpace(s.Server.GatewayHostname))
-                {
-                    ts.GatewayUsageMethod = 0; // brak bramy
-                    return;
-                }
-                ts.GatewayHostname = s.Server.GatewayHostname;
-                ts.GatewayUsageMethod = (uint)(s.Server.GatewayUsageMethod == 0 ? 1 : s.Server.GatewayUsageMethod);
-                ts.GatewayProfileUsageMethod = 1; // 1 = jawnie z ustawień połączenia
-                ts.GatewayCredsSource = 0;        // 0 = login/hasło (TSC_PROXY_CREDS_MODE_USERPASS)
-            }
-            catch (Exception) { /* kontrolka bez obsługi bramy — pomijamy */ }
         }
 
         // Panel plików SFTP przy aktywnej sesji SSH (przycisk folderu na pasku stanu).
@@ -3822,7 +3770,7 @@ namespace RdpManager
                 : ((_paletteSel + dir) % _paletteFlat.Count + _paletteFlat.Count) % _paletteFlat.Count;
 
             var sel = _paletteFlat[_paletteSel];
-            sel.row.Background = (Brush)TryFindResource("Elevated");
+            sel.row.Background = Res("Elevated");
             sel.row.BringIntoView();
         }
 
@@ -3838,11 +3786,11 @@ namespace RdpManager
                 Margin = new Thickness(0, 1, 0, 1),
                 Child = new TextBlock
                 {
-                    Text = label, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
+                    Text = label, Foreground = Res("TextPrim"), FontSize = 12,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 0, 0)
                 }
             };
-            row.MouseEnter += (s, e) => row.Background = (Brush)TryFindResource("Elevated");
+            row.MouseEnter += (s, e) => row.Background = Res("Elevated");
             row.MouseLeave += (s, e) => row.Background = Brushes.Transparent;
             row.MouseLeftButtonUp += (s, e) => { e.Handled = true; onClick(); };
             return row;
@@ -3893,7 +3841,7 @@ namespace RdpManager
             {
                 Padding = new Thickness(7, 6, 7, 6),
                 CornerRadius = new CornerRadius(7),
-                Background = isActive ? (Brush)TryFindResource("AccentSoft") : Brushes.Transparent,
+                Background = isActive ? Res("AccentSoft") : Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Thickness(0, 1, 0, 1)
             };
@@ -3917,7 +3865,7 @@ namespace RdpManager
 
             var name = new TextBlock
             {
-                Text = server.Name, Foreground = (Brush)TryFindResource("TextPrim"), FontSize = 12,
+                Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             Grid.SetColumn(name, 1);
@@ -3928,7 +3876,7 @@ namespace RdpManager
             grid.Children.Add(dot);
 
             row.Child = grid;
-            row.MouseEnter += (s, e) => { if (!isActive) row.Background = (Brush)TryFindResource("Elevated"); };
+            row.MouseEnter += (s, e) => { if (!isActive) row.Background = Res("Elevated"); };
             row.MouseLeave += (s, e) => { if (!isActive) row.Background = Brushes.Transparent; };
             row.MouseLeftButtonUp += (s, e) => { e.Handled = true; onClick(); };
             return row;
@@ -4489,9 +4437,9 @@ namespace RdpManager
         {
             switch (group)
             {
-                case "Produkcja": return (Brush)TryFindResource("AvProd");
-                case "Staging": return (Brush)TryFindResource("AvStaging");
-                case "Klienci": return (Brush)TryFindResource("AvClient");
+                case "Produkcja": return Res("AvProd");
+                case "Staging": return Res("AvStaging");
+                case "Klienci": return Res("AvClient");
             }
             var key = group ?? "";
             if (!_avatarCache.TryGetValue(key, out var b))
@@ -4510,13 +4458,13 @@ namespace RdpManager
         {
             switch (group)
             {
-                case "Produkcja": return (Brush)TryFindResource("GdProd");
-                case "Staging": return (Brush)TryFindResource("GdStaging");
-                case "Klienci": return (Brush)TryFindResource("GdClient");
+                case "Produkcja": return Res("GdProd");
+                case "Staging": return Res("GdStaging");
+                case "Klienci": return Res("GdClient");
             }
             return AvatarBrush(group) is LinearGradientBrush g
                 ? new SolidColorBrush(g.GradientStops[0].Color)
-                : (Brush)TryFindResource("GdClient");
+                : Res("GdClient");
         }
 
         private static int StableHash(string s)
@@ -4530,9 +4478,9 @@ namespace RdpManager
         {
             switch (status)
             {
-                case ServerStatus.Online: return (Brush)TryFindResource("Online");
-                case ServerStatus.Idle: return (Brush)TryFindResource("Idle");
-                default: return (Brush)TryFindResource("Offline");
+                case ServerStatus.Online: return Res("Online");
+                case ServerStatus.Idle: return Res("Idle");
+                default: return Res("Offline");
             }
         }
 
@@ -4674,10 +4622,10 @@ namespace RdpManager
         {
             switch (kind)
             {
-                case StatusKind.Connecting: return (Brush)TryFindResource("Idle");
-                case StatusKind.Ok: return (Brush)TryFindResource("Online");
-                case StatusKind.Error: return (Brush)TryFindResource("Danger");
-                default: return (Brush)TryFindResource("TextSec");
+                case StatusKind.Connecting: return Res("Idle");
+                case StatusKind.Ok: return Res("Online");
+                case StatusKind.Error: return Res("Danger");
+                default: return Res("TextSec");
             }
         }
     }

@@ -133,31 +133,7 @@ namespace RdpManager
             _loggedIn = false;
             try
             {
-                IMsRdpClientAdvancedSettings8 adv = _rdp.AdvancedSettings9;
-                adv.RDPPort = _server.Port;
-                adv.AuthenticationLevel = (uint)Math.Clamp(_server.AuthenticationLevel, 0, 2);
-                adv.EnableCredSspSupport = true;
-                adv.ConnectToAdministerServer = _server.AdminSession;   // sesja konsolowa (mstsc /admin)
-                adv.SmartSizing = false;
-                adv.EnableAutoReconnect = _settings.AutoReconnect;
-                _rdp.ColorDepth = _settings.ColorDepth;
-                adv.RedirectClipboard = _server.RedirectClipboard;
-                adv.RedirectDrives = _server.RedirectDrives;
-                adv.RedirectPrinters = _server.RedirectPrinters;
-                adv.AudioRedirectionMode = (uint)Math.Clamp(_server.AudioMode, 0, 2);
-                try { _rdp.SecuredSettings2.KeyboardHookMode = 2; } catch { }
-                try { ((IMsRdpClientNonScriptable5)_rdp.GetOcx()).UseMultimon = false; } catch { }
-                ApplyGateway();
-
-                _rdp.Server = _server.Host;
-                if (_server.UseWindowsAccount)
-                {
-                    _rdp.UserName = ""; _rdp.Domain = ""; adv.ClearTextPassword = "";
-                }
-                else
-                {
-                    _rdp.UserName = _username; _rdp.Domain = _domain; adv.ClearTextPassword = _password;
-                }
+                RdpConnect.Apply(_rdp, _server, _settings, _username, _domain, _password);
                 _rdp.Connect();
                 SetStatus(string.Format(L("S.st.connecting"), _server.Host), StatusKind.Connecting, false);
             }
@@ -165,20 +141,6 @@ namespace RdpManager
             {
                 SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error, true);
             }
-        }
-
-        private void ApplyGateway()
-        {
-            try
-            {
-                var ts = _rdp.TransportSettings;
-                if (string.IsNullOrWhiteSpace(_server.GatewayHostname)) { ts.GatewayUsageMethod = 0; return; }
-                ts.GatewayHostname = _server.GatewayHostname;
-                ts.GatewayUsageMethod = (uint)(_server.GatewayUsageMethod == 0 ? 1 : _server.GatewayUsageMethod);
-                ts.GatewayProfileUsageMethod = 1;
-                ts.GatewayCredsSource = 0;
-            }
-            catch { }
         }
 
         private void Disconnect_Click(object sender, RoutedEventArgs e)
