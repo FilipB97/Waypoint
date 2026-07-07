@@ -583,6 +583,11 @@ namespace RdpManager
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     UpdateLayout();
+                    // Hit-test i IsMouseOver są OK po re-wejściu, ale zmiana tła „bd" (podświetlenie) nie jest
+                    // MALOWANA, dopóki realny resize nie odświeży renderu paska kart. Wymuszamy przerysowanie
+                    // poddrzewa — to samo, co robi resize, tylko bez zmiany rozmiaru okna.
+                    TabStripHost.InvalidateVisual();
+                    foreach (System.Windows.UIElement c in FocusControls.Children) c.InvalidateVisual();
                     System.Windows.Input.Mouse.Synchronize();
                     if (immersive) LogButtonRects();   // fizyczne prostokąty przycisków (po layoucie)
                 }), System.Windows.Threading.DispatcherPriority.Background);
@@ -649,7 +654,13 @@ namespace RdpManager
             while (d != null)
             {
                 if (d is System.Windows.Controls.Button b && b.Parent == FocusControls)
-                    return "btn#" + FocusControls.Children.IndexOf(b) + "(" + (b.ToolTip?.ToString() ?? "") + ")";
+                {
+                    // mo = czy WPF uważa, że mysz jest nad przyciskiem (steruje triggerem podświetlenia);
+                    // bd = realny Background wewnętrznego Bordera „bd" (czy trigger nałożył pędzel Elevated).
+                    var bd = b.Template?.FindName("bd", b) as System.Windows.Controls.Border;
+                    string bg = bd?.Background is System.Windows.Media.SolidColorBrush s ? s.Color.ToString() : (bd?.Background?.ToString() ?? "?");
+                    return "btn#" + FocusControls.Children.IndexOf(b) + "[mo=" + b.IsMouseOver + ",bd=" + bg + "]";
+                }
                 d = System.Windows.Media.VisualTreeHelper.GetParent(d);
             }
             return hit == null ? "null" : hit.GetType().Name;
