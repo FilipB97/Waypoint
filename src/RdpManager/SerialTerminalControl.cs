@@ -19,6 +19,7 @@ namespace RdpManager
             return Task.Run(() =>
             {
                 DisposePort();
+                lock (_utf8) _utf8.Reset();   // ponowne otwarcie: porzuć niedokończony znak wielobajtowy z poprzedniej sesji
                 var p = new SerialPort(portName, baud > 0 ? baud : 115200, Parity.None, 8, StopBits.One)
                 {
                     Handshake = Handshake.None,

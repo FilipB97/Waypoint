@@ -36,14 +36,20 @@ namespace RdpManager.Core
 
         public static Dictionary<string, string> Load(string dir)
         {
+            var path = Path.Combine(dir, "known_hosts.json");
             try
             {
-                var path = Path.Combine(dir, "known_hosts.json");
                 if (File.Exists(path))
                     return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path))
                            ?? new Dictionary<string, string>();
             }
-            catch { /* uszkodzony plik — start od pustego; użytkownik potwierdzi klucze ponownie */ }
+            catch
+            {
+                // Uszkodzony plik: odłóż na bok (.corrupt) i zgłoś — zamiast po cichu skasować CAŁE zaufanie
+                // hostów (dotąd wracaliśmy do pustki, więc przy następnym łączeniu każdy klucz wyglądał jak nowy).
+                AtomicFile.PreserveCorrupt(path);
+                HealthNotices.Add(HealthNoticeKind.FileQuarantined, Path.GetFileName(path));
+            }
             return new Dictionary<string, string>();
         }
 

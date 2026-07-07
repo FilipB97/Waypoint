@@ -57,5 +57,26 @@ namespace RdpManager.Tests
             }
             finally { try { Directory.Delete(dir, true); } catch { } }
         }
+
+        [Fact]
+        public void Load_Corrupt_QuarantinesAndNotifies()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "waypoint-tests-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(dir);
+                var path = Path.Combine(dir, "known_hosts.json");
+                File.WriteAllText(path, "{uszkodzony");
+                HealthNotices.Drain();   // wyczyść zbiornik przed próbą
+
+                var result = KnownHosts.Load(dir);
+
+                Assert.Empty(result);                          // nadal startujemy od pustego
+                Assert.True(File.Exists(path + ".corrupt"));   // ale plik odłożony na bok, nie skasowany
+                Assert.Contains(HealthNotices.Drain(),
+                    n => n.Kind == HealthNoticeKind.FileQuarantined && n.Detail == "known_hosts.json");
+            }
+            finally { try { Directory.Delete(dir, true); } catch { } }
+        }
     }
 }

@@ -163,6 +163,7 @@ namespace RdpManager
             if (_settings.ReachabilityEnabled) { _reachTimer.Start(); CheckReachabilityAsync(); }
 
             ShowView("Sessions");
+            Core.KnownHosts.Load(SettingsStore.Dir);   // wykryj/oddziel uszkodzony known_hosts.json ZANIM opróżnimy notki
             ShowHealthNotices();   // nieblokujący sygnał, jeśli przy ładowaniu zadziałała samonaprawa/kwarantanna
 
             InitTray();
@@ -956,10 +957,15 @@ namespace RdpManager
             BuildProfilesList();
         }
 
+        // Ostrzeżenie o nieudanym zapisie hasła do sejfu (CredWrite odmówił). Dotąd wyjątek połykał globalny
+        // handler i użytkownik nie wiedział, że hasło nie zostało zapisane.
+        private static void WarnCredSaveFailed()
+            => MessageBox.Show(L("S.cred.saveFailed"), L("S.cred.saveFailed.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+
         private static void SaveProfilePassword(CredentialProfile profile, string password)
         {
             if (string.IsNullOrEmpty(password)) CredentialStore.Delete(profile.CredTarget);
-            else CredentialStore.Save(profile.CredTarget, profile.Username, password);
+            else if (!CredentialStore.TrySave(profile.CredTarget, profile.Username, password)) WarnCredSaveFailed();
         }
 
         private Point _acDragStart;
@@ -4283,7 +4289,9 @@ namespace RdpManager
         private void SaveCredential(ServerInfo server, string password)
         {
             if (server.SavePassword && !string.IsNullOrEmpty(password))
-                CredentialStore.Save(server.CredTarget, server.Username, password);
+            {
+                if (!CredentialStore.TrySave(server.CredTarget, server.Username, password)) WarnCredSaveFailed();
+            }
             else
                 CredentialStore.Delete(server.CredTarget);   // nie zapisujemy / kasujemy stare
         }

@@ -282,6 +282,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.warn.telnet">Telnet przesyła wszystko, w tym hasło, jawnym tekstem. Używaj tylko w zaufanych sieciach. Tam gdzie się da, wybieraj SSH.</sys:String>
     <sys:String x:Key="S.warn.vnc.title">VNC — bez szyfrowania</sys:String>
     <sys:String x:Key="S.warn.vnc">Klasyczne VNC ma słabe uwierzytelnianie i brak szyfrowania sesji. Używaj tylko w zaufanych sieciach albo tuneluj przez SSH.</sys:String>
+    <sys:String x:Key="S.cred.saveFailed">Nie udało się zapisać hasła w Menedżerze poświadczeń Windows. Sesja zadziała, ale hasło nie zostało zapamiętane — przy kolejnym połączeniu podaj je ponownie.</sys:String>
+    <sys:String x:Key="S.cred.saveFailed.title">Nie zapisano hasła</sys:String>
     <sys:String x:Key="S.st.wolsent">Wysłano pakiet Wake-on-LAN do {0}</sys:String>
 
     <sys:String x:Key="S.dash.servers">Serwery</sys:String>
