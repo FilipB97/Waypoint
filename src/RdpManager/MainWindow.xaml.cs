@@ -574,36 +574,104 @@ namespace RdpManager
             {
                 _wasImmersive = immersive;
                 LogFocusDiag(immersive);
-                // Przełączenie skupienia przebudowuje pasek kart BEZ zmiany rozmiaru okna (brak WM_SIZE), więc WPF
-                // nie odświeża „mysz nad"/hit-testu nowo pokazanych ikon (hover łapie dopiero po realnym resize
-                // un-maximize→maximize). Wymuszamy re-hit-test PO ustaleniu layoutu (Background = po Render), bez
-                // bramki na CaptionHeight — ta jest 0 (WPF-UI tak ją tworzy), więc stara ścieżka ForceFrameRecalc
-                // nigdy nie odpalała.
+                // TYMCZASOWA sonda hover: loguje mapowanie kursor→element nad paskiem kart, żeby ustalić offset
+                // hit-testu przy DPI 1.25 + RootScale 0.9 (do usunięcia po diagnozie).
+                if (immersive) PreviewMouseMove += HoverDiag_MouseMove;
+                else PreviewMouseMove -= HoverDiag_MouseMove;
+                // WŁAŚCIWA POPRAWKA: hover pada tylko po ponownym wejściu w skupienie na JUŻ zmaksymalizowanym
+                // oknie (brak WM_SIZE → nieodświeżona strefa non-client hit-testu; klik działa, hover nie).
+                // ForceFrameRecalc (SetWindowPos SWP_FRAMECHANGED → WM_NCCALCSIZE) odświeża non-client — to samo
+                // co robi realny resize (un-maximize→maximize, który „naprawiał"). Dotąd był MARTWYM kodem:
+                // wołany tylko z ApplyCaptionCore pod bramką `if (changed)`, a CaptionHeight jest stale 0, więc
+                // nigdy się nie wykonał. Tu wołamy bezwarunkowo przy każdej realnej zmianie trybu.
+                ForceFrameRecalc();
+                // Dodatkowy re-hit-test po ustaleniu layoutu (Background = po Render) — z #65; sam nie wystarczył.
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     UpdateLayout();
                     System.Windows.Input.Mouse.Synchronize();
+                    if (immersive) LogButtonRects();   // fizyczne prostokąty przycisków (po layoucie)
                 }), System.Windows.Threading.DispatcherPriority.Background);
             }
         }
 
-        // TYMCZASOWA diagnostyka trybu skupienia (do usunięcia po potwierdzeniu przyczyny hover-buga @125% DPI).
-        // Zapisuje realny stan okna przy każdej zmianie trybu → %APPDATA%\RdpManager\focusdiag.log. Best-effort.
+        // ===== TYMCZASOWA diagnostyka hover-buga trybu skupienia (@125% DPI + RootScale). Cała do usunięcia. =====
+        private int _hoverDiagCount;
+
         private void LogFocusDiag(bool immersive)
+        {
+            double caption = System.Windows.Shell.WindowChrome.GetWindowChrome(this)?.CaptionHeight ?? double.NaN;
+            double dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this).DpiScaleX;
+            _hoverDiagCount = 0;   // świeża próbka po każdej zmianie trybu
+            AppendFocusDiag(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "--- immersive={0} caption={1} state={2} dpi={3} rootScale={4}",
+                immersive, caption, WindowState, dpi, RootScale.ScaleX));
+        }
+
+        // Fizyczne (ekranowe, px) prostokąty przycisków paska kart — do porównania z fizyczną pozycją kursora.
+        private void LogButtonRects()
         {
             try
             {
-                double caption = System.Windows.Shell.WindowChrome.GetWindowChrome(this)?.CaptionHeight ?? double.NaN;
-                double dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this).DpiScaleX;
-                string line = string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                    "{0:yyyy-MM-dd HH:mm:ss}  immersive={1} caption={2} state={3} dpi={4} rootScale={5}",
-                    DateTime.Now, immersive, caption, WindowState, dpi, RootScale.ScaleX);
+                for (int i = 0; i < FocusControls.Children.Count; i++)
+                {
+                    if (FocusControls.Children[i] is FrameworkElement fe && fe.ActualWidth > 0)
+                    {
+                        Point tl = fe.PointToScreen(new Point(0, 0));
+                        Point br = fe.PointToScreen(new Point(fe.ActualWidth, fe.ActualHeight));
+                        AppendFocusDiag(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                            "rect btn#{0} phys tl=({1:0},{2:0}) br=({3:0},{4:0}) tip={5}",
+                            i, tl.X, tl.Y, br.X, br.Y, (fe as System.Windows.Controls.Button)?.ToolTip));
+                    }
+                }
+            }
+            catch { }
+        }
+
+        // Loguje pozycję kursora (fizyczną + wg WPF) i co InputHitTest zwraca nad pasmem paska kart. Max 80 wpisów.
+        private void HoverDiag_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (_hoverDiagCount >= 80) return;
+            try
+            {
+                Point pWin = e.GetPosition(this);
+                double tabBottom = TabStripHost.TranslatePoint(new Point(0, TabStripHost.ActualHeight), this).Y;
+                if (pWin.Y > tabBottom + 6) return;   // tylko pasmo paska kart
+                GetCursorPos(out POINT cur);          // fizyczny kursor (px)
+                var hit = InputHitTest(pWin) as DependencyObject;
+                _hoverDiagCount++;
+                AppendFocusDiag(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "move curPhys=({0},{1}) win=({2:0.0},{3:0.0}) hit={4}",
+                    cur.X, cur.Y, pWin.X, pWin.Y, DescribeHit(hit)));
+            }
+            catch { }
+        }
+
+        // Zwraca który przycisk FocusControls (indeks + tooltip) odpowiada trafionemu elementowi, albo typ elementu.
+        private string DescribeHit(DependencyObject hit)
+        {
+            var d = hit;
+            while (d != null)
+            {
+                if (d is System.Windows.Controls.Button b && b.Parent == FocusControls)
+                    return "btn#" + FocusControls.Children.IndexOf(b) + "(" + (b.ToolTip?.ToString() ?? "") + ")";
+                d = System.Windows.Media.VisualTreeHelper.GetParent(d);
+            }
+            return hit == null ? "null" : hit.GetType().Name;
+        }
+
+        private void AppendFocusDiag(string body)
+        {
+            try
+            {
                 string dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RdpManager");
                 System.IO.Directory.CreateDirectory(dir);
-                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "focusdiag.log"), line + Environment.NewLine);
+                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "focusdiag.log"),
+                    string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                        "{0:HH:mm:ss} {1}{2}", DateTime.Now, body, Environment.NewLine));
             }
-            catch { /* diagnostyka jest best-effort — nie przerywamy pracy aplikacji */ }
+            catch { /* best-effort */ }
         }
 
         // W skupieniu AppTitleBar znika, ale WindowChrome zostawia strefę caption (~32px) na górze,
