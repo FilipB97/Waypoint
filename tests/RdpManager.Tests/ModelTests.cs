@@ -31,5 +31,16 @@ namespace RdpManager.Tests
             Assert.NotEqual(a.Id, b.Id);
             Assert.Equal("RdpManager:" + a.Id, a.CredTarget);
         }
+
+        [Fact]
+        public void ServerInfo_Notes_DefaultEmpty_AndRoundTripsThroughJson()
+        {
+            Assert.Equal("", new ServerInfo().Notes);
+
+            var s = new ServerInfo { Name = "srv", Notes = "wiersz 1\nwiersz 2" };
+            var json = System.Text.Json.JsonSerializer.Serialize(s);
+            var back = System.Text.Json.JsonSerializer.Deserialize<ServerInfo>(json);
+            Assert.Equal("wiersz 1\nwiersz 2", back.Notes);
+        }
     }
 }

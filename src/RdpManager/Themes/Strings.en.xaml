@@ -188,6 +188,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.mac.ph">e.g. AA:BB:CC:DD:EE:FF</sys:String>
     <sys:String x:Key="S.se.tags">Tags (comma-separated) — used by search filtering</sys:String>
     <sys:String x:Key="S.se.tags.ph">e.g. prod, clientA, db</sys:String>
+    <sys:String x:Key="S.se.notes">Notes</sys:String>
+    <sys:String x:Key="S.se.notes.ph">Any notes about this server (shown on row hover)</sys:String>
     <sys:String x:Key="S.se.mac.bad">Invalid MAC address: {0}</sys:String>
     <sys:String x:Key="S.se.port.bad">Port must be a number from 1 to 65535.</sys:String>
     <sys:String x:Key="S.se.keypath.missing">Key file not found: {0}. It will still be saved — check the path before connecting.</sys:String>
