@@ -233,6 +233,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.tearoff">Tear off to a window</sys:String>
     <sys:String x:Key="S.m.split">Split screen with this session</sys:String>
     <sys:String x:Key="S.m.unsplit">End split screen</sys:String>
+    <sys:String x:Key="S.split.drop">Drop here to split the screen</sys:String>
     <sys:String x:Key="S.m.duplicate">Duplicate</sys:String>
     <sys:String x:Key="S.m.moveleft">Move left</sys:String>
     <sys:String x:Key="S.m.moveright">Move right</sys:String>
