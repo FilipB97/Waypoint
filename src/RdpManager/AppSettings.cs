@@ -35,9 +35,10 @@ namespace RdpManager
         /// <summary>Zapisuj dziennik audytu połączeń (metadane, bez haseł).</summary>
         public bool ConnectionLogEnabled { get; set; } = true;
 
-        /// <summary>Pokazano już jednorazowe ostrzeżenie o jawnym tekście Telnet / braku szyfrowania VNC.</summary>
+        /// <summary>Pokazano już jednorazowe ostrzeżenie o braku szyfrowania: Telnet / VNC / zwykły FTP.</summary>
         public bool TelnetWarned { get; set; }
         public bool VncWarned { get; set; }
+        public bool FtpWarned { get; set; }
 
         /// <summary>Id serwerów w kolejności ostatnich połączeń (najnowsze pierwsze).</summary>
         public List<string> RecentIds { get; set; } = new List<string>();

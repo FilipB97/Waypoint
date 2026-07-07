@@ -30,6 +30,12 @@ namespace RdpManager.Models
         /// <summary>SSH: tunele lokalne w składni ssh -L („portLokalny:host:portZdalny", po jednej regule).</summary>
         public List<string> Tunnels { get; set; } = new List<string>();
 
+        /// <summary>FTP: tryb szyfrowania — 0 = jawne FTPS, 1 = niejawne FTPS, 2 = brak (zwykły FTP).</summary>
+        public int FtpEncryption { get; set; }
+
+        /// <summary>FTP: logowanie anonimowe (login „anonymous", bez hasła).</summary>
+        public bool FtpAnonymous { get; set; }
+
         /// <summary>Logowanie zintegrowane kontem Windows (bez podawania loginu/hasła).</summary>
         public bool UseWindowsAccount { get; set; }
 
@@ -144,7 +150,8 @@ namespace RdpManager.Models
         Serial,
         Http,
         Vnc,
-        Sftp   // dopisywać na KOŃCU — wartości enuma są serializowane (przestawienie zmieniłoby zapisane serwery)
+        Sftp,  // dopisywać na KOŃCU (enum serializowany po nazwie; kolejność ważna dla combo w edytorze)
+        Ftp
     }
 
     /// <summary>Grupa serwerów w drzewie (Produkcja / Staging / Klienci …).</summary>

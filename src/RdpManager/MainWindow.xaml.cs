@@ -1470,6 +1470,7 @@ namespace RdpManager
             RemoteProtocol.Http => "WWW",
             RemoteProtocol.Vnc => "VNC",
             RemoteProtocol.Sftp => "SFTP",
+            RemoteProtocol.Ftp => "FTP",
             _ => p.ToString()
         };
 
@@ -1973,7 +1974,7 @@ namespace RdpManager
             AddCopy("S.m.copy.host", () => server.Host);
             if (server.Protocol != RemoteProtocol.Http)
                 AddCopy("S.m.copy.port", () => server.Port.ToString());
-            if (rdp || server.Protocol == RemoteProtocol.Ssh || server.Protocol == RemoteProtocol.Sftp)
+            if (rdp || server.Protocol == RemoteProtocol.Ssh || server.Protocol == RemoteProtocol.Sftp || server.Protocol == RemoteProtocol.Ftp)
             {
                 AddCopy("S.m.copy.user", () => EffUser(server));
                 if (rdp) AddCopy("S.m.copy.domain", () => EffDomain(server));
@@ -1997,7 +1998,7 @@ namespace RdpManager
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
             if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
-            if (rdp || server.Protocol == RemoteProtocol.Ssh || server.Protocol == RemoteProtocol.Sftp) menu.Items.Add(connectAsItem);
+            if (rdp || server.Protocol == RemoteProtocol.Ssh || server.Protocol == RemoteProtocol.Sftp || server.Protocol == RemoteProtocol.Ftp) menu.Items.Add(connectAsItem);
             menu.Items.Add(editItem);
             menu.Items.Add(dupItem);
             menu.Items.Add(copyMenu);
@@ -2166,6 +2167,15 @@ namespace RdpManager
                 session = new Session(server, panel, conn);
                 WireFilesEvents(session);
             }
+            else if (server.Protocol == RemoteProtocol.Ftp)
+            {
+                // FTP/FTPS jako osobny protokół: ten sam panel plików (IRemoteFs), konektor FluentFTP.
+                var conn = new FtpConnector();
+                var panel = new FileTransferPanel(() => conn.NewFs());
+                SessionContainer.Children.Add(panel);
+                session = new Session(server, panel, conn);
+                WireFilesEvents(session);
+            }
             else if (server.Protocol == RemoteProtocol.Vnc)
             {
                 // VNC (RemoteViewing) — kontrolka WinForms w hoście WPF, jak RDP. Zdarzenia wiążemy przy połączeniu.
@@ -2225,6 +2235,9 @@ namespace RdpManager
                 case RemoteProtocol.Sftp:
                     return !string.IsNullOrWhiteSpace(EffUser(s.Server))
                            && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath));
+                case RemoteProtocol.Ftp:
+                    return s.Server.FtpAnonymous
+                           || (!string.IsNullOrWhiteSpace(EffUser(s.Server)) && !string.IsNullOrEmpty(s.Password));
                 default:
                     return s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
             }
@@ -2748,6 +2761,7 @@ namespace RdpManager
                 case RemoteProtocol.Telnet: return "telnet://" + s.Host;
                 case RemoteProtocol.Vnc: return "vnc://" + s.Host;
                 case RemoteProtocol.Sftp: return "sftp://" + s.Host;
+                case RemoteProtocol.Ftp: return "ftp://" + s.Host;
                 case RemoteProtocol.Serial: return s.Host + " @" + s.Port;   // COM3 @115200
                 default: return s.Host;
             }
@@ -3266,13 +3280,16 @@ namespace RdpManager
         private void WarnUnencrypted(RemoteProtocol proto)
         {
             bool already = proto == RemoteProtocol.Telnet ? _settings.TelnetWarned
-                         : proto == RemoteProtocol.Vnc ? _settings.VncWarned : true;
+                         : proto == RemoteProtocol.Vnc ? _settings.VncWarned
+                         : proto == RemoteProtocol.Ftp ? _settings.FtpWarned : true;
             if (already) return;
 
-            if (proto == RemoteProtocol.Telnet) _settings.TelnetWarned = true; else _settings.VncWarned = true;
+            if (proto == RemoteProtocol.Telnet) _settings.TelnetWarned = true;
+            else if (proto == RemoteProtocol.Vnc) _settings.VncWarned = true;
+            else _settings.FtpWarned = true;
             SettingsStore.Save(_settings);
 
-            string k = proto == RemoteProtocol.Telnet ? "telnet" : "vnc";
+            string k = proto == RemoteProtocol.Telnet ? "telnet" : proto == RemoteProtocol.Vnc ? "vnc" : "ftp";
             MessageBox.Show(L("S.warn." + k), L("S.warn." + k + ".title"), MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
@@ -3492,7 +3509,9 @@ namespace RdpManager
         // SFTP jako osobny protokół: panel łączy się leniwie; identyczność (login z profilu) + hasło ustawiamy tutaj.
         private void ConnectFiles(Session s)
         {
-            if (string.IsNullOrWhiteSpace(EffUser(s.Server))) { PromptAndConnect(s, null); return; }
+            bool anon = s.Server.Protocol == RemoteProtocol.Ftp && s.Server.FtpAnonymous;
+            if (!anon && string.IsNullOrWhiteSpace(EffUser(s.Server))) { PromptAndConnect(s, null); return; }
+            if (s.Server.Protocol == RemoteProtocol.Ftp && s.Server.FtpEncryption == 2) WarnUnencrypted(RemoteProtocol.Ftp);
             SetTabStatus(s, ServerStatus.Idle);
             SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
             if (s == _active) UpdateCanvas();

@@ -59,9 +59,12 @@ namespace RdpManager
                 server.Protocol == RemoteProtocol.Serial ? 3 :
                 server.Protocol == RemoteProtocol.Http ? 4 :
                 server.Protocol == RemoteProtocol.Vnc ? 5 :
-                server.Protocol == RemoteProtocol.Sftp ? 6 : 0;
+                server.Protocol == RemoteProtocol.Sftp ? 6 :
+                server.Protocol == RemoteProtocol.Ftp ? 7 : 0;
             KeyPathBox.Text = server.PrivateKeyPath ?? "";
             TunnelsBox.Text = server.Tunnels == null ? "" : string.Join(Environment.NewLine, server.Tunnels);
+            FtpTlsCombo.SelectedIndex = Math.Clamp(server.FtpEncryption, 0, 2);
+            FtpAnonCheck.IsChecked = server.FtpAnonymous;
             BuildColorSwatches();
             ApplyWinAuthState();
             ApplyProtocolState();
@@ -180,7 +183,7 @@ namespace RdpManager
         // Porty domyślne wszystkich protokołów — port podmieniamy tylko, gdy bieżąca wartość
         // jest jednym z nich (czyli użytkownik nie wpisał własnego). Musi zawierać KAŻDY default,
         // inaczej jedno przejście przez dany protokół zrywa automat na zawsze.
-        private static readonly string[] DefaultPorts = { "", "3389", "22", "23", "115200", "443", "5900" };
+        private static readonly string[] DefaultPorts = { "", "3389", "22", "23", "115200", "443", "5900", "21" };
 
         private void Protocol_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
@@ -191,9 +194,11 @@ namespace RdpManager
             ApplyProtocolState();
         }
 
+        private void FtpAnon_Click(object sender, RoutedEventArgs e) { if (!_initializing) ApplyProtocolState(); }
+
         private static int DefaultPortFor(int protocolIndex)
             => protocolIndex == 1 ? 22 : protocolIndex == 2 ? 23 : protocolIndex == 3 ? 115200
-             : protocolIndex == 4 ? 443 : protocolIndex == 5 ? 5900 : protocolIndex == 6 ? 22 : 3389;
+             : protocolIndex == 4 ? 443 : protocolIndex == 5 ? 5900 : protocolIndex == 6 ? 22 : protocolIndex == 7 ? 21 : 3389;
 
         // Widoczność pól zależnie od protokołu: RDP = wszystko; SSH = poświadczenia + klucz + tunele;
         // Telnet/Serial = bez poświadczeń (logowanie w terminalu); WWW = tylko URL (bez portu).
@@ -201,9 +206,10 @@ namespace RdpManager
         private void ApplyProtocolState()
         {
             int idx = ProtocolCombo.SelectedIndex;
-            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3, http = idx == 4, vnc = idx == 5, sftp = idx == 6;
-            bool user = rdp || ssh || sftp;  // login (VNC uwierzytelnia samym hasłem; SFTP ma login)
-            bool pass = rdp || ssh || vnc || sftp;   // pole hasła
+            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3, http = idx == 4, vnc = idx == 5, sftp = idx == 6, ftp = idx == 7;
+            bool ftpAnon = ftp && FtpAnonCheck.IsChecked == true;   // anonimowy FTP: bez loginu/hasła
+            bool user = (rdp || ssh || sftp || ftp) && !ftpAnon;  // login (VNC hasłem; FTP anonimowy = brak)
+            bool pass = (rdp || ssh || vnc || sftp || ftp) && !ftpAnon;   // pole hasła
 
             var rdpVis = rdp ? Visibility.Visible : Visibility.Collapsed;
             RdpCard.Visibility = rdpVis;               // cała karta „Opcje RDP" (bez pustego nagłówka dla nie-RDP)
@@ -216,7 +222,8 @@ namespace RdpManager
             KeyPathPanel.Visibility = (ssh || sftp) ? Visibility.Visible : Visibility.Collapsed;   // klucz: SSH i SFTP
             TunnelsPanel.Visibility = ssh ? Visibility.Visible : Visibility.Collapsed;             // tunele ssh -L: tylko powłoka SSH
 
-            AuthCard.Visibility = pass ? Visibility.Visible : Visibility.Collapsed;   // Telnet/Serial/WWW logują się inaczej
+            AuthCard.Visibility = (pass || ftp) ? Visibility.Visible : Visibility.Collapsed;   // Telnet/Serial/WWW inaczej; FTP: karta też dla anonimowego (opcje FTP)
+            FtpOptionsPanel.Visibility = ftp ? Visibility.Visible : Visibility.Collapsed;
             ProfileRow.Visibility = user ? Visibility.Visible : Visibility.Collapsed; // profil (login/domena) tylko dla RDP/SSH
             var userVis = user ? Visibility.Visible : Visibility.Collapsed;
             UserLabel.Visibility = userVis;
@@ -314,12 +321,16 @@ namespace RdpManager
                          : idx == 3 ? RemoteProtocol.Serial
                          : idx == 4 ? RemoteProtocol.Http
                          : idx == 5 ? RemoteProtocol.Vnc
+                         : idx == 6 ? RemoteProtocol.Sftp
+                         : idx == 7 ? RemoteProtocol.Ftp
                          : RemoteProtocol.Rdp;
             bool ssh = protocol == RemoteProtocol.Ssh;
             bool rdp = protocol == RemoteProtocol.Rdp;
             bool vnc = protocol == RemoteProtocol.Vnc;
             bool sftp = protocol == RemoteProtocol.Sftp;
-            bool creds = rdp || ssh || sftp; // login — Telnet/Serial/WWW/VNC nie mają loginu w modelu
+            bool ftp = protocol == RemoteProtocol.Ftp;
+            bool anon = ftp && FtpAnonCheck.IsChecked == true;
+            bool creds = rdp || ssh || sftp || ftp; // login — Telnet/Serial/WWW/VNC nie mają loginu w modelu
             bool passProto = creds || vnc;   // hasło (VNC uwierzytelnia samym hasłem)
 
             // Tunele i MAC: waliduj PRZED zapisem czegokolwiek (błąd = nic się nie zmienia).
@@ -338,7 +349,7 @@ namespace RdpManager
                 return;
             }
             // Port sieciowy 1–65535 (RDP/SSH/Telnet/VNC). Serial = baud (dowolna liczba), WWW = brak portu — pomijamy.
-            bool netPort = rdp || ssh || vnc || sftp || protocol == RemoteProtocol.Telnet;
+            bool netPort = rdp || ssh || vnc || sftp || ftp || protocol == RemoteProtocol.Telnet;
             if (netPort && (!int.TryParse(PortBox.Text.Trim(), out var portVal) || portVal < 1 || portVal > 65535))
             {
                 MessageBox.Show(LocalizationManager.S("S.se.port.bad"),
@@ -353,6 +364,8 @@ namespace RdpManager
             _server.Protocol = protocol;
             _server.PrivateKeyPath = (ssh || sftp) ? KeyPathBox.Text.Trim() : "";
             _server.Tunnels = ssh ? tunnels : new List<string>();
+            _server.FtpEncryption = ftp ? FtpTlsCombo.SelectedIndex : 0;
+            _server.FtpAnonymous = anon;
 
             _server.Name = NameBox.Text.Trim();
             _server.Host = HostBox.Text.Trim();
@@ -367,7 +380,7 @@ namespace RdpManager
             _server.UseWindowsAccount = !useProfile && rdp && WinAuthCheck.IsChecked == true;
             _server.Username = (useProfile || !creds || _server.UseWindowsAccount) ? "" : UserBox.Text.Trim();
             _server.Domain = (!useProfile && rdp && !_server.UseWindowsAccount) ? DomainBox.Text.Trim() : "";
-            _server.SavePassword = !useProfile && passProto && !_server.UseWindowsAccount && SavePassCheck.IsChecked == true;
+            _server.SavePassword = !useProfile && passProto && !_server.UseWindowsAccount && !anon && SavePassCheck.IsChecked == true;
 
             _server.RedirectClipboard = EdClipboard.IsChecked == true;
             _server.RedirectDrives = EdDrives.IsChecked == true;
@@ -386,7 +399,7 @@ namespace RdpManager
             _server.AvatarColor = _avatarColor ?? "";
             _server.Initials = RdpUtils.MakeInitials(_server.Name);   // zawsze z nazwy (leczy stare inicjały z IP)
 
-            EnteredPassword = (!useProfile && passProto && !_server.UseWindowsAccount) ? CurrentPassword() : "";
+            EnteredPassword = (!useProfile && passProto && !_server.UseWindowsAccount && !anon) ? CurrentPassword() : "";
             DialogResult = true;
         }
 

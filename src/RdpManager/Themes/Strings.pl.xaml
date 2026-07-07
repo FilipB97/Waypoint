@@ -165,6 +165,11 @@
     <sys:String x:Key="S.se.baud">Prędkość (baud)</sys:String>
     <sys:String x:Key="S.se.tunnels">Tunele lokalne (jak ssh -L)</sys:String>
     <sys:String x:Key="S.se.tunnels.ph">portLokalny:host:portZdalny — jedna reguła na linię, np. 5433:db.internal:5432</sys:String>
+    <sys:String x:Key="S.se.ftp.anon">Logowanie anonimowe</sys:String>
+    <sys:String x:Key="S.se.ftp.tls">Szyfrowanie</sys:String>
+    <sys:String x:Key="S.se.ftp.tls.explicit">Jawne FTPS</sys:String>
+    <sys:String x:Key="S.se.ftp.tls.implicit">Niejawne FTPS</sys:String>
+    <sys:String x:Key="S.se.ftp.tls.none">Bez szyfrowania (zwykły FTP)</sys:String>
     <sys:String x:Key="S.se.tunnels.bad">Niepoprawna reguła tunelu: {0}
 Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.se.browse">Przeglądaj…</sys:String>
@@ -301,6 +306,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.warn.telnet">Telnet przesyła wszystko, w tym hasło, jawnym tekstem. Używaj tylko w zaufanych sieciach. Tam gdzie się da, wybieraj SSH.</sys:String>
     <sys:String x:Key="S.warn.vnc.title">VNC — bez szyfrowania</sys:String>
     <sys:String x:Key="S.warn.vnc">Klasyczne VNC ma słabe uwierzytelnianie i brak szyfrowania sesji. Używaj tylko w zaufanych sieciach albo tuneluj przez SSH.</sys:String>
+    <sys:String x:Key="S.warn.ftp.title">FTP — bez szyfrowania</sys:String>
+    <sys:String x:Key="S.warn.ftp">Zwykły FTP przesyła login, hasło i pliki jawnym tekstem. Używaj tylko w zaufanych sieciach — w innym razie wybierz FTPS (jawne lub niejawne).</sys:String>
     <sys:String x:Key="S.cred.saveFailed">Nie udało się zapisać hasła w Menedżerze poświadczeń Windows. Sesja zadziała, ale hasło nie zostało zapamiętane — przy kolejnym połączeniu podaj je ponownie.</sys:String>
     <sys:String x:Key="S.cred.saveFailed.title">Nie zapisano hasła</sys:String>
     <sys:String x:Key="S.st.wolsent">Wysłano pakiet Wake-on-LAN do {0}</sys:String>
