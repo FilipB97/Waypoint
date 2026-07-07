@@ -133,6 +133,7 @@
     <sys:String x:Key="S.reconnect">Reconnect</sys:String>
     <sys:String x:Key="S.connected">● Connected</sys:String>
     <sys:String x:Key="S.tip.fullscreen">Full screen (on this monitor)</sys:String>
+    <sys:String x:Key="S.tip.cad">Send Ctrl+Alt+Del</sys:String>
     <sys:String x:Key="S.tip.minimize">Minimize</sys:String>
     <sys:String x:Key="S.emptyhint">Select a server on the left to open a session.</sys:String>
     <sys:String x:Key="S.fs.drag">Drag to move the bar</sys:String>
@@ -235,6 +236,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.prompt.newgroup.title">New group</sys:String>
     <sys:String x:Key="S.prompt.newgroup.label">Group name:</sys:String>
     <sys:String x:Key="S.m.tearoff">Tear off to a window</sys:String>
+    <sys:String x:Key="S.m.cad">Send Ctrl+Alt+Del</sys:String>
     <sys:String x:Key="S.m.split">Split screen with this session</sys:String>
     <sys:String x:Key="S.m.unsplit">End split screen</sys:String>
     <sys:String x:Key="S.split.drop">Drop here to split the screen</sys:String>

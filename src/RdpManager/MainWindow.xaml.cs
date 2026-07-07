@@ -2610,6 +2610,9 @@ namespace RdpManager
             if (session.Server.Protocol == RemoteProtocol.Rdp)
             {
                 tabMenu.Items.Add(tearItem);   // wyciąganie do okna jest RDP-owe
+                var cadItem = new MenuItem { Header = L("S.m.cad") };
+                cadItem.Click += (s, e) => SendCtrlAltDel(session);
+                tabMenu.Items.Add(cadItem);
                 splitItem = new MenuItem { Header = L("S.m.split") };      // ta sesja w prawym panelu, aktywna w lewym
                 splitItem.Click += (s, e) => EnterSplit(session);
                 unsplitItem = new MenuItem { Header = L("S.m.unsplit") };
@@ -3348,6 +3351,31 @@ namespace RdpManager
             try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
         }
 
+        private void SendCtrlAltDel_Click(object sender, RoutedEventArgs e) => SendCtrlAltDel(_active);
+
+        // Wysyła zdalne Ctrl+Alt+Del. OCX RDP nie ma na to scriptowalnej metody, więc — jak w mstsc — dajemy
+        // klientowi Ctrl+Alt+End, który (przy KeyboardHookMode=2 i z fokusem na kontrolce) tłumaczy je na
+        // zdalną sekwencję SAS. Iniekcja przez keybd_event po ustawieniu fokusu na kontrolce sesji.
+        private void SendCtrlAltDel(Session s)
+        {
+            if (s == null || s.Server.Protocol != RemoteProtocol.Rdp || !s.Connected) return;
+            if (s != _active && s != _paneLeft && s != _paneRight) Activate(s);   // sesja musi być widoczna
+            try { s.Rdp.Focus(); } catch { }
+            // Po przetworzeniu fokusu (Input) wstrzykujemy Ctrl↓ Alt↓ End↓ End↑ Alt↑ Ctrl↑.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                // keybd_event jest globalny — wyślij TYLKO gdy nasze okno jest na pierwszym planie, inaczej
+                // klawisze trafiłyby do aplikacji, na którą użytkownik zdążył przełączyć (iniekcja jest odroczona).
+                if (GetForegroundWindow() != new WindowInteropHelper(this).Handle) return;
+                keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_END, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_END, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            }), System.Windows.Threading.DispatcherPriority.Input);
+        }
+
         // ---------- SSH ----------
 
         /// <summary>Łączy sesję terminalową (SSH/Telnet/Serial): inicjalizuje xterm i transport w tle.</summary>
@@ -3535,6 +3563,7 @@ namespace RdpManager
             if (_active == null) return;
 
             FilesBtn.Visibility = _active.IsSsh ? Visibility.Visible : Visibility.Collapsed;   // SFTP tylko dla SSH
+            CadBtn.Visibility = _active.Server.Protocol == RemoteProtocol.Rdp ? Visibility.Visible : Visibility.Collapsed;   // Ctrl+Alt+Del tylko dla RDP
         }
 
         private void UpdateToolbarEnabled()
@@ -3738,6 +3767,11 @@ namespace RdpManager
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+        private const byte VK_CONTROL = 0x11, VK_MENU = 0x12, VK_END = 0x23;
+        private const uint KEYEVENTF_KEYUP = 0x0002;
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
