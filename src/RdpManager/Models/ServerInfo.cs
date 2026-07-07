@@ -143,7 +143,8 @@ namespace RdpManager.Models
         Telnet,
         Serial,
         Http,
-        Vnc
+        Vnc,
+        Sftp   // dopisywać na KOŃCU — wartości enuma są serializowane (przestawienie zmieniłoby zapisane serwery)
     }
 
     /// <summary>Grupa serwerów w drzewie (Produkcja / Staging / Klienci …).</summary>

@@ -39,12 +39,7 @@ namespace RdpManager
         public event Action<string, bool, string> TunnelStatus;
 
         private readonly List<ForwardedPortLocal> _forwards = new List<ForwardedPortLocal>();
-        private string _hostKeyHost;
-        private int _hostKeyPort;
-        private ServerInfo _server;          // parametry ostatniego połączenia — dla SFTP
-        private string _password;
-        private PrivateKeyFile _loadedKey;   // cache: passphrase pytamy raz, nie przy każdym łączu
-        private string _loadedKeyPath;
+        private readonly SshConnectionFactory _conn = new SshConnectionFactory();   // budowa łącza + TOFU (wspólne z SFTP)
 
         private readonly Grid _grid = new Grid();
         private readonly ColumnDefinition _splitCol = new ColumnDefinition { Width = new GridLength(0) };
@@ -58,7 +53,7 @@ namespace RdpManager
             ResizeBehavior = GridResizeBehavior.PreviousAndNext,
             Visibility = Visibility.Collapsed
         };
-        private SftpPanel _files;
+        private FileTransferPanel _files;
 
         public SshTerminalControl()
         {
@@ -79,7 +74,7 @@ namespace RdpManager
         {
             if (_files == null)
             {
-                _files = new SftpPanel(CreateSftpClient);
+                _files = new FileTransferPanel(() => _conn.NewFs());
                 Grid.SetColumn(_files, 2);
                 _grid.Children.Add(_files);
             }
@@ -122,13 +117,14 @@ namespace RdpManager
                 DisposeClient();   // rekonekt: sprzątnij poprzednie połączenie
                 lock (_utf8) _utf8.Reset();   // porzuć niedokończony znak wielobajtowy z poprzedniej sesji
 
-                _server = server;
-                _password = password;
-                var ci = BuildConnectionInfo(server, password);
+                _conn.TrustHostKey = TrustHostKey;
+                _conn.RequestKeyPassphrase = RequestKeyPassphrase;
+                _conn.SetIdentity(server, password);
+                var ci = _conn.BuildConnectionInfo();
 
                 var client = new SshClient(ci);
                 client.KeepAliveInterval = TimeSpan.FromSeconds(30);   // NAT/zapory ubijają bezczynne sesje
-                client.HostKeyReceived += OnHostKey;
+                _conn.Attach(client);
                 client.ErrorOccurred += (o, e) => RaiseDisconnected(e.Exception?.Message);
                 client.Connect();
 
@@ -154,76 +150,6 @@ namespace RdpManager
             });
         }
 
-        // Wspólne dla terminala i SFTP (osobne łącza TCP na tych samych poświadczeniach).
-        private ConnectionInfo BuildConnectionInfo(ServerInfo server, string password)
-        {
-            var methods = new List<AuthenticationMethod>();
-            if (!string.IsNullOrWhiteSpace(server.PrivateKeyPath))
-                methods.Add(new PrivateKeyAuthenticationMethod(server.Username,
-                    LoadPrivateKey(server.PrivateKeyPath)));
-            if (!string.IsNullOrEmpty(password))
-            {
-                methods.Add(new PasswordAuthenticationMethod(server.Username, password));
-                // Wiele serwerów używa keyboard-interactive zamiast czystego "password".
-                var kbi = new KeyboardInteractiveAuthenticationMethod(server.Username);
-                kbi.AuthenticationPrompt += (o, e) => { foreach (var p in e.Prompts) p.Response = password; };
-                methods.Add(kbi);
-            }
-            if (methods.Count == 0)
-                methods.Add(new NoneAuthenticationMethod(server.Username));
-
-            _hostKeyHost = server.Host;
-            _hostKeyPort = server.Port > 0 ? server.Port : 22;
-            return new ConnectionInfo(server.Host, _hostKeyPort, server.Username, methods.ToArray())
-            {
-                Timeout = TimeSpan.FromSeconds(15),
-                Encoding = Encoding.UTF8
-            };
-        }
-
-        /// <summary>
-        /// Nowe połączenie SFTP na poświadczeniach tej sesji (wątek roboczy; osobne łącze TCP,
-        /// ten sam mechanizm weryfikacji klucza hosta — po TOFU terminala przechodzi cicho).
-        /// </summary>
-        public SftpClient CreateSftpClient()
-        {
-            var server = _server;
-            if (server == null) throw new InvalidOperationException("Sesja SSH nie była jeszcze łączona.");
-            var c = new SftpClient(BuildConnectionInfo(server, _password));
-            c.HostKeyReceived += OnHostKey;
-            c.Connect();
-            return c;
-        }
-
-        // Klucz zaszyfrowany passphrasem → dopytaj przez RequestKeyPassphrase (do 3 prób).
-        private PrivateKeyFile LoadPrivateKey(string path)
-        {
-            if (_loadedKey != null && _loadedKeyPath == path) return _loadedKey;   // passphrase pytamy raz
-
-            try { return Cache(new PrivateKeyFile(path), path); }
-            catch (SshPassPhraseNullOrEmptyException)
-            {
-                var ask = RequestKeyPassphrase;
-                if (ask == null) throw;
-                for (int attempt = 0; attempt < 3; attempt++)
-                {
-                    string phrase = ask(path);
-                    if (phrase == null) throw new SshAuthenticationException("Anulowano podawanie passphrase klucza.");
-                    try { return Cache(new PrivateKeyFile(path, phrase), path); }
-                    catch (SshException) { /* złe hasło klucza — spróbuj ponownie */ }
-                    catch (InvalidOperationException) { /* jw. — starsze wersje rzucają inaczej */ }
-                }
-                throw new SshAuthenticationException("Niepoprawna passphrase klucza (3 próby).");
-            }
-        }
-
-        private PrivateKeyFile Cache(PrivateKeyFile key, string path)
-        {
-            _loadedKey = key;
-            _loadedKeyPath = path;
-            return key;
-        }
-
         // Tunele lokalne (ssh -L): 127.0.0.1:portLokalny → host:portZdalny przez serwer SSH.
         // Błąd jednej reguły nie ubija sesji — leci zdarzeniem do UI.
         private void StartTunnels(SshClient client, ServerInfo server)
@@ -243,43 +169,6 @@ namespace RdpManager
                 }
                 catch (Exception ex) { TunnelStatus?.Invoke(spec, false, ex.Message); }
             }
-        }
-
-        // TOFU: znany klucz → OK; nowy → pytanie (domyślnie ufaj); ZMIENIONY → pytanie z ostrzeżeniem (domyślnie odrzuć).
-        private void OnHostKey(object sender, HostKeyEventArgs e)
-        {
-            try
-            {
-                string fp = KnownHosts.Fingerprint(e.HostKey);
-
-                // Odczyt→sprawdzenie pod lockiem, ale lock ZWALNIAMY przed pytaniem o zaufanie: ask(...)
-                // marshaluje na wątek UI (Dispatcher.Invoke, blokująco), a trzymanie KnownHosts.Sync przez
-                // ten czas potrafiło zakleszczyć równoległe sesje/SFTP dobijające się o ten sam lock.
-                bool changed;
-                lock (KnownHosts.Sync)
-                {
-                    var store = KnownHosts.Load(SettingsStore.Dir);
-                    var status = KnownHosts.Check(store, _hostKeyHost, _hostKeyPort, fp);
-                    if (status == KnownHosts.Status.Match) { e.CanTrust = true; return; }
-                    changed = status == KnownHosts.Status.Mismatch;
-                }
-
-                var ask = TrustHostKey;
-                bool trust = ask != null ? ask(_hostKeyHost + ":" + _hostKeyPort, fp, changed) : !changed;
-                if (trust)
-                {
-                    // Ponowny odczyt świeżego stanu i zapis pod lockiem. TOCTOU nieszkodliwe: inna sesja mogła
-                    // w międzyczasie dopisać ten sam host — zapiszemy ten sam odcisk (idempotentnie).
-                    lock (KnownHosts.Sync)
-                    {
-                        var store = KnownHosts.Load(SettingsStore.Dir);
-                        store[KnownHosts.EntryKey(_hostKeyHost, _hostKeyPort)] = fp;
-                        KnownHosts.Save(SettingsStore.Dir, store);
-                    }
-                }
-                e.CanTrust = trust;
-            }
-            catch { e.CanTrust = false; }   // wątpliwość = odmowa (bezpieczny domyślny)
         }
 
         private void OnShellData(object sender, ShellDataEventArgs e)

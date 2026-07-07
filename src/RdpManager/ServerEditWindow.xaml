@@ -69,6 +69,7 @@
                                 <ComboBoxItem Content="Serial (COM)"/>
                                 <ComboBoxItem Content="WWW (link)"/>
                                 <ComboBoxItem Content="VNC"/>
+                                <ComboBoxItem Content="SFTP"/>
                             </ComboBox>
                         </StackPanel>
                         <StackPanel Grid.Column="2">
@@ -179,10 +180,12 @@
                                 <ui:TextBox x:Name="KeyPathBox" Grid.Column="0" PlaceholderText="{DynamicResource S.se.keypath.ph}"/>
                                 <ui:Button Grid.Column="1" Content="{DynamicResource S.se.browse}" Click="BrowseKey_Click" Margin="8,0,0,0"/>
                             </Grid>
-                            <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.tunnels}" Margin="0,12,0,4"/>
-                            <ui:TextBox x:Name="TunnelsBox" AcceptsReturn="True" TextWrapping="NoWrap"
-                                        MinHeight="64" MaxHeight="140" VerticalScrollBarVisibility="Auto"
-                                        PlaceholderText="{DynamicResource S.se.tunnels.ph}"/>
+                            <StackPanel x:Name="TunnelsPanel">
+                                <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.se.tunnels}" Margin="0,12,0,4"/>
+                                <ui:TextBox x:Name="TunnelsBox" AcceptsReturn="True" TextWrapping="NoWrap"
+                                            MinHeight="64" MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                                            PlaceholderText="{DynamicResource S.se.tunnels.ph}"/>
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>

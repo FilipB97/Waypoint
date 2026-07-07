@@ -4,18 +4,18 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
-using Renci.SshNet;
 
 namespace RdpManager
 {
     /// <summary>
-    /// Panel plików SFTP przy sesji SSH: nawigacja, wyślij/pobierz, nowy folder, usuwanie.
-    /// Łączy się fabryką z <see cref="SshTerminalControl"/> (te same poświadczenia + weryfikacja
-    /// klucza hosta; osobne łącze TCP). Operacje SFTP w tle, UI przez Dispatcher, jedna naraz.
+    /// Panel plików zdalnego systemu (<see cref="IRemoteFs"/>): nawigacja, wyślij/pobierz, nowy folder,
+    /// usuwanie. Działa dla SFTP (i docelowo FTP/FTPS) — źródło dostarcza fabryka. Operacje w tle,
+    /// UI przez Dispatcher, jedna naraz. Jako samodzielna sesja zgłasza zdarzenia
+    /// <see cref="Connected"/>/<see cref="Failed"/> (stan karty/sesji); błąd pojedynczej operacji
+    /// NIE zrywa sesji — tylko błąd łączenia.
     /// </summary>
-    public class SftpPanel : Border
+    public class FileTransferPanel : Border
     {
         private sealed class Row
         {
@@ -27,10 +27,16 @@ namespace RdpManager
             public string Modified { get; set; }
         }
 
-        private readonly Func<SftpClient> _factory;
-        private SftpClient _sftp;
+        private readonly Func<IRemoteFs> _factory;
+        private IRemoteFs _fs;
         private string _path = "/";
         private bool _busy;
+
+        /// <summary>Udane (po)łączenie — dla sesji plikowej: karta „online".</summary>
+        public event Action Connected;
+
+        /// <summary>Nieudane łączenie (nie: błąd operacji) — dla sesji plikowej: karta „offline".</summary>
+        public event Action<string> Failed;
 
         private readonly TextBlock _pathText;
         private readonly TextBlock _status;
@@ -39,7 +45,7 @@ namespace RdpManager
         private static string L(string key) => LocalizationManager.S(key);
         private static Brush Res(string key) => Application.Current.TryFindResource(key) as Brush ?? Brushes.Gray;
 
-        public SftpPanel(Func<SftpClient> factory)
+        public FileTransferPanel(Func<IRemoteFs> factory)
         {
             _factory = factory;
             Background = Res("Panel");
@@ -134,30 +140,44 @@ namespace RdpManager
             _status.ToolTip = string.IsNullOrEmpty(text) ? null : text;
         }
 
-        // Jedna operacja SFTP naraz; łączy przy pierwszym użyciu (dispatcher wolny — praca w tle).
-        private async Task<bool> RunAsync(string statusText, Action<SftpClient> work)
+        // Jedna operacja naraz; łączy przy pierwszym użyciu (dispatcher wolny — praca w tle).
+        // Rozróżnia błąd POŁĄCZENIA (zgłoszony przez Failed → sesja offline) od błędu operacji (tylko status).
+        private async Task<bool> RunAsync(string statusText, Action<IRemoteFs> work)
         {
             if (_busy) return false;
             _busy = true;
+            bool connecting = false;
             try
             {
                 SetStatus(statusText);
+                bool didConnect = false;
                 await Task.Run(() =>
                 {
-                    if (_sftp == null || !_sftp.IsConnected)
+                    if (_fs == null || !_fs.IsConnected)
                     {
-                        try { _sftp?.Dispose(); } catch { }
-                        _sftp = _factory();
-                        if (_path == "/") _path = _sftp.WorkingDirectory ?? "/";   // start w katalogu domowym
+                        try { _fs?.Dispose(); } catch { }
+                        _fs = _factory();
+                        connecting = true;
+                        _fs.Connect();
+                        connecting = false;
+                        didConnect = true;
+                        if (_path == "/") _path = _fs.HomeDirectory ?? "/";   // start w katalogu domowym
                     }
-                    work(_sftp);
+                    work(_fs);
                 });
+                if (didConnect) Connected?.Invoke();
                 SetStatus(L("S.sftp.done"));
                 return true;
             }
             catch (Exception ex)
             {
                 SetStatus(ex.Message, error: true);
+                if (connecting)   // błąd łączenia zrywa sesję; błąd operacji zostawia ją żywą
+                {
+                    try { _fs?.Dispose(); } catch { }
+                    _fs = null;
+                    Failed?.Invoke(ex.Message);
+                }
                 return false;
             }
             finally { _busy = false; }
@@ -167,20 +187,19 @@ namespace RdpManager
         public async void RefreshAsync()
         {
             List<Row> rows = null;
-            bool ok = await RunAsync(L("S.sftp.connecting"), sftp =>
+            bool ok = await RunAsync(L("S.sftp.connecting"), fs =>
             {
-                rows = sftp.ListDirectory(_path)
-                    .Where(f => f.Name != "." && f.Name != "..")
-                    .OrderByDescending(f => f.IsDirectory)
+                rows = fs.List(_path)
+                    .OrderByDescending(f => f.IsDir)
                     .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
                     .Select(f => new Row
                     {
-                        Display = (f.IsDirectory ? "\U0001F4C1 " : "\U0001F4C4 ") + f.Name,
+                        Display = (f.IsDir ? "\U0001F4C1 " : "\U0001F4C4 ") + f.Name,
                         Name = f.Name,
                         FullName = f.FullName,
-                        IsDir = f.IsDirectory,
-                        SizeText = f.IsDirectory ? "" : FormatSize(f.Length),
-                        Modified = f.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
+                        IsDir = f.IsDir,
+                        SizeText = f.IsDir ? "" : FormatSize(f.Length),
+                        Modified = f.Modified.ToString("yyyy-MM-dd HH:mm")
                     })
                     .ToList();
             });
@@ -208,10 +227,10 @@ namespace RdpManager
             foreach (var file in dlg.FileNames)
             {
                 string name = System.IO.Path.GetFileName(file);
-                bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name), sftp =>
+                bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name), fs =>
                 {
-                    using (var fs = System.IO.File.OpenRead(file))
-                        sftp.UploadFile(fs, dir + "/" + name, true);
+                    using (var s = System.IO.File.OpenRead(file))
+                        fs.Upload(s, dir + "/" + name, true);
                 });
                 if (!ok) return;   // błąd przerywa serię (status już pokazuje powód)
             }
@@ -224,10 +243,10 @@ namespace RdpManager
             var dlg = new Microsoft.Win32.SaveFileDialog { FileName = r.Name };
             if (dlg.ShowDialog() != true) return;
 
-            await RunAsync(string.Format(L("S.sftp.downloading"), r.Name), sftp =>
+            await RunAsync(string.Format(L("S.sftp.downloading"), r.Name), fs =>
             {
-                using (var fs = System.IO.File.Create(dlg.FileName))
-                    sftp.DownloadFile(r.FullName, fs);
+                using (var s = System.IO.File.Create(dlg.FileName))
+                    fs.Download(r.FullName, s);
             });
         }
 
@@ -238,7 +257,7 @@ namespace RdpManager
             if (dlg.ShowDialog() != true || dlg.Value.Length == 0) return;
 
             string name = dlg.Value;
-            bool ok = await RunAsync(L("S.sftp.connecting"), sftp => sftp.CreateDirectory(_path.TrimEnd('/') + "/" + name));
+            bool ok = await RunAsync(L("S.sftp.connecting"), fs => fs.CreateDirectory(_path.TrimEnd('/') + "/" + name));
             if (ok) RefreshAsync();
         }
 
@@ -248,11 +267,7 @@ namespace RdpManager
             if (MessageBox.Show(string.Format(L("S.sftp.delete.confirm"), r.Name), L("S.sftp.delete"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
-            bool ok = await RunAsync(L("S.sftp.connecting"), sftp =>
-            {
-                if (r.IsDir) sftp.DeleteDirectory(r.FullName);   // tylko pusty katalog (bez rekurencji)
-                else sftp.DeleteFile(r.FullName);
-            });
+            bool ok = await RunAsync(L("S.sftp.connecting"), fs => fs.Delete(r.FullName, r.IsDir));   // katalog: tylko pusty
             if (ok) RefreshAsync();
         }
 
@@ -266,8 +281,8 @@ namespace RdpManager
 
         public void DisposePanel()
         {
-            try { _sftp?.Dispose(); } catch { }
-            _sftp = null;
+            try { _fs?.Dispose(); } catch { }
+            _fs = null;
         }
     }
 }
