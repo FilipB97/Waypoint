@@ -579,9 +579,12 @@ namespace RdpManager
         private void ApplyImmersiveCaption(bool immersive)
         {
             ApplyCaptionCore(immersive);
-            // WPF-UI przy PIERWSZEJ maksymalizacji przywraca CaptionHeight PO naszym handlerze (stąd „działa
-            // dopiero po przywróceniu i ponownej maksymalizacji"). Re-asercja po jego synchronicznych handlerach.
+            // WPF-UI przywraca CaptionHeight PO naszym handlerze — i to na RÓŻNych etapach: raz zaraz po Loaded,
+            // a po sekwencji „sesja do osobnego okna → ponowna maksymalizacja" jeszcze PÓŹNIEJ (i bez layoutu,
+            // więc watch tego nie łapie). Dlatego dobijamy na DWÓCH priorytetach — Loaded oraz ApplicationIdle
+            // (po wszystkim, co WPF-UI zdąży zrobić w tej turze dispatchera).
             Dispatcher.BeginInvoke(new Action(() => ApplyCaptionCore(IsImmersive())), DispatcherPriority.Loaded);
+            Dispatcher.BeginInvoke(new Action(() => ApplyCaptionCore(IsImmersive())), DispatcherPriority.ApplicationIdle);
         }
 
         private void ApplyCaptionCore(bool immersive)
