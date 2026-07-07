@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Documents;
+using System.Windows.Media;
 using RdpManager.Core;
 
 namespace RdpManager
@@ -17,7 +19,16 @@ namespace RdpManager
             _htmlUrl = htmlUrl;
             Bar.Title = header;
             HeaderText.Text = header;
-            NotesBox.Text = string.IsNullOrWhiteSpace(notes) ? LocalizationManager.S("S.update.nonotes") : notes.Trim();
+
+            string notesText = string.IsNullOrWhiteSpace(notes) ? LocalizationManager.S("S.update.nonotes") : notes.Trim();
+            var doc = MarkdownLite.Build(notesText, OpenLink);
+            doc.FontFamily = FontFamily;                 // czcionka okna (Segoe UI Variable), nie domyślna FlowDocument
+            doc.FontSize = 13;
+            doc.PagePadding = new Thickness(14, 12, 14, 12);
+            doc.TextAlignment = TextAlignment.Left;      // bez „justowania" (poprzednia wersja rozciągała wiersze)
+            doc.Foreground = TryFindResource("TextSec") as Brush ?? Brushes.Gray;
+            NotesView.Document = doc;
+
             GithubLink.IsEnabled = !string.IsNullOrEmpty(htmlUrl);
 
             if (confirm)
@@ -36,10 +47,13 @@ namespace RdpManager
         private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
-        private void Github_Click(object sender, RoutedEventArgs e)
+        private void Github_Click(object sender, RoutedEventArgs e) => OpenLink(_htmlUrl);
+
+        // Otwiera adres w domyślnej przeglądarce (przycisk „Zobacz na GitHub" oraz linki [tekst](url) z notatek).
+        private void OpenLink(string url)
         {
-            if (string.IsNullOrEmpty(_htmlUrl)) return;
-            try { Process.Start(new ProcessStartInfo(_htmlUrl) { UseShellExecute = true }); }
+            if (string.IsNullOrEmpty(url)) return;
+            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
             catch { /* brak przeglądarki — ignoruj */ }
         }
     }

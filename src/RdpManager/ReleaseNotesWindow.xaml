@@ -20,12 +20,12 @@
         <TextBlock x:Name="HeaderText" Grid.Row="1" Margin="20,6,20,10" FontSize="18" FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrim}" TextWrapping="Wrap"/>
 
-        <!-- Notatki wydania (markdown z GitHuba) — tekst do odczytu, przewijalny. -->
+        <!-- Notatki wydania (markdown z GitHuba) — renderowane, przewijalne. -->
         <Border Grid.Row="2" Margin="20,0,20,0" Background="{DynamicResource Panel}"
                 BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="10">
-            <TextBox x:Name="NotesBox" IsReadOnly="True" IsTabStop="False" TextWrapping="Wrap"
-                     BorderThickness="0" Background="Transparent" Foreground="{DynamicResource TextSec}"
-                     Padding="14,12" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"/>
+            <FlowDocumentScrollViewer x:Name="NotesView" IsTabStop="False" Padding="0"
+                     Foreground="{DynamicResource TextSec}"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"/>
         </Border>
 
         <StackPanel Grid.Row="3" Margin="20,14,20,18">
