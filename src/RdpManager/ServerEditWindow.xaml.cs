@@ -60,7 +60,8 @@ namespace RdpManager
                 server.Protocol == RemoteProtocol.Http ? 4 :
                 server.Protocol == RemoteProtocol.Vnc ? 5 :
                 server.Protocol == RemoteProtocol.Sftp ? 6 :
-                server.Protocol == RemoteProtocol.Ftp ? 7 : 0;
+                server.Protocol == RemoteProtocol.Ftp ? 7 :
+                server.Protocol == RemoteProtocol.Rest ? 8 : 0;
             KeyPathBox.Text = server.PrivateKeyPath ?? "";
             TunnelsBox.Text = server.Tunnels == null ? "" : string.Join(Environment.NewLine, server.Tunnels);
             FtpTlsCombo.SelectedIndex = Math.Clamp(server.FtpEncryption, 0, 3);
@@ -206,7 +207,8 @@ namespace RdpManager
         private void ApplyProtocolState()
         {
             int idx = ProtocolCombo.SelectedIndex;
-            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3, http = idx == 4, vnc = idx == 5, sftp = idx == 6, ftp = idx == 7;
+            bool rdp = idx == 0, ssh = idx == 1, serial = idx == 3, http = idx == 4, vnc = idx == 5, sftp = idx == 6, ftp = idx == 7, rest = idx == 8;
+            bool urlMode = http || rest;   // Host = URL, bez portu i bez poświadczeń w edytorze (REST auth jest w konsoli)
             bool ftpAnon = ftp && FtpAnonCheck.IsChecked == true;   // anonimowy FTP: bez loginu/hasła
             bool user = (rdp || ssh || sftp || ftp) && !ftpAnon;  // login (VNC hasłem; FTP anonimowy = brak)
             bool pass = (rdp || ssh || vnc || sftp || ftp) && !ftpAnon;   // pole hasła
@@ -233,14 +235,14 @@ namespace RdpManager
             PassLabel.Visibility = passVis;
             PassPanel.Visibility = passVis;
 
-            var portVis = http ? Visibility.Collapsed : Visibility.Visible;   // URL niesie port w sobie
+            var portVis = urlMode ? Visibility.Collapsed : Visibility.Visible;   // URL niesie port w sobie
             PortLabel.Visibility = portVis;
             PortBox.Visibility = portVis;
 
             HostLabel.Text = serial ? LocalizationManager.S("S.se.comport")
-                           : http ? LocalizationManager.S("S.se.url") : "Host";
+                           : urlMode ? LocalizationManager.S("S.se.url") : "Host";
             PortLabel.Text = serial ? LocalizationManager.S("S.se.baud") : "Port";
-            HostBox.PlaceholderText = serial ? "COM3" : http ? "https://…" : "";
+            HostBox.PlaceholderText = serial ? "COM3" : urlMode ? "https://…" : "";
         }
 
         // ---------- Profil poświadczeń ----------
@@ -324,6 +326,7 @@ namespace RdpManager
                          : idx == 5 ? RemoteProtocol.Vnc
                          : idx == 6 ? RemoteProtocol.Sftp
                          : idx == 7 ? RemoteProtocol.Ftp
+                         : idx == 8 ? RemoteProtocol.Rest
                          : RemoteProtocol.Rdp;
             bool ssh = protocol == RemoteProtocol.Ssh;
             bool rdp = protocol == RemoteProtocol.Rdp;

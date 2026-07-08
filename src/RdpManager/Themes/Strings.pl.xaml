@@ -424,6 +424,36 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dual.push">Wyślij zaznaczony plik na serwer →</sys:String>
     <sys:String x:Key="S.dual.pull">← Pobierz zaznaczony plik na dysk</sys:String>
 
+    <!-- Klient REST/HTTP -->
+    <sys:String x:Key="S.rest.urlph">https://api.przyklad.pl/…</sys:String>
+    <sys:String x:Key="S.rest.send">Wyślij</sys:String>
+    <sys:String x:Key="S.rest.save">Zapisz żądanie</sys:String>
+    <sys:String x:Key="S.rest.tab.params">Parametry</sys:String>
+    <sys:String x:Key="S.rest.tab.headers">Nagłówki</sys:String>
+    <sys:String x:Key="S.rest.tab.body">Treść</sys:String>
+    <sys:String x:Key="S.rest.tab.auth">Uwierzytelnianie</sys:String>
+    <sys:String x:Key="S.rest.add">Dodaj</sys:String>
+    <sys:String x:Key="S.rest.remove">Usuń</sys:String>
+    <sys:String x:Key="S.rest.body.type">Typ treści</sys:String>
+    <sys:String x:Key="S.rest.auth.type">Typ</sys:String>
+    <sys:String x:Key="S.rest.auth.none">Brak</sys:String>
+    <sys:String x:Key="S.rest.auth.bearer">Bearer (token)</sys:String>
+    <sys:String x:Key="S.rest.auth.basic">Basic (login/hasło)</sys:String>
+    <sys:String x:Key="S.rest.auth.token">Token</sys:String>
+    <sys:String x:Key="S.rest.auth.user">Login</sys:String>
+    <sys:String x:Key="S.rest.auth.pass">Hasło</sys:String>
+    <sys:String x:Key="S.rest.auth.hint">Sekret (token / hasło) trafia do Menedżera poświadczeń Windows, nie do pliku.</sys:String>
+    <sys:String x:Key="S.rest.pretty">Formatuj JSON</sys:String>
+    <sys:String x:Key="S.rest.copy">Kopiuj treść</sys:String>
+    <sys:String x:Key="S.rest.resp.body">Treść</sys:String>
+    <sys:String x:Key="S.rest.resp.headers">Nagłówki</sys:String>
+    <sys:String x:Key="S.rest.resp.empty">Wyślij żądanie, aby zobaczyć odpowiedź.</sys:String>
+    <sys:String x:Key="S.rest.sending">Wysyłanie…</sys:String>
+    <sys:String x:Key="S.rest.saved">Zapisano żądanie</sys:String>
+    <sys:String x:Key="S.rest.needurl">Podaj adres URL.</sys:String>
+    <sys:String x:Key="S.rest.err">BŁĄD</sys:String>
+    <sys:String x:Key="S.rest.error">Błąd: {0}</sys:String>
+
     <sys:String x:Key="S.ssh.tunnel.up">tunel {0} aktywny — nasłuch na 127.0.0.1</sys:String>
     <sys:String x:Key="S.ssh.tunnel.fail">tunel {0}: {1}</sys:String>
     <sys:String x:Key="S.ssh.keypass.title">Klucz SSH</sys:String>
