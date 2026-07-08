@@ -461,6 +461,13 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.env.import">Import environment from Postman</sys:String>
     <sys:String x:Key="S.rest.env.importtitle">Import environment from Postman</sys:String>
     <sys:String x:Key="S.rest.hist">History (double-click to replay)</sys:String>
+    <sys:String x:Key="S.rest.tab.scripts">Scripts</sys:String>
+    <sys:String x:Key="S.rest.script.pre">Pre-request</sys:String>
+    <sys:String x:Key="S.rest.script.post">After response (tests)</sys:String>
+    <sys:String x:Key="S.rest.script.hint">JavaScript (Jint): pm.environment.get/set, pm.variables, pm.request (pre: setUrl/setBody/addHeader), pm.response.json()/text()/code, pm.test('name', fn), pm.expect(x).to.equal(y), console.log(…). Example: pm.environment.set('token', pm.response.json().access_token);</sys:String>
+    <sys:String x:Key="S.rest.resp.script">Script</sys:String>
+    <sys:String x:Key="S.rest.script.err">Script error: {0}</sys:String>
+    <sys:String x:Key="S.rest.script.testsummary">Tests: {0}/{1}</sys:String>
     <sys:String x:Key="S.rest.body.type">Content type</sys:String>
     <sys:String x:Key="S.rest.auth.type">Type</sys:String>
     <sys:String x:Key="S.rest.auth.none">None</sys:String>

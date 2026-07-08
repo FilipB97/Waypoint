@@ -63,6 +63,8 @@ namespace RdpManager
         private ObservableCollection<RestHistoryEntry> _history;
         private CancellationTokenSource _cts;
         private string _rawBody;
+        // Zmienne ustawione przez skrypt gdy BRAK aktywnego środowiska (sesyjne; z env-em skrypt pisze do env).
+        private readonly Dictionary<string, string> _scriptVars = new Dictionary<string, string>();
         private bool _loading;
         private bool _envLoading;
 
@@ -114,12 +116,12 @@ namespace RdpManager
             SelectNodeFor(req);
         }
 
-        private void RecordHistory(RestResponse r)
+        private void RecordHistory(RestResponse r, RestRequest used)
         {
             _history.Insert(0, new RestHistoryEntry
             {
-                Method = _req.Method,
-                Url = _req.Url,
+                Method = used.Method,
+                Url = used.Url,
                 Status = r.Ok ? r.Status : 0,
                 ElapsedMs = r.ElapsedMs,
                 WhenIso = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
@@ -169,14 +171,43 @@ namespace RdpManager
             BuildEnvCombo();
         }
 
-        // Zmienne aktywnego środowiska do podstawiania {{klucz}} (null = brak środowiska).
+        private RestEnvironment ActiveEnv() => _coll.Environments.FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
+
+        // Zmienne do podstawiania {{klucz}}: aktywne środowisko + nakładka zmiennych ustawionych przez skrypt.
         private IReadOnlyDictionary<string, string> Vars()
         {
-            var env = _coll.Environments.FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
-            if (env == null) return null;
             var d = new Dictionary<string, string>();
-            foreach (var v in env.Variables) if (!string.IsNullOrWhiteSpace(v.Key)) d[v.Key] = v.Value ?? "";
-            return d;
+            var env = ActiveEnv();
+            if (env != null)
+                foreach (var v in env.Variables) if (!string.IsNullOrWhiteSpace(v.Key)) d[v.Key] = v.Value ?? "";
+            foreach (var kv in _scriptVars) d[kv.Key] = kv.Value;   // skrypt (bez env) nadpisuje
+            return d.Count > 0 ? d : null;
+        }
+
+        // Odczyt/zapis zmiennej ze skryptu: gdy jest aktywne środowisko → pisz do niego (utrwali się z kolekcją),
+        // w przeciwnym razie do sesyjnego _scriptVars.
+        private string GetScriptVar(string key)
+        {
+            var env = ActiveEnv();
+            var v = env?.Variables.FirstOrDefault(x => x.Key == key);
+            if (v != null) return v.Value ?? "";
+            return _scriptVars.TryGetValue(key, out var s) ? s : "";
+        }
+
+        private void SetScriptVar(string key, string val)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return;
+            var env = ActiveEnv();
+            if (env == null) { _scriptVars[key] = val ?? ""; return; }
+            var v = env.Variables.FirstOrDefault(x => x.Key == key);
+            if (v == null) env.Variables.Add(new RestVariable { Key = key, Value = val ?? "" });
+            else v.Value = val ?? "";
+        }
+
+        private void UnsetScriptVar(string key)
+        {
+            _scriptVars.Remove(key);
+            ActiveEnv()?.Variables.RemoveAll(x => x.Key == key);
         }
 
         // ---------- Drzewo kolekcji ----------
@@ -341,6 +372,8 @@ namespace RdpManager
             AuthUserBox.Text = req.AuthUsername;
             TokenBox.Password = req.AuthType == 1 ? (req.AuthSecret ?? "") : "";
             AuthPassBox.Password = req.AuthType == 2 ? (req.AuthSecret ?? "") : "";
+            PreScriptBox.Text = req.PreScript ?? "";
+            TestScriptBox.Text = req.TestScript ?? "";
             UpdateAuthPanels();
             ClearResponse();
             _loading = false;
@@ -359,6 +392,8 @@ namespace RdpManager
             _req.AuthType = AuthCombo.SelectedIndex < 0 ? 0 : AuthCombo.SelectedIndex;
             _req.AuthUsername = AuthUserBox.Text ?? "";
             _req.AuthSecret = SecretFromUi();
+            _req.PreScript = PreScriptBox.Text ?? "";
+            _req.TestScript = TestScriptBox.Text ?? "";
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -380,10 +415,23 @@ namespace RdpManager
 
         // ---------- Wysyłka ----------
 
+        private const int ScriptTabIndex = 2;   // Body, Nagłówki, Skrypt
+
         private async void Send_Click(object sender, RoutedEventArgs e)
         {
             CaptureCurrent();
-            if (string.IsNullOrWhiteSpace(_req.Url)) { SetStatus(L("S.rest.needurl"), error: true); return; }
+
+            // Skrypty i wysyłka na KOPII żądania — mutacje z pre-skryptu nie brudzą zapisanego żądania.
+            var eff = CloneForSend(_req);
+            var pre = RestScript.Run(_req.PreScript, eff, null, GetScriptVar, SetScriptVar, UnsetScriptVar);
+            if (!pre.Ok)
+            {
+                ShowScriptOutput(pre, null);
+                ResponseTabs.SelectedIndex = ScriptTabIndex;
+                SetStatus(string.Format(L("S.rest.script.err"), pre.Error), error: true);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(eff.Url)) { SetStatus(L("S.rest.needurl"), error: true); return; }
 
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
@@ -391,13 +439,50 @@ namespace RdpManager
             SendBtn.IsEnabled = false;
             SetStatus(L("S.rest.sending"));
 
-            var resp = await RestClient.SendAsync(_req, _req.AuthSecret, Vars(), ct);
+            var resp = await RestClient.SendAsync(eff, eff.AuthSecret, Vars(), ct);
             if (ct.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk
 
             RenderResponse(resp);
-            RecordHistory(resp);
+            var post = RestScript.Run(_req.TestScript, eff, resp, GetScriptVar, SetScriptVar, UnsetScriptVar);
+            ShowScriptOutput(pre, post);
+            if (!post.Ok || post.Tests.Any(t => !t.Passed)) ResponseTabs.SelectedIndex = ScriptTabIndex;
+            RecordHistory(resp, eff);
             SendBtn.IsEnabled = true;
-            SetStatus("");
+            SetStatus(ScriptSummary(post));
+        }
+
+        // Kopia żądania do skryptów+wysyłki (nie brudzi zapisanego modelu).
+        private static RestRequest CloneForSend(RestRequest r) => new RestRequest
+        {
+            Id = r.Id, Name = r.Name, Method = r.Method, Url = r.Url,
+            Body = r.Body, BodyContentType = r.BodyContentType,
+            AuthType = r.AuthType, AuthUsername = r.AuthUsername, AuthSecret = r.AuthSecret,
+            QueryParams = r.QueryParams.Select(p => new RestKeyValue { Enabled = p.Enabled, Key = p.Key, Value = p.Value }).ToList(),
+            Headers = r.Headers.Select(p => new RestKeyValue { Enabled = p.Enabled, Key = p.Key, Value = p.Value }).ToList()
+        };
+
+        private void ShowScriptOutput(ScriptOutcome pre, ScriptOutcome post)
+        {
+            var lines = new List<string>();
+            AppendOutcome(lines, L("S.rest.script.pre"), pre);
+            AppendOutcome(lines, L("S.rest.script.post"), post);
+            ScriptOutput.Text = string.Join("\n", lines);
+        }
+
+        private static void AppendOutcome(List<string> lines, string label, ScriptOutcome o)
+        {
+            if (o == null || (o.Ok && o.IsEmpty)) return;
+            if (lines.Count > 0) lines.Add("");
+            lines.Add("— " + label + " —");
+            if (!o.Ok) lines.Add("⚠ " + o.Error);
+            foreach (var t in o.Tests) lines.Add((t.Passed ? "✓ " : "✗ ") + t.Name + (t.Passed ? "" : "  — " + t.Error));
+            foreach (var log in o.Logs) lines.Add(log);
+        }
+
+        private static string ScriptSummary(ScriptOutcome post)
+        {
+            if (post == null || post.Tests.Count == 0) return "";
+            return string.Format(L("S.rest.script.testsummary"), post.Tests.Count(t => t.Passed), post.Tests.Count);
         }
 
         private void RenderResponse(RestResponse r)
@@ -430,6 +515,7 @@ namespace RdpManager
             MetaText.Text = "";
             ResponseHeaders.ItemsSource = null;
             ResponseBody.Text = L("S.rest.resp.empty");
+            ScriptOutput.Text = "";
         }
 
         private string FormatBody()
