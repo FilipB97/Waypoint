@@ -54,6 +54,7 @@ namespace RdpManager
         private ObservableCollection<RestKeyValue> _params;
         private ObservableCollection<RestKeyValue> _headers;
         private ObservableCollection<RestNode> _roots;
+        private ObservableCollection<RestHistoryEntry> _history;
         private CancellationTokenSource _cts;
         private string _rawBody;
         private bool _loading;
@@ -77,7 +78,60 @@ namespace RdpManager
             LoadIntoUi(_req);
             SelectNodeFor(_req);
             BuildEnvCombo();
+            _history = new ObservableCollection<RestHistoryEntry>(_coll.History);
+            HistoryList.ItemsSource = _history;
             UrlBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) Send_Click(s, e); };
+        }
+
+        // ---------- Historia ----------
+
+        private void History_Toggled(object sender, RoutedEventArgs e) => ShowHistory(HistoryToggle.IsChecked == true);
+
+        private void ShowHistory(bool on)
+        {
+            HistoryToggle.IsChecked = on;
+            CollTree.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+            HistoryList.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Dwuklik wpisu historii → nowe żądanie w kolekcji z tą metodą i URL (bez nadpisywania bieżącego).
+        private void History_Activate(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (!(HistoryList.SelectedItem is RestHistoryEntry h)) return;
+            CaptureCurrent();
+            var req = new RestRequest { Name = UniqueName(HistName(h)), Method = h.Method, Url = h.Url };
+            _coll.Requests.Add(req);
+            BuildTree();
+            _req = req;
+            LoadIntoUi(req);
+            ShowHistory(false);
+            SelectNodeFor(req);
+        }
+
+        private void RecordHistory(RestResponse r)
+        {
+            _history.Insert(0, new RestHistoryEntry
+            {
+                Method = _req.Method,
+                Url = _req.Url,
+                Status = r.Ok ? r.Status : 0,
+                ElapsedMs = r.ElapsedMs,
+                WhenIso = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            });
+            while (_history.Count > 50) _history.RemoveAt(_history.Count - 1);   // ostatnie 50
+            _coll.History = _history.ToList();
+            RestStore.Put(_server.Id, _coll);   // historia utrwalana od razu (wraz z zapamiętanym żądaniem)
+        }
+
+        private static string HistName(RestHistoryEntry h)
+        {
+            try
+            {
+                var u = new Uri(h.Url.Contains("://") ? h.Url : "https://" + h.Url);
+                var seg = u.Segments.LastOrDefault()?.Trim('/');
+                return string.IsNullOrEmpty(seg) ? u.Host : seg;
+            }
+            catch { return string.IsNullOrWhiteSpace(h.Method) ? "Request" : h.Method; }
         }
 
         // ---------- Środowiska ({{zmienne}}) ----------
@@ -335,6 +389,7 @@ namespace RdpManager
             if (ct.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk
 
             RenderResponse(resp);
+            RecordHistory(resp);
             SendBtn.IsEnabled = true;
             SetStatus("");
         }

@@ -83,6 +83,11 @@
                         <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextSec}"
                                    FontWeight="SemiBold" VerticalAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ToggleButton x:Name="HistoryToggle" ToolTip="{DynamicResource S.rest.hist}" Click="History_Toggled"
+                                          Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6,0" Height="28">
+                                <ui:SymbolIcon Symbol="History24" FontSize="16"/>
+                            </ToggleButton>
+                            <Border Width="1" Margin="3,5" Background="{DynamicResource Border}"/>
                             <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.newreq}" Click="AddRequest_Click">
                                 <ui:SymbolIcon Symbol="DocumentAdd24" FontSize="16"/>
                             </Button>
@@ -97,7 +102,8 @@
                             </Button>
                         </StackPanel>
                     </Grid>
-                    <TreeView Grid.Row="1" x:Name="CollTree" BorderThickness="0" Background="Transparent"
+                    <Grid Grid.Row="1">
+                    <TreeView x:Name="CollTree" BorderThickness="0" Background="Transparent"
                               SelectedItemChanged="Tree_SelectionChanged">
                         <TreeView.ItemContainerStyle>
                             <Style TargetType="TreeViewItem">
@@ -115,6 +121,26 @@
                             </HierarchicalDataTemplate>
                         </TreeView.ItemTemplate>
                     </TreeView>
+
+                    <!-- Historia wysłanych żądań (przełącznik w nagłówku) -->
+                    <ListBox x:Name="HistoryList" Visibility="Collapsed" BorderThickness="0" Background="Transparent"
+                             MouseDoubleClick="History_Activate"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="2,3">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Method}" FontWeight="SemiBold" Width="52"
+                                                   Foreground="{DynamicResource TextSec}" FontSize="12"/>
+                                        <TextBlock Text="{Binding Url}" Foreground="{DynamicResource TextPrim}"
+                                                   TextTrimming="CharacterEllipsis" FontSize="12.5"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextTer}" FontSize="10.5" Margin="0,1,0,0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    </Grid>
 
                     <!-- Wybór aktywnego środowiska (zmienne {{...}}) -->
                     <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,6,0,0">
