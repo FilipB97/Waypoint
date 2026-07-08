@@ -1,10 +1,11 @@
 # Waypoint
 
-**Waypoint** is a modern, tabbed **RDP + SSH** connection manager for Windows, built with WPF
-(.NET 8) and the Windows 11 **Fluent / Mica** design. RDP sessions use the official Microsoft
-RDP ActiveX control (`mstscax`); SSH opens an embedded **xterm.js terminal**. It aims to be a
-comfortable daily replacement for `mstsc.exe` — and a modern alternative to dated connection
-managers.
+**Waypoint** is a modern, tabbed **multi-protocol connection manager** for Windows, built with WPF
+(.NET 8) and the Windows 11 **Fluent / Mica** design. It handles **RDP, SSH, VNC, Telnet and serial**
+sessions, an **SFTP/FTP file manager** and a built-in **REST/API client** — all in one window. RDP uses
+the official Microsoft ActiveX control (`mstscax`); SSH / Telnet / serial run on an embedded
+**xterm.js terminal**. It aims to be a comfortable daily replacement for `mstsc.exe`, PuTTY, WinSCP and
+Postman — and a modern alternative to dated connection managers.
 
 > Status: early but usable. See the [roadmap](docs/ROADMAP.md) for what's next.
 
@@ -18,46 +19,65 @@ it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 
 ## Features
 
-- **Tabbed sessions** — multiple simultaneous RDP **and SSH** connections, switch without disconnecting.
-- **Embedded SSH terminal** (xterm.js) — password and private-key auth, host-key verification
-  (trust-on-first-use with fingerprint prompt), copy-on-select, Ctrl+Shift+C/V, Ctrl+wheel font size.
-- **Server list with groups**, favorites (pinned), collapsible groups, one-click group rename,
-  search/filter, and reachability dots (background TCP probe).
-- **Full-screen mode** with an auto-hiding toolbar and an "other connections" flyout to
-  switch sessions without leaving full screen.
-- **Dynamic resolution** — the session resolution follows the window/full-screen size for a
-  crisp 1:1 image (falls back to smart-sizing on older hosts).
-- **Credential handling** via the Windows Credential Manager (DPAPI) — passwords are never
-  written to app files.
-- **Per-server options** — port, domain/Windows account, clipboard/drive/printer/audio
-  redirection, server-identity verification level, and RD Gateway / jump-host.
-- **Credential prompt** at connect time and "connect as" for retrying with other credentials.
-- **One-click migration** — import from **mstsc history**, **`.rdp` files**, **mRemoteNG**
-  (`confCons.xml`) and **RDCMan** (`.rdg`); export back to `.rdp`.
+### Protocols, one tree
+
+- **RDP** — Microsoft's official ActiveX control (`mstscax`): dynamic resolution that follows the
+  window/full-screen size (falls back to smart-sizing on older hosts), clipboard/drive/printer/audio
+  redirection, server-identity verification level, RD Gateway / jump-host and admin session.
+- **SSH** — embedded **xterm.js** terminal: password and private-key auth (including
+  **passphrase-protected keys**), host-key verification (trust-on-first-use with fingerprint prompt),
+  local **port-forwarding tunnels**, copy-on-select, Ctrl+Shift+C/V, Ctrl+wheel font size.
+- **VNC** — connect to any VNC server in a tab, next to your RDP and SSH sessions.
+- **Telnet & serial (COM)** — classic terminal sessions for switches, routers and embedded devices
+  (configurable baud rate for serial).
+- **SFTP / FTP / FTPS** — a **dual-pane file manager**: browse local and remote side by side, upload
+  and download files and whole folders **recursively**, with progress.
+- **REST / HTTP** — a built-in, Postman-style **API client** (see below).
+- **Web links** — open a saved URL / web panel.
+
+### Built-in REST/API client
+
+- **Collections & folders** of saved requests; per-collection **environments** with `{{variables}}`
+  substituted into URL, query, headers, body and auth.
+- **Request history**, pretty-printed JSON and response headers.
+- **Import from Postman** — collections and environments.
+- **JavaScript scripts** (Jint) — pre-request & test scripts with a `pm.*` API (e.g. capture a token
+  into a variable and reuse it in the next request).
+- Bearer/Basic **secrets go to the Windows Credential Manager**, never into the collection file.
+
+### Workspace
+
+- **Tabbed sessions** across every protocol; multiple sessions per server, duplicate tab, tab reorder,
+  **tear off** a tab into a standalone window and **dock** it back (seamless reconnect).
+- **Server list** with groups, favorites (pinned), collapsible groups, one-click group rename, a
+  **collapsible sidebar**, search/filter, **drag-and-drop reordering** and reachability dots
+  (background TCP probe).
+- **Full-screen mode** with an auto-hiding toolbar and an "other connections" flyout; **focus mode**
+  maximizes and melts the chrome away — just the tab strip and the session.
+- **Multi-monitor, mstsc-style** — run several standalone session windows across several screens.
 - **Quick connect** — `host`, `host:port`, `user@host` or `DOMAIN\user@host` without saving.
 - **Keyboard shortcuts** — `Ctrl+Tab` cycle tabs, `Alt+1..9` jump, `Ctrl+W` close,
   `Ctrl+F`/`Ctrl+K` focus search, `Ctrl+±/0` zoom, `F11` full screen.
-- **Diagnostics & audit** — per-server TCP port test and an optional connection log.
-- **Multiple sessions per server**, duplicate tab, tab reorder, and **drag-and-drop server reordering** in the tree.
-- **Profile export / import** — back up all servers and settings to one file.
-- **Multi-monitor, mstsc-style** — open any session in a **standalone window**, drag it to
-  another monitor and go full screen there; run several sessions on several screens at once.
-  **Tear off** a tab into its own window and **dock** it back to a tab (seamless reconnect).
-- **Focus mode** — maximize the window and the chrome melts away: just the tab strip and the
-  remote screen (window controls move onto the tab strip). In a standalone session window,
-  maximizing goes straight to full screen, mstsc-style.
 - **Dashboard & recents**, UI zoom (Ctrl+scroll), **dark / light / system theme**,
-  **English & Polish** UI (switchable live).
+  **English & Polish** UI (switchable live), system-tray with a global quick-connect hotkey.
+
+### Credentials & migration
+
+- **Windows Credential Manager (DPAPI)** for all secrets — never written to app files.
+- **Shared credential profiles** — one login reused across many servers.
+- Built-in **password / token / key generator**; credential prompt at connect time and "connect as"
+  for retrying with other credentials.
+- **One-click migration** — import from **mstsc history**, **`.rdp` files**, **mRemoteNG**
+  (`confCons.xml`), **RDCMan** (`.rdg`) and **FileZilla** sites; export back to `.rdp` or a full profile.
+- **Diagnostics & audit** — per-server TCP port test and an optional connection log.
 
 ## Known limitations
 
 - **Not code-signed** — SmartScreen warns on first run (*More info → Run anyway*).
 - **SSH host keys** use trust-on-first-use with a fingerprint prompt; existing OpenSSH
   `known_hosts` files are not imported (yet).
-- **SSH private keys with a passphrase** are not supported yet (use an unencrypted key or
-  password auth for now).
-- The SSH terminal needs the **WebView2 Runtime** (built into Windows 11; a free Microsoft
-  download on older Windows 10).
+- The embedded terminal (SSH/Telnet/serial) needs the **WebView2 Runtime** (built into Windows 11;
+  a free Microsoft download on older Windows 10).
 - Keyboard shortcuts (Ctrl+Tab, Alt+1..9, F11, …) work while focus is on the app chrome.
   Inside a connected session the keyboard goes to the remote — same as `mstsc`.
 
@@ -126,7 +146,9 @@ UI and RDP-control behavior require a real Windows desktop session and are verif
 
 - **Passwords** are stored in the **Windows Credential Manager** (DPAPI, tied to the current
   Windows user) under the target `RdpManager:<server-id>` — the same secure store `mstsc` uses.
-  They are **never** serialized to disk by the app.
+  They are **never** serialized to disk by the app. The same store holds **shared credential-profile**
+  logins and **REST auth secrets** (Bearer tokens / Basic passwords); REST environment variables are
+  plain config, so keep tokens in the request's Auth tab, not in a `{{variable}}`.
 - **Server list** (`%APPDATA%\RdpManager\servers.json`) and **settings**
   (`%APPDATA%\RdpManager\settings.json`) contain only non-secret metadata (host, port,
   username, redirection flags). The password field is `[JsonIgnore]`.
