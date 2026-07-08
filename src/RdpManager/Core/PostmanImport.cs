@@ -54,6 +54,28 @@ namespace RdpManager.Core
             return res;
         }
 
+        /// <summary>
+        /// Import osobnego pliku środowiska Postman (eksport „environment", z tablicą „values") → <see cref="RestEnvironment"/>.
+        /// Wartości typu „secret" wczytujemy z PUSTĄ wartością (sekrety nie trafiają do jawnego rest.json — patrz zakładka Auth).
+        /// </summary>
+        public static RestEnvironment ParseEnvironment(string json)
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("values", out var values) || values.ValueKind != JsonValueKind.Array)
+                throw new InvalidOperationException("To nie wygląda na środowisko Postman (brak tablicy 'values').");
+
+            var env = new RestEnvironment { Name = Str(root, "name") ?? "Postman" };
+            foreach (var v in values.EnumerateArray())
+            {
+                string key = Str(v, "key");
+                if (string.IsNullOrWhiteSpace(key)) continue;
+                bool secret = string.Equals(Str(v, "type"), "secret", StringComparison.OrdinalIgnoreCase);
+                env.Variables.Add(new RestVariable { Key = key, Value = secret ? "" : (Str(v, "value") ?? "") });
+            }
+            return env;
+        }
+
         private static void WalkItems(JsonElement items, string parentFolderId, Result res)
         {
             foreach (var it in items.EnumerateArray())
