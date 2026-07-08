@@ -29,7 +29,7 @@
         </StackPanel>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,4,18,16">
-            <ui:Button Content="{DynamicResource S.restore.skip}" Appearance="Secondary" Click="Skip_Click" Margin="0,0,8,0" MinWidth="90"/>
+            <ui:Button Content="{DynamicResource S.restore.skip}" Appearance="Secondary" Click="Skip_Click" Margin="0,0,8,0" MinWidth="90" IsCancel="True"/>
             <ui:Button Content="{DynamicResource S.restore.open}" Appearance="Primary" Click="Open_Click" MinWidth="110" IsDefault="True"/>
         </StackPanel>
     </Grid>

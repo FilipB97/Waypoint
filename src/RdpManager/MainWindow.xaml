@@ -26,12 +26,16 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8"
+                                BorderThickness="2" BorderBrush="Transparent">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource RailHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -52,12 +56,16 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                BorderThickness="2" BorderBrush="Transparent">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource Elevated}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -169,6 +177,10 @@
                             <StackPanel x:Name="ServerTree"/>
                         </AdornerDecorator>
                     </ScrollViewer>
+
+                    <TextBlock x:Name="TreeEmptyHint" Grid.Row="1" Visibility="Collapsed" Text=""
+                               Foreground="{DynamicResource TextTer}" FontSize="12.5" TextWrapping="Wrap" TextAlignment="Center"
+                               VerticalAlignment="Top" HorizontalAlignment="Center" Margin="20,32,20,0"/>
 
                     <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10">
                         <StackPanel>
@@ -405,7 +417,8 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
-                                    <Border x:Name="Bd" CornerRadius="7" Background="Transparent" Padding="12,9">
+                                    <Border x:Name="Bd" CornerRadius="7" Background="Transparent" Padding="12,9"
+                                            BorderThickness="2" BorderBrush="Transparent">
                                         <Grid>
                                             <Border x:Name="Bar" Width="3" CornerRadius="2" HorizontalAlignment="Left"
                                                     Background="{DynamicResource Accent}" Visibility="Collapsed"/>
@@ -420,6 +433,9 @@
                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Panel}"/>
                                             <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
                                             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>

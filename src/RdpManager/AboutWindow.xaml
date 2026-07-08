@@ -40,7 +40,7 @@
                        FontFamily="{DynamicResource Mono}" TextWrapping="Wrap" Margin="0,16,0,0"/>
 
             <ui:Button Content="{DynamicResource S.m.close}" Appearance="Primary" HorizontalAlignment="Right"
-                       Margin="0,18,0,0" MinWidth="96" Click="Close_Click"/>
+                       Margin="0,18,0,0" MinWidth="96" Click="Close_Click" IsCancel="True"/>
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

@@ -20,11 +20,13 @@
                             <Border x:Name="Bd" CornerRadius="6" Background="{DynamicResource Accent}" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.12"/></Trigger>
                             <Trigger Property="IsPressed" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.20"/></Trigger>
                             <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -66,10 +68,12 @@
                         <Grid>
                             <Border x:Name="Bd" CornerRadius="6" Background="{DynamicResource Accent}" Opacity="0"/>
                             <ContentPresenter Margin="8,5" VerticalAlignment="Center"/>
+                            <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.08"/></Trigger>
                             <Trigger Property="IsSelected" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.16"/></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -114,10 +118,10 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.up}" Click="Up_Click">
+                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.up}" AutomationProperties.Name="{DynamicResource S.sftp.up}" Click="Up_Click">
                         <ui:SymbolIcon Symbol="ArrowUp24"/>
                     </Button>
-                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.refresh}" Click="Refresh_Click">
+                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.refresh}" AutomationProperties.Name="{DynamicResource S.sftp.refresh}" Click="Refresh_Click">
                         <ui:SymbolIcon Symbol="ArrowClockwise24"/>
                     </Button>
                 </StackPanel>
@@ -128,17 +132,17 @@
                 </ScrollViewer>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="UploadBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.upload}" Click="Upload_Click">
+                    <Button x:Name="UploadBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.upload}" AutomationProperties.Name="{DynamicResource S.sftp.upload}" Click="Upload_Click">
                         <ui:SymbolIcon Symbol="ArrowUpload24"/>
                     </Button>
-                    <Button x:Name="DownloadBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.download}" Click="Download_Click">
+                    <Button x:Name="DownloadBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.download}" AutomationProperties.Name="{DynamicResource S.sftp.download}" Click="Download_Click">
                         <ui:SymbolIcon Symbol="ArrowDownload24"/>
                     </Button>
                     <Border Width="1" Margin="4,4" Background="{DynamicResource Border}"/>
-                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.newfolder}" Click="NewFolder_Click">
+                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.newfolder}" AutomationProperties.Name="{DynamicResource S.sftp.newfolder}" Click="NewFolder_Click">
                         <ui:SymbolIcon Symbol="FolderAdd24"/>
                     </Button>
-                    <Button x:Name="DeleteBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.delete}" Click="Delete_Click">
+                    <Button x:Name="DeleteBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.delete}" AutomationProperties.Name="{DynamicResource S.sftp.delete}" Click="Delete_Click">
                         <ui:SymbolIcon Symbol="Delete24"/>
                     </Button>
                 </StackPanel>
