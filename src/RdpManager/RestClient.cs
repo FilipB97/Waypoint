@@ -98,7 +98,10 @@ namespace RdpManager
 
             if (hasBody)
             {
-                msg.Content = new StringContent(Subst(req.Body, vars), Encoding.UTF8);
+                // Dla form-urlencoded podstawiamy i kodujemy każdą wartość osobno (jak parametry zapytania) —
+                // inaczej sekret zawierający +,/,= rozjechałby się. Inne typy: podstaw i wyślij treść tak jak jest.
+                string content = IsFormUrlEncoded(contentType) ? BuildFormBody(req.Body, vars) : Subst(req.Body, vars);
+                msg.Content = new StringContent(content, Encoding.UTF8);
                 if (!string.IsNullOrWhiteSpace(contentType))
                 {
                     try { msg.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(Subst(contentType, vars)); } catch { /* zła wartość → zostaje domyślny */ }
@@ -122,6 +125,29 @@ namespace RdpManager
                     Convert.ToBase64String(Encoding.UTF8.GetBytes(Subst(req.AuthUsername ?? "", vars) + ":" + (secret ?? ""))));
 
             return msg;
+        }
+
+        private static bool IsFormUrlEncoded(string contentType)
+            => !string.IsNullOrEmpty(contentType)
+               && contentType.IndexOf("x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        /// <summary>Buduje treść application/x-www-form-urlencoded: dzieli szablon „k=v&amp;k=v", podstawia
+        /// {{zmienne}} i koduje każdą część PO podstawieniu (wartość z {{var}} może mieć +,/,= — musi być
+        /// zakodowana, jak parametry zapytania). Publiczne dla testów.</summary>
+        public static string BuildFormBody(string body, IReadOnlyDictionary<string, string> vars)
+        {
+            if (string.IsNullOrEmpty(body)) return "";
+            var parts = new List<string>();
+            foreach (var seg in body.Split('&'))
+            {
+                if (seg.Length == 0) continue;
+                int eq = seg.IndexOf('=');
+                if (eq < 0) { parts.Add(Uri.EscapeDataString(Subst(seg, vars))); continue; }
+                string k = Uri.EscapeDataString(Subst(seg.Substring(0, eq), vars));
+                string v = Uri.EscapeDataString(Subst(seg.Substring(eq + 1), vars));
+                parts.Add(k + "=" + v);
+            }
+            return string.Join("&", parts);
         }
 
         // Podstawia {{klucz}} wartościami zmiennych (nieznane {{x}} zostają bez zmian). Publiczne dla testów.

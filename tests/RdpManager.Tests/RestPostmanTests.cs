@@ -94,6 +94,25 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void Parse_UrlencodedBody_KeepsPlaceholdersLiteral()
+        {
+            string json = @"{ ""info"": { ""name"": ""OAuth"" }, ""item"": [
+                { ""name"": ""Token"", ""request"": {
+                    ""method"": ""POST"",
+                    ""url"": { ""raw"": ""https://x/oauth2/token"" },
+                    ""body"": { ""mode"": ""urlencoded"", ""urlencoded"": [
+                        { ""key"": ""username"", ""value"": ""{{username}}"" },
+                        { ""key"": ""grant_type"", ""value"": ""password"" },
+                        { ""key"": ""skip"", ""value"": ""x"", ""disabled"": true }
+                    ] }
+                } }
+            ] }";
+            var req = PostmanImport.Parse(json).Collection.Requests.First(x => x.Name == "Token");
+            Assert.Equal("application/x-www-form-urlencoded", req.BodyContentType);
+            Assert.Equal("username={{username}}&grant_type=password", req.Body);   // placeholder literalny, disabled pominięty
+        }
+
+        [Fact]
         public void Parse_NotACollection_Throws()
         {
             Assert.Throws<InvalidOperationException>(() => PostmanImport.Parse(@"{ ""foo"": 1 }"));

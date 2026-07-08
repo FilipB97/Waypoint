@@ -54,6 +54,21 @@ namespace RdpManager.Tests
             var u = RestClient.BuildRequestUri(Req("{{base}}/u", ("id", "{{v}}", true)), vars);
             Assert.Equal("https://x.test/u?id=9", u.AbsoluteUri);
         }
+
+        [Fact]
+        public void BuildFormBody_SubstitutesThenEncodesValues()
+        {
+            var vars = new Dictionary<string, string> { ["u"] = "bob", ["sec"] = "a+b/c=" };
+            var b = RestClient.BuildFormBody("username={{u}}&client_secret={{sec}}&grant_type=password", vars);
+            Assert.Equal("username=bob&client_secret=a%2Bb%2Fc%3D&grant_type=password", b);   // +,/,= zakodowane PO podstawieniu
+        }
+
+        [Fact]
+        public void BuildFormBody_EmptyAndNoVars()
+        {
+            Assert.Equal("", RestClient.BuildFormBody("", null));
+            Assert.Equal("grant_type=password", RestClient.BuildFormBody("grant_type=password", null));
+        }
     }
 
     public class RestStoreTests
