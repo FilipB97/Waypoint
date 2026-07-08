@@ -1,12 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using RdpManager.Models;
@@ -14,20 +13,49 @@ using RdpManager.Models;
 namespace RdpManager
 {
     /// <summary>
-    /// Konsola REST dla jednego wpisu-API („wpis = jedno API/kolekcja"). PR1: pojedyncze żądanie
-    /// (metoda/URL/params/nagłówki/treść/auth) + wysyłka przez <see cref="RestClient"/> i podgląd odpowiedzi.
-    /// Sekret auth (token/hasło Basic) trzymany w Credential Manager, nie w rest.json.
-    /// Kolekcje/foldery, środowiska i historia — kolejne PR-y (model już to przewiduje).
+    /// Konsola REST dla jednego wpisu-API („wpis = jedno API/kolekcja"). Lewy panel: drzewo kolekcji
+    /// (foldery + żądania); prawy: budowniczy żądania (metoda/URL/params/nagłówki/treść/auth) + podgląd
+    /// odpowiedzi. Sekret auth trzymany w Credential Manager (w pamięci sesji jako transient), nigdy w JSON.
+    /// Środowiska/zmienne i historia — kolejne PR-y (model już to przewiduje).
     /// </summary>
     public partial class RestConsole : UserControl
     {
+        // Węzeł drzewa kolekcji: folder albo żądanie.
+        private sealed class RestNode : INotifyPropertyChanged
+        {
+            public bool IsFolder { get; set; }
+            public RestFolder Folder { get; set; }
+            public RestRequest Request { get; set; }
+            public ObservableCollection<RestNode> Children { get; } = new ObservableCollection<RestNode>();
+
+            public Wpf.Ui.Controls.SymbolRegular Icon =>
+                IsFolder ? Wpf.Ui.Controls.SymbolRegular.Folder24 : Wpf.Ui.Controls.SymbolRegular.Globe24;
+            public Brush IconBrush =>
+                (Brush)(Application.Current?.TryFindResource(IsFolder ? "Accent" : "TextSec")) ?? Brushes.Gray;
+
+            public string Name
+            {
+                get => IsFolder ? Folder.Name : Request.Name;
+                set { if (IsFolder) Folder.Name = value; else Request.Name = value; Raise(nameof(Name)); }
+            }
+
+            private bool _selected, _expanded;
+            public bool IsSelected { get => _selected; set { _selected = value; Raise(nameof(IsSelected)); } }
+            public bool IsExpanded { get => _expanded; set { _expanded = value; Raise(nameof(IsExpanded)); } }
+
+            public event PropertyChangedEventHandler PropertyChanged;
+            private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        }
+
         private readonly ServerInfo _server;
         private RestCollection _coll;
         private RestRequest _req;
         private ObservableCollection<RestKeyValue> _params;
         private ObservableCollection<RestKeyValue> _headers;
+        private ObservableCollection<RestNode> _roots;
         private CancellationTokenSource _cts;
         private string _rawBody;
+        private bool _loading;
 
         private static readonly string[] Methods = { "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS" };
 
@@ -37,41 +65,189 @@ namespace RdpManager
         {
             InitializeComponent();
             _server = server;
-            LoadRequest();
-            UrlBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) Send_Click(s, e); };
-        }
-
-        // ---------- Wczytanie / zapis ----------
-
-        private void LoadRequest()
-        {
             _coll = RestStore.For(_server.Id);
             if (string.IsNullOrEmpty(_coll.BaseUrl)) _coll.BaseUrl = _server.Host ?? "";
             if (_coll.Requests.Count == 0)
                 _coll.Requests.Add(new RestRequest { Name = "Request 1", Url = _coll.BaseUrl });
+            LoadSecrets();
+            BuildTree();
             _req = _coll.Requests[0];
-
-            SelectMethod(_req.Method);
-            UrlBox.Text = _req.Url;
-            _params = new ObservableCollection<RestKeyValue>(_req.QueryParams);
-            _headers = new ObservableCollection<RestKeyValue>(_req.Headers);
-            ParamsList.ItemsSource = _params;
-            HeadersList.ItemsSource = _headers;
-            BodyBox.Text = _req.Body;
-            SelectContentType(_req.BodyContentType);
-            AuthCombo.SelectedIndex = Math.Clamp(_req.AuthType, 0, 2);
-            AuthUserBox.Text = _req.AuthUsername;
-            if (CredentialStore.TryRead(_req.AuthCredTarget, out var secret))
-            {
-                if (_req.AuthType == 1) TokenBox.Password = secret;
-                else if (_req.AuthType == 2) AuthPassBox.Password = secret;
-            }
-            UpdateAuthPanels();
+            LoadIntoUi(_req);
+            SelectNodeFor(_req);
+            UrlBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) Send_Click(s, e); };
         }
 
-        // Zbiera stan formularza do modelu żądania (przed wysyłką i przed zapisem).
-        private void ApplyToRequest()
+        // ---------- Drzewo kolekcji ----------
+
+        private void BuildTree()
         {
+            _roots = new ObservableCollection<RestNode>();
+            foreach (var f in _coll.Folders.Where(f => string.IsNullOrEmpty(f.ParentId)).OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+                _roots.Add(BuildFolderNode(f));
+            foreach (var r in _coll.Requests.Where(r => string.IsNullOrEmpty(r.FolderId)).OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
+                _roots.Add(new RestNode { IsFolder = false, Request = r });
+            CollTree.ItemsSource = _roots;
+        }
+
+        private RestNode BuildFolderNode(RestFolder f)
+        {
+            var node = new RestNode { IsFolder = true, Folder = f, IsExpanded = true };
+            foreach (var sub in _coll.Folders.Where(x => x.ParentId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                node.Children.Add(BuildFolderNode(sub));
+            foreach (var r in _coll.Requests.Where(x => x.FolderId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                node.Children.Add(new RestNode { IsFolder = false, Request = r });
+            return node;
+        }
+
+        private void Tree_SelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (_loading || !(e.NewValue is RestNode node) || node.IsFolder) return;
+            if (node.Request == _req) return;
+            CaptureCurrent();          // zachowaj edycję poprzedniego żądania (w pamięci)
+            _req = node.Request;
+            LoadIntoUi(_req);
+        }
+
+        private RestNode SelectedNode => CollTree.SelectedItem as RestNode;
+
+        // Folder-rodzic dla nowego elementu: wybrany folder, folder wybranego żądania, albo korzeń (null).
+        private RestFolder CurrentParentFolder()
+        {
+            var n = SelectedNode;
+            if (n == null) return null;
+            return n.IsFolder ? n.Folder : _coll.Folders.FirstOrDefault(f => f.Id == n.Request.FolderId);
+        }
+
+        private bool SelectNodeFor(RestRequest req) => SelectIn(_roots, req);
+
+        private bool SelectIn(ObservableCollection<RestNode> nodes, RestRequest req)
+        {
+            foreach (var n in nodes)
+            {
+                if (!n.IsFolder && n.Request == req) { n.IsSelected = true; return true; }
+                if (n.IsFolder && SelectIn(n.Children, req)) { n.IsExpanded = true; return true; }
+            }
+            return false;
+        }
+
+        // ---------- Dodawanie / zmiana nazwy / usuwanie ----------
+
+        private void AddRequest_Click(object sender, RoutedEventArgs e)
+        {
+            CaptureCurrent();
+            var parent = CurrentParentFolder();
+            var req = new RestRequest
+            {
+                Name = UniqueName(L("S.rest.newreq")),
+                Url = _coll.BaseUrl,
+                FolderId = parent?.Id ?? ""
+            };
+            _coll.Requests.Add(req);
+            BuildTree();
+            _req = req;
+            LoadIntoUi(req);
+            SelectNodeFor(req);
+        }
+
+        private void AddFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new InputDialog(L("S.rest.newfolder"), L("S.rest.newfolder.label"), "") { Owner = Window.GetWindow(this) };
+            if (dlg.ShowDialog() != true || dlg.Value.Trim().Length == 0) return;
+            var parent = CurrentParentFolder();
+            _coll.Folders.Add(new RestFolder { Name = dlg.Value.Trim(), ParentId = parent?.Id ?? "" });
+            BuildTree();
+            if (_req != null) SelectNodeFor(_req);
+        }
+
+        private void Rename_Click(object sender, RoutedEventArgs e)
+        {
+            var node = SelectedNode;
+            if (node == null) return;
+            var dlg = new InputDialog(L("S.rest.rename"), L("S.rest.rename.label"), node.Name) { Owner = Window.GetWindow(this) };
+            if (dlg.ShowDialog() != true || dlg.Value.Trim().Length == 0) return;
+            node.Name = dlg.Value.Trim();
+            var keep = _req;
+            BuildTree();               // przebuduj (kolejność alfabetyczna)
+            if (keep != null) SelectNodeFor(keep);
+        }
+
+        private void DeleteNode_Click(object sender, RoutedEventArgs e)
+        {
+            var node = SelectedNode;
+            if (node == null) return;
+            if (MessageBox.Show(string.Format(L("S.rest.delete.confirm"), node.Name), L("S.rest.delete"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+            bool removedActive = node.IsFolder ? FolderContains(node.Folder, _req) : node.Request == _req;
+            if (node.IsFolder) DeleteFolder(node.Folder);
+            else DeleteRequest(node.Request);
+
+            if (_coll.Requests.Count == 0)
+                _coll.Requests.Add(new RestRequest { Name = "Request 1", Url = _coll.BaseUrl });
+            BuildTree();
+            if (removedActive) { _req = _coll.Requests[0]; LoadIntoUi(_req); }
+            SelectNodeFor(_req);
+        }
+
+        private bool FolderContains(RestFolder f, RestRequest req)
+        {
+            if (req == null) return false;
+            if (req.FolderId == f.Id) return true;
+            return _coll.Folders.Where(x => x.ParentId == f.Id).Any(sub => FolderContains(sub, req));
+        }
+
+        private void DeleteFolder(RestFolder f)
+        {
+            foreach (var sub in _coll.Folders.Where(x => x.ParentId == f.Id).ToList()) DeleteFolder(sub);
+            foreach (var r in _coll.Requests.Where(x => x.FolderId == f.Id).ToList()) DeleteRequest(r);
+            _coll.Folders.Remove(f);
+        }
+
+        private void DeleteRequest(RestRequest r)
+        {
+            CredentialStore.Delete(r.AuthCredTarget);
+            _coll.Requests.Remove(r);
+        }
+
+        private string UniqueName(string baseName)
+        {
+            var names = new System.Collections.Generic.HashSet<string>(_coll.Requests.Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
+            if (!names.Contains(baseName)) return baseName;
+            for (int i = 2; ; i++) { string n = baseName + " " + i; if (!names.Contains(n)) return n; }
+        }
+
+        // ---------- Wczytanie / zapis żądania ----------
+
+        private void LoadSecrets()
+        {
+            foreach (var r in _coll.Requests)
+                r.AuthSecret = CredentialStore.TryRead(r.AuthCredTarget, out var s) ? s : "";
+        }
+
+        private void LoadIntoUi(RestRequest req)
+        {
+            _loading = true;
+            SelectMethod(req.Method);
+            UrlBox.Text = req.Url;
+            _params = new ObservableCollection<RestKeyValue>(req.QueryParams);
+            _headers = new ObservableCollection<RestKeyValue>(req.Headers);
+            ParamsList.ItemsSource = _params;
+            HeadersList.ItemsSource = _headers;
+            BodyBox.Text = req.Body;
+            SelectContentType(req.BodyContentType);
+            AuthCombo.SelectedIndex = Math.Clamp(req.AuthType, 0, 2);
+            AuthUserBox.Text = req.AuthUsername;
+            TokenBox.Password = req.AuthType == 1 ? (req.AuthSecret ?? "") : "";
+            AuthPassBox.Password = req.AuthType == 2 ? (req.AuthSecret ?? "") : "";
+            UpdateAuthPanels();
+            ClearResponse();
+            _loading = false;
+        }
+
+        // Zbiera stan formularza do aktywnego żądania (przed przełączeniem/wysyłką/zapisem). Sekret → transient.
+        private void CaptureCurrent()
+        {
+            if (_req == null) return;
             _req.Method = SelectedMethod();
             _req.Url = (UrlBox.Text ?? "").Trim();
             _req.QueryParams = _params.ToList();
@@ -80,24 +256,19 @@ namespace RdpManager
             _req.BodyContentType = SelectedContentType();
             _req.AuthType = AuthCombo.SelectedIndex < 0 ? 0 : AuthCombo.SelectedIndex;
             _req.AuthUsername = AuthUserBox.Text ?? "";
+            _req.AuthSecret = SecretFromUi();
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            ApplyToRequest();
-            PersistSecret();
+            CaptureCurrent();
+            foreach (var r in _coll.Requests)   // sekrety całej kolekcji → Credential Manager
+            {
+                if (r.AuthType == 0 || string.IsNullOrEmpty(r.AuthSecret)) CredentialStore.Delete(r.AuthCredTarget);
+                else CredentialStore.TrySave(r.AuthCredTarget, r.AuthUsername, r.AuthSecret);
+            }
             RestStore.Put(_server.Id, _coll);
             SetStatus(L("S.rest.saved"));
-        }
-
-        // Sekret auth → Credential Manager (usuwany, gdy brak auth lub pusty).
-        private void PersistSecret()
-        {
-            string secret = SecretFromUi();
-            if (_req.AuthType == 0 || string.IsNullOrEmpty(secret))
-                CredentialStore.Delete(_req.AuthCredTarget);
-            else
-                CredentialStore.TrySave(_req.AuthCredTarget, _req.AuthUsername, secret);
         }
 
         private string SecretFromUi()
@@ -109,7 +280,7 @@ namespace RdpManager
 
         private async void Send_Click(object sender, RoutedEventArgs e)
         {
-            ApplyToRequest();
+            CaptureCurrent();
             if (string.IsNullOrWhiteSpace(_req.Url)) { SetStatus(L("S.rest.needurl"), error: true); return; }
 
             _cts?.Cancel();
@@ -118,7 +289,7 @@ namespace RdpManager
             SendBtn.IsEnabled = false;
             SetStatus(L("S.rest.sending"));
 
-            var resp = await RestClient.SendAsync(_req, SecretFromUi(), ct);
+            var resp = await RestClient.SendAsync(_req, _req.AuthSecret, ct);
             if (ct.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk
 
             RenderResponse(resp);
@@ -147,6 +318,15 @@ namespace RdpManager
             _rawBody = r.Body ?? "";
             ResponseBody.Text = FormatBody();
             ResponseHeaders.ItemsSource = r.Headers;
+        }
+
+        private void ClearResponse()
+        {
+            _rawBody = null;
+            StatusPill.Visibility = Visibility.Collapsed;
+            MetaText.Text = "";
+            ResponseHeaders.ItemsSource = null;
+            ResponseBody.Text = L("S.rest.resp.empty");
         }
 
         private string FormatBody()

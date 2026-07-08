@@ -40,6 +40,11 @@ namespace RdpManager.Models
         [JsonIgnore]
         public string AuthCredTarget => "RdpManager:rest:" + Id;
 
+        /// <summary>Sekret auth (token/hasło Basic) w PAMIĘCI na czas sesji — przeżywa przełączanie żądań w drzewie.
+        /// Wczytywany z Credential Manager przy otwarciu, zapisywany do niego przy „Zapisz". Nigdy do JSON.</summary>
+        [JsonIgnore]
+        public string AuthSecret { get; set; } = "";
+
         [JsonExtensionData]
         public Dictionary<string, JsonElement> Extra { get; set; }
     }

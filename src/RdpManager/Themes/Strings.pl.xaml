@@ -436,6 +436,14 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.remove">Usuń</sys:String>
     <sys:String x:Key="S.rest.key">Klucz</sys:String>
     <sys:String x:Key="S.rest.value">Wartość</sys:String>
+    <sys:String x:Key="S.rest.collection">Kolekcja</sys:String>
+    <sys:String x:Key="S.rest.newreq">Nowe żądanie</sys:String>
+    <sys:String x:Key="S.rest.newfolder">Nowy folder</sys:String>
+    <sys:String x:Key="S.rest.newfolder.label">Nazwa folderu</sys:String>
+    <sys:String x:Key="S.rest.rename">Zmień nazwę</sys:String>
+    <sys:String x:Key="S.rest.rename.label">Nowa nazwa</sys:String>
+    <sys:String x:Key="S.rest.delete">Usuń</sys:String>
+    <sys:String x:Key="S.rest.delete.confirm">Usunąć „{0}"?</sys:String>
     <sys:String x:Key="S.rest.body.type">Typ treści</sys:String>
     <sys:String x:Key="S.rest.auth.type">Typ</sys:String>
     <sys:String x:Key="S.rest.auth.none">Brak</sys:String>
