@@ -498,13 +498,19 @@ namespace RdpManager
 
         // ---------- Nawigacja (rail) ----------
 
+        private string _currentView = "Dashboard";
+        private bool _sidebarCollapsed;   // ręczne zwinięcie panelu bocznego (klik w aktywną ikonę nawigacji)
+
         private void Nav_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button b && b.Tag is string v) ShowView(v);
+            if (!(sender is Button b) || !(b.Tag is string v)) return;
+            if (v == _currentView) { _sidebarCollapsed = !_sidebarCollapsed; UpdateImmersive(); }   // ta sama ikona → zwiń/rozwiń panel
+            else ShowView(v);
         }
 
         private void ShowView(string view)
         {
+            _currentView = view;
             SessionsView.Visibility = view == "Sessions" ? Visibility.Visible : Visibility.Collapsed;
             DashboardView.Visibility = view == "Dashboard" ? Visibility.Visible : Visibility.Collapsed;
             RecentView.Visibility = view == "Recent" ? Visibility.Visible : Visibility.Collapsed;
@@ -626,9 +632,8 @@ namespace RdpManager
             // Panel boczny ukryty w skupieniu — chyba że chwilowo wysunięty (wtedy żyje w FocusPeekPopup, nie tu).
             if (!_focusPeeking)
             {
-                var sideVis = immersive ? Visibility.Collapsed : Visibility.Visible;
-                Rail.Visibility = sideVis;
-                Sidebar.Visibility = sideVis;
+                Rail.Visibility = immersive ? Visibility.Collapsed : Visibility.Visible;   // rail (ikony) zostaje — pozwala rozwinąć panel
+                Sidebar.Visibility = (immersive || _sidebarCollapsed) ? Visibility.Collapsed : Visibility.Visible;
             }
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
             if (immersive) { if (_focusPeekPoll != null && !_focusPeekPoll.IsEnabled) _focusPeekPoll.Start(); }
@@ -721,9 +726,8 @@ namespace RdpManager
             // Wróć do layoutu (Grid.Column zachowane na elementach). W skupieniu ukryte, poza — widoczne.
             BodyGrid.Children.Add(Rail);
             BodyGrid.Children.Add(Sidebar);
-            var vis = IsImmersive() ? Visibility.Collapsed : Visibility.Visible;
-            Rail.Visibility = vis;
-            Sidebar.Visibility = vis;
+            Rail.Visibility = IsImmersive() ? Visibility.Collapsed : Visibility.Visible;
+            Sidebar.Visibility = (IsImmersive() || _sidebarCollapsed) ? Visibility.Collapsed : Visibility.Visible;
         }
 
         // Polling kursora w trybie skupienia: najechanie na lewą krawędź (i przytrzymanie) wysuwa panel;
@@ -3828,7 +3832,7 @@ namespace RdpManager
 
             AppTitleBar.Visibility = Visibility.Visible;
             Rail.Visibility = Visibility.Visible;
-            Sidebar.Visibility = Visibility.Visible;
+            Sidebar.Visibility = _sidebarCollapsed ? Visibility.Collapsed : Visibility.Visible;   // respektuj ręczne zwinięcie
             TabStripHost.Visibility = Visibility.Visible;
             SessionToolbar.Visibility = Visibility.Visible;
             SessionHotZoneRow.Height = new GridLength(0);   // brak odstępu pod paskiem kart (kotwica popupu ma 0)
