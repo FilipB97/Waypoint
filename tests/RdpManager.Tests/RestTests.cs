@@ -131,5 +131,32 @@ namespace RdpManager.Tests
             }
             finally { try { Directory.Delete(dir, true); } catch { } }
         }
+
+        [Fact]
+        public void DeepCopy_FreshRequestIds_ClearsHistory_KeepsData()
+        {
+            var src = new RestCollection
+            {
+                BaseUrl = "https://x",
+                Folders = { new RestFolder { Name = "F" } },
+                Requests = { new RestRequest { Name = "R", Method = "POST", Url = "https://x/y" } },
+                Environments = { new RestEnvironment { Name = "dev", Variables = { new RestVariable { Key = "k", Value = "v" } } } },
+                History = { new RestHistoryEntry { Method = "GET" } }
+            };
+            string srcReqId = src.Requests[0].Id;
+
+            var copy = RestStore.DeepCopy(src, out var map);
+
+            Assert.Single(copy.Requests);
+            Assert.NotEqual(srcReqId, copy.Requests[0].Id);        // świeże Id
+            Assert.Equal(copy.Requests[0].Id, map[srcReqId]);      // mapa stare→nowe
+            Assert.Equal("POST", copy.Requests[0].Method);
+            Assert.Single(copy.Folders);
+            Assert.Equal("v", copy.Environments[0].Variables[0].Value);
+            Assert.Empty(copy.History);                            // historia wyczyszczona
+            // źródło nietknięte
+            Assert.Equal(srcReqId, src.Requests[0].Id);
+            Assert.Single(src.History);
+        }
     }
 }

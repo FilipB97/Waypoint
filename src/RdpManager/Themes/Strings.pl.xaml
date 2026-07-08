@@ -265,6 +265,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.renamegroup">Zmień nazwę grupy…</sys:String>
     <sys:String x:Key="S.m.wol">Obudź (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplikuj serwer…</sys:String>
+    <sys:String x:Key="S.m.dupcollection">Duplikuj kolekcję…</sys:String>
     <sys:String x:Key="S.m.copy">Kopiuj</sys:String>
     <sys:String x:Key="S.m.copy.name">Nazwę</sys:String>
     <sys:String x:Key="S.m.copy.host">Host / adres</sys:String>

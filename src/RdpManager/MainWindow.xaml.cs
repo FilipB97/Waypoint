@@ -1640,7 +1640,7 @@ namespace RdpManager
             {
                 Text = (isPinned ? L("S.group.pinned") : name.ToUpperInvariant()) + "  ·  " + count,
                 Foreground = Res("TextSec"),
-                FontSize = 11.5, FontWeight = FontWeights.SemiBold,
+                FontSize = 13, FontWeight = FontWeights.Bold,   // grupa nadrzędna — wyraźniej niż wiersze w środku
                 VerticalAlignment = VerticalAlignment.Center
             });
 
@@ -1989,6 +1989,7 @@ namespace RdpManager
         {
             var menu = new ContextMenu();
             bool rdp = server.Protocol == RemoteProtocol.Rdp;
+            bool rest = server.Protocol == RemoteProtocol.Rest;   // kolekcja — nie serwer: bez WoL, „Duplikuj kolekcję"
             var pinItem = new MenuItem { Header = L(server.Pinned ? "S.m.unpin" : "S.m.pin") };
             pinItem.Click += (s, e) => TogglePin(server);
             var newWinItem = new MenuItem { Header = L("S.m.newwin") };
@@ -2001,7 +2002,7 @@ namespace RdpManager
             };
             var editItem = new MenuItem { Header = L("S.m.edit") };
             editItem.Click += (s, e) => EditServer(server);
-            var dupItem = new MenuItem { Header = L("S.m.dupserver") };
+            var dupItem = new MenuItem { Header = L(rest ? "S.m.dupcollection" : "S.m.dupserver") };
             dupItem.Click += (s, e) => DuplicateServer(server);
 
             // Kopiuj ▸ — pojedyncze pola (i login+hasło) do schowka. Hasło z Credential Managera na żądanie.
@@ -2046,7 +2047,7 @@ namespace RdpManager
             menu.Items.Add(copyMenu);
             if (server.Protocol != RemoteProtocol.Serial && server.Protocol != RemoteProtocol.Http && server.Protocol != RemoteProtocol.Rest)
                 menu.Items.Add(diagItem);   // sonda TCP — nie dla COM/URL/REST
-            menu.Items.Add(wolItem);
+            if (!rest) menu.Items.Add(wolItem);   // Wake-on-LAN nie dotyczy kolekcji REST
             if (rdp) menu.Items.Add(exportItem);       // .rdp ma sens tylko dla RDP
             menu.Items.Add(new Separator());
             menu.Items.Add(delItem);
@@ -4687,10 +4688,21 @@ namespace RdpManager
             var dlg = new ServerEditWindow(copy, pw, _credProfiles) { Owner = this };
             if (dlg.ShowDialog() != true) return;
             _vm.Add(copy);
+            if (copy.Protocol == RemoteProtocol.Rest) DuplicateRestData(src.Id, copy.Id);   // skopiuj też drzewo kolekcji
             PersistServers();
             SaveCredential(copy, dlg.EnteredPassword);
             RenderTree(SearchBox.Text);
             CheckReachabilityAsync();
+        }
+
+        // Kopiuje dane kolekcji REST (rest.json) na nowy wpis: świeże Id żądań + przeniesione sekrety auth.
+        private void DuplicateRestData(string srcId, string dstId)
+        {
+            var copy = RestStore.DeepCopy(RestStore.For(srcId), out var map);
+            foreach (var kv in map)
+                if (CredentialStore.TryRead("RdpManager:rest:" + kv.Key, out var sec) && !string.IsNullOrEmpty(sec))
+                    CredentialStore.TrySave("RdpManager:rest:" + kv.Value, "", sec);
+            RestStore.Put(dstId, copy);
         }
 
         private void EditServer(ServerInfo server)
