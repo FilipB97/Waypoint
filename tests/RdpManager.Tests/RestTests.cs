@@ -64,6 +64,21 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void BuildFormBodyFromFields_SkipsDisabledAndEmptyKey_EncodesAfterSubstitute()
+        {
+            var vars = new Dictionary<string, string> { ["u"] = "bob", ["sec"] = "a+b/c=" };
+            var fields = new List<RestKeyValue>
+            {
+                new RestKeyValue { Key = "username", Value = "{{u}}", Enabled = true },
+                new RestKeyValue { Key = "client_secret", Value = "{{sec}}", Enabled = true },
+                new RestKeyValue { Key = "skip", Value = "x", Enabled = false },
+                new RestKeyValue { Key = "", Value = "y", Enabled = true },
+            };
+            var b = RestClient.BuildFormBodyFromFields(fields, vars);
+            Assert.Equal("username=bob&client_secret=a%2Bb%2Fc%3D", b);
+        }
+
+        [Fact]
         public void BuildFormBody_EmptyAndNoVars()
         {
             Assert.Equal("", RestClient.BuildFormBody("", null));

@@ -71,6 +71,30 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void LegacyPostmanApi_SetGetClearEnvironmentVariable_MatchesPmEnvironment()
+        {
+            var (get, set, unset, store) = Store();
+            var resp = new RestResponse { Ok = true, Status = 200, Body = "{\"access_token\":\"XYZ\"}" };
+            var o = RestScript.Run(
+                "var d = pm.response.json(); postman.setEnvironmentVariable('token', d.access_token);" +
+                "pm.test('readback', function(){ pm.expect(postman.getEnvironmentVariable('token')).to.equal('XYZ'); });" +
+                "postman.clearEnvironmentVariable('token');",
+                null, resp, get, set, unset);
+            Assert.True(o.Ok, o.Error);
+            Assert.True(o.Tests.Single().Passed, o.Tests.Single().Error);
+            Assert.False(store.ContainsKey("token"));   // clearEnvironmentVariable usunął
+        }
+
+        [Fact]
+        public void LegacyPostmanApi_GlobalVariable_SharesStoreWithEnvironment()
+        {
+            var (get, set, unset, store) = Store();
+            var o = RestScript.Run("postman.setGlobalVariable('g','1');", null, null, get, set, unset);
+            Assert.True(o.Ok, o.Error);
+            Assert.Equal("1", store["g"]);
+        }
+
+        [Fact]
         public void EmptyScript_IsNoop()
         {
             var (get, set, unset, _) = Store();

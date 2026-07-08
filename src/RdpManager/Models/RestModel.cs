@@ -27,6 +27,9 @@ namespace RdpManager.Models
         public List<RestKeyValue> Headers { get; set; } = new List<RestKeyValue>();
         public string Body { get; set; } = "";
         public string BodyContentType { get; set; } = "application/json";
+        /// <summary>Pola treści application/x-www-form-urlencoded jako tabela klucz/wartość (edytor przyjazny jak w Postmanie).
+        /// Gdy niepuste, mają pierwszeństwo przy wysyłce nad <see cref="Body"/> (zob. RestClient.Build).</summary>
+        public List<RestKeyValue> FormFields { get; set; } = new List<RestKeyValue>();
 
         /// <summary>Rodzaj uwierzytelniania: 0 = brak, 1 = Bearer (token), 2 = Basic (login + hasło).</summary>
         public int AuthType { get; set; }

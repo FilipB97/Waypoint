@@ -86,21 +86,27 @@ namespace RdpManager
         {
             var msg = new HttpRequestMessage(new HttpMethod((req.Method ?? "GET").Trim().ToUpperInvariant()), BuildRequestUri(req, vars));
 
-            // Body tylko dla metod, które go niosą, i gdy niepuste.
-            bool hasBody = !string.IsNullOrEmpty(req.Body)
-                           && msg.Method != HttpMethod.Get && msg.Method != HttpMethod.Head;
-
             // Content-Type z nagłówków ma pierwszeństwo nad polem body.
             string contentType = req.Headers
                 .Where(h => h.Enabled && string.Equals(h.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
                 .Select(h => h.Value).FirstOrDefault();
             if (string.IsNullOrWhiteSpace(contentType)) contentType = req.BodyContentType;
 
+            bool isForm = IsFormUrlEncoded(contentType);
+            bool hasFields = isForm && req.FormFields.Any(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key));
+            // Body tylko dla metod, które go niosą, i gdy niepuste (tabela pól LUB surowy tekst dla form; surowy tekst dla reszty typów).
+            bool hasBody = (msg.Method != HttpMethod.Get && msg.Method != HttpMethod.Head)
+                           && (hasFields || !string.IsNullOrEmpty(req.Body));
+
             if (hasBody)
             {
                 // Dla form-urlencoded podstawiamy i kodujemy każdą wartość osobno (jak parametry zapytania) —
-                // inaczej sekret zawierający +,/,= rozjechałby się. Inne typy: podstaw i wyślij treść tak jak jest.
-                string content = IsFormUrlEncoded(contentType) ? BuildFormBody(req.Body, vars) : Subst(req.Body, vars);
+                // inaczej sekret zawierający +,/,= rozjechałby się. Tabela pól (edytor) ma pierwszeństwo nad
+                // starszym surowym tekstem (kompatybilność z żądaniami zapisanymi przed edytorem). Inne typy:
+                // podstaw i wyślij treść tak jak jest.
+                string content = !isForm ? Subst(req.Body, vars)
+                                : hasFields ? BuildFormBodyFromFields(req.FormFields, vars)
+                                : BuildFormBody(req.Body, vars);
                 msg.Content = new StringContent(content, Encoding.UTF8);
                 if (!string.IsNullOrWhiteSpace(contentType))
                 {
@@ -130,6 +136,21 @@ namespace RdpManager
         private static bool IsFormUrlEncoded(string contentType)
             => !string.IsNullOrEmpty(contentType)
                && contentType.IndexOf("x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        /// <summary>Buduje treść application/x-www-form-urlencoded z tabeli pól (edytor klucz/wartość):
+        /// pomija wyłączone/puste-klucz, podstawia {{zmienne}} i koduje każdą część PO podstawieniu.
+        /// Publiczne dla testów.</summary>
+        public static string BuildFormBodyFromFields(List<RestKeyValue> fields, IReadOnlyDictionary<string, string> vars)
+        {
+            if (fields == null) return "";
+            var parts = new List<string>();
+            foreach (var f in fields)
+            {
+                if (!f.Enabled || string.IsNullOrWhiteSpace(f.Key)) continue;
+                parts.Add(Uri.EscapeDataString(Subst(f.Key, vars)) + "=" + Uri.EscapeDataString(Subst(f.Value ?? "", vars)));
+            }
+            return string.Join("&", parts);
+        }
 
         /// <summary>Buduje treść application/x-www-form-urlencoded: dzieli szablon „k=v&amp;k=v", podstawia
         /// {{zmienne}} i koduje każdą część PO podstawieniu (wartość z {{var}} może mieć +,/,= — musi być
