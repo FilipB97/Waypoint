@@ -6,8 +6,10 @@ namespace RdpManager
 {
     /// <summary>
     /// Cienki wrapper na Windows Credential Manager (advapi32). Hasła trzymamy w systemowym
-    /// sejfie użytkownika (DPAPI pod spodem), nigdy w plikach aplikacji — to samo miejsce,
-    /// z którego korzysta mstsc.
+    /// sejfie bieżącego użytkownika Windows (DPAPI pod spodem), nigdy w plikach aplikacji — to samo
+    /// miejsce, z którego korzysta mstsc. Persist=LOCAL_MACHINE (nie SESSION) — wpis przeżywa wylogowanie
+    /// i restart, ale w odróżnieniu od ENTERPRISE nie roami się z profilem na inny komputer; nadal jest
+    /// widoczny wyłącznie dla konta, które go zapisało, nie dla innych użytkowników tej maszyny (A11 z przeglądu).
     /// </summary>
     public static class CredentialStore
     {

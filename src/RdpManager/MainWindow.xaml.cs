@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -4981,11 +4982,13 @@ namespace RdpManager
             try
             {
                 var servers = _vm.Servers.ToList();
-                var results = await Task.WhenAll(servers.Select(srv =>
-                    Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv,
-                        // Serial (COM), WWW i REST (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status.
-                        srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http || srv.Protocol == RemoteProtocol.Rest
-                            ? srv.Status : Probe(srv.Host, srv.Port)))));
+                var results = await Task.WhenAll(servers.Select(async srv =>
+                {
+                    // Serial (COM), WWW i REST (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status.
+                    var status = srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http || srv.Protocol == RemoteProtocol.Rest
+                        ? srv.Status : await ProbeAsync(srv.Host, srv.Port);
+                    return new KeyValuePair<ServerInfo, ServerStatus>(srv, status);
+                }));
 
                 foreach (var kv in results)
                 {
@@ -5037,7 +5040,7 @@ namespace RdpManager
 
             SetStatus(string.Format(L("S.st.diagnosing"), host, port), StatusKind.Connecting);
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            bool ok = await Task.Run(() => Probe(host, port) == ServerStatus.Online);
+            bool ok = await ProbeAsync(host, port) == ServerStatus.Online;
             sw.Stop();
 
             string msg = RdpUtils.FormatDiagnostics(host, port, ok, sw.ElapsedMilliseconds,
@@ -5047,26 +5050,28 @@ namespace RdpManager
                 MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
-        private static ServerStatus Probe(string host, int port)
+        // Limit jednoczesnych sond — setki serwerów naraz zalewałyby pulę wątków/gniazd (A4 z przeglądu).
+        private static readonly SemaphoreSlim ProbeConcurrency = new SemaphoreSlim(32);
+
+        private static async Task<ServerStatus> ProbeAsync(string host, int port)
         {
             if (string.IsNullOrWhiteSpace(host)) return ServerStatus.Offline;
+            await ProbeConcurrency.WaitAsync();
             try
             {
                 using (var c = new TcpClient())
                 {
-                    var ar = c.BeginConnect(host, port, null, null);
-                    if (ar.AsyncWaitHandle.WaitOne(1500) && c.Connected)
-                    {
-                        c.EndConnect(ar);
-                        return ServerStatus.Online;
-                    }
-                    return ServerStatus.Offline;
+                    // Task.WaitAsync (nie blokujący wątek WaitOne) — Dispose przy timeout/wyjątku ubija
+                    // wciąż-trwające ConnectAsync pod spodem (zamknięcie gniazda przerywa próbę połączenia).
+                    await c.ConnectAsync(host, port).WaitAsync(TimeSpan.FromMilliseconds(1500));
+                    return c.Connected ? ServerStatus.Online : ServerStatus.Offline;
                 }
             }
             catch
             {
-                return ServerStatus.Offline;
+                return ServerStatus.Offline;   // timeout (TimeoutException) albo błąd połączenia
             }
+            finally { ProbeConcurrency.Release(); }
         }
 
         private static string DescribeDisconnect(AxMsRdpClient11NotSafeForScripting rdp, int reason)
