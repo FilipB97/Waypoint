@@ -75,6 +75,25 @@ namespace RdpManager
             else { _current = null; _vars = new ObservableCollection<RestVariable>(); VarsList.ItemsSource = _vars; VarsList.IsEnabled = false; }
         }
 
+        // Import osobnego pliku środowiska Postman (dodaje nowe środowisko do tej kolekcji).
+        private void ImportEnv_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = L("S.rest.env.importtitle"), Filter = L("S.dlg.postman.filter") };
+            if (dlg.ShowDialog(this) != true) return;
+
+            RestEnvironment env;
+            try { env = Core.PostmanImport.ParseEnvironment(System.IO.File.ReadAllText(dlg.FileName)); }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show(ex.Message, L("S.rest.env.importtitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            CommitVars();
+            env.Name = UniqueEnvName(string.IsNullOrWhiteSpace(env.Name) ? L("S.rest.env.newenv") : env.Name);
+            _envs.Add(env);
+            EnvList.SelectedItem = env;
+        }
+
         private void AddVar_Click(object sender, RoutedEventArgs e)
         {
             if (_current == null) return;

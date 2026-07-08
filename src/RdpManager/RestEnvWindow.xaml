@@ -89,6 +89,10 @@
                     <Button Style="{StaticResource EnvIconBtn}" ToolTip="{DynamicResource S.rest.delete}" Click="DeleteEnv_Click">
                         <ui:SymbolIcon Symbol="Delete24" FontSize="15"/>
                     </Button>
+                    <Border Width="1" Margin="3,5" Background="{DynamicResource Border}"/>
+                    <Button Style="{StaticResource EnvIconBtn}" ToolTip="{DynamicResource S.rest.env.import}" Click="ImportEnv_Click">
+                        <ui:SymbolIcon Symbol="ArrowImport24" FontSize="15"/>
+                    </Button>
                 </StackPanel>
             </Grid>
 
