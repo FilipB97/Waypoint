@@ -451,7 +451,7 @@
 
                 <!-- Prawa kolumna: treść wybranej kategorii (lub wyniki wyszukiwania) -->
                 <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel x:Name="SettingsCards" Margin="12,24,28,24" MaxWidth="640" HorizontalAlignment="Left">
+                    <StackPanel x:Name="SettingsCards" Margin="12,24,28,24" MaxWidth="900" HorizontalAlignment="Left">
 
                     <!-- Interfejs -->
                     <Border Style="{DynamicResource Card}">
@@ -513,11 +513,6 @@
                             <CheckBox x:Name="SetConnLog" Content="{DynamicResource S.set.connlog}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                             <CheckBox x:Name="SetOpenNewWindow" Content="{DynamicResource S.set.opennewwin}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                             <CheckBox x:Name="SetImmersive" Content="{DynamicResource S.set.immersive}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
-                            <CheckBox x:Name="SetCheckUpdates" Content="{DynamicResource S.set.checkupdates}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <ui:Button Content="{DynamicResource S.set.checkupdatesnow}" Appearance="Secondary" Click="CheckUpdatesNow_Click"/>
-                                <TextBlock x:Name="UpdateCheckStatus" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource TextSec}"/>
-                            </StackPanel>
                             <CheckBox x:Name="SetMinimizeToTray" Content="{DynamicResource S.set.traymin}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                             <CheckBox x:Name="SetHotkey" Content="{DynamicResource S.set.hotkey}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
                             <CheckBox x:Name="SetRestorePrompt" Content="{DynamicResource S.set.restoreprompt}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
@@ -568,6 +563,12 @@
                             </StackPanel>
                             <TextBlock Foreground="{DynamicResource TextTer}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
                                        Text="{DynamicResource S.set.backupnote}"/>
+                            <Border Height="1" Background="{DynamicResource Border}" Margin="0,14,0,0"/>
+                            <CheckBox x:Name="SetCheckUpdates" Content="{DynamicResource S.set.checkupdates}" Foreground="{DynamicResource TextSec}" Margin="0,14,0,0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <ui:Button Content="{DynamicResource S.set.checkupdatesnow}" Appearance="Secondary" Click="CheckUpdatesNow_Click"/>
+                                <TextBlock x:Name="UpdateCheckStatus" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource TextSec}"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
