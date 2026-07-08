@@ -41,21 +41,21 @@
             <Setter Property="FontSize" Value="12.5"/>
         </Style>
 
-        <!-- Wiersz klucz/wartość: przełącznik + klucz + wartość + usuń. -->
+        <!-- Wiersz klucz/wartość: przełącznik + klucz + wartość + usuń. Szerokości kolumn zsynchronizowane z nagłówkiem (KvHeader). -->
         <DataTemplate x:Key="KvRowTemplate">
-            <Grid Margin="0,2">
+            <Grid Height="34">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="26"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="30"/>
+                    <ColumnDefinition Width="36"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="1.3*"/>
+                    <ColumnDefinition Width="34"/>
                 </Grid.ColumnDefinitions>
-                <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" VerticalAlignment="Center"/>
-                <TextBox Grid.Column="1" Style="{StaticResource RestCell}" Margin="0,0,6,0"
+                <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1" Style="{StaticResource RestCell}" Margin="0,0,8,0"
                          Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"/>
-                <TextBox Grid.Column="2" Style="{StaticResource RestCell}" Margin="0,0,6,0"
+                <TextBox Grid.Column="2" Style="{StaticResource RestCell}" Margin="0,0,8,0"
                          Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
-                <Button Grid.Column="3" Style="{StaticResource RestIconBtn}" Width="26" Height="26" Click="DeleteKv_Click"
+                <Button Grid.Column="3" Style="{StaticResource RestIconBtn}" Width="28" Height="28" Click="DeleteKv_Click"
                         ToolTip="{DynamicResource S.rest.remove}">
                     <ui:SymbolIcon Symbol="Dismiss20" FontSize="14"/>
                 </Button>
@@ -108,13 +108,26 @@
                 <TabItem Header="{DynamicResource S.rest.tab.params}">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl x:Name="ParamsList" ItemTemplate="{StaticResource KvRowTemplate}" Margin="2,6,2,0"/>
+                        <Border Grid.Row="0" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="0,6,0,4" Margin="2,8,2,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1.3*"/>
+                                    <ColumnDefinition Width="34"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1" Text="{DynamicResource S.rest.key}" Foreground="{DynamicResource TextTer}" FontSize="11"/>
+                                <TextBlock Grid.Column="2" Text="{DynamicResource S.rest.value}" Foreground="{DynamicResource TextTer}" FontSize="11"/>
+                            </Grid>
+                        </Border>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="ParamsList" ItemTemplate="{StaticResource KvRowTemplate}" Margin="2,2,2,0"/>
                         </ScrollViewer>
-                        <Button Grid.Row="1" HorizontalAlignment="Left" Margin="2,6,0,0" Style="{StaticResource RestIconBtn}"
+                        <Button Grid.Row="2" HorizontalAlignment="Left" Margin="2,6,0,0" Style="{StaticResource RestIconBtn}"
                                 Width="Auto" Padding="8,0" Click="AddParam_Click" Foreground="{DynamicResource Accent}">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="Add20" FontSize="14"/>
@@ -127,13 +140,26 @@
                 <TabItem Header="{DynamicResource S.rest.tab.headers}">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl x:Name="HeadersList" ItemTemplate="{StaticResource KvRowTemplate}" Margin="2,6,2,0"/>
+                        <Border Grid.Row="0" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="0,6,0,4" Margin="2,8,2,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1.3*"/>
+                                    <ColumnDefinition Width="34"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1" Text="{DynamicResource S.rest.key}" Foreground="{DynamicResource TextTer}" FontSize="11"/>
+                                <TextBlock Grid.Column="2" Text="{DynamicResource S.rest.value}" Foreground="{DynamicResource TextTer}" FontSize="11"/>
+                            </Grid>
+                        </Border>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="HeadersList" ItemTemplate="{StaticResource KvRowTemplate}" Margin="2,2,2,0"/>
                         </ScrollViewer>
-                        <Button Grid.Row="1" HorizontalAlignment="Left" Margin="2,6,0,0" Style="{StaticResource RestIconBtn}"
+                        <Button Grid.Row="2" HorizontalAlignment="Left" Margin="2,6,0,0" Style="{StaticResource RestIconBtn}"
                                 Width="Auto" Padding="8,0" Click="AddHeader_Click" Foreground="{DynamicResource Accent}">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="Add20" FontSize="14"/>
