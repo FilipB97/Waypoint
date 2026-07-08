@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -36,10 +38,63 @@ namespace RdpManager
             public string Modified { get; set; }
         }
 
+        // Stan jednego transferu drzewa (upload/download) — postęp bajtowy do paska, callback per plik do statusu.
+        // Klasa (nie struct) celowo: dzielona przez referencję między wątkiem roboczym (ProgressStream) a UI.
+        private sealed class TransferState
+        {
+            public long TotalBytes;
+            public long DoneBytes;
+            public Action<string> OnFileStarted;
+            public Action OnBytesChanged;
+        }
+
+        // Dekorator strumienia: zgłasza przesłane bajty i sprawdza anulowanie przy KAŻDYM Read/Write.
+        // Owija lokalną stronę transferu (source pliku przy wysyłce, target pliku przy pobieraniu) —
+        // działa dla WSZYSTKICH backendów (SFTP/FTP/lokalny) bez zmiany IRemoteFs czy jego implementacji,
+        // bo każda z nich ostatecznie czyta/pisze do strumienia PRZEKAZANEGO przez wołającego (ten tutaj).
+        private sealed class ProgressStream : System.IO.Stream
+        {
+            private readonly System.IO.Stream _inner;
+            private readonly CancellationToken _ct;
+            private readonly Action<int> _onBytes;
+
+            public ProgressStream(System.IO.Stream inner, CancellationToken ct, Action<int> onBytes)
+            { _inner = inner; _ct = ct; _onBytes = onBytes; }
+
+            public override bool CanRead => _inner.CanRead;
+            public override bool CanSeek => _inner.CanSeek;
+            public override bool CanWrite => _inner.CanWrite;
+            public override long Length => _inner.Length;
+            public override long Position { get => _inner.Position; set => _inner.Position = value; }
+            public override void Flush() => _inner.Flush();
+            public override long Seek(long offset, System.IO.SeekOrigin origin) => _inner.Seek(offset, origin);
+            public override void SetLength(long value) => _inner.SetLength(value);
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                _ct.ThrowIfCancellationRequested();
+                int n = _inner.Read(buffer, offset, count);
+                if (n > 0) _onBytes?.Invoke(n);
+                return n;
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                _ct.ThrowIfCancellationRequested();
+                _inner.Write(buffer, offset, count);
+                _onBytes?.Invoke(count);
+            }
+        }
+
+        private enum OverwriteChoice { Overwrite, Skip, Cancel }
+
         private readonly Func<IRemoteFs> _factory;
         private IRemoteFs _fs;
         private string _path = "/";
         private bool _busy;
+        private CancellationTokenSource _transferCts;
+        private TransferState _xferState;   // aktywny transfer — tylko on może aktualizować pasek (odrzuca spóźnione raporty)
+        private readonly Stopwatch _progressThrottle = new Stopwatch();
 
         /// <summary>Udane (po)łączenie — dla sesji plikowej: karta „online".</summary>
         public event Action Connected;
@@ -75,61 +130,124 @@ namespace RdpManager
         /// <summary>Upuszczenie pliku z DRUGIEGO panelu na ten (dual-pane) — host wykonuje transfer.</summary>
         public event Action<FileDragData> CrossPaneDrop;
 
-        /// <summary>Wysyła lokalny plik LUB katalog (rekurencyjnie) do bieżącego katalogu TEGO panelu.</summary>
+        /// <summary>Wysyła lokalny plik LUB katalog (rekurencyjnie) do bieżącego katalogu TEGO panelu.
+        /// Pyta raz o nadpisanie, jeśli nazwa już istnieje w bieżącym listingu (A2 z przeglądu).</summary>
         public async Task<bool> TransferInLocalFileAsync(string localPath)
         {
             bool isDir = System.IO.Directory.Exists(localPath);
             if (!isDir && !System.IO.File.Exists(localPath)) return false;
             string dir = _path.TrimEnd('/');
             string name = System.IO.Path.GetFileName(localPath.TrimEnd('/', '\\'));
-            bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name),
-                fs => UploadTree(fs, localPath, dir, ProgressUp));
+
+            if (!CheckUploadConflict(name, out _)) return false;
+
+            bool ok = await RunTransferAsync(
+                _ => LocalTreeSize(localPath),
+                n => string.Format(L("S.sftp.uploading"), n),
+                (fs, ct, state) => UploadTree(fs, localPath, dir, ct, state));
             if (ok) RefreshAsync();
             return ok;
         }
 
-        /// <summary>Pobiera plik LUB katalog (rekurencyjnie) z TEGO panelu do lokalnego katalogu (wołający odświeża cel).</summary>
-        public Task<bool> TransferOutToLocalAsync(string remoteFull, string remoteName, bool isDir, string localDir)
-            => RunAsync(string.Format(L("S.sftp.downloading"), remoteName),
-                fs => DownloadTree(fs, remoteFull, remoteName, isDir, localDir.Replace('/', '\\'), ProgressDown));
+        /// <summary>Pobiera plik LUB katalog (rekurencyjnie) z TEGO panelu do lokalnego katalogu (wołający odświeża cel).
+        /// Pyta raz o nadpisanie, jeśli cel już istnieje lokalnie.</summary>
+        public async Task<bool> TransferOutToLocalAsync(string remoteFull, string remoteName, bool isDir, string localDir)
+        {
+            string dest = SafeCombine(localDir.Replace('/', '\\'), remoteName);
+            if (System.IO.Directory.Exists(dest) || System.IO.File.Exists(dest))
+            {
+                if (AskOverwrite(remoteName) != OverwriteChoice.Overwrite) return false;
+            }
+            return await RunTransferAsync(
+                fs => RemoteTreeSize(fs, remoteFull, isDir, 0),
+                n => string.Format(L("S.sftp.downloading"), n),
+                (fs, ct, state) => DownloadTree(fs, remoteFull, remoteName, isDir, localDir.Replace('/', '\\'), ct, state));
+        }
 
-        // ---------- Rekurencyjny transfer drzew (plik lub katalog); progress per plik ----------
+        // ---------- Rekurencyjny transfer drzew (plik lub katalog); anulowanie + postęp bajtowy ----------
+
+        /// <summary>Wysyła lokalny plik/katalog do remoteDir na zdalnym fs (rekurencyjnie, bez śledzenia postępu).
+        /// Publiczne dla testów — TransferState jest prywatny, więc pełny wariant zostaje wewnętrzny.</summary>
+        public static void UploadTree(IRemoteFs fs, string localPath, string remoteDir, CancellationToken ct)
+            => UploadTree(fs, localPath, remoteDir, ct, null);
 
         // Wysyła lokalny plik/katalog do remoteDir na zdalnym fs; katalogi tworzy, w pliki wchodzi rekurencyjnie.
-        private static void UploadTree(IRemoteFs fs, string localPath, string remoteDir, Action<string> progress)
+        // Statyczna i bezstanowa poza jawnymi parametrami — testowalna bez UI (state/ct mogą być null/None).
+        private static void UploadTree(IRemoteFs fs, string localPath, string remoteDir, CancellationToken ct, TransferState state)
         {
+            ct.ThrowIfCancellationRequested();
             string name = System.IO.Path.GetFileName(localPath.TrimEnd('/', '\\'));
             string target = remoteDir.TrimEnd('/') + "/" + name;
             if (System.IO.Directory.Exists(localPath))
             {
                 EnsureRemoteDir(fs, target);
-                foreach (var sub in System.IO.Directory.GetDirectories(localPath)) UploadTree(fs, sub, target, progress);
-                foreach (var f in System.IO.Directory.GetFiles(localPath)) UploadTree(fs, f, target, progress);
+                foreach (var sub in System.IO.Directory.GetDirectories(localPath)) UploadTree(fs, sub, target, ct, state);
+                foreach (var f in System.IO.Directory.GetFiles(localPath)) UploadTree(fs, f, target, ct, state);
             }
             else
             {
-                progress?.Invoke(name);
-                using (var s = System.IO.File.OpenRead(localPath)) fs.Upload(s, target, true);
+                state?.OnFileStarted?.Invoke(name);
+                using (var real = System.IO.File.OpenRead(localPath))
+                using (var wrapped = new ProgressStream(real, ct, delta => AddBytes(state, delta)))
+                    fs.Upload(wrapped, target, true);
             }
         }
+
+        /// <summary>Pobiera zdalny plik/katalog do localParentDir (rekurencyjnie, bez śledzenia postępu).
+        /// Publiczne dla testów — TransferState jest prywatny, więc pełny wariant zostaje wewnętrzny.</summary>
+        public static void DownloadTree(IRemoteFs fs, string remoteFull, string remoteName, bool isDir, string localParentDir, CancellationToken ct)
+            => DownloadTree(fs, remoteFull, remoteName, isDir, localParentDir, ct, null);
 
         // Pobiera zdalny plik/katalog do localParentDir (ścieżka Windows); katalogi listuje i schodzi rekurencyjnie.
         // remoteName pochodzi z listingu ZDALNEGO serwera — złośliwy/skompromitowany serwer mógłby zwrócić
         // "..\..\", ścieżkę z literą dysku itp., próbując zapisać poza wybranym katalogiem ("zip-slip" /
         // path traversal). SafeCombine odrzuca takie nazwy i wymusza pozostanie wewnątrz localParentDir.
-        private static void DownloadTree(IRemoteFs fs, string remoteFull, string remoteName, bool isDir, string localParentDir, Action<string> progress)
+        private static void DownloadTree(IRemoteFs fs, string remoteFull, string remoteName, bool isDir, string localParentDir, CancellationToken ct, TransferState state)
         {
+            ct.ThrowIfCancellationRequested();
             string dest = SafeCombine(localParentDir, remoteName);
             if (isDir)
             {
                 System.IO.Directory.CreateDirectory(dest);
-                foreach (var e in fs.List(remoteFull)) DownloadTree(fs, e.FullName, e.Name, e.IsDir, dest, progress);
+                foreach (var e in fs.List(remoteFull)) DownloadTree(fs, e.FullName, e.Name, e.IsDir, dest, ct, state);
             }
             else
             {
-                progress?.Invoke(remoteName);
-                using (var s = System.IO.File.Create(dest)) fs.Download(remoteFull, s);
+                state?.OnFileStarted?.Invoke(remoteName);
+                using (var real = System.IO.File.Create(dest))
+                using (var wrapped = new ProgressStream(real, ct, delta => AddBytes(state, delta)))
+                    fs.Download(remoteFull, wrapped);
             }
+        }
+
+        private static void AddBytes(TransferState state, int delta)
+        {
+            if (state == null) return;
+            state.DoneBytes += delta;
+            state.OnBytesChanged?.Invoke();
+        }
+
+        // Sumuje rozmiar CAŁEGO lokalnego poddrzewa (do paska postępu przy wysyłce) — tanie, bez sieci.
+        private static long LocalTreeSize(string path)
+        {
+            if (System.IO.Directory.Exists(path))
+            {
+                long sum = 0;
+                foreach (var d in System.IO.Directory.GetDirectories(path)) sum += LocalTreeSize(d);
+                foreach (var f in System.IO.Directory.GetFiles(path)) { try { sum += new System.IO.FileInfo(f).Length; } catch { } }
+                return sum;
+            }
+            try { return System.IO.File.Exists(path) ? new System.IO.FileInfo(path).Length : 0; } catch { return 0; }
+        }
+
+        // Sumuje rozmiar CAŁEGO zdalnego poddrzewa (do paska postępu przy pobieraniu) — dodatkowe listowania,
+        // ale ograniczone dokładnie do drzewa, które i tak zaraz pobierzemy.
+        private static long RemoteTreeSize(IRemoteFs fs, string remoteFull, bool isDir, long knownLength)
+        {
+            if (!isDir) return knownLength;
+            long sum = 0;
+            foreach (var e in fs.List(remoteFull)) sum += RemoteTreeSize(fs, e.FullName, e.IsDir, e.Length);
+            return sum;
         }
 
         /// <summary>Łączy <paramref name="localDir"/> z nazwą pochodzącą ZE ZDALNEGO SERWERA, odrzucając próby
@@ -159,13 +277,9 @@ namespace RdpManager
             try { fs.CreateDirectory(path); } catch { }
         }
 
-        // Status per plik z wątku roboczego → wątek UI (nieblokująco).
-        private void ProgressUp(string name) => Dispatcher.BeginInvoke(new Action(() => SetStatus(string.Format(L("S.sftp.uploading"), name))));
-        private void ProgressDown(string name) => Dispatcher.BeginInvoke(new Action(() => SetStatus(string.Format(L("S.sftp.downloading"), name))));
-
         // Jedna operacja naraz; łączy przy pierwszym użyciu (dispatcher wolny — praca w tle).
         // Rozróżnia błąd POŁĄCZENIA (zgłoszony przez Failed → sesja offline) od błędu operacji (tylko status).
-        private async Task<bool> RunAsync(string statusText, Action<IRemoteFs> work)
+        private async Task<bool> RunAsync(string statusText, Action<IRemoteFs> work, CancellationToken ct = default)
         {
             if (_busy) return false;
             _busy = true;
@@ -187,10 +301,15 @@ namespace RdpManager
                         if (_path == "/") _path = _fs.HomeDirectory ?? "/";   // start w katalogu domowym
                     }
                     work(_fs);
-                });
+                }, ct);
                 if (didConnect) Connected?.Invoke();
                 SetStatus(L("S.sftp.done"));
                 return true;
+            }
+            catch (OperationCanceledException)
+            {
+                SetStatus(L("S.sftp.cancelled"));
+                return false;
             }
             catch (Exception ex)
             {
@@ -204,6 +323,87 @@ namespace RdpManager
                 return false;
             }
             finally { _busy = false; }
+        }
+
+        // Jak RunAsync, ale dla transferów drzew: liczy rozmiar CAŁOŚCI z góry (pasek postępu), pokazuje
+        // przycisk Anuluj i sprząta CancellationTokenSource po sobie (A7-podobny wyciek, tu od początku poprawnie).
+        private async Task<bool> RunTransferAsync(Func<IRemoteFs, long> computeTotal, Func<string, string> statusFormat,
+            Action<IRemoteFs, CancellationToken, TransferState> transfer)
+        {
+            var state = new TransferState();
+            state.OnFileStarted = name => Dispatcher.BeginInvoke(new Action(() => SetStatus(statusFormat(name))));
+            state.OnBytesChanged = () => ReportBytesThrottled(state);
+
+            _transferCts?.Cancel();
+            _transferCts?.Dispose();
+            var cts = new CancellationTokenSource();
+            _transferCts = cts;
+            _xferState = state;
+            ShowTransferUi(true);
+            try
+            {
+                return await RunAsync(L("S.sftp.connecting"), fs =>
+                {
+                    state.TotalBytes = computeTotal(fs);
+                    transfer(fs, cts.Token, state);
+                }, cts.Token);
+            }
+            finally
+            {
+                ShowTransferUi(false);
+                if (_xferState == state) _xferState = null;
+                if (_transferCts == cts) _transferCts = null;
+                cts.Dispose();
+            }
+        }
+
+        private void ShowTransferUi(bool on)
+        {
+            TransferProgress.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            CancelTransferBtn.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            if (!on) TransferProgress.Value = 0;
+        }
+
+        private void CancelTransfer_Click(object sender, RoutedEventArgs e) => _transferCts?.Cancel();
+
+        // Throttled (max ~10/s) aktualizacja paska — bez tego szybki lokalny kopiuj wołałby Dispatcher.BeginInvoke
+        // tysiące razy na sekundę. `state != _xferState` odrzuca spóźnione raporty po anulowaniu/nowym transferze.
+        private void ReportBytesThrottled(TransferState state)
+        {
+            if (_progressThrottle.IsRunning && _progressThrottle.ElapsedMilliseconds < 100) return;
+            _progressThrottle.Restart();
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (state != _xferState) return;
+                double pct = state.TotalBytes > 0 ? Math.Min(100.0, state.DoneBytes * 100.0 / state.TotalBytes) : 0;
+                TransferProgress.Value = pct;
+            }));
+        }
+
+        // Pyta RAZ (dla korzenia transferu — "ask-once", nie per-plik w głębi drzewa) czy nadpisać istniejący
+        // cel. Uproszczenie świadome: pełny per-plik dialog dla rekurencyjnego drzewa byłby bardzo inwazyjny;
+        // to i tak koniec z CAŁKOWICIE cichym nadpisywaniem sprzed poprawki (zero ostrzeżenia).
+        private OverwriteChoice AskOverwrite(string name)
+        {
+            var r = MessageBox.Show(Window.GetWindow(this),
+                string.Format(L("S.sftp.exists.confirm"), name), L("S.sftp.exists.title"),
+                MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            return r == MessageBoxResult.Yes ? OverwriteChoice.Overwrite
+                 : r == MessageBoxResult.No ? OverwriteChoice.Skip
+                 : OverwriteChoice.Cancel;
+        }
+
+        // Sprawdza istnienie celu w BIEŻĄCO wczytanym listingu zdalnym (bez dodatkowego round-tripu) i pyta
+        // raz o nadpisanie/pominięcie. true = kontynuuj wysyłkę. cancelWhole = true → wołający powinien
+        // przerwać CAŁĄ serię (przy wielu plikach naraz), nie tylko ten jeden element.
+        private bool CheckUploadConflict(string name, out bool cancelWhole)
+        {
+            cancelWhole = false;
+            bool exists = (FileList.ItemsSource as IEnumerable<Row>)?.Any(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)) == true;
+            if (!exists) return true;
+            var choice = AskOverwrite(name);
+            if (choice == OverwriteChoice.Cancel) { cancelWhole = true; return false; }
+            return choice == OverwriteChoice.Overwrite;
         }
 
         private void SetStatus(string text, bool error = false)
@@ -288,6 +488,7 @@ namespace RdpManager
         }
 
         // Wysyła podane pliki/katalogi do bieżącego katalogu (wspólne dla przycisku i upuszczenia z Eksploratora).
+        // Konflikt nazwy pyta RAZ na element (ask-once) — "Anuluj" przerywa całą serię, "Pomiń" tylko ten element.
         private async Task UploadPaths(IEnumerable<string> paths)
         {
             string dir = _path.TrimEnd('/');
@@ -296,11 +497,21 @@ namespace RdpManager
             {
                 bool isDir = System.IO.Directory.Exists(p);
                 if (!isDir && !System.IO.File.Exists(p)) continue;
-                any = true;
                 string name = System.IO.Path.GetFileName(p.TrimEnd('/', '\\'));
-                bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name),
-                    fs => UploadTree(fs, p, dir, ProgressUp));
-                if (!ok) return;   // błąd przerywa serię (status pokazuje powód)
+
+                if (!CheckUploadConflict(name, out bool cancelWhole))
+                {
+                    if (cancelWhole) break;
+                    continue;
+                }
+
+                any = true;
+                string localPath = p;
+                bool ok = await RunTransferAsync(
+                    _ => LocalTreeSize(localPath),
+                    n => string.Format(L("S.sftp.uploading"), n),
+                    (fs, ct, state) => UploadTree(fs, localPath, dir, ct, state));
+                if (!ok) break;   // błąd/anulowanie przerywa serię (status pokazuje powód)
             }
             if (any) RefreshAsync();
         }
@@ -312,11 +523,21 @@ namespace RdpManager
             {
                 var fdlg = new Microsoft.Win32.OpenFolderDialog();
                 if (fdlg.ShowDialog() != true) return;
-                await RunAsync(string.Format(L("S.sftp.downloading"), r.Name),
-                    fs => DownloadTree(fs, r.FullName, r.Name, true, fdlg.FolderName, ProgressDown));
+
+                string dest = SafeCombine(fdlg.FolderName, r.Name);
+                if (System.IO.Directory.Exists(dest) || System.IO.File.Exists(dest))
+                {
+                    var choice = AskOverwrite(r.Name);
+                    if (choice != OverwriteChoice.Overwrite) return;
+                }
+
+                await RunTransferAsync(
+                    fs => RemoteTreeSize(fs, r.FullName, true, 0),
+                    n => string.Format(L("S.sftp.downloading"), n),
+                    (fs, ct, state) => DownloadTree(fs, r.FullName, r.Name, true, fdlg.FolderName, ct, state));
                 return;
             }
-            var dlg = new Microsoft.Win32.SaveFileDialog { FileName = r.Name };
+            var dlg = new Microsoft.Win32.SaveFileDialog { FileName = r.Name };   // SaveFileDialog pyta o nadpisanie natywnie
             if (dlg.ShowDialog() != true) return;
 
             await RunAsync(string.Format(L("S.sftp.downloading"), r.Name), fs =>
@@ -411,6 +632,11 @@ namespace RdpManager
 
         public void DisposePanel()
         {
+            // Anuluj transfer W TOKU PRZED zerwaniem połączenia pod nim — bez tego zamknięcie karty w trakcie
+            // transferu ucinało go w dowolnym miejscu (pół-skopiowany plik, A2 z przeglądu). Anulowanie jest
+            // kooperacyjne (ProgressStream sprawdza je przy każdym kawałku) — znacznie skraca okno wyścigu
+            // z wątkiem roboczym, choć bez pełnego async-dispose (poza zakresem tej poprawki) nie eliminuje go całkowicie.
+            _transferCts?.Cancel();
             try { _fs?.Dispose(); } catch { }
             _fs = null;
         }

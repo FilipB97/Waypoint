@@ -429,6 +429,10 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.uploading">Uploading {0}…</sys:String>
     <sys:String x:Key="S.sftp.downloading">Downloading {0}…</sys:String>
     <sys:String x:Key="S.sftp.done">Done ✓</sys:String>
+    <sys:String x:Key="S.sftp.cancelled">Cancelled</sys:String>
+    <sys:String x:Key="S.sftp.exists.title">Item already exists</sys:String>
+    <sys:String x:Key="S.sftp.exists.confirm">"{0}" already exists at the destination. Overwrite? (Yes = overwrite, No = skip, Cancel = abort)</sys:String>
+    <sys:String x:Key="S.sftp.cancel">Cancel transfer</sys:String>
     <sys:String x:Key="S.sftp.drophint">Drop files here to upload</sys:String>
     <sys:String x:Key="S.dual.push">Send the selected file to the server →</sys:String>
     <sys:String x:Key="S.dual.pull">← Download the selected file to disk</sys:String>
