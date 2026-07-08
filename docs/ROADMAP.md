@@ -42,16 +42,45 @@ current priorities.
 - **SSH tunnels / port forwarding** — local forwards per server (SSH.NET supports it);
   the killer feature for "database behind a jump host" workflows.
 - **Auto-update** — check GitHub Releases, offer one-click update (important while unsigned).
-- **SSH key passphrase** + OpenSSH agent / Pageant support; import OpenSSH `known_hosts`.
+- **SSH key passphrase** + OpenSSH agent / Pageant support; import OpenSSH `known_hosts`
+  (see [REVIEW.md](REVIEW.md) D2).
 - **Code signing** — Azure Trusted Signing or SignPath (OSS) to remove the SmartScreen warning.
 - **Tray icon + global Quick Connect hotkey.**
 - **RDP admin/console session** (`/admin`) and **Wake-on-LAN**.
+
+## Hardening & polish (from the 2026-07 review)
+
+Full write-up: [REVIEW.md](REVIEW.md). IDs below refer to its findings.
+
+**Critical**
+- **H1** — FTPS accepts any certificate; needs TOFU/pinning like the SSH known-hosts model.
+- **H2** — path traversal / "zip-slip" on directory download (unsanitized remote file names).
+
+**Soon**
+- **A1** — no size limit on REST responses (OOM / binary corruption risk).
+- **A2** — file transfer has no cancellation, overwrite policy, or real progress.
+- **1.1 / 1.3 / 1.5** — accessibility: no dialog closes on Escape, icon buttons lack
+  screen-reader names, no visible keyboard-focus ring on custom controls.
+- **M1 / M4 / L2** — security: update check doesn't verify the Authenticode signature (only
+  extracts the cert), web-panel launch has no URL scheme allowlist, Jint sandbox has no
+  memory/instruction limit.
+- **A4** — reachability probing spawns a thread per server instead of using async sockets.
+
+**Later**
+- Design tokens (corner radius, spacing, type scale) + micro-animations on hover/press
+  (REVIEW.md 2.2–2.5, 5.1).
+- `MainWindow` god-object refactor — extract `UpdateService`, `SessionManager`,
+  `ServerTreeController`, focus/fullscreen controllers (REVIEW.md B1/B2).
+- `SchemaVersion` + migration step for the JSON stores (REVIEW.md B5).
+- New features: SSH agent/Pageant support (D3), session logging (D4), REST per-request
+  timeout (D7), REST secret-typed variables (M3).
 
 ## Later / ideas
 
 - SFTP file browser attached to SSH sessions.
 - Sub-groups / tags in the server tree; shared credential profiles.
-- Light terminal theme following the app theme; terminal font/color settings.
-- Session logging (SSH transcript), configurable scrollback.
+- Light terminal theme following the app theme; terminal font/color settings
+  (see [REVIEW.md](REVIEW.md) D5).
+- Session logging (SSH transcript), configurable scrollback (see [REVIEW.md](REVIEW.md) D4).
 - Portable mode (settings next to the exe).
 - ARM64 build.
