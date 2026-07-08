@@ -64,40 +64,81 @@ namespace RdpManager
         /// <summary>Bieżący katalog panelu (do transferu w dual-pane).</summary>
         public string CurrentDir => _path;
 
-        /// <summary>Zaznaczony PLIK (nie katalog) — do transferu; false gdy brak zaznaczenia lub katalog.</summary>
-        public bool TryGetSelectedFile(out string full, out string name)
+        /// <summary>Zaznaczony wpis (plik lub katalog) — do transferu; false gdy brak zaznaczenia.</summary>
+        public bool TryGetSelected(out string full, out string name, out bool isDir)
         {
-            full = name = null;
-            if (FileList.SelectedItem is Row r && !r.IsDir) { full = r.FullName; name = r.Name; return true; }
+            full = name = null; isDir = false;
+            if (FileList.SelectedItem is Row r) { full = r.FullName; name = r.Name; isDir = r.IsDir; return true; }
             return false;
         }
 
         /// <summary>Upuszczenie pliku z DRUGIEGO panelu na ten (dual-pane) — host wykonuje transfer.</summary>
         public event Action<FileDragData> CrossPaneDrop;
 
-        /// <summary>Wysyła lokalny plik do bieżącego katalogu TEGO panelu (przez RunAsync + odśwież).</summary>
+        /// <summary>Wysyła lokalny plik LUB katalog (rekurencyjnie) do bieżącego katalogu TEGO panelu.</summary>
         public async Task<bool> TransferInLocalFileAsync(string localPath)
         {
-            if (!System.IO.File.Exists(localPath)) return false;
+            bool isDir = System.IO.Directory.Exists(localPath);
+            if (!isDir && !System.IO.File.Exists(localPath)) return false;
             string dir = _path.TrimEnd('/');
-            string name = System.IO.Path.GetFileName(localPath);
-            bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name), fs =>
-            {
-                using (var s = System.IO.File.OpenRead(localPath)) fs.Upload(s, dir + "/" + name, true);
-            });
+            string name = System.IO.Path.GetFileName(localPath.TrimEnd('/', '\\'));
+            bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name),
+                fs => UploadTree(fs, localPath, dir, ProgressUp));
             if (ok) RefreshAsync();
             return ok;
         }
 
-        /// <summary>Pobiera plik z TEGO panelu do lokalnego katalogu (przez RunAsync; wołający odświeża cel).</summary>
-        public Task<bool> TransferOutToLocalAsync(string remoteFull, string remoteName, string localDir)
+        /// <summary>Pobiera plik LUB katalog (rekurencyjnie) z TEGO panelu do lokalnego katalogu (wołający odświeża cel).</summary>
+        public Task<bool> TransferOutToLocalAsync(string remoteFull, string remoteName, bool isDir, string localDir)
+            => RunAsync(string.Format(L("S.sftp.downloading"), remoteName),
+                fs => DownloadTree(fs, remoteFull, remoteName, isDir, localDir.Replace('/', '\\'), ProgressDown));
+
+        // ---------- Rekurencyjny transfer drzew (plik lub katalog); progress per plik ----------
+
+        // Wysyła lokalny plik/katalog do remoteDir na zdalnym fs; katalogi tworzy, w pliki wchodzi rekurencyjnie.
+        private static void UploadTree(IRemoteFs fs, string localPath, string remoteDir, Action<string> progress)
         {
-            string dest = System.IO.Path.Combine(localDir.Replace('/', '\\'), remoteName);
-            return RunAsync(string.Format(L("S.sftp.downloading"), remoteName), fs =>
+            string name = System.IO.Path.GetFileName(localPath.TrimEnd('/', '\\'));
+            string target = remoteDir.TrimEnd('/') + "/" + name;
+            if (System.IO.Directory.Exists(localPath))
             {
-                using (var s = System.IO.File.Create(dest)) fs.Download(remoteFull, s);
-            });
+                EnsureRemoteDir(fs, target);
+                foreach (var sub in System.IO.Directory.GetDirectories(localPath)) UploadTree(fs, sub, target, progress);
+                foreach (var f in System.IO.Directory.GetFiles(localPath)) UploadTree(fs, f, target, progress);
+            }
+            else
+            {
+                progress?.Invoke(name);
+                using (var s = System.IO.File.OpenRead(localPath)) fs.Upload(s, target, true);
+            }
         }
+
+        // Pobiera zdalny plik/katalog do localParentDir (ścieżka Windows); katalogi listuje i schodzi rekurencyjnie.
+        private static void DownloadTree(IRemoteFs fs, string remoteFull, string remoteName, bool isDir, string localParentDir, Action<string> progress)
+        {
+            string dest = System.IO.Path.Combine(localParentDir, remoteName);
+            if (isDir)
+            {
+                System.IO.Directory.CreateDirectory(dest);
+                foreach (var e in fs.List(remoteFull)) DownloadTree(fs, e.FullName, e.Name, e.IsDir, dest, progress);
+            }
+            else
+            {
+                progress?.Invoke(remoteName);
+                using (var s = System.IO.File.Create(dest)) fs.Download(remoteFull, s);
+            }
+        }
+
+        // SFTP rzuca gdy katalog już istnieje; FTP/Local są idempotentne. Ignorujemy — realny błąd (np. brak
+        // uprawnień) i tak wyjdzie przy Upload/List do środka.
+        private static void EnsureRemoteDir(IRemoteFs fs, string path)
+        {
+            try { fs.CreateDirectory(path); } catch { }
+        }
+
+        // Status per plik z wątku roboczego → wątek UI (nieblokująco).
+        private void ProgressUp(string name) => Dispatcher.BeginInvoke(new Action(() => SetStatus(string.Format(L("S.sftp.uploading"), name))));
+        private void ProgressDown(string name) => Dispatcher.BeginInvoke(new Action(() => SetStatus(string.Format(L("S.sftp.downloading"), name))));
 
         // Jedna operacja naraz; łączy przy pierwszym użyciu (dispatcher wolny — praca w tle).
         // Rozróżnia błąd POŁĄCZENIA (zgłoszony przez Failed → sesja offline) od błędu operacji (tylko status).
@@ -223,21 +264,19 @@ namespace RdpManager
             await UploadPaths(dlg.FileNames);
         }
 
-        // Wysyła podane pliki do bieżącego katalogu (wspólne dla przycisku i upuszczenia z Eksploratora).
-        private async Task UploadPaths(IEnumerable<string> files)
+        // Wysyła podane pliki/katalogi do bieżącego katalogu (wspólne dla przycisku i upuszczenia z Eksploratora).
+        private async Task UploadPaths(IEnumerable<string> paths)
         {
             string dir = _path.TrimEnd('/');
             bool any = false;
-            foreach (var file in files)
+            foreach (var p in paths)
             {
-                if (!System.IO.File.Exists(file)) continue;   // foldery w tej fazie pomijamy
+                bool isDir = System.IO.Directory.Exists(p);
+                if (!isDir && !System.IO.File.Exists(p)) continue;
                 any = true;
-                string name = System.IO.Path.GetFileName(file);
-                bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name), fs =>
-                {
-                    using (var s = System.IO.File.OpenRead(file))
-                        fs.Upload(s, dir + "/" + name, true);
-                });
+                string name = System.IO.Path.GetFileName(p.TrimEnd('/', '\\'));
+                bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name),
+                    fs => UploadTree(fs, p, dir, ProgressUp));
                 if (!ok) return;   // błąd przerywa serię (status pokazuje powód)
             }
             if (any) RefreshAsync();
@@ -245,7 +284,15 @@ namespace RdpManager
 
         private async void Download_Click(object sender, RoutedEventArgs e)
         {
-            if (!(FileList.SelectedItem is Row r) || r.IsDir) return;
+            if (!(FileList.SelectedItem is Row r)) return;
+            if (r.IsDir)   // katalog → wybór folderu docelowego, pobranie rekurencyjne
+            {
+                var fdlg = new Microsoft.Win32.OpenFolderDialog();
+                if (fdlg.ShowDialog() != true) return;
+                await RunAsync(string.Format(L("S.sftp.downloading"), r.Name),
+                    fs => DownloadTree(fs, r.FullName, r.Name, true, fdlg.FolderName, ProgressDown));
+                return;
+            }
             var dlg = new Microsoft.Win32.SaveFileDialog { FileName = r.Name };
             if (dlg.ShowDialog() != true) return;
 
