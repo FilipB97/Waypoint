@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -33,6 +34,10 @@ namespace RdpManager
     /// </summary>
     public static class RestClient
     {
+        /// <summary>Twardy limit rozmiaru odpowiedzi — bez niego serwer (złośliwy albo po prostu zwracający
+        /// coś nieoczekiwanego) mógłby wymusić bufor rosnący bez ograniczeń (OOM). Publiczne dla testów.</summary>
+        public const long MaxResponseBytes = 20L * 1024 * 1024;
+
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler
         {
             AllowAutoRedirect = true,
@@ -48,11 +53,26 @@ namespace RdpManager
             try
             {
                 using (var msg = Build(req, authSecret, vars))
-                using (var resp = await Http.SendAsync(msg, HttpCompletionOption.ResponseContentRead, ct))
+                // ResponseHeadersRead (nie ResponseContentRead): sprawdzamy Content-Length ZANIM zaczniemy
+                // czytać ciało — deklarowany-zbyt-duży rozmiar odrzucamy bez pobierania ani bajta.
+                using (var resp = await Http.SendAsync(msg, HttpCompletionOption.ResponseHeadersRead, ct))
                 {
-                    string body = await resp.Content.ReadAsStringAsync(ct);
+                    long? declared = resp.Content.Headers.ContentLength;
+                    if (declared.HasValue && declared.Value > MaxResponseBytes)
+                    {
+                        sw.Stop();
+                        return TooLargeResponse(sw.ElapsedMilliseconds, declared);
+                    }
+
+                    byte[] bytes;
+                    using (var stream = await resp.Content.ReadAsStreamAsync(ct))
+                        bytes = await ReadBoundedAsync(stream, MaxResponseBytes, ct);
                     sw.Stop();
 
+                    // Content-Length brakujący/kłamliwy (chunked, proxy) — limit egzekwowany też PODCZAS czytania.
+                    if (bytes == null) return TooLargeResponse(sw.ElapsedMilliseconds, null);
+
+                    string body = Encoding.UTF8.GetString(bytes);
                     var headers = new List<KeyValuePair<string, string>>();
                     foreach (var h in resp.Headers) headers.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
                     foreach (var h in resp.Content.Headers) headers.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
@@ -63,7 +83,7 @@ namespace RdpManager
                         Status = (int)resp.StatusCode,
                         ReasonPhrase = resp.ReasonPhrase ?? "",
                         ElapsedMs = sw.ElapsedMilliseconds,
-                        Size = resp.Content.Headers.ContentLength ?? Encoding.UTF8.GetByteCount(body),
+                        Size = bytes.LongLength,
                         Body = body,
                         ContentType = resp.Content.Headers.ContentType?.ToString() ?? "",
                         Headers = headers
@@ -79,6 +99,35 @@ namespace RdpManager
             {
                 sw.Stop();
                 return new RestResponse { Ok = false, ElapsedMs = sw.ElapsedMilliseconds, Error = (ex.InnerException ?? ex).Message };
+            }
+        }
+
+        private static RestResponse TooLargeResponse(long elapsedMs, long? declaredBytes) => new RestResponse
+        {
+            Ok = false,
+            ElapsedMs = elapsedMs,
+            Error = declaredBytes.HasValue
+                ? $"Response too large ({FormatMb(declaredBytes.Value)}) — limit is {FormatMb(MaxResponseBytes)}. Not displayed."
+                : $"Response exceeded the {FormatMb(MaxResponseBytes)} limit while downloading. Not displayed."
+        };
+
+        private static string FormatMb(long bytes) => (bytes / 1048576.0).ToString("0.#") + " MB";
+
+        /// <summary>Czyta strumień do bufora w pamięci, przerywając (null) jeśli przekroczy <paramref name="maxBytes"/>
+        /// — bez tego bufor rósłby bez ograniczeń dla odpowiedzi bez znanego/wiarygodnego Content-Length
+        /// (chunked, proxy kłamiący o rozmiarze). Publiczne dla testów.</summary>
+        public static async Task<byte[]> ReadBoundedAsync(Stream stream, long maxBytes, CancellationToken ct)
+        {
+            using (var buffer = new MemoryStream())
+            {
+                byte[] chunk = new byte[81920];
+                int read;
+                while ((read = await stream.ReadAsync(chunk, 0, chunk.Length, ct)) > 0)
+                {
+                    buffer.Write(chunk, 0, read);
+                    if (buffer.Length > maxBytes) return null;
+                }
+                return buffer.ToArray();
             }
         }
 
