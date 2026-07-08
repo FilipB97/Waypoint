@@ -40,6 +40,7 @@
     <sys:String x:Key="S.set.iface">Interface</sys:String>
     <sys:String x:Key="S.set.uiscale">UI scale (%) — also Ctrl + mouse wheel</sys:String>
     <sys:String x:Key="S.set.bardelay">Fullscreen bar delay (ms)</sys:String>
+    <sys:String x:Key="S.set.termfontsize">Terminal font size (8-24)</sys:String>
     <sys:String x:Key="S.set.theme">Theme</sys:String>
     <sys:String x:Key="S.theme.dark">Dark</sys:String>
     <sys:String x:Key="S.theme.light">Light</sys:String>
@@ -141,6 +142,7 @@
     <sys:String x:Key="S.fs.others.up">other connections  ▴</sys:String>
     <sys:String x:Key="S.fs.pin">📌 pin</sys:String>
     <sys:String x:Key="S.fs.pinned">📌 pinned</sys:String>
+    <sys:String x:Key="S.fs.minimize">Minimize</sys:String>
     <sys:String x:Key="S.fs.restore">Restore window</sys:String>
     <sys:String x:Key="S.fs.opensessions">OPEN SESSIONS</sys:String>
     <sys:String x:Key="S.fs.allservers">ALL SERVERS</sys:String>

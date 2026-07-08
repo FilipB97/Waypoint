@@ -12,12 +12,12 @@
         <Style x:Key="SeSub" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="Margin" Value="0,4,0,8"/>
         </Style>
         <Style x:Key="SeLbl" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
     </Window.Resources>
@@ -36,7 +36,7 @@
         <TabControl x:Name="EditorTabs" Grid.Row="1" Margin="12,6,12,6" Background="Transparent" BorderThickness="0">
 
             <!-- ===== Połączenie (wspólne) ===== -->
-            <TabItem Header="{DynamicResource S.se.section.conn}">
+            <TabItem x:Name="TabConn" Header="{DynamicResource S.se.section.conn}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="4,10,10,4">
                         <Grid Margin="0,0,0,10">
@@ -253,7 +253,7 @@
         </TabControl>
 
         <Border Grid.Row="2" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,12,16,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource DialogButtonRowMargin}">
                 <ui:Button Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="96" IsCancel="True"/>
                 <ui:Button Content="{DynamicResource S.save}" Appearance="Primary" Click="Save_Click" MinWidth="96"/>
             </StackPanel>

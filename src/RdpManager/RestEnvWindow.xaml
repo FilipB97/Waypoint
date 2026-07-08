@@ -17,13 +17,20 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="Bd" CornerRadius="6" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
-                            <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
+                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.12"/></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0.12" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
                         </ControlTemplate.Triggers>
@@ -49,7 +56,7 @@
                          Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
                 <Button Grid.Column="2" Style="{StaticResource EnvIconBtn}" Width="28" Padding="0" Click="DeleteVar_Click"
                         ToolTip="{DynamicResource S.rest.remove}" AutomationProperties.Name="{DynamicResource S.rest.remove}">
-                    <ui:SymbolIcon Symbol="Dismiss20" FontSize="14"/>
+                    <ui:SymbolIcon Symbol="Dismiss20" FontSize="{StaticResource IconSm}"/>
                 </Button>
             </Grid>
         </DataTemplate>
@@ -64,7 +71,7 @@
 
         <ui:TitleBar x:Name="WinTitleBar" Grid.Row="0" Title=""/>
 
-        <Grid Grid.Row="1" Margin="18,4,18,4">
+        <Grid Grid.Row="1" Margin="{StaticResource DialogContentMarginTight}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
@@ -83,17 +90,17 @@
                          BorderThickness="1" BorderBrush="{DynamicResource Border}" Background="Transparent"/>
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,6,0,0">
                     <Button Style="{StaticResource EnvIconBtn}" ToolTip="{DynamicResource S.rest.env.newenv}" AutomationProperties.Name="{DynamicResource S.rest.env.newenv}" Click="AddEnv_Click">
-                        <ui:SymbolIcon Symbol="Add20" FontSize="15"/>
+                        <ui:SymbolIcon Symbol="Add20" FontSize="{StaticResource IconMd}"/>
                     </Button>
                     <Button Style="{StaticResource EnvIconBtn}" ToolTip="{DynamicResource S.rest.rename}" AutomationProperties.Name="{DynamicResource S.rest.rename}" Click="RenameEnv_Click">
-                        <ui:SymbolIcon Symbol="Rename24" FontSize="15"/>
+                        <ui:SymbolIcon Symbol="Rename24" FontSize="{StaticResource IconMd}"/>
                     </Button>
                     <Button Style="{StaticResource EnvIconBtn}" ToolTip="{DynamicResource S.rest.delete}" AutomationProperties.Name="{DynamicResource S.rest.delete}" Click="DeleteEnv_Click">
-                        <ui:SymbolIcon Symbol="Delete24" FontSize="15"/>
+                        <ui:SymbolIcon Symbol="Delete24" FontSize="{StaticResource IconMd}"/>
                     </Button>
                     <Border Width="1" Margin="3,5" Background="{DynamicResource Border}"/>
                     <Button Style="{StaticResource EnvIconBtn}" ToolTip="{DynamicResource S.rest.env.import}" AutomationProperties.Name="{DynamicResource S.rest.env.import}" Click="ImportEnv_Click">
-                        <ui:SymbolIcon Symbol="ArrowImport24" FontSize="15"/>
+                        <ui:SymbolIcon Symbol="ArrowImport24" FontSize="{StaticResource IconMd}"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -109,21 +116,21 @@
                 <TextBlock Grid.Row="0" Text="{DynamicResource S.rest.env.vars}" Foreground="{DynamicResource TextSec}"
                            FontWeight="SemiBold" Margin="2,0,0,4"/>
                 <TextBlock Grid.Row="1" Text="{DynamicResource S.rest.env.hint}" Foreground="{DynamicResource TextTer}"
-                           FontSize="11.5" TextWrapping="Wrap" Margin="2,0,0,6"/>
+                           FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="2,0,0,6"/>
                 <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                     <ItemsControl x:Name="VarsList" ItemTemplate="{StaticResource EnvVarRow}" Margin="2,0"/>
                 </ScrollViewer>
                 <Button Grid.Row="3" HorizontalAlignment="Left" Margin="2,6,0,0" Style="{StaticResource EnvIconBtn}"
                         Click="AddVar_Click" Foreground="{DynamicResource Accent}" AutomationProperties.Name="{DynamicResource S.rest.add}">
                     <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="Add20" FontSize="14"/>
+                        <ui:SymbolIcon Symbol="Add20" FontSize="{StaticResource IconSm}"/>
                         <TextBlock Text="{DynamicResource S.rest.add}" Margin="6,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </Grid>
         </Grid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,4,18,16">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource DialogButtonRowMargin}">
             <ui:Button Content="{DynamicResource S.rest.env.close}" Appearance="Primary" Click="Close_Click" MinWidth="90" IsDefault="True" IsCancel="True"/>
         </StackPanel>
     </Grid>

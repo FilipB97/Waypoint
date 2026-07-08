@@ -17,19 +17,19 @@
 
         <ui:TitleBar x:Name="Bar" Grid.Row="0" Title="{DynamicResource S.update.title}"/>
 
-        <TextBlock x:Name="HeaderText" Grid.Row="1" Margin="20,6,20,10" FontSize="18" FontWeight="SemiBold"
+        <TextBlock x:Name="HeaderText" Grid.Row="1" Margin="20,6,20,10" FontSize="{StaticResource FontTitle}" FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrim}" TextWrapping="Wrap"/>
 
         <!-- Notatki wydania (markdown z GitHuba) — renderowane, przewijalne. -->
         <Border Grid.Row="2" Margin="20,0,20,0" Background="{DynamicResource Panel}"
-                BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="10">
+                BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusLg}">
             <FlowDocumentScrollViewer x:Name="NotesView" IsTabStop="False" Padding="0"
                      Foreground="{DynamicResource TextSec}"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"/>
         </Border>
 
-        <StackPanel Grid.Row="3" Margin="20,14,20,18">
-            <TextBlock x:Name="WarnText" Foreground="{DynamicResource TextTer}" FontSize="12" TextWrapping="Wrap"
+        <StackPanel Grid.Row="3" Margin="{StaticResource DialogButtonRowMargin}">
+            <TextBlock x:Name="WarnText" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap"
                        Margin="0,0,0,12" Visibility="Collapsed" Text="{DynamicResource S.update.willrestart}"/>
             <Grid>
                 <TextBlock VerticalAlignment="Center" HorizontalAlignment="Left">

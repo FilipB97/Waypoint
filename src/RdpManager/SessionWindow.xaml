@@ -22,7 +22,7 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar x:Name="WinTitleBar" Grid.Row="0" Title="Sesja">
-            <ui:TitleBar.Icon><ui:SymbolIcon Symbol="Desktop24" Foreground="#2657D6"/></ui:TitleBar.Icon>
+            <ui:TitleBar.Icon><ui:SymbolIcon Symbol="Desktop24" Foreground="{DynamicResource Accent}"/></ui:TitleBar.Icon>
         </ui:TitleBar>
 
         <Border x:Name="Toolbar" Grid.Row="1" Background="{DynamicResource Panel}"
@@ -54,7 +54,7 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
                     <ui:ProgressRing x:Name="Spinner" IsIndeterminate="True" Width="46" Height="46"
                                      Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,0,0,18"/>
-                    <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}" FontSize="16"
+                    <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontSubtitle}"
                                FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="OverlayMsg" Foreground="{DynamicResource TextSec}" HorizontalAlignment="Center"
                                TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
@@ -67,7 +67,7 @@
         <!-- pasek pełnoekranowy (auto-hide) -->
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
-            <Border Background="{DynamicResource FsBarBg}" CornerRadius="10" Padding="14,7" Margin="12,4,12,12"
+            <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,7" Margin="12,4,12,12"
                     BorderBrush="{DynamicResource Border}" BorderThickness="1">
                 <Border.Effect><DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/></Border.Effect>
                 <StackPanel Orientation="Horizontal">
@@ -75,7 +75,7 @@
                         <Thumb.Template>
                             <ControlTemplate TargetType="Thumb">
                                 <Border Background="Transparent">
-                                    <TextBlock Text="⠿" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="⠿" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                                 </Border>
                             </ControlTemplate>
                         </Thumb.Template>
@@ -83,7 +83,7 @@
                     <TextBlock x:Name="FsName" Foreground="{DynamicResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
                     <ui:Button x:Name="FsPinBtn" Content="{DynamicResource S.fs.pin}" Appearance="Secondary" Click="FsPin_Click" Margin="0,0,6,0"/>
-                    <ui:Button Content="{DynamicResource S.tip.minimize}" Appearance="Secondary" Click="FsMinimize_Click" Margin="0,0,6,0"/>
+                    <ui:Button Content="{DynamicResource S.fs.minimize}" Appearance="Secondary" Click="FsMinimize_Click" Margin="0,0,6,0"/>
                     <ui:Button Content="{DynamicResource S.fs.restore}" Appearance="Secondary" Click="Fullscreen_Click"/>
                 </StackPanel>
             </Border>

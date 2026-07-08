@@ -889,6 +889,7 @@ namespace RdpManager
             SettingsCats.SelectedIndex = 0;   // domyślna kategoria (Interfejs) → pokazuje pierwszą kartę
             SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
+            SetTermFontSize.Text = _settings.TerminalFontSize.ToString();
             SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
             SetBorder.SelectedIndex = _settings.WindowBorderColor == "System" ? 2
                                     : string.IsNullOrEmpty(_settings.WindowBorderColor) ? 0 : 1;
@@ -1129,6 +1130,7 @@ namespace RdpManager
         {
             if (int.TryParse(SetUiScale.Text.Trim(), out var us)) _settings.UiScale = Math.Clamp(us / 100.0, 0.7, 1.8);
             _settings.FullscreenBarDelayMs = int.TryParse(SetBarDelay.Text.Trim(), out var d) ? Math.Clamp(d, 0, 3000) : 450;
+            _settings.TerminalFontSize = int.TryParse(SetTermFontSize.Text.Trim(), out var tfs) ? Math.Clamp(tfs, 8, 24) : 14;
             _settings.DefaultPort = int.TryParse(SetDefaultPort.Text.Trim(), out var p) ? Math.Clamp(p, 1, 65535) : 3389;
             _settings.ColorDepth = ParseColorDepth();
             _settings.AutoReconnect = SetAutoReconnect.IsChecked == true;

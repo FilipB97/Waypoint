@@ -18,6 +18,10 @@ namespace RdpManager
         /// <summary>Motyw interfejsu: „Dark" | „Light" | „System".</summary>
         public string Theme { get; set; } = "Dark";
 
+        /// <summary>Domyślny rozmiar czcionki terminala (SSH/Telnet/Serial), 8-24. Ctrl+kółko w terminalu
+        /// zmienia go tylko na czas sesji — to jest wartość startowa dla nowych połączeń.</summary>
+        public int TerminalFontSize { get; set; } = 14;
+
         /// <summary>Kolor obwódki (krawędzi) okien: "" = brak kolorowej ramki (domyślnie), "System" = akcent
         /// Windows, "#RRGGBB" = wybrany kolor. Steruje atrybutem DWMWA_BORDER_COLOR na Windows 11.</summary>
         public string WindowBorderColor { get; set; } = "";

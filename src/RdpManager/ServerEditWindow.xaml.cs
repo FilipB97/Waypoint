@@ -310,11 +310,42 @@ namespace RdpManager
             return list;
         }
 
+        // Pola oznaczone czerwoną obwódką po nieudanej walidacji — czyszczone na początku każdej kolejnej próby.
+        private readonly List<Control> _invalidFields = new List<Control>();
+
+        private void MarkInvalid(Control field)
+        {
+            field.BorderBrush = (Brush)FindResource("Danger");
+            field.BorderThickness = new Thickness(1.5);
+            _invalidFields.Add(field);
+        }
+
+        private void ClearInvalidMarks()
+        {
+            foreach (var f in _invalidFields) { f.ClearValue(Control.BorderBrushProperty); f.ClearValue(Control.BorderThicknessProperty); }
+            _invalidFields.Clear();
+        }
+
+        // Zaznacza pole (czerwona obwódka) i przenosi tam fokus — najpierw przełączając zakładkę, jeśli
+        // pole leży poza aktualnie widoczną (bez tego Focus() nic by nie dał na niewidocznej karcie).
+        private void FocusInvalid(Control field, TabItem tab)
+        {
+            EditorTabs.SelectedItem = tab;
+            MarkInvalid(field);
+            field.Focus();
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e)
         {
+            ClearInvalidMarks();
+
             bool restProto = ProtocolCombo.SelectedIndex == 8;   // REST: kolekcja — URL bazowy opcjonalny
-            if (string.IsNullOrWhiteSpace(NameBox.Text) || (!restProto && string.IsNullOrWhiteSpace(HostBox.Text)))
+            bool needName = string.IsNullOrWhiteSpace(NameBox.Text);
+            bool needHost = !restProto && string.IsNullOrWhiteSpace(HostBox.Text);
+            if (needName || needHost)
             {
+                if (needName && needHost) MarkInvalid(HostBox);   // drugie puste pole — dodatkowo, bez przenoszenia tam fokusu
+                FocusInvalid(needName ? NameBox : HostBox, TabConn);
                 MessageBox.Show(LocalizationManager.S("S.se.needname"), LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -342,6 +373,7 @@ namespace RdpManager
             var tunnels = TunnelSpec.ParseAll(TunnelsBox.Text, out string badTunnel);
             if (ssh && badTunnel != null)
             {
+                FocusInvalid(TunnelsBox, TabAuth);
                 MessageBox.Show(string.Format(LocalizationManager.S("S.se.tunnels.bad"), badTunnel),
                     LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -349,6 +381,7 @@ namespace RdpManager
             string macText = MacBox.Text.Trim();
             if (macText.Length > 0 && !WakeOnLan.TryParseMac(macText, out _))
             {
+                FocusInvalid(MacBox, TabConn);
                 MessageBox.Show(string.Format(LocalizationManager.S("S.se.mac.bad"), macText),
                     LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -357,6 +390,7 @@ namespace RdpManager
             bool netPort = rdp || ssh || vnc || sftp || ftp || protocol == RemoteProtocol.Telnet;
             if (netPort && (!int.TryParse(PortBox.Text.Trim(), out var portVal) || portVal < 1 || portVal > 65535))
             {
+                FocusInvalid(PortBox, TabConn);
                 MessageBox.Show(LocalizationManager.S("S.se.port.bad"),
                     LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
