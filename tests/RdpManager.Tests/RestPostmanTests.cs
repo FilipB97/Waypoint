@@ -36,7 +36,8 @@ namespace RdpManager.Tests
         ""auth"": { ""type"": ""basic"", ""basic"": [ { ""key"": ""username"", ""value"": ""u"" }, { ""key"": ""password"", ""value"": ""p"" } ] }
       }
     }
-  ]
+  ],
+  ""variable"": [ { ""key"": ""base_url"", ""value"": ""https://api.example.com"" } ]
 }";
 
         [Fact]
@@ -80,6 +81,16 @@ namespace RdpManager.Tests
             Assert.Equal(2, post.AuthType);
             Assert.Equal("u", post.AuthUsername);
             Assert.Equal("p", r.Secrets[post.AuthCredTarget]);
+        }
+
+        [Fact]
+        public void Parse_ImportsCollectionVariablesAsEnvironment()
+        {
+            var r = PostmanImport.Parse(Sample);
+            Assert.Single(r.Collection.Environments);
+            var env = r.Collection.Environments[0];
+            Assert.Contains(env.Variables, v => v.Key == "base_url" && v.Value == "https://api.example.com");
+            Assert.Equal(env.Id, r.Collection.ActiveEnvironmentId);
         }
 
         [Fact]

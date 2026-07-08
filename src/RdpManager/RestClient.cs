@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using RdpManager.Models;
@@ -39,13 +40,14 @@ namespace RdpManager
         })
         { Timeout = TimeSpan.FromSeconds(60) };
 
-        /// <summary>Wysyła żądanie. <paramref name="authSecret"/> = token (Bearer) lub hasło (Basic) z Credential Manager.</summary>
-        public static async Task<RestResponse> SendAsync(RestRequest req, string authSecret, CancellationToken ct)
+        /// <summary>Wysyła żądanie. <paramref name="authSecret"/> = token (Bearer) lub hasło (Basic) z Credential Manager.
+        /// <paramref name="vars"/> = zmienne aktywnego środowiska podstawiane jako {{klucz}} (null = brak).</summary>
+        public static async Task<RestResponse> SendAsync(RestRequest req, string authSecret, IReadOnlyDictionary<string, string> vars, CancellationToken ct)
         {
             var sw = Stopwatch.StartNew();
             try
             {
-                using (var msg = Build(req, authSecret))
+                using (var msg = Build(req, authSecret, vars))
                 using (var resp = await Http.SendAsync(msg, HttpCompletionOption.ResponseContentRead, ct))
                 {
                     string body = await resp.Content.ReadAsStringAsync(ct);
@@ -80,9 +82,9 @@ namespace RdpManager
             }
         }
 
-        private static HttpRequestMessage Build(RestRequest req, string authSecret)
+        private static HttpRequestMessage Build(RestRequest req, string authSecret, IReadOnlyDictionary<string, string> vars)
         {
-            var msg = new HttpRequestMessage(new HttpMethod((req.Method ?? "GET").Trim().ToUpperInvariant()), BuildRequestUri(req));
+            var msg = new HttpRequestMessage(new HttpMethod((req.Method ?? "GET").Trim().ToUpperInvariant()), BuildRequestUri(req, vars));
 
             // Body tylko dla metod, które go niosą, i gdy niepuste.
             bool hasBody = !string.IsNullOrEmpty(req.Body)
@@ -96,39 +98,50 @@ namespace RdpManager
 
             if (hasBody)
             {
-                msg.Content = new StringContent(req.Body, Encoding.UTF8);
+                msg.Content = new StringContent(Subst(req.Body, vars), Encoding.UTF8);
                 if (!string.IsNullOrWhiteSpace(contentType))
                 {
-                    try { msg.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType); } catch { /* zła wartość → zostaje domyślny */ }
+                    try { msg.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(Subst(contentType, vars)); } catch { /* zła wartość → zostaje domyślny */ }
                 }
             }
 
             foreach (var h in req.Headers.Where(h => h.Enabled && !string.IsNullOrWhiteSpace(h.Key)))
             {
                 if (string.Equals(h.Key, "Content-Type", StringComparison.OrdinalIgnoreCase)) continue;   // ustawione na treści
-                if (!msg.Headers.TryAddWithoutValidation(h.Key, h.Value))
-                    msg.Content?.Headers.TryAddWithoutValidation(h.Key, h.Value);
+                string val = Subst(h.Value, vars);
+                if (!msg.Headers.TryAddWithoutValidation(h.Key, val))
+                    msg.Content?.Headers.TryAddWithoutValidation(h.Key, val);
             }
 
             // Uwierzytelnianie z zakładki Auth nadpisuje ewentualny ręczny nagłówek Authorization.
-            if (req.AuthType == 1 && !string.IsNullOrEmpty(authSecret))
-                msg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authSecret);
+            string secret = Subst(authSecret, vars);
+            if (req.AuthType == 1 && !string.IsNullOrEmpty(secret))
+                msg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
             else if (req.AuthType == 2)
                 msg.Headers.Authorization = new AuthenticationHeaderValue("Basic",
-                    Convert.ToBase64String(Encoding.UTF8.GetBytes((req.AuthUsername ?? "") + ":" + (authSecret ?? ""))));
+                    Convert.ToBase64String(Encoding.UTF8.GetBytes(Subst(req.AuthUsername ?? "", vars) + ":" + (secret ?? ""))));
 
             return msg;
         }
 
-        /// <summary>Buduje docelowy URI: dokleja włączone parametry zapytania i uzupełnia schemat (https) gdy brak. Publiczne dla testów.</summary>
-        public static Uri BuildRequestUri(RestRequest req)
+        // Podstawia {{klucz}} wartościami zmiennych (nieznane {{x}} zostają bez zmian). Publiczne dla testów.
+        public static string Subst(string s, IReadOnlyDictionary<string, string> vars)
         {
-            string url = (req.Url ?? "").Trim();
+            if (string.IsNullOrEmpty(s) || vars == null || vars.Count == 0) return s ?? "";
+            return Regex.Replace(s, @"\{\{\s*([^{}\s]+)\s*\}\}",
+                m => vars.TryGetValue(m.Groups[1].Value, out var v) ? (v ?? "") : m.Value);
+        }
+
+        /// <summary>Buduje docelowy URI: podstawia {{zmienne}}, dokleja włączone parametry zapytania
+        /// i uzupełnia schemat (https) gdy brak. Publiczne dla testów.</summary>
+        public static Uri BuildRequestUri(RestRequest req, IReadOnlyDictionary<string, string> vars = null)
+        {
+            string url = Subst((req.Url ?? "").Trim(), vars);
             if (url.Length > 0 && !url.Contains("://")) url = "https://" + url;
 
             var qp = req.QueryParams
                 .Where(p => p.Enabled && !string.IsNullOrWhiteSpace(p.Key))
-                .Select(p => Uri.EscapeDataString(p.Key) + "=" + Uri.EscapeDataString(p.Value ?? ""))
+                .Select(p => Uri.EscapeDataString(Subst(p.Key, vars)) + "=" + Uri.EscapeDataString(Subst(p.Value ?? "", vars)))
                 .ToList();
             if (qp.Count > 0)
                 url += (url.Contains("?") ? "&" : "?") + string.Join("&", qp);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -56,6 +57,7 @@ namespace RdpManager
         private CancellationTokenSource _cts;
         private string _rawBody;
         private bool _loading;
+        private bool _envLoading;
 
         private static readonly string[] Methods = { "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS" };
 
@@ -74,7 +76,47 @@ namespace RdpManager
             _req = _coll.Requests[0];
             LoadIntoUi(_req);
             SelectNodeFor(_req);
+            BuildEnvCombo();
             UrlBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) Send_Click(s, e); };
+        }
+
+        // ---------- Środowiska ({{zmienne}}) ----------
+
+        private void BuildEnvCombo()
+        {
+            _envLoading = true;
+            EnvCombo.Items.Clear();
+            EnvCombo.Items.Add(new ComboBoxItem { Content = L("S.rest.env.none"), Tag = "" });
+            foreach (var env in _coll.Environments)
+                EnvCombo.Items.Add(new ComboBoxItem { Content = env.Name, Tag = env.Id });
+            int sel = 0;
+            for (int i = 1; i < EnvCombo.Items.Count; i++)
+                if ((EnvCombo.Items[i] as ComboBoxItem)?.Tag as string == _coll.ActiveEnvironmentId) { sel = i; break; }
+            EnvCombo.SelectedIndex = sel;
+            _envLoading = false;
+        }
+
+        private void EnvCombo_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (_envLoading) return;
+            _coll.ActiveEnvironmentId = (EnvCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
+        }
+
+        private void ManageEnv_Click(object sender, RoutedEventArgs e)
+        {
+            new RestEnvWindow(_coll) { Owner = Window.GetWindow(this) }.ShowDialog();
+            if (!_coll.Environments.Any(x => x.Id == _coll.ActiveEnvironmentId)) _coll.ActiveEnvironmentId = "";
+            BuildEnvCombo();
+        }
+
+        // Zmienne aktywnego środowiska do podstawiania {{klucz}} (null = brak środowiska).
+        private IReadOnlyDictionary<string, string> Vars()
+        {
+            var env = _coll.Environments.FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
+            if (env == null) return null;
+            var d = new Dictionary<string, string>();
+            foreach (var v in env.Variables) if (!string.IsNullOrWhiteSpace(v.Key)) d[v.Key] = v.Value ?? "";
+            return d;
         }
 
         // ---------- Drzewo kolekcji ----------
@@ -289,7 +331,7 @@ namespace RdpManager
             SendBtn.IsEnabled = false;
             SetStatus(L("S.rest.sending"));
 
-            var resp = await RestClient.SendAsync(_req, _req.AuthSecret, ct);
+            var resp = await RestClient.SendAsync(_req, _req.AuthSecret, Vars(), ct);
             if (ct.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk
 
             RenderResponse(resp);
