@@ -910,7 +910,7 @@ namespace RdpManager
         }
 
         // Lista serwerów do „Połącz na starcie": checkbox = auto-połączenie, przeciąganie (uchwyt ⠿) ustala
-        // KOLEJNOŚĆ uruchamiania. Wyświetlane najpierw zaznaczone (w zapisanej kolejności), potem reszta.
+        // KOLEJNOŚĆ uruchamiania. Serwery pogrupowane wg protokołu (nagłówki); w grupie: zapisana kolejność → nazwa.
         private void BuildAutoConnectList()
         {
             AutoConnectList.Children.Clear();
@@ -927,18 +927,36 @@ namespace RdpManager
 
             var ids = _settings.AutoConnectServerIds ?? new List<string>();
             var selected = new HashSet<string>(ids);
-            var ordered = new List<ServerInfo>();
-            foreach (var id in ids)
-            {
-                var s = servers.FirstOrDefault(v => v.Id == id);
-                if (s != null && !ordered.Contains(s)) ordered.Add(s);
-            }
-            foreach (var s in servers.OrderBy(v => v.Group).ThenBy(v => v.Name))
-                if (!ordered.Contains(s)) ordered.Add(s);
+            int SavedOrder(ServerInfo s) { int i = ids.IndexOf(s.Id); return i < 0 ? int.MaxValue : i; }
 
-            foreach (var s in ordered)
-                AutoConnectList.Children.Add(BuildAutoConnectRow(s, selected.Contains(s.Id)));
+            foreach (var grp in servers.GroupBy(s => s.Protocol).OrderBy(g => ProtocolOrder(g.Key)))
+            {
+                AutoConnectList.Children.Add(MakeAcHeader(ProtocolLabel(grp.Key), grp.Count()));
+                foreach (var s in grp.OrderBy(SavedOrder).ThenBy(v => v.Name, StringComparer.OrdinalIgnoreCase))
+                    AutoConnectList.Children.Add(BuildAutoConnectRow(s, selected.Contains(s.Id)));
+            }
         }
+
+        // Nagłówek grupy protokołu na liście autostartu (nieprzeciągalny — zapis pomija: OfType<Border>()).
+        private FrameworkElement MakeAcHeader(string label, int count) => new TextBlock
+        {
+            Text = label + "  ·  " + count,
+            Foreground = Res("TextTer"), FontSize = 11, FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(2, 8, 0, 3)
+        };
+
+        private static int ProtocolOrder(RemoteProtocol p) => p switch
+        {
+            RemoteProtocol.Rdp => 0,
+            RemoteProtocol.Ssh => 1,
+            RemoteProtocol.Sftp => 2,
+            RemoteProtocol.Ftp => 3,
+            RemoteProtocol.Vnc => 4,
+            RemoteProtocol.Telnet => 5,
+            RemoteProtocol.Serial => 6,
+            RemoteProtocol.Http => 7,
+            _ => 8
+        };
 
         // ---------- Profile poświadczeń (lista w Ustawieniach) ----------
         private void BuildProfilesList()
