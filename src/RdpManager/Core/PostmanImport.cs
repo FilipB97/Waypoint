@@ -35,6 +35,22 @@ namespace RdpManager.Core
             if (!string.IsNullOrWhiteSpace(name)) res.Name = name;
 
             WalkItems(items, "", res);
+
+            // Zmienne kolekcji ({{...}}) → środowisko. Jawne (jak w eksporcie Postmana) — nie na sekrety.
+            if (root.TryGetProperty("variable", out var vars) && vars.ValueKind == JsonValueKind.Array)
+            {
+                var env = new RestEnvironment { Name = res.Name };
+                foreach (var v in vars.EnumerateArray())
+                {
+                    string key = Str(v, "key");
+                    if (!string.IsNullOrWhiteSpace(key)) env.Variables.Add(new RestVariable { Key = key, Value = Str(v, "value") ?? "" });
+                }
+                if (env.Variables.Count > 0)
+                {
+                    res.Collection.Environments.Add(env);
+                    res.Collection.ActiveEnvironmentId = env.Id;
+                }
+            }
             return res;
         }
 

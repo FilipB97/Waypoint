@@ -37,6 +37,23 @@ namespace RdpManager.Tests
             var u = RestClient.BuildRequestUri(Req("https://x.test/a?z=0", ("q", "1", true)));
             Assert.Equal("https://x.test/a?z=0&q=1", u.AbsoluteUri);
         }
+
+        [Fact]
+        public void Subst_ReplacesKnown_LeavesUnknownAndNull()
+        {
+            var vars = new Dictionary<string, string> { ["a"] = "1", ["name"] = "bob" };
+            Assert.Equal("1/bob", RestClient.Subst("{{a}}/{{name}}", vars));
+            Assert.Equal("1{{b}}", RestClient.Subst("{{a}}{{b}}", vars));   // nieznana zostaje
+            Assert.Equal("{{a}}", RestClient.Subst("{{a}}", null));         // brak zmiennych = bez zmian
+        }
+
+        [Fact]
+        public void BuildUri_SubstitutesVariablesInUrlAndQuery()
+        {
+            var vars = new Dictionary<string, string> { ["base"] = "https://x.test", ["v"] = "9" };
+            var u = RestClient.BuildRequestUri(Req("{{base}}/u", ("id", "{{v}}", true)), vars);
+            Assert.Equal("https://x.test/u?id=9", u.AbsoluteUri);
+        }
     }
 
     public class RestStoreTests
