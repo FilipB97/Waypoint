@@ -175,9 +175,22 @@
                 </Border>
             </Grid>
 
-            <!-- Status -->
-            <TextBlock x:Name="StatusText" Grid.Row="3" Foreground="{DynamicResource TextTer}" FontSize="11"
-                       Margin="14,4,14,8" TextTrimming="CharacterEllipsis"/>
+            <!-- Status + postęp transferu -->
+            <Grid Grid.Row="3" Margin="14,4,14,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock x:Name="StatusText" Foreground="{DynamicResource TextTer}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                    <ProgressBar x:Name="TransferProgress" Visibility="Collapsed" Height="4" Margin="0,4,0,0"
+                                 Minimum="0" Maximum="100"/>
+                </StackPanel>
+                <Button x:Name="CancelTransferBtn" Grid.Column="1" Visibility="Collapsed" Style="{StaticResource FtIconBtn}"
+                        Width="24" Height="24" ToolTip="{DynamicResource S.sftp.cancel}" Click="CancelTransfer_Click" Margin="6,0,0,0">
+                    <ui:SymbolIcon Symbol="Dismiss24" FontSize="14"/>
+                </Button>
+            </Grid>
         </Grid>
     </Border>
 </UserControl>
