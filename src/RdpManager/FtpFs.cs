@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FluentFTP;
+using FluentFTP.Client.BaseClient;
 using RdpManager.Models;
 
 namespace RdpManager
 {
     /// <summary>
     /// FTP/FTPS przez FluentFTP (implementacja <see cref="IRemoteFs"/> — ten sam panel plików co SFTP).
-    /// Tryb szyfrowania i login anonimowy bierze z <see cref="ServerInfo"/>. Certyfikaty TLS akceptowane
-    /// bez pinowania (typowe dla wewnętrznych FTPS) — TOFU/pin certyfikatu poza zakresem v1.
+    /// Tryb szyfrowania i login anonimowy bierze z <see cref="ServerInfo"/>. Certyfikat TLS weryfikowany
+    /// przez TOFU/pinning (<see cref="Core.FtpsCertPinning"/>) — ten sam wzorzec co znane klucze hosta SSH.
     /// </summary>
     public sealed class FtpFs : IRemoteFs
     {
@@ -18,10 +19,14 @@ namespace RdpManager
         private readonly string _password;
         private FtpClient _c;
 
-        public FtpFs(ServerInfo server, string password)
+        /// <summary>(host:port, odcisk, czyZmianaCertyfikatu) → true = ufaj. Wołane z wątku FTP; obsługa marshaluje na UI.</summary>
+        public Func<string, string, bool, bool> TrustCertificate;
+
+        public FtpFs(ServerInfo server, string password, Func<string, string, bool, bool> trustCertificate = null)
         {
             _server = server;
             _password = password;
+            TrustCertificate = trustCertificate;
         }
 
         public bool IsConnected => _c != null && _c.IsConnected;
@@ -37,8 +42,45 @@ namespace RdpManager
                                      : _server.FtpEncryption == 2 ? FtpEncryptionMode.None
                                      : _server.FtpEncryption == 3 ? FtpEncryptionMode.Auto
                                      : FtpEncryptionMode.Explicit;   // domyślnie jawne FTPS
-            _c.Config.ValidateAnyCertificate = true;   // akceptuj self-signed (wewn. FTPS); pinowanie poza zakresem v1
+            _c.ValidateCertificate += OnValidateCertificate;   // TOFU/pin zamiast ValidateAnyCertificate (MITM)
             _c.Connect();
+        }
+
+        // TOFU: znany certyfikat → OK; nowy → pytanie (domyślnie ufaj); ZMIENIONY → pytanie z ostrzeżeniem
+        // (domyślnie odrzuć). FtpSslValidationEventArgs.Accept domyślnie false — wątpliwość = odmowa.
+        private void OnValidateCertificate(BaseFtpClient control, FtpSslValidationEventArgs e)
+        {
+            try
+            {
+                string fp = Core.FtpsCertPinning.Fingerprint(e.Certificate);
+                int port = _server.Port > 0 ? _server.Port : 21;
+                string hostPort = _server.Host + ":" + port;
+
+                // Odczyt→sprawdzenie pod lockiem, zwolniony PRZED pytaniem o zaufanie (ask marshaluje na UI,
+                // blokująco) — jak w SshConnectionFactory.OnHostKey, z tego samego powodu (uniknąć zakleszczenia).
+                bool changed;
+                lock (Core.FtpsCertPinning.Sync)
+                {
+                    var store = Core.FtpsCertPinning.Load(SettingsStore.Dir);
+                    var status = Core.FtpsCertPinning.Check(store, _server.Host, port, fp);
+                    if (status == Core.FtpsCertPinning.Status.Match) { e.Accept = true; return; }
+                    changed = status == Core.FtpsCertPinning.Status.Mismatch;
+                }
+
+                var ask = TrustCertificate;
+                bool trust = ask != null ? ask(hostPort, fp, changed) : !changed;
+                if (trust)
+                {
+                    lock (Core.FtpsCertPinning.Sync)
+                    {
+                        var store = Core.FtpsCertPinning.Load(SettingsStore.Dir);
+                        store[Core.FtpsCertPinning.EntryKey(_server.Host, port)] = fp;
+                        Core.FtpsCertPinning.Save(SettingsStore.Dir, store);
+                    }
+                }
+                e.Accept = trust;
+            }
+            catch { e.Accept = false; }   // wątpliwość = odmowa (bezpieczny domyślny)
         }
 
         public string HomeDirectory => _c.GetWorkingDirectory();
@@ -81,12 +123,15 @@ namespace RdpManager
         private ServerInfo _server;
         private string _password;
 
+        /// <summary>(host:port, odcisk, czyZmianaCertyfikatu) → true = ufaj. Przekazywane do każdego <see cref="FtpFs"/>.</summary>
+        public Func<string, string, bool, bool> TrustCertificate;
+
         public void SetIdentity(ServerInfo server, string password)
         {
             _server = server;
             _password = password;
         }
 
-        public IRemoteFs NewFs() => new FtpFs(_server, _password);
+        public IRemoteFs NewFs() => new FtpFs(_server, _password, TrustCertificate);
     }
 }

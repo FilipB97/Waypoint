@@ -2217,7 +2217,7 @@ namespace RdpManager
             else if (server.Protocol == RemoteProtocol.Ftp)
             {
                 // FTP/FTPS jako osobny protokół: ten sam panel plików (IRemoteFs), konektor FluentFTP.
-                var conn = new FtpConnector();
+                var conn = new FtpConnector { TrustCertificate = AskTrustFtpsCert };   // TOFU certyfikatu (dialog na wątku UI)
                 var panel = new DualFilePanel(() => conn.NewFs());
                 SessionContainer.Children.Add(panel);
                 session = new Session(server, panel, conn);
@@ -3570,6 +3570,14 @@ namespace RdpManager
                 "", masked: true) { Owner = this };
             return dlg.ShowDialog() == true ? dlg.Value : null;
         }));
+
+        // TOFU certyfikatu FTPS — ten sam wzorzec co AskTrustHostKey (SSH), inny magazyn (FtpsCertPinning).
+        private bool AskTrustFtpsCert(string hostPort, string fp, bool changed) => (bool)Dispatcher.Invoke(new Func<bool>(() =>
+            MessageBox.Show(this,
+                string.Format(L(changed ? "S.ftps.cert.changed" : "S.ftps.cert.new"), hostPort, fp),
+                L("S.ftps.cert.title"), MessageBoxButton.YesNo,
+                changed ? MessageBoxImage.Warning : MessageBoxImage.Question,
+                changed ? MessageBoxResult.No : MessageBoxResult.Yes) == MessageBoxResult.Yes));
 
         // SFTP jako osobny protokół: panel łączy się leniwie; identyczność (login z profilu) + hasło ustawiamy tutaj.
         private void ConnectFiles(Session s)
