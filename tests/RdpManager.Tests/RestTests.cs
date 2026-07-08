@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using RdpManager;
 using RdpManager.Models;
 using Xunit;
@@ -197,11 +198,11 @@ namespace RdpManager.Tests
             };
             string srcReqId = src.Requests[0].Id;
 
-            var copy = RestStore.DeepCopy(src, out var map);
+            var copy = RestStore.DeepCopy(src, out var reqMap, out _);
 
             Assert.Single(copy.Requests);
             Assert.NotEqual(srcReqId, copy.Requests[0].Id);        // świeże Id
-            Assert.Equal(copy.Requests[0].Id, map[srcReqId]);      // mapa stare→nowe
+            Assert.Equal(copy.Requests[0].Id, reqMap[srcReqId]);   // mapa stare→nowe
             Assert.Equal("POST", copy.Requests[0].Method);
             Assert.Single(copy.Folders);
             Assert.Equal("v", copy.Environments[0].Variables[0].Value);
@@ -209,6 +210,32 @@ namespace RdpManager.Tests
             // źródło nietknięte
             Assert.Equal(srcReqId, src.Requests[0].Id);
             Assert.Single(src.History);
+        }
+
+        [Fact]
+        public void DeepCopy_FreshFolderIds_RewritesParentAndFolderIdReferences()
+        {
+            var src = new RestCollection();
+            var parent = new RestFolder { Name = "Parent" };
+            var child = new RestFolder { Name = "Child", ParentId = parent.Id };
+            src.Folders.Add(parent);
+            src.Folders.Add(child);
+            src.Requests.Add(new RestRequest { Name = "R", FolderId = child.Id });
+            string parentOldId = parent.Id, childOldId = child.Id;
+
+            var copy = RestStore.DeepCopy(src, out _, out var folderMap);
+
+            var newParent = copy.Folders.First(f => f.Name == "Parent");
+            var newChild = copy.Folders.First(f => f.Name == "Child");
+            Assert.NotEqual(parentOldId, newParent.Id);
+            Assert.NotEqual(childOldId, newChild.Id);
+            Assert.Equal(newParent.Id, folderMap[parentOldId]);
+            Assert.Equal(newChild.Id, folderMap[childOldId]);
+            Assert.Equal(newParent.Id, newChild.ParentId);         // referencja przepisana na nowe Id
+            Assert.Equal(newChild.Id, copy.Requests[0].FolderId);  // referencja żądania też przepisana
+            // źródło nietknięte
+            Assert.Equal(parentOldId, parent.Id);
+            Assert.Equal(parentOldId, child.ParentId);
         }
     }
 }

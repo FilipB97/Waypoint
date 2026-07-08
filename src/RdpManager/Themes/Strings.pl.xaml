@@ -480,6 +480,12 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.auth.user">Login</sys:String>
     <sys:String x:Key="S.rest.auth.pass">Hasło</sys:String>
     <sys:String x:Key="S.rest.auth.hint">Sekret (token / hasło) trafia do Menedżera poświadczeń Windows, nie do pliku.</sys:String>
+    <sys:String x:Key="S.rest.auth.inherit">Dziedzicz</sys:String>
+    <sys:String x:Key="S.rest.auth.inherit.desc">Dziedziczy z: {0} ({1})</sys:String>
+    <sys:String x:Key="S.rest.authmgr.open">Uwierzytelnianie kolekcji</sys:String>
+    <sys:String x:Key="S.rest.authmgr.title">Uwierzytelnianie kolekcji</sys:String>
+    <sys:String x:Key="S.rest.authmgr.root">Kolekcja (główne)</sys:String>
+    <sys:String x:Key="S.rest.authmgr.list">Kolekcja i foldery</sys:String>
     <sys:String x:Key="S.rest.pretty">Formatuj JSON</sys:String>
     <sys:String x:Key="S.rest.copy">Kopiuj treść</sys:String>
     <sys:String x:Key="S.rest.resp.body">Treść</sys:String>

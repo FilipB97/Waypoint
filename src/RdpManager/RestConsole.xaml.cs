@@ -355,10 +355,24 @@ namespace RdpManager
 
         // ---------- Wczytanie / zapis żądania ----------
 
+        // Cel w Credential Managerze dla auth CAŁEJ kolekcji (korzeń dziedziczenia) — kolekcja nie zna
+        // własnego Id (kluczowana zewnętrznie po Id wpisu), więc liczymy to tutaj z _server.Id.
+        private string CollAuthCredTarget => "RdpManager:restcoll:" + _server.Id;
+
         private void LoadSecrets()
         {
             foreach (var r in _coll.Requests)
                 r.AuthSecret = CredentialStore.TryRead(r.AuthCredTarget, out var s) ? s : "";
+            foreach (var f in _coll.Folders)
+                f.AuthSecret = CredentialStore.TryRead(f.AuthCredTarget, out var s) ? s : "";
+            _coll.AuthSecret = CredentialStore.TryRead(CollAuthCredTarget, out var cs) ? cs : "";
+        }
+
+        private void CollectionAuth_Click(object sender, RoutedEventArgs e)
+        {
+            bool committed = new RestAuthWindow(_coll, CollAuthCredTarget) { Owner = Window.GetWindow(this) }.ShowDialog() == true;
+            if (committed) RestStore.Put(_server.Id, _coll);   // od razu, nie czekamy na „Zapisz" (lekcja PR #100)
+            UpdateAuthPanels();   // opis dziedziczenia mógł się zmienić, jeśli aktywne żądanie ma "Dziedzicz"
         }
 
         private void LoadIntoUi(RestRequest req)
@@ -377,7 +391,7 @@ namespace RdpManager
                 req.FormFields.Count > 0 ? req.FormFields : isForm ? ParseLegacyFormBody(req.Body) : new List<RestKeyValue>());
             FormFieldsList.ItemsSource = _formFields;
             UpdateBodyMode();
-            AuthCombo.SelectedIndex = Math.Clamp(req.AuthType, 0, 2);
+            AuthCombo.SelectedIndex = Math.Clamp(req.AuthType, 0, 3);
             AuthUserBox.Text = req.AuthUsername;
             TokenBox.Password = req.AuthType == 1 ? (req.AuthSecret ?? "") : "";
             AuthPassBox.Password = req.AuthType == 2 ? (req.AuthSecret ?? "") : "";
@@ -433,6 +447,9 @@ namespace RdpManager
 
             // Skrypty i wysyłka na KOPII żądania — mutacje z pre-skryptu nie brudzą zapisanego żądania.
             var eff = CloneForSend(_req);
+            // AuthType=Dziedzicz na klonie zastępujemy już ROZWIĄZANYM (folder → nadfolder → kolekcja) —
+            // RestClient nie zna dziedziczenia, dostaje zawsze gotowy, jawny typ.
+            (eff.AuthType, eff.AuthUsername, eff.AuthSecret) = ResolveEffectiveAuth(_req);
             var pre = RestScript.Run(_req.PreScript, eff, null, GetScriptVar, SetScriptVar, UnsetScriptVar);
             if (!pre.Ok)
             {
@@ -579,6 +596,28 @@ namespace RdpManager
             int i = AuthCombo.SelectedIndex;
             BearerPanel.Visibility = i == 1 ? Visibility.Visible : Visibility.Collapsed;
             BasicPanel.Visibility = i == 2 ? Visibility.Visible : Visibility.Collapsed;
+            bool inherit = i == RestAuthResolve.Inherit;
+            InheritHint.Visibility = inherit ? Visibility.Visible : Visibility.Collapsed;
+            if (inherit && _req != null) InheritHint.Text = DescribeInheritedAuth(_req);
+        }
+
+        // Rozwiązuje efektywne uwierzytelnianie żądania: jawny typ używany wprost; "Dziedzicz" idzie w górę
+        // łańcucha folderów (ParentId) aż do pierwszego jawnego poziomu, na końcu do korzenia kolekcji.
+        private (int type, string username, string secret) ResolveEffectiveAuth(RestRequest req)
+        {
+            if (req.AuthType != RestAuthResolve.Inherit) return (req.AuthType, req.AuthUsername, req.AuthSecret);
+            var (t, u, s, _) = RestAuthResolve.Resolve(_coll, req.FolderId);
+            return (t, u, s);
+        }
+
+        // Opis "skąd" dla podpowiedzi w UI (bez sekretu) — dokładnie ta klasa błędu, która wywołała tę funkcję:
+        // użytkownik widzi "Dziedziczy", ale nie wie skąd i czy tam w ogóle coś jest ustawione.
+        private string DescribeInheritedAuth(RestRequest req)
+        {
+            var (type, _, _, source) = RestAuthResolve.Resolve(_coll, req.FolderId);
+            string place = source != null ? source.Name : L("S.rest.collection");
+            string typeLabel = type == 1 ? L("S.rest.auth.bearer") : type == 2 ? L("S.rest.auth.basic") : L("S.rest.auth.none");
+            return string.Format(L("S.rest.auth.inherit.desc"), place, typeLabel);
         }
 
         private string SelectedMethod() => (MethodCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "GET";
