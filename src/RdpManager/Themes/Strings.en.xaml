@@ -265,6 +265,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.renamegroup">Rename group…</sys:String>
     <sys:String x:Key="S.m.wol">Wake up (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplicate server…</sys:String>
+    <sys:String x:Key="S.m.dupcollection">Duplicate collection…</sys:String>
     <sys:String x:Key="S.m.copy">Copy</sys:String>
     <sys:String x:Key="S.m.copy.name">Name</sys:String>
     <sys:String x:Key="S.m.copy.host">Host / address</sys:String>

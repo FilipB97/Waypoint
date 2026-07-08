@@ -61,5 +61,21 @@ namespace RdpManager
             all[serverId] = collection;
             Save(all);
         }
+
+        /// <summary>Głęboka kopia kolekcji ze świeżymi Id żądań (do duplikowania wpisu). Historia czyszczona.
+        /// <paramref name="requestIdMap"/> = stare Id → nowe Id (do przeniesienia sekretów w Credential Manager).</summary>
+        public static RestCollection DeepCopy(RestCollection src, out Dictionary<string, string> requestIdMap)
+        {
+            requestIdMap = new Dictionary<string, string>();
+            var copy = JsonSerializer.Deserialize<RestCollection>(JsonSerializer.Serialize(src, Options)) ?? new RestCollection();
+            copy.History.Clear();
+            foreach (var r in copy.Requests)
+            {
+                string oldId = r.Id;
+                r.Id = System.Guid.NewGuid().ToString("N");   // nowy Id → osobny CredTarget (sekrety nie współdzielone)
+                requestIdMap[oldId] = r.Id;
+            }
+            return copy;
+        }
     }
 }
