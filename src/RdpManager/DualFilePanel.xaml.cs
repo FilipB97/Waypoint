@@ -49,24 +49,24 @@ namespace RdpManager
 
         private async void ToRemote_Click(object sender, RoutedEventArgs e)
         {
-            if (_local.TryGetSelectedFile(out var full, out _)) await _remote.TransferInLocalFileAsync(full);
+            if (_local.TryGetSelected(out var full, out _, out _)) await _remote.TransferInLocalFileAsync(full);
         }
 
         private async void ToLocal_Click(object sender, RoutedEventArgs e)
         {
-            if (_remote.TryGetSelectedFile(out var full, out var name)
-                && await _remote.TransferOutToLocalAsync(full, name, _local.CurrentDir))
+            if (_remote.TryGetSelected(out var full, out var name, out var isDir)
+                && await _remote.TransferOutToLocalAsync(full, name, isDir, _local.CurrentDir))
                 _local.RefreshAsync();
         }
 
         private async void OnDropOnRemote(FileDragData d)
         {
-            if (!d.IsDir) await _remote.TransferInLocalFileAsync(d.Full);   // d.Full = lokalna ścieżka
+            await _remote.TransferInLocalFileAsync(d.Full);   // plik lub katalog (d.Full = lokalna ścieżka)
         }
 
         private async void OnDropOnLocal(FileDragData d)
         {
-            if (!d.IsDir && await d.Source.TransferOutToLocalAsync(d.Full, d.Name, _local.CurrentDir))
+            if (await d.Source.TransferOutToLocalAsync(d.Full, d.Name, d.IsDir, _local.CurrentDir))
                 _local.RefreshAsync();
         }
     }
