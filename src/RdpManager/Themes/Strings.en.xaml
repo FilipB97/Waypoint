@@ -434,6 +434,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.tab.auth">Auth</sys:String>
     <sys:String x:Key="S.rest.add">Add</sys:String>
     <sys:String x:Key="S.rest.remove">Remove</sys:String>
+    <sys:String x:Key="S.rest.key">Key</sys:String>
+    <sys:String x:Key="S.rest.value">Value</sys:String>
     <sys:String x:Key="S.rest.body.type">Content type</sys:String>
     <sys:String x:Key="S.rest.auth.type">Type</sys:String>
     <sys:String x:Key="S.rest.auth.none">None</sys:String>

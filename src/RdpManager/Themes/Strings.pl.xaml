@@ -434,6 +434,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.tab.auth">Uwierzytelnianie</sys:String>
     <sys:String x:Key="S.rest.add">Dodaj</sys:String>
     <sys:String x:Key="S.rest.remove">Usuń</sys:String>
+    <sys:String x:Key="S.rest.key">Klucz</sys:String>
+    <sys:String x:Key="S.rest.value">Wartość</sys:String>
     <sys:String x:Key="S.rest.body.type">Typ treści</sys:String>
     <sys:String x:Key="S.rest.auth.type">Typ</sys:String>
     <sys:String x:Key="S.rest.auth.none">Brak</sys:String>
