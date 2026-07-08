@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using RdpManager.Core;
 
@@ -20,6 +21,7 @@ namespace RdpManager
             TypeCombo.SelectedIndex = 0;
             _ready = true;
             Generate();
+            PreviewKeyDown += (s, e) => { if (e.Key == Key.Escape) Close(); };
         }
 
         private void Length_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)

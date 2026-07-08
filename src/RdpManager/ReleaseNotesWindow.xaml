@@ -36,9 +36,9 @@
                     <Hyperlink x:Name="GithubLink" Click="Github_Click" Foreground="{DynamicResource Accent}"><Run Text="{DynamicResource S.update.viewgithub}"/></Hyperlink>
                 </TextBlock>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <ui:Button x:Name="CancelBtn" Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="96" Visibility="Collapsed"/>
+                    <ui:Button x:Name="CancelBtn" Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="96" Visibility="Collapsed" IsCancel="True"/>
                     <ui:Button x:Name="OkBtn" Content="{DynamicResource S.update.now}" Appearance="Primary" Click="Ok_Click" MinWidth="120" IsDefault="True" Visibility="Collapsed"/>
-                    <ui:Button x:Name="CloseBtn" Content="{DynamicResource S.m.close}" Appearance="Primary" Click="Close_Click" MinWidth="96" IsDefault="True" Visibility="Collapsed"/>
+                    <ui:Button x:Name="CloseBtn" Content="{DynamicResource S.m.close}" Appearance="Primary" Click="Close_Click" MinWidth="96" IsDefault="True" Visibility="Collapsed" IsCancel="True"/>
                 </StackPanel>
             </Grid>
         </StackPanel>

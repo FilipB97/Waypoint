@@ -25,6 +25,8 @@
     <sys:String x:Key="S.gen.pickclass">Wybierz co najmniej jedną klasę znaków</sys:String>
 
     <sys:String x:Key="S.search">Szukaj serwera…</sys:String>
+    <sys:String x:Key="S.tree.empty">Brak serwerów. Dodaj pierwszy przyciskiem „Dodaj serwer" poniżej.</sys:String>
+    <sys:String x:Key="S.tree.noresults">Brak wyników dla „{0}".</sys:String>
     <sys:String x:Key="S.quickConnect">Szybkie połączenie</sys:String>
     <sys:String x:Key="S.quickConnect.tip">Połącz bez zapisywania — podaj host, host:port, user@host lub DOMENA\user@host</sys:String>
     <sys:String x:Key="S.addServer">+ Dodaj serwer</sys:String>

@@ -1561,7 +1561,8 @@ namespace RdpManager
 
         private void RenderTree(string filter = null)
         {
-            filter = (filter ?? "").Trim().ToLowerInvariant();
+            string filterDisplay = (filter ?? "").Trim();
+            filter = filterDisplay.ToLowerInvariant();
             ServerTree.Children.Clear();
             _serverRows.Clear();
             _serverActivate.Clear();
@@ -1604,6 +1605,13 @@ namespace RdpManager
                     { ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
             }
             UpdateActiveRows();
+
+            // Pusty stan drzewa (3.1 z przeglądu): rozróżnij "w ogóle brak serwerów" od "filtr nic nie znalazł" —
+            // liczymy dopasowania, nie _visibleOrder (te pomija zwinięte grupy, więc byłoby mylące gdy wszystko zwinięte).
+            int matchCount = pinned.Count + byGroup.Values.Sum(l => l.Count);
+            if (_vm.Servers.Count == 0) { TreeEmptyHint.Text = L("S.tree.empty"); TreeEmptyHint.Visibility = Visibility.Visible; }
+            else if (matchCount == 0) { TreeEmptyHint.Text = string.Format(L("S.tree.noresults"), filterDisplay); TreeEmptyHint.Visibility = Visibility.Visible; }
+            else TreeEmptyHint.Visibility = Visibility.Collapsed;
         }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RenderTree(SearchBox.Text);

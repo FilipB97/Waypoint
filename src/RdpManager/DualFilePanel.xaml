@@ -15,10 +15,12 @@
         <!-- Środek: transfer w obie strony -->
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0">
             <ui:Button x:Name="PushBtn" Appearance="Secondary" ToolTip="{DynamicResource S.dual.push}"
+                       AutomationProperties.Name="{DynamicResource S.dual.push}"
                        Click="ToRemote_Click" Width="42" Height="36" Margin="0,0,0,10" Padding="0">
                 <ui:SymbolIcon Symbol="ArrowRight24"/>
             </ui:Button>
             <ui:Button x:Name="PullBtn" Appearance="Secondary" ToolTip="{DynamicResource S.dual.pull}"
+                       AutomationProperties.Name="{DynamicResource S.dual.pull}"
                        Click="ToLocal_Click" Width="42" Height="36" Padding="0">
                 <ui:SymbolIcon Symbol="ArrowLeft24"/>
             </ui:Button>

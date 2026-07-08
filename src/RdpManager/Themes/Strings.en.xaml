@@ -25,6 +25,8 @@
     <sys:String x:Key="S.gen.pickclass">Pick at least one character class</sys:String>
 
     <sys:String x:Key="S.search">Search servers…</sys:String>
+    <sys:String x:Key="S.tree.empty">No servers yet. Add your first one with the "Add server" button below.</sys:String>
+    <sys:String x:Key="S.tree.noresults">No results for "{0}".</sys:String>
     <sys:String x:Key="S.quickConnect">Quick connect</sys:String>
     <sys:String x:Key="S.quickConnect.tip">Connect without saving — enter host, host:port, user@host or DOMAIN\user@host</sys:String>
     <sys:String x:Key="S.addServer">+ Add server</sys:String>
