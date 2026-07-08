@@ -57,9 +57,12 @@ namespace RdpManager.Core
         /// <summary>
         /// Import osobnego pliku środowiska Postman (eksport „environment", z tablicą „values") → <see cref="RestEnvironment"/>.
         /// Wartości typu „secret" wczytujemy z PUSTĄ wartością (sekrety nie trafiają do jawnego rest.json — patrz zakładka Auth).
+        /// <paramref name="blankedSecretKeys"/> = klucze zmiennych, których wartość wyczyszczono (do ostrzeżenia w UI —
+        /// inaczej użytkownik po cichu dostaje pustą zmienną tam, gdzie w Postmanie była realna wartość).
         /// </summary>
-        public static RestEnvironment ParseEnvironment(string json)
+        public static RestEnvironment ParseEnvironment(string json, out List<string> blankedSecretKeys)
         {
+            blankedSecretKeys = new List<string>();
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("values", out var values) || values.ValueKind != JsonValueKind.Array)
@@ -71,6 +74,7 @@ namespace RdpManager.Core
                 string key = Str(v, "key");
                 if (string.IsNullOrWhiteSpace(key)) continue;
                 bool secret = string.Equals(Str(v, "type"), "secret", StringComparison.OrdinalIgnoreCase);
+                if (secret) blankedSecretKeys.Add(key);
                 env.Variables.Add(new RestVariable { Key = key, Value = secret ? "" : (Str(v, "value") ?? "") });
             }
             return env;

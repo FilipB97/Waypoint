@@ -82,7 +82,8 @@ namespace RdpManager
             if (dlg.ShowDialog(this) != true) return;
 
             RestEnvironment env;
-            try { env = Core.PostmanImport.ParseEnvironment(System.IO.File.ReadAllText(dlg.FileName)); }
+            List<string> blanked;
+            try { env = Core.PostmanImport.ParseEnvironment(System.IO.File.ReadAllText(dlg.FileName), out blanked); }
             catch (System.Exception ex)
             {
                 MessageBox.Show(ex.Message, L("S.rest.env.importtitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -92,6 +93,12 @@ namespace RdpManager
             env.Name = UniqueEnvName(string.IsNullOrWhiteSpace(env.Name) ? L("S.rest.env.newenv") : env.Name);
             _envs.Add(env);
             EnvList.SelectedItem = env;
+
+            // Postman oznaczył te zmienne jako „secret" — ich wartości NIE zaimportowano (nigdy jawnie w rest.json).
+            // Bez tego ostrzeżenia użytkownik po cichu dostaje puste zmienne tam, gdzie w Postmanie były realne wartości.
+            if (blanked.Count > 0)
+                MessageBox.Show(string.Format(L("S.rest.env.import.secretswarn"), string.Join(", ", blanked)),
+                    L("S.rest.env.importtitle"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void AddVar_Click(object sender, RoutedEventArgs e)

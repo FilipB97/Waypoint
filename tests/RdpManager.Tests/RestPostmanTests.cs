@@ -155,16 +155,17 @@ namespace RdpManager.Tests
                 { ""key"": ""base_url"", ""value"": ""https://dev.example.com"", ""type"": ""default"" },
                 { ""key"": ""token"", ""value"": ""abc"", ""type"": ""secret"" }
             ], ""_postman_variable_scope"": ""environment"" }";
-            var env = PostmanImport.ParseEnvironment(json);
+            var env = PostmanImport.ParseEnvironment(json, out var blanked);
             Assert.Equal("Dev", env.Name);
             Assert.Contains(env.Variables, v => v.Key == "base_url" && v.Value == "https://dev.example.com");
             Assert.Equal("", env.Variables.First(v => v.Key == "token").Value);   // sekret wyzerowany
+            Assert.Equal(new[] { "token" }, blanked);   // do ostrzeżenia w UI
         }
 
         [Fact]
         public void ParseEnvironment_NotAnEnvironment_Throws()
         {
-            Assert.Throws<InvalidOperationException>(() => PostmanImport.ParseEnvironment(@"{ ""foo"": 1 }"));
+            Assert.Throws<InvalidOperationException>(() => PostmanImport.ParseEnvironment(@"{ ""foo"": 1 }", out _));
         }
     }
 }
