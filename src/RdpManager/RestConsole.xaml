@@ -64,8 +64,65 @@
     </UserControl.Resources>
 
     <Border Background="{DynamicResource Panel}">
-        <Grid Margin="12,10,12,10">
-            <Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240" MinWidth="150"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Lewy panel: drzewo kolekcji (foldery + żądania) -->
+            <Border Grid.Column="0" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">
+                <Grid Margin="8,10,8,8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="2,0,0,6">
+                        <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextSec}"
+                                   FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.newreq}" Click="AddRequest_Click">
+                                <ui:SymbolIcon Symbol="DocumentAdd24" FontSize="16"/>
+                            </Button>
+                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.newfolder}" Click="AddFolder_Click">
+                                <ui:SymbolIcon Symbol="FolderAdd24" FontSize="16"/>
+                            </Button>
+                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.rename}" Click="Rename_Click">
+                                <ui:SymbolIcon Symbol="Rename24" FontSize="16"/>
+                            </Button>
+                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.delete}" Click="DeleteNode_Click">
+                                <ui:SymbolIcon Symbol="Delete24" FontSize="16"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                    <TreeView Grid.Row="1" x:Name="CollTree" BorderThickness="0" Background="Transparent"
+                              SelectedItemChanged="Tree_SelectionChanged">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal" Height="24">
+                                    <ui:SymbolIcon Symbol="{Binding Icon}" FontSize="15" Foreground="{Binding IconBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Name}" Margin="7,0,0,0" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextPrim}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                          Background="Transparent" ResizeBehavior="PreviousAndNext"/>
+
+            <!-- Prawy panel: budowniczy żądania + odpowiedź -->
+            <Grid Grid.Column="2" Margin="12,10,12,10">
+                <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>   <!-- pasek: metoda + URL + Wyślij/Zapisz -->
                 <RowDefinition Height="1.1*" MinHeight="150"/>   <!-- żądanie: zakładki -->
                 <RowDefinition Height="Auto"/>   <!-- splitter -->
@@ -291,6 +348,7 @@
 
             <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="{DynamicResource TextTer}" FontSize="11"
                        Margin="2,6,2,0" TextTrimming="CharacterEllipsis"/>
+            </Grid>
         </Grid>
     </Border>
 </UserControl>
