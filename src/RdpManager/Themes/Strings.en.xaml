@@ -388,6 +388,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.filezilla">FileZilla (sitemanager.xml)…</sys:String>
     <sys:String x:Key="S.import.hdr.remote">Desktops &amp; terminals</sys:String>
     <sys:String x:Key="S.import.hdr.files">File transfer</sys:String>
+    <sys:String x:Key="S.import.hdr.rest">REST / API</sys:String>
+    <sys:String x:Key="S.import.postman">Postman collection (.json)…</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Import from mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Import from RDCMan</sys:String>
@@ -396,9 +398,13 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dlg.rdm.filter">RDM export (*.rdm;*.xml)|*.rdm;*.xml|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importfz.title">Import from FileZilla</sys:String>
     <sys:String x:Key="S.dlg.fz.filter">FileZilla Site Manager (sitemanager.xml)|sitemanager.xml|XML (*.xml)|*.xml|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importpostman.title">Import from Postman</sys:String>
+    <sys:String x:Key="S.dlg.postman.filter">Postman collection (*.json)|*.json|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.msg.import.unsupported">Skipped unsupported protocols: {0}</sys:String>
     <sys:String x:Key="S.msg.import.nopass">Passwords are not migrated — you'll enter them on first connect.</sys:String>
     <sys:String x:Key="S.msg.import.withpass">{0} password(s) imported into Windows Credential Manager.</sys:String>
+    <sys:String x:Key="S.msg.postman.done">Imported collection: {0} request(s), {1} folder(s).</sys:String>
+    <sys:String x:Key="S.msg.postman.empty">No requests found in the file (is it a Postman v2.1 collection?).</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">The SSH terminal requires the WebView2 Runtime (built into Windows 11; on older systems install it from Microsoft).</sys:String>
     <!-- SFTP file panel -->

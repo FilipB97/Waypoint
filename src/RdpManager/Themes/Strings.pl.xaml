@@ -388,6 +388,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.filezilla">FileZilla (sitemanager.xml)…</sys:String>
     <sys:String x:Key="S.import.hdr.remote">Pulpit i terminale</sys:String>
     <sys:String x:Key="S.import.hdr.files">Transfer plików</sys:String>
+    <sys:String x:Key="S.import.hdr.rest">REST / API</sys:String>
+    <sys:String x:Key="S.import.postman">Kolekcja Postman (.json)…</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Importuj z mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Importuj z RDCMan</sys:String>
@@ -396,9 +398,13 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dlg.rdm.filter">Eksport RDM (*.rdm;*.xml)|*.rdm;*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importfz.title">Importuj z FileZilli</sys:String>
     <sys:String x:Key="S.dlg.fz.filter">Menedżer stron FileZilla (sitemanager.xml)|sitemanager.xml|XML (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.dlg.importpostman.title">Importuj z Postmana</sys:String>
+    <sys:String x:Key="S.dlg.postman.filter">Kolekcja Postman (*.json)|*.json|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.msg.import.unsupported">Pominięto nieobsługiwane protokoły: {0}</sys:String>
     <sys:String x:Key="S.msg.import.nopass">Hasła nie są przenoszone — podasz je przy pierwszym połączeniu.</sys:String>
     <sys:String x:Key="S.msg.import.withpass">Zaimportowano hasła do Menedżera poświadczeń Windows: {0}.</sys:String>
+    <sys:String x:Key="S.msg.postman.done">Zaimportowano kolekcję: {0} żądań, {1} folderów.</sys:String>
+    <sys:String x:Key="S.msg.postman.empty">W pliku nie znaleziono żądań (czy to kolekcja Postman v2.1?).</sys:String>
 
     <sys:String x:Key="S.ssh.nowebview">Terminal SSH wymaga składnika WebView2 Runtime (wbudowany w Windows 11; na starszych systemach doinstaluj go ze strony Microsoft).</sys:String>
     <!-- panel plików SFTP -->
