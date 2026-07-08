@@ -35,9 +35,14 @@ namespace RdpManager
         /// <summary>Konektor sesji plikowej: poświadczenia + fabryka <see cref="IRemoteFs"/> (null poza SFTP/FTP).</summary>
         public IFileConnector FilesConn { get; }
 
-        /// <summary>Element wizualny sesji w kontenerze (host RDP/VNC, terminal albo panel plików).</summary>
+        /// <summary>Konsola HTTP/REST — null poza protokołem Rest.</summary>
+        public RestConsole Rest { get; }
+        public bool IsRest => Rest != null;
+
+        /// <summary>Element wizualny sesji w kontenerze (host RDP/VNC, terminal, panel plików albo konsola REST).</summary>
         public FrameworkElement View => IsTerm ? (FrameworkElement)Term
                                       : IsFiles ? (FrameworkElement)Files
+                                      : IsRest ? (FrameworkElement)Rest
                                       : Host;
 
         public FrameworkElement TabButton { get; set; }
@@ -83,6 +88,13 @@ namespace RdpManager
             Server = server;
             Files = files;
             FilesConn = conn;
+        }
+
+        /// <summary>Sesja REST — konsola HTTP zamiast kontrolki/terminala; brak cyklu łączenia (gotowa od razu).</summary>
+        public Session(ServerInfo server, RestConsole rest)
+        {
+            Server = server;
+            Rest = rest;
         }
     }
 

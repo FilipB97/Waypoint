@@ -955,7 +955,8 @@ namespace RdpManager
             RemoteProtocol.Telnet => 5,
             RemoteProtocol.Serial => 6,
             RemoteProtocol.Http => 7,
-            _ => 8
+            RemoteProtocol.Rest => 8,
+            _ => 9
         };
 
         // ---------- Profile poświadczeń (lista w Ustawieniach) ----------
@@ -1511,6 +1512,7 @@ namespace RdpManager
             RemoteProtocol.Vnc => "VNC",
             RemoteProtocol.Sftp => "SFTP",
             RemoteProtocol.Ftp => "FTP",
+            RemoteProtocol.Rest => "REST",
             _ => p.ToString()
         };
 
@@ -2012,8 +2014,8 @@ namespace RdpManager
             }
             AddCopy("S.m.copy.name", () => server.Name);
             AddCopy("S.m.copy.host", () => server.Host);
-            if (server.Protocol != RemoteProtocol.Http)
-                AddCopy("S.m.copy.port", () => server.Port.ToString());
+            if (server.Protocol != RemoteProtocol.Http && server.Protocol != RemoteProtocol.Rest)
+                AddCopy("S.m.copy.port", () => server.Port.ToString());   // WWW/REST: URL niesie port
             if (rdp || server.Protocol == RemoteProtocol.Ssh || server.Protocol == RemoteProtocol.Sftp || server.Protocol == RemoteProtocol.Ftp)
             {
                 AddCopy("S.m.copy.user", () => EffUser(server));
@@ -2042,8 +2044,8 @@ namespace RdpManager
             menu.Items.Add(editItem);
             menu.Items.Add(dupItem);
             menu.Items.Add(copyMenu);
-            if (server.Protocol != RemoteProtocol.Serial && server.Protocol != RemoteProtocol.Http)
-                menu.Items.Add(diagItem);   // sonda TCP — nie dla COM/URL
+            if (server.Protocol != RemoteProtocol.Serial && server.Protocol != RemoteProtocol.Http && server.Protocol != RemoteProtocol.Rest)
+                menu.Items.Add(diagItem);   // sonda TCP — nie dla COM/URL/REST
             menu.Items.Add(wolItem);
             if (rdp) menu.Items.Add(exportItem);       // .rdp ma sens tylko dla RDP
             menu.Items.Add(new Separator());
@@ -2216,6 +2218,15 @@ namespace RdpManager
                 session = new Session(server, panel, conn);
                 WireFilesEvents(session);
             }
+            else if (server.Protocol == RemoteProtocol.Rest)
+            {
+                // REST: konsola HTTP jako widok sesji. Narzędzie bez cyklu łączenia — gotowe od razu.
+                var console = new RestConsole(server);
+                SessionContainer.Children.Add(console);
+                session = new Session(server, console);
+                session.Connected = true;
+                RecordRecent(server);
+            }
             else if (server.Protocol == RemoteProtocol.Vnc)
             {
                 // VNC (RemoteViewing) — kontrolka WinForms w hoście WPF, jak RDP. Zdarzenia wiążemy przy połączeniu.
@@ -2258,6 +2269,7 @@ namespace RdpManager
             session.TabButton = BuildTab(session);
             if (GroupOf(session) != null) RebuildTabStrip();   // serwer w grupie → renderuj w jej kontenerze
             else { TabStrip.Children.Add(session.TabButton); RefreshTabTitles(); }
+            if (session.IsRest) SetTabStatus(session, ServerStatus.Online);   // narzędzie: gotowe od razu
 
             Activate(session);
             if (autoConnect) BeginConnect(session);
@@ -3184,6 +3196,11 @@ namespace RdpManager
                 try { session.Files.DisposePanel(); } catch { }
                 SessionContainer.Children.Remove(session.Files);
             }
+            else if (session.IsRest)
+            {
+                try { session.Rest.DisposeConsole(); } catch { }
+                SessionContainer.Children.Remove(session.Rest);
+            }
             else
             {
                 try { session.Rdp.Disconnect(); } catch { /* nie połączona */ }
@@ -3239,6 +3256,7 @@ namespace RdpManager
         /// <summary>Łączy sesję; gdy brak poświadczeń (i nie konto Windows) — pyta o nie promptem.</summary>
         private void BeginConnect(Session s)
         {
+            if (s.IsRest) return;   // REST: narzędzie bez cyklu łączenia (wysyłka per żądanie w konsoli)
             if (CanAuto(s)) ConnectSession(s);
             else PromptAndConnect(s, null);
         }
@@ -3280,6 +3298,7 @@ namespace RdpManager
         /// <summary>Łączy sesję na podstawie jej modelu (bez odczytu z formularza) — używane też z flyoutu.</summary>
         private void ConnectSession(Session s)
         {
+            if (s.IsRest) return;   // REST: brak łączenia; wysyłka odbywa się w konsoli
             if (s.IsTerm) { ConnectTerm(s); return; }
             if (s.IsVnc) { ConnectVnc(s); return; }
             if (s.IsFiles) { ConnectFiles(s); return; }
@@ -3412,6 +3431,7 @@ namespace RdpManager
         private void Disconnect_Click(object sender, RoutedEventArgs e)
         {
             if (_active == null) return;
+            if (_active.IsRest) return;   // REST: brak połączenia do zerwania
             if (_active.IsTerm) { _active.Term.Disconnect(); return; }
             if (_active.IsVnc) { try { _active.Vnc.Client?.Close(); } catch { } return; }
             try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
@@ -4882,8 +4902,8 @@ namespace RdpManager
                 var servers = _vm.Servers.ToList();
                 var results = await Task.WhenAll(servers.Select(srv =>
                     Task.Run(() => new KeyValuePair<ServerInfo, ServerStatus>(srv,
-                        // Serial (COM) i WWW (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status.
-                        srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http
+                        // Serial (COM), WWW i REST (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status.
+                        srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http || srv.Protocol == RemoteProtocol.Rest
                             ? srv.Status : Probe(srv.Host, srv.Port)))));
 
                 foreach (var kv in results)

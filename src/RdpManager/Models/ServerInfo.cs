@@ -151,7 +151,8 @@ namespace RdpManager.Models
         Http,
         Vnc,
         Sftp,  // dopisywać na KOŃCU (enum serializowany po nazwie; kolejność ważna dla combo w edytorze)
-        Ftp
+        Ftp,
+        Rest   // klient HTTP/REST („wpis = jedno API"); Host = bazowy URL
     }
 
     /// <summary>Grupa serwerów w drzewie (Produkcja / Staging / Klienci …).</summary>

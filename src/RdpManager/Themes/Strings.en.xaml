@@ -424,6 +424,36 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dual.push">Send the selected file to the server →</sys:String>
     <sys:String x:Key="S.dual.pull">← Download the selected file to disk</sys:String>
 
+    <!-- REST/HTTP client -->
+    <sys:String x:Key="S.rest.urlph">https://api.example.com/…</sys:String>
+    <sys:String x:Key="S.rest.send">Send</sys:String>
+    <sys:String x:Key="S.rest.save">Save request</sys:String>
+    <sys:String x:Key="S.rest.tab.params">Params</sys:String>
+    <sys:String x:Key="S.rest.tab.headers">Headers</sys:String>
+    <sys:String x:Key="S.rest.tab.body">Body</sys:String>
+    <sys:String x:Key="S.rest.tab.auth">Auth</sys:String>
+    <sys:String x:Key="S.rest.add">Add</sys:String>
+    <sys:String x:Key="S.rest.remove">Remove</sys:String>
+    <sys:String x:Key="S.rest.body.type">Content type</sys:String>
+    <sys:String x:Key="S.rest.auth.type">Type</sys:String>
+    <sys:String x:Key="S.rest.auth.none">None</sys:String>
+    <sys:String x:Key="S.rest.auth.bearer">Bearer (token)</sys:String>
+    <sys:String x:Key="S.rest.auth.basic">Basic (user/pass)</sys:String>
+    <sys:String x:Key="S.rest.auth.token">Token</sys:String>
+    <sys:String x:Key="S.rest.auth.user">User</sys:String>
+    <sys:String x:Key="S.rest.auth.pass">Password</sys:String>
+    <sys:String x:Key="S.rest.auth.hint">The secret (token / password) goes to Windows Credential Manager, not to the file.</sys:String>
+    <sys:String x:Key="S.rest.pretty">Pretty JSON</sys:String>
+    <sys:String x:Key="S.rest.copy">Copy body</sys:String>
+    <sys:String x:Key="S.rest.resp.body">Body</sys:String>
+    <sys:String x:Key="S.rest.resp.headers">Headers</sys:String>
+    <sys:String x:Key="S.rest.resp.empty">Send a request to see the response.</sys:String>
+    <sys:String x:Key="S.rest.sending">Sending…</sys:String>
+    <sys:String x:Key="S.rest.saved">Request saved</sys:String>
+    <sys:String x:Key="S.rest.needurl">Enter a URL.</sys:String>
+    <sys:String x:Key="S.rest.err">ERROR</sys:String>
+    <sys:String x:Key="S.rest.error">Error: {0}</sys:String>
+
     <sys:String x:Key="S.ssh.tunnel.up">tunnel {0} up — listening on 127.0.0.1</sys:String>
     <sys:String x:Key="S.ssh.tunnel.fail">tunnel {0}: {1}</sys:String>
     <sys:String x:Key="S.ssh.keypass.title">SSH key</sys:String>
