@@ -458,6 +458,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.env.hint">Variables are saved to the file — don't put secrets here (add them in the Auth tab).</sys:String>
     <sys:String x:Key="S.rest.env.newenv">New environment</sys:String>
     <sys:String x:Key="S.rest.env.close">Close</sys:String>
+    <sys:String x:Key="S.rest.hist">History (double-click to replay)</sys:String>
     <sys:String x:Key="S.rest.body.type">Content type</sys:String>
     <sys:String x:Key="S.rest.auth.type">Type</sys:String>
     <sys:String x:Key="S.rest.auth.none">None</sys:String>
