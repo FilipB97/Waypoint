@@ -514,6 +514,17 @@ Nowy odcisk:
 {1}
 
 To może oznaczać atak (podszywanie się pod serwer) albo reinstalację serwera. Kontynuować i zapisać nowy klucz?</sys:String>
+    <sys:String x:Key="S.ftps.cert.title">Certyfikat FTPS</sys:String>
+    <sys:String x:Key="S.ftps.cert.new">Pierwsze połączenie z {0}.
+Odcisk certyfikatu (SHA-256):
+{1}
+
+Zaufać i zapamiętać ten certyfikat?</sys:String>
+    <sys:String x:Key="S.ftps.cert.changed">UWAGA: certyfikat serwera {0} ZMIENIŁ SIĘ!
+Nowy odcisk:
+{1}
+
+To może oznaczać atak (podszywanie się pod serwer) albo wymianę certyfikatu. Kontynuować i zapisać nowy certyfikat?</sys:String>
 
     <sys:String x:Key="S.cp.header">Podaj poświadczenia dla {0} ({1}).</sys:String>
     <sys:String x:Key="S.cp.needuser">Podaj nazwę użytkownika.</sys:String>

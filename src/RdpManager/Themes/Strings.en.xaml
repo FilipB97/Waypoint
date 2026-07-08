@@ -514,6 +514,17 @@ New fingerprint:
 {1}
 
 This may indicate an attack (server spoofing) or a server reinstall. Continue and save the new key?</sys:String>
+    <sys:String x:Key="S.ftps.cert.title">FTPS certificate</sys:String>
+    <sys:String x:Key="S.ftps.cert.new">First connection to {0}.
+Certificate fingerprint (SHA-256):
+{1}
+
+Trust and remember this certificate?</sys:String>
+    <sys:String x:Key="S.ftps.cert.changed">WARNING: the server certificate for {0} HAS CHANGED!
+New fingerprint:
+{1}
+
+This may indicate an attack (server spoofing) or a certificate rotation. Continue and save the new certificate?</sys:String>
 
     <sys:String x:Key="S.cp.header">Enter credentials for {0} ({1}).</sys:String>
     <sys:String x:Key="S.cp.needuser">Enter a username.</sys:String>
