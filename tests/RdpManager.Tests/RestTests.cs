@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using RdpManager;
 using RdpManager.Models;
 using Xunit;
@@ -84,6 +87,41 @@ namespace RdpManager.Tests
         {
             Assert.Equal("", RestClient.BuildFormBody("", null));
             Assert.Equal("grant_type=password", RestClient.BuildFormBody("grant_type=password", null));
+        }
+
+        [Fact]
+        public async Task ReadBoundedAsync_UnderLimit_ReturnsAllBytes()
+        {
+            byte[] data = Encoding.UTF8.GetBytes("{\"ok\":true}");
+            using var stream = new MemoryStream(data);
+            byte[] result = await RestClient.ReadBoundedAsync(stream, RestClient.MaxResponseBytes, CancellationToken.None);
+            Assert.Equal(data, result);
+        }
+
+        [Fact]
+        public async Task ReadBoundedAsync_OverLimit_ReturnsNull()
+        {
+            byte[] data = new byte[1000];
+            using var stream = new MemoryStream(data);
+            byte[] result = await RestClient.ReadBoundedAsync(stream, maxBytes: 100, CancellationToken.None);
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task ReadBoundedAsync_ExactlyAtLimit_ReturnsBytes()
+        {
+            byte[] data = new byte[100];
+            using var stream = new MemoryStream(data);
+            byte[] result = await RestClient.ReadBoundedAsync(stream, maxBytes: 100, CancellationToken.None);
+            Assert.Equal(100, result.Length);
+        }
+
+        [Fact]
+        public async Task ReadBoundedAsync_Empty_ReturnsEmptyArray()
+        {
+            using var stream = new MemoryStream(Array.Empty<byte>());
+            byte[] result = await RestClient.ReadBoundedAsync(stream, RestClient.MaxResponseBytes, CancellationToken.None);
+            Assert.Empty(result);
         }
     }
 

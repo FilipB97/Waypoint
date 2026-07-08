@@ -461,21 +461,34 @@ namespace RdpManager
             if (string.IsNullOrWhiteSpace(eff.Url)) { SetStatus(L("S.rest.needurl"), error: true); return; }
 
             _cts?.Cancel();
-            _cts = new CancellationTokenSource();
-            var ct = _cts.Token;
+            _cts?.Dispose();   // stary token nikomu już niepotrzebny — bez tego wyciekał przy każdym Send (A7)
+            var cts = new CancellationTokenSource();
+            _cts = cts;
             SendBtn.IsEnabled = false;
             SetStatus(L("S.rest.sending"));
 
-            var resp = await RestClient.SendAsync(eff, eff.AuthSecret, Vars(), ct);
-            if (ct.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk
+            try
+            {
+                var resp = await RestClient.SendAsync(eff, eff.AuthSecret, Vars(), cts.Token);
+                if (cts.Token.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk (finally i tak nie odblokuje)
 
-            RenderResponse(resp);
-            var post = RestScript.Run(_req.TestScript, eff, resp, GetScriptVar, SetScriptVar, UnsetScriptVar);
-            ShowScriptOutput(pre, post);
-            if (!post.Ok || post.Tests.Any(t => !t.Passed)) ResponseTabs.SelectedIndex = ScriptTabIndex;
-            RecordHistory(resp, eff);
-            SendBtn.IsEnabled = true;
-            SetStatus(ScriptSummary(post));
+                RenderResponse(resp);
+                var post = RestScript.Run(_req.TestScript, eff, resp, GetScriptVar, SetScriptVar, UnsetScriptVar);
+                ShowScriptOutput(pre, post);
+                if (!post.Ok || post.Tests.Any(t => !t.Passed)) ResponseTabs.SelectedIndex = ScriptTabIndex;
+                RecordHistory(resp, eff);
+                SetStatus(ScriptSummary(post));
+            }
+            catch (Exception ex)
+            {
+                // Nieoczekiwany błąd PO wysyłce (np. RecordHistory→RestStore.Put przy pełnym/zablokowanym
+                // dysku) — bez tego catch+finally SendBtn zostawałby zablokowany na stałe (A6/A7).
+                SetStatus(string.Format(L("S.rest.error"), ex.Message), error: true);
+            }
+            finally
+            {
+                if (!cts.Token.IsCancellationRequested) SendBtn.IsEnabled = true;
+            }
         }
 
         // Kopia żądania do skryptów+wysyłki (nie brudzi zapisanego modelu).
