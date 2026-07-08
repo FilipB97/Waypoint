@@ -36,7 +36,13 @@ namespace RdpManager
             if (string.IsNullOrWhiteSpace(script)) return o;
             try
             {
-                var engine = new Engine(cfg => { cfg.LimitRecursion(64); cfg.TimeoutInterval(TimeSpan.FromSeconds(5)); });
+                // LimitMemory/MaxStatements obok istniejącego timeoutu — bez nich zaimportowany skrypt
+                // mógłby zaalokować bez limitu (np. rosnący string w pętli) i zawiesić UI do 5 s timeoutu.
+                var engine = new Engine(cfg => cfg
+                    .LimitRecursion(64)
+                    .TimeoutInterval(TimeSpan.FromSeconds(5))
+                    .LimitMemory(4 * 1024 * 1024)
+                    .MaxStatements(100_000));
 
                 engine.SetValue("__get", (Func<string, string>)(k => getVar(k) ?? ""));
                 engine.SetValue("__set", (Action<string, string>)((k, v) => setVar(k, v ?? "")));

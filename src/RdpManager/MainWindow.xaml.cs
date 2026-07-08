@@ -2146,15 +2146,20 @@ namespace RdpManager
             else OpenServer(server, autoConnect, forceNew);
         }
 
-        // Wpis WWW: nie ma sesji — otwieramy panel webowy w domyślnej przeglądarce.
+        // Wpis WWW: nie ma sesji — otwieramy panel webowy w domyślnej przeglądarce. Tylko http/https,
+        // zob. Core.UrlValidation.
         private void OpenUrl(ServerInfo server)
         {
-            string url = (server.Host ?? "").Trim();
-            if (url.Length == 0) return;
-            if (!url.Contains("://")) url = "https://" + url;
+            string raw = (server.Host ?? "").Trim();
+            if (raw.Length == 0) return;
+            if (!Core.UrlValidation.TryNormalizeWebUrl(raw, out var uri))
+            {
+                SetStatus(string.Format(L("S.st.badurl"), raw), StatusKind.Error);
+                return;
+            }
             try
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
                 RecordRecent(server);
             }
             catch (Exception ex) { SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error); }

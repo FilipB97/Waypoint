@@ -114,9 +114,12 @@ namespace RdpManager
         }
 
         // Pobiera zdalny plik/katalog do localParentDir (ścieżka Windows); katalogi listuje i schodzi rekurencyjnie.
+        // remoteName pochodzi z listingu ZDALNEGO serwera — złośliwy/skompromitowany serwer mógłby zwrócić
+        // "..\..\", ścieżkę z literą dysku itp., próbując zapisać poza wybranym katalogiem ("zip-slip" /
+        // path traversal). SafeCombine odrzuca takie nazwy i wymusza pozostanie wewnątrz localParentDir.
         private static void DownloadTree(IRemoteFs fs, string remoteFull, string remoteName, bool isDir, string localParentDir, Action<string> progress)
         {
-            string dest = System.IO.Path.Combine(localParentDir, remoteName);
+            string dest = SafeCombine(localParentDir, remoteName);
             if (isDir)
             {
                 System.IO.Directory.CreateDirectory(dest);
@@ -127,6 +130,26 @@ namespace RdpManager
                 progress?.Invoke(remoteName);
                 using (var s = System.IO.File.Create(dest)) fs.Download(remoteFull, s);
             }
+        }
+
+        /// <summary>Łączy <paramref name="localDir"/> z nazwą pochodzącą ZE ZDALNEGO SERWERA, odrzucając próby
+        /// wyjścia poza <paramref name="localDir"/> (separatory ścieżki, "."/"..", litera dysku). Dwie warstwy:
+        /// odrzucenie niebezpiecznych znaków w samej nazwie ORAZ kontrola, że wynikowa pełna ścieżka faktycznie
+        /// leży wewnątrz katalogu — sama pierwsza warstwa nie złapałaby np. "C:evil.txt" (Path.Combine traktuje
+        /// "rooted" drugi argument jako zastępujący pierwszy, ignorując localDir). Publiczne dla testów.</summary>
+        public static string SafeCombine(string localDir, string remoteName)
+        {
+            if (string.IsNullOrWhiteSpace(remoteName) || remoteName == "." || remoteName == ".."
+                || remoteName.IndexOfAny(new[] { '/', '\\', ':' }) >= 0)
+                throw new InvalidOperationException(string.Format(L("S.sftp.unsafename"), remoteName));
+
+            string root = System.IO.Path.GetFullPath(localDir);
+            string rootWithSep = root.EndsWith(System.IO.Path.DirectorySeparatorChar.ToString())
+                ? root : root + System.IO.Path.DirectorySeparatorChar;
+            string dest = System.IO.Path.GetFullPath(System.IO.Path.Combine(root, remoteName));
+            if (!dest.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(string.Format(L("S.sftp.unsafename"), remoteName));
+            return dest;
         }
 
         // SFTP rzuca gdy katalog już istnieje; FTP/Local są idempotentne. Ignorujemy — realny błąd (np. brak
