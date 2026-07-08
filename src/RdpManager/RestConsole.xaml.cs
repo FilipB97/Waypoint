@@ -166,9 +166,12 @@ namespace RdpManager
 
         private void ManageEnv_Click(object sender, RoutedEventArgs e)
         {
-            new RestEnvWindow(_coll) { Owner = Window.GetWindow(this) }.ShowDialog();
+            bool committed = new RestEnvWindow(_coll) { Owner = Window.GetWindow(this) }.ShowDialog() == true;
             if (!_coll.Environments.Any(x => x.Id == _coll.ActiveEnvironmentId)) _coll.ActiveEnvironmentId = "";
             BuildEnvCombo();
+            // Import/edycja środowisk to trwała zmiana — utrwalamy od razu, nie czekając na „Zapisz"/wysyłkę
+            // (inaczej po zamknięciu aplikacji zaimportowane środowiska ginęły).
+            if (committed) { CaptureCurrent(); RestStore.Put(_server.Id, _coll); }
         }
 
         private RestEnvironment ActiveEnv() => _coll.Environments.FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
