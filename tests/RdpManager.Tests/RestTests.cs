@@ -203,6 +203,34 @@ namespace RdpManager.Tests
             finally { try { Directory.Delete(dir, true); } catch { } }
         }
 
+        // SchemaVersion (B5/C5): Save() stempluje bieżącą wersję; plik sprzed jej wprowadzenia (brak pola
+        // w JSON) deserializuje się jako 0 — właśnie ten brak znacznika opisuje przegląd (AuthType=3=Inherit).
+        [Fact]
+        public void SaveLoad_StampsCurrentSchemaVersion()
+        {
+            string dir = TempDir();
+            try
+            {
+                RestStore.Save(new Dictionary<string, RestCollection> { ["srv1"] = new RestCollection() }, dir);
+                var loaded = RestStore.Load(dir)["srv1"];
+                Assert.Equal(RestCollection.CurrentSchemaVersion, loaded.SchemaVersion);
+            }
+            finally { try { Directory.Delete(dir, true); } catch { } }
+        }
+
+        [Fact]
+        public void SaveLoad_FileWithoutSchemaVersion_DefaultsToZero()
+        {
+            string dir = TempDir();
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "rest.json"), "{\"srv1\":{\"BaseUrl\":\"https://api.test\"}}");
+                var loaded = RestStore.Load(dir)["srv1"];
+                Assert.Equal(0, loaded.SchemaVersion);
+            }
+            finally { try { Directory.Delete(dir, true); } catch { } }
+        }
+
         [Fact]
         public void Load_MissingFile_ReturnsEmpty()
         {

@@ -79,6 +79,7 @@ namespace RdpManager
         /// <summary>Zapisuje listę do podanego katalogu (testowalne).</summary>
         public static void Save(List<ServerInfo> servers, string dir)
         {
+            foreach (var s in servers) s.SchemaVersion = ServerInfo.CurrentSchemaVersion;   // B5: zapis tym buildem = aktualna wersja
             var path = FilePath(dir);
             AtomicFile.Backup(path);   // kopia poprzedniej listy na wypadek błędnego zapisu
             AtomicFile.WriteAllText(path, JsonSerializer.Serialize(servers, Options));

@@ -11,6 +11,17 @@ namespace RdpManager.Models
     /// </summary>
     public class ServerInfo
     {
+        /// <summary>Wersja kształtu pól tego wpisu. CELOWO bez domyślnej wartości = CurrentSchemaVersion —
+        /// inaczej deserializacja starego pliku (bez tego pola) i świeży obiekt byłyby nie do odróżnienia
+        /// (System.Text.Json nie zeruje pól nieobecnych w JSON, tylko zostawia wartość z inicjalizatora).
+        /// 0 = nieoznaczone/sprzed wprowadzenia znacznika. ServerRepository.Save wpisuje bieżącą wersję.
+        /// Dziś żadne pole nie zmieniło znaczenia, więc nie ma jeszcze kroku Migrate() — sam znacznik
+        /// na przyszłość (B5 z przeglądu).</summary>
+        public int SchemaVersion { get; set; }
+
+        /// <summary>Publiczne dla testów (C5) i ewentualnej przyszłej migracji.</summary>
+        public const int CurrentSchemaVersion = 1;
+
         /// <summary>Stały identyfikator — klucz poświadczeń w Windows Credential Manager.</summary>
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
 

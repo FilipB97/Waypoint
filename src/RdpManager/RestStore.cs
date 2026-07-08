@@ -42,6 +42,7 @@ namespace RdpManager
 
         public static void Save(Dictionary<string, RestCollection> data, string dir)
         {
+            foreach (var c in data.Values) c.SchemaVersion = RestCollection.CurrentSchemaVersion;   // B5: zapis tym buildem = aktualna wersja
             var path = FilePath(dir);
             AtomicFile.Backup(path);
             AtomicFile.WriteAllText(path, JsonSerializer.Serialize(data, Options));
