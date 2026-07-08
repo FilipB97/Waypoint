@@ -50,30 +50,29 @@ current priorities.
 
 ## Hardening & polish (from the 2026-07 review)
 
-Full write-up: [REVIEW.md](REVIEW.md). IDs below refer to its findings.
+Full write-up: [REVIEW.md](REVIEW.md). IDs below refer to its findings. Everything in §7's
+suggested order is done except B1/B2 (see "Known issue" below) — landed across PRs #105–#112:
+security (H1/H2/M1/M4/L2), resilience (A1/A2/A3/A4/A5/A6/A7/A8/A9/A11 + C3 tests), accessibility
+(1.1/1.2/1.3/1.5/3.1), visual consistency (2.1/2.2/2.4/2.5/5.1/3.4), terminal theming (D5), and
+`SchemaVersion` on the JSON stores (B5).
 
-**Critical**
-- **H1** — FTPS accepts any certificate; needs TOFU/pinning like the SSH known-hosts model.
-- **H2** — path traversal / "zip-slip" on directory download (unsanitized remote file names).
+**Known issue — deliberately deferred**
+- **B1/B2** — `MainWindow.xaml.cs` is a god object (~5100 lines, ~200 methods: update/bootstrap,
+  tray/hotkey, fullscreen/focus state machines, the settings form, profile CRUD, the dashboard,
+  tree rendering + drag/drop, the tab strip/groups/split, lifecycle for 8 protocols,
+  reachability/WOL). Fix: extract `UpdateService`, `SessionManager`, `ServerTreeController`,
+  `FullscreenController`/`FocusModeController`, `TabStripController` (mechanical move-method, not
+  an MVVM rewrite). Deliberately not attempted in an assistant-driven session: it's a large,
+  structurally invasive change to the app's central file that can't be interactively regression-
+  tested here (WPF app, no way to click through it) — unit tests won't catch subtle bugs in event-
+  wiring order or closure captures. Do this very incrementally, one controller extraction per PR,
+  building after every step, with manual regression testing before each merge.
 
-**Soon**
-- **A1** — no size limit on REST responses (OOM / binary corruption risk).
-- **A2** — file transfer has no cancellation, overwrite policy, or real progress.
-- **1.1 / 1.3 / 1.5** — accessibility: no dialog closes on Escape, icon buttons lack
-  screen-reader names, no visible keyboard-focus ring on custom controls.
-- **M1 / M4 / L2** — security: update check doesn't verify the Authenticode signature (only
-  extracts the cert), web-panel launch has no URL scheme allowlist, Jint sandbox has no
-  memory/instruction limit.
-- **A4** — reachability probing spawns a thread per server instead of using async sockets.
-
-**Later**
-- Design tokens (corner radius, spacing, type scale) + micro-animations on hover/press
-  (REVIEW.md 2.2–2.5, 5.1).
-- `MainWindow` god-object refactor — extract `UpdateService`, `SessionManager`,
-  `ServerTreeController`, focus/fullscreen controllers (REVIEW.md B1/B2).
-- `SchemaVersion` + migration step for the JSON stores (REVIEW.md B5).
+**Not yet started (lower priority, deferred by design)**
+- **M2** — FTP "Auto" encryption mode silently allows plaintext fallback.
+- **M3** — REST variables have no "secret" type (plaintext in `rest.json`, same as scripts).
 - New features: SSH agent/Pageant support (D3), session logging (D4), REST per-request
-  timeout (D7), REST secret-typed variables (M3).
+  timeout (D7).
 
 ## Later / ideas
 
