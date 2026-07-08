@@ -281,6 +281,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.connectingShort">Łączenie…</sys:String>
     <sys:String x:Key="S.st.connected">Połączono</sys:String>
     <sys:String x:Key="S.st.exception">Wyjątek: {0}</sys:String>
+    <sys:String x:Key="S.st.badurl">Niedozwolony adres (tylko http/https): {0}</sys:String>
     <sys:String x:Key="S.st.disconnecting">Rozłączanie: {0}</sys:String>
     <sys:String x:Key="S.st.fatal">Błąd krytyczny (errorCode {0})</sys:String>
     <sys:String x:Key="S.st.disconnected">Rozłączono: {0}</sys:String>
@@ -423,6 +424,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.newfolder.label">Nazwa nowego folderu:</sys:String>
     <sys:String x:Key="S.sftp.delete">Usuń</sys:String>
     <sys:String x:Key="S.sftp.delete.confirm">Usunąć "{0}"? (katalogi tylko puste)</sys:String>
+    <sys:String x:Key="S.sftp.unsafename">Serwer zwrócił niebezpieczną nazwę pliku: „{0}” — pobieranie odrzucone.</sys:String>
     <sys:String x:Key="S.sftp.connecting">Łączenie SFTP…</sys:String>
     <sys:String x:Key="S.sftp.uploading">Wysyłanie {0}…</sys:String>
     <sys:String x:Key="S.sftp.downloading">Pobieranie {0}…</sys:String>
