@@ -20,8 +20,8 @@
                 <Image Source="pack://application:,,,/Assets/app.ico" Width="52" Height="52"
                        RenderOptions.BitmapScalingMode="HighQuality"/>
                 <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
-                    <TextBlock Text="Waypoint" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrim}"/>
-                    <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextSec}" FontSize="12"/>
+                    <TextBlock Text="Waypoint" FontSize="{StaticResource FontDisplay}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrim}"/>
+                    <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}"/>
                 </StackPanel>
             </StackPanel>
 
@@ -36,7 +36,7 @@
                 <ui:Button Content="{DynamicResource S.about.repo}" Appearance="Secondary" Click="Repo_Click"/>
             </StackPanel>
 
-            <TextBlock x:Name="DataPathText" Foreground="{DynamicResource TextTer}" FontSize="10.5"
+            <TextBlock x:Name="DataPathText" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
                        FontFamily="{DynamicResource Mono}" TextWrapping="Wrap" Margin="0,16,0,0"/>
 
             <ui:Button Content="{DynamicResource S.m.close}" Appearance="Primary" HorizontalAlignment="Right"

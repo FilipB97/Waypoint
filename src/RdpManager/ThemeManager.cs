@@ -18,9 +18,15 @@ namespace RdpManager
         private static readonly System.Windows.Media.Color BrandAccent =
             System.Windows.Media.Color.FromRgb(0x26, 0x57, 0xD6);
 
+        /// <summary>Czy aktualnie obowiązuje jasny motyw — ostatni wynik <see cref="Apply"/>. Czytane m.in.
+        /// przez XtermControl, który (WebView2/xterm.js) nie żyje w drzewie zasobów WPF i nie może
+        /// same reagować na DynamicResource (D5 z przeglądu).</summary>
+        public static bool IsLight { get; private set; }
+
         public static void Apply(string theme)
         {
             bool light = theme == "Light" || (theme == "System" && SystemIsLight());
+            IsLight = light;
             var appTheme = light ? ApplicationTheme.Light : ApplicationTheme.Dark;
             ApplicationThemeManager.Apply(appTheme);
             ApplicationAccentColorManager.Apply(BrandAccent, appTheme);   // nadpisz akcent systemowy marką (kobalt)

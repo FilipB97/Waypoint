@@ -17,13 +17,20 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="Bd" CornerRadius="6" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
-                            <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
+                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.12"/></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0.12" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
                             <Trigger Property="IsPressed" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.20"/></Trigger>
                             <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
@@ -40,11 +47,11 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
             <Setter Property="Padding" Value="5,2"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="5" Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Padding="{TemplateBinding Padding}">
                             <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -66,12 +73,20 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ListViewItem">
                         <Grid>
-                            <Border x:Name="Bd" CornerRadius="6" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
                             <ContentPresenter Margin="8,5" VerticalAlignment="Center"/>
-                            <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
+                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.08"/></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0.08" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
                             <Trigger Property="IsSelected" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.16"/></Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
                         </ControlTemplate.Triggers>
@@ -89,13 +104,13 @@
                     <ColumnDefinition Width="88"/>
                     <ColumnDefinition Width="140"/>
                 </Grid.ColumnDefinitions>
-                <ui:SymbolIcon Grid.Column="0" Symbol="{Binding Icon}" FontSize="16" Foreground="{Binding IconBrush}" VerticalAlignment="Center"/>
+                <ui:SymbolIcon Grid.Column="0" Symbol="{Binding Icon}" FontSize="{StaticResource IconMd}" Foreground="{Binding IconBrush}" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="{DynamicResource TextPrim}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="6,0,8,0"/>
                 <TextBlock Grid.Column="2" Text="{Binding SizeText}" Foreground="{DynamicResource TextSec}"
-                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,12,0" FontSize="11.5"/>
+                           VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,12,0" FontSize="{StaticResource FontSmall}"/>
                 <TextBlock Grid.Column="3" Text="{Binding Modified}" Foreground="{DynamicResource TextTer}"
-                           VerticalAlignment="Center" FontSize="11.5"/>
+                           VerticalAlignment="Center" FontSize="{StaticResource FontSmall}"/>
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -157,9 +172,9 @@
                         <ColumnDefinition Width="88"/>
                         <ColumnDefinition Width="140"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Text="{DynamicResource S.sftp.name}" Foreground="{DynamicResource TextTer}" FontSize="11" Margin="6,0,0,0"/>
-                    <TextBlock Grid.Column="2" Text="{DynamicResource S.sftp.size}" Foreground="{DynamicResource TextTer}" FontSize="11" HorizontalAlignment="Right" Margin="0,0,12,0"/>
-                    <TextBlock Grid.Column="3" Text="{DynamicResource S.sftp.modified}" Foreground="{DynamicResource TextTer}" FontSize="11"/>
+                    <TextBlock Grid.Column="1" Text="{DynamicResource S.sftp.name}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" Margin="6,0,0,0"/>
+                    <TextBlock Grid.Column="2" Text="{DynamicResource S.sftp.size}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" HorizontalAlignment="Right" Margin="0,0,12,0"/>
+                    <TextBlock Grid.Column="3" Text="{DynamicResource S.sftp.modified}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}"/>
                 </Grid>
             </Border>
 
@@ -170,10 +185,10 @@
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           MouseDoubleClick="List_DoubleClick"
                           PreviewMouseLeftButtonDown="List_PreviewDown" PreviewMouseMove="List_PreviewMove"/>
-                <Border x:Name="DropOverlay" Visibility="Collapsed" Margin="6" CornerRadius="10"
+                <Border x:Name="DropOverlay" Visibility="Collapsed" Margin="6" CornerRadius="{StaticResource RadiusLg}"
                         Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Accent}" BorderThickness="2" Opacity="0.96">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <ui:SymbolIcon Symbol="ArrowUpload24" FontSize="34" Foreground="{DynamicResource Accent}" HorizontalAlignment="Center"/>
+                        <ui:SymbolIcon Symbol="ArrowUpload24" FontSize="{StaticResource IconXl}" Foreground="{DynamicResource Accent}" HorizontalAlignment="Center"/>
                         <TextBlock Text="{DynamicResource S.sftp.drophint}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
@@ -186,13 +201,13 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                    <TextBlock x:Name="StatusText" Foreground="{DynamicResource TextTer}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="StatusText" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" TextTrimming="CharacterEllipsis"/>
                     <ProgressBar x:Name="TransferProgress" Visibility="Collapsed" Height="4" Margin="0,4,0,0"
                                  Minimum="0" Maximum="100"/>
                 </StackPanel>
                 <Button x:Name="CancelTransferBtn" Grid.Column="1" Visibility="Collapsed" Style="{StaticResource FtIconBtn}"
-                        Width="24" Height="24" ToolTip="{DynamicResource S.sftp.cancel}" Click="CancelTransfer_Click" Margin="6,0,0,0">
-                    <ui:SymbolIcon Symbol="Dismiss24" FontSize="14"/>
+                        Width="24" Height="24" ToolTip="{DynamicResource S.sftp.cancel}" AutomationProperties.Name="{DynamicResource S.sftp.cancel}" Click="CancelTransfer_Click" Margin="6,0,0,0">
+                    <ui:SymbolIcon Symbol="Dismiss24" FontSize="{StaticResource IconSm}"/>
                 </Button>
             </Grid>
         </Grid>

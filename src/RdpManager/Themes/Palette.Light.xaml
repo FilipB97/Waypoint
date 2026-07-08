@@ -9,8 +9,12 @@
     <SolidColorBrush x:Key="TextPrim"   Color="#1B1D22"/>
     <SolidColorBrush x:Key="TextSec"    Color="#565A62"/>
     <SolidColorBrush x:Key="TextTer"    Color="#888B93"/>
-    <SolidColorBrush x:Key="Accent"     Color="#2657D6"/>
-    <SolidColorBrush x:Key="AccentSoft" Color="#222657D6"/>
+    <SolidColorBrush x:Key="Accent"       Color="#2657D6"/>
+    <SolidColorBrush x:Key="AccentSoft"   Color="#222657D6"/>
+    <SolidColorBrush x:Key="AccentBright" Color="#4C86FF"/>
+    <SolidColorBrush x:Key="AccentStrong" Color="#662657D6"/>
+    <SolidColorBrush x:Key="SplitDim"     Color="#33000000"/>
+    <SolidColorBrush x:Key="TextOnColor" Color="White"/>
     <SolidColorBrush x:Key="Online"     Color="#1FA871"/>
     <SolidColorBrush x:Key="Idle"       Color="#C9852B"/>
     <SolidColorBrush x:Key="Offline"    Color="#9CA0A8"/>

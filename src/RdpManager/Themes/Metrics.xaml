@@ -1,0 +1,38 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <!-- Design tokens: promienie zaokrągleń, skala fontów (tekst i ikony), marginesy okien dialogowych.
+         Stałe, niezależne od motywu Dark/Light — w odróżnieniu od Palette.*.xaml NIE są podmieniane
+         w runtime (ThemeManager.SwapPalette dopasowuje po "Palette." w URI źródła), więc StaticResource
+         (nie DynamicResource) jest tu właściwym wyborem (2.1/2.2/2.4/2.5 z przeglądu). -->
+
+    <!-- Promienie zaokrągleń -->
+    <CornerRadius x:Key="RadiusXs">2</CornerRadius>
+    <CornerRadius x:Key="RadiusSm">6</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">8</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">10</CornerRadius>
+
+    <!-- Skala fontów: tekst czytelny (podpisy → nagłówki) -->
+    <sys:Double x:Key="FontMicro">7.5</sys:Double>
+    <sys:Double x:Key="FontCaption">10.5</sys:Double>
+    <sys:Double x:Key="FontSmall">11.5</sys:Double>
+    <sys:Double x:Key="FontBody">12.5</sys:Double>
+    <sys:Double x:Key="FontBodyLg">14</sys:Double>
+    <sys:Double x:Key="FontSubtitle">15.5</sys:Double>
+    <sys:Double x:Key="FontTitle">18</sys:Double>
+    <sys:Double x:Key="FontHeading">20</sys:Double>
+    <sys:Double x:Key="FontDisplay">22</sys:Double>
+
+    <!-- Skala fontów: glify ikon (SymbolIcon / znaki Unicode użyte jako ikony) — osobna skala,
+         bo rozmiar ikony dobiera się do przycisku/kontenera, nie do hierarchii czytelnego tekstu. -->
+    <sys:Double x:Key="IconXs">11</sys:Double>
+    <sys:Double x:Key="IconSm">14</sys:Double>
+    <sys:Double x:Key="IconMd">16</sys:Double>
+    <sys:Double x:Key="IconLg">18</sys:Double>
+    <sys:Double x:Key="IconXl">34</sys:Double>
+
+    <!-- Marginesy okien dialogowych: warianty, które już się pokrywały między kilkoma oknami (2.4) -->
+    <Thickness x:Key="DialogContentMargin">18,8,18,8</Thickness>
+    <Thickness x:Key="DialogButtonRowMargin">18,4,18,16</Thickness>
+    <Thickness x:Key="DialogContentMarginTight">18,4,18,4</Thickness>
+</ResourceDictionary>

@@ -38,8 +38,10 @@ namespace RdpManager
         protected XtermControl()
         {
             Child = Web;
-            // Ciemne tło od pierwszej klatki (bez białego błysku WebView2).
-            Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(16, 18, 22);
+            // Tło od pierwszej klatki dopasowane do motywu apki (bez błysku złego koloru przy starcie WebView2).
+            Web.DefaultBackgroundColor = ThemeManager.IsLight
+                ? System.Drawing.Color.FromArgb(255, 255, 255)
+                : System.Drawing.Color.FromArgb(16, 18, 22);
         }
 
         /// <summary>Klawisze z xterm (wątek UI). Pochodna pisze do swojego transportu.</summary>
@@ -204,10 +206,19 @@ namespace RdpManager
             string js = ReadAsset("xterm.js").Replace("</script>", "<\\/script>");
             string fit = ReadAsset("addon-fit.js").Replace("</script>", "<\\/script>");
 
+            // Terminal (WebView2/xterm.js) żyje poza drzewem zasobów WPF — nie widzi DynamicResource,
+            // więc motyw i rozmiar czcionki trzeba wstrzyknąć raz, przy budowie strony (D5 z przeglądu).
+            bool light = ThemeManager.IsLight;
+            string pageBg = light ? "#FFFFFF" : "#101216";
+            string xtermTheme = light
+                ? "{ background:'#FFFFFF', foreground:'#1B1D22', cursor:'#2657D6', selectionBackground:'#B8CBFA' }"
+                : "{ background:'#101216', foreground:'#D6D8DC', cursor:'#2657D6', selectionBackground:'#2A3A66' }";
+            int fontSize = Math.Min(24, Math.Max(8, SettingsStore.Load().TerminalFontSize));
+
             var sb = new StringBuilder(400_000);
             sb.Append("<!doctype html><html><head><meta charset='utf-8'><style>")
               .Append(css)
-              .Append("html,body{margin:0;padding:0;height:100%;background:#101216;overflow:hidden}#t{height:100%}")
+              .Append("html,body{margin:0;padding:0;height:100%;background:").Append(pageBg).Append(";overflow:hidden}#t{height:100%}")
               .Append("</style><script>").Append(js)
               .Append("</script><script>").Append(fit)
               .Append("</script></head><body><div id='t'></div><script>\n")
@@ -217,9 +228,8 @@ const TermCtor = (typeof Terminal === 'function') ? Terminal : Terminal.Terminal
 const FitCtor  = (typeof FitAddon === 'function') ? FitAddon : FitAddon.FitAddon;
 const term = new TermCtor({
   fontFamily: 'Cascadia Code, Cascadia Mono, Consolas, monospace',
-  fontSize: 14, cursorBlink: true, scrollback: 5000,
-  theme: { background:'#101216', foreground:'#D6D8DC', cursor:'#2657D6',
-           selectionBackground:'#2A3A66' }
+  fontSize: ").Append(fontSize).Append(@", cursorBlink: true, scrollback: 5000,
+  theme: ").Append(xtermTheme).Append(@"
 });
 const fit = new FitCtor();
 term.loadAddon(fit);

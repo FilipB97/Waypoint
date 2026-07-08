@@ -40,6 +40,7 @@
     <sys:String x:Key="S.set.iface">Interfejs</sys:String>
     <sys:String x:Key="S.set.uiscale">Skala interfejsu (%) — także Ctrl + kółko myszy</sys:String>
     <sys:String x:Key="S.set.bardelay">Opóźnienie paska pełnoekranowego (ms)</sys:String>
+    <sys:String x:Key="S.set.termfontsize">Rozmiar czcionki terminala (8-24)</sys:String>
     <sys:String x:Key="S.set.theme">Motyw</sys:String>
     <sys:String x:Key="S.theme.dark">Ciemny</sys:String>
     <sys:String x:Key="S.theme.light">Jasny</sys:String>
@@ -141,6 +142,7 @@
     <sys:String x:Key="S.fs.others.up">inne połączenia  ▴</sys:String>
     <sys:String x:Key="S.fs.pin">📌 przypnij</sys:String>
     <sys:String x:Key="S.fs.pinned">📌 przypięte</sys:String>
+    <sys:String x:Key="S.fs.minimize">Minimalizuj</sys:String>
     <sys:String x:Key="S.fs.restore">Przywróć okno</sys:String>
     <sys:String x:Key="S.fs.opensessions">OTWARTE SESJE</sys:String>
     <sys:String x:Key="S.fs.allservers">WSZYSTKIE SERWERY</sys:String>

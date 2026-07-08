@@ -16,14 +16,14 @@
 
         <ui:TitleBar x:Name="WinTitleBar" Grid.Row="0" Title=""/>
 
-        <StackPanel Grid.Row="1" Margin="18,8,18,8">
+        <StackPanel Grid.Row="1" Margin="{StaticResource DialogContentMargin}">
             <TextBlock x:Name="PromptLabel" TextWrapping="Wrap" Margin="0,0,0,8"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             <ui:TextBox x:Name="InputBox"/>
             <PasswordBox x:Name="MaskedBox" Visibility="Collapsed" VerticalContentAlignment="Center"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,4,18,16">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource DialogButtonRowMargin}">
             <ui:Button Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="90" IsCancel="True"/>
             <ui:Button Content="OK" Appearance="Primary" Click="Ok_Click" MinWidth="90" IsDefault="True"/>
         </StackPanel>

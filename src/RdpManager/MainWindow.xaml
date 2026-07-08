@@ -26,13 +26,20 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8"
-                                BorderThickness="2" BorderBrush="Transparent">
+                        <Grid>
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusMd}"
+                                    BorderThickness="2" BorderBrush="Transparent"/>
+                            <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusMd}" Background="{DynamicResource RailHover}" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource RailHover}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
@@ -56,13 +63,20 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6"
-                                BorderThickness="2" BorderBrush="Transparent">
+                        <Grid>
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusSm}"
+                                    BorderThickness="2" BorderBrush="Transparent"/>
+                            <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Elevated}" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Elevated}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
@@ -77,21 +91,21 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,4,0"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
         </Style>
 
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource Panel}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}"/>
             <Setter Property="Padding" Value="18,14"/>
             <Setter Property="Margin" Value="0,0,0,14"/>
         </Style>
         <Style x:Key="CardHead" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBodyLg}"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
     </Window.Resources>
@@ -131,25 +145,25 @@
 
                     <StackPanel Grid.Row="0" HorizontalAlignment="Center">
                         <Button x:Name="NavDashboard" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.dashboard}" AutomationProperties.Name="{DynamicResource S.nav.dashboard}" Tag="Dashboard" Click="Nav_Click">
-                            <ui:SymbolIcon x:Name="IcoDashboard" Symbol="Apps24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
+                            <ui:SymbolIcon x:Name="IcoDashboard" Symbol="Apps24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                         <Button x:Name="NavSessions" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.sessions}" AutomationProperties.Name="{DynamicResource S.nav.sessions}" Tag="Sessions" Click="Nav_Click">
-                            <ui:SymbolIcon x:Name="IcoSessions" Symbol="Desktop24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
+                            <ui:SymbolIcon x:Name="IcoSessions" Symbol="Desktop24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                         <Button x:Name="NavRecent" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.recent}" AutomationProperties.Name="{DynamicResource S.nav.recent}" Tag="Recent" Click="Nav_Click">
-                            <ui:SymbolIcon x:Name="IcoRecent" Symbol="History24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
+                            <ui:SymbolIcon x:Name="IcoRecent" Symbol="History24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                         <Button x:Name="NavTools" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.tools}" AutomationProperties.Name="{DynamicResource S.nav.tools}" Click="OpenPasswordGen_Click">
-                            <ui:SymbolIcon x:Name="IcoTools" Symbol="Key24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
+                            <ui:SymbolIcon x:Name="IcoTools" Symbol="Key24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">
                         <Button x:Name="AvatarBtn" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.about}" AutomationProperties.Name="{DynamicResource S.nav.about}" Click="Avatar_Click">
-                            <ui:SymbolIcon Symbol="Info24" FontSize="18" Foreground="{DynamicResource TextTer}"/>
+                            <ui:SymbolIcon Symbol="Info24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                         <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.settings}" AutomationProperties.Name="{DynamicResource S.nav.settings}" Tag="Settings" Click="Nav_Click">
-                            <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="17" Foreground="{DynamicResource TextTer}"/>
+                            <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -179,7 +193,7 @@
                     </ScrollViewer>
 
                     <TextBlock x:Name="TreeEmptyHint" Grid.Row="1" Visibility="Collapsed" Text=""
-                               Foreground="{DynamicResource TextTer}" FontSize="12.5" TextWrapping="Wrap" TextAlignment="Center"
+                               Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" TextAlignment="Center"
                                VerticalAlignment="Top" HorizontalAlignment="Center" Margin="20,32,20,0"/>
 
                     <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10">
@@ -269,27 +283,27 @@
                                     Margin="4,0,6,0" Visibility="Collapsed">
                             <Button x:Name="QuickSwitchBtn" Style="{DynamicResource IconBtn}" Click="QuickSwitch_Click"
                                     ToolTip="{DynamicResource S.qs.tip}">
-                                <ui:SymbolIcon Symbol="Add24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                                <ui:SymbolIcon Symbol="Add24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click"
                                     ToolTip="{DynamicResource S.focus.toggle}">
-                                <TextBlock Text="&#x25A3;" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#x25A3;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click"
                                     ToolTip="{DynamicResource S.tip.fullscreen}">
-                                <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                                <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusMinimize_Click"
                                     ToolTip="{DynamicResource S.tip.minimize}">
-                                <TextBlock Text="&#x2212;" FontSize="15" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#x2212;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusRestore_Click"
                                     ToolTip="{DynamicResource S.fs.restore}">
-                                <TextBlock Text="&#x2750;" FontSize="13" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#x2750;" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusClose_Click"
                                     ToolTip="{DynamicResource S.m.close}">
-                                <TextBlock Text="&#x2715;" FontSize="13" Foreground="{DynamicResource Danger}" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#x2715;" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource Danger}" VerticalAlignment="Center"/>
                             </Button>
                         </StackPanel>
                         <!-- Połączona sesja (poza trybem skupienia): akcje przy prawym końcu paska kart —
@@ -299,20 +313,20 @@
                                     Margin="4,0,6,0" Visibility="Collapsed">
                             <Button x:Name="FilesBtn" Style="{DynamicResource IconBtn}" Click="Files_Click"
                                     Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}">
-                                <ui:SymbolIcon Symbol="Folder24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                                <ui:SymbolIcon Symbol="Folder24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button x:Name="CadBtn" Style="{DynamicResource IconBtn}" Click="SendCtrlAltDel_Click"
                                     Visibility="Collapsed" ToolTip="{DynamicResource S.tip.cad}">
-                                <ui:SymbolIcon Symbol="Keyboard24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                                <ui:SymbolIcon Symbol="Keyboard24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}">
-                                <TextBlock Text="&#x25A3;" FontSize="15" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#x25A3;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
-                                <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" Foreground="{DynamicResource TextTer}"/>
+                                <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="{DynamicResource S.disconnect}">
-                                <TextBlock Text="✕" FontSize="14" Foreground="{DynamicResource Danger}"/>
+                                <TextBlock Text="✕" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource Danger}"/>
                             </Button>
                         </StackPanel>
                     </Grid>
@@ -324,8 +338,8 @@
                     <Grid>
                         <!-- disconnected -> kompaktowy pasek połączenia (pełna edycja jest w oknie serwera) -->
                         <StackPanel x:Name="ConnectForm" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border x:Name="CfAvatar" Width="18" Height="18" CornerRadius="5" VerticalAlignment="Center" Margin="0,0,8,0">
-                                <TextBlock x:Name="CfAvatarText" Foreground="White" FontSize="7.5" FontWeight="Bold"
+                            <Border x:Name="CfAvatar" Width="18" Height="18" CornerRadius="{StaticResource RadiusSm}" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <TextBlock x:Name="CfAvatarText" Foreground="{DynamicResource TextOnColor}" FontSize="{StaticResource FontMicro}" FontWeight="Bold"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock x:Name="CfName" Foreground="{DynamicResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
@@ -378,11 +392,11 @@
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
                             <ui:ProgressRing x:Name="OverlaySpinner" IsIndeterminate="True" Width="46" Height="46"
                                              Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,0,0,18"/>
-                            <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}" FontSize="16"
+                            <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontSubtitle}"
                                        FontWeight="SemiBold" HorizontalAlignment="Center"/>
                             <TextBlock x:Name="OverlayMsg" Foreground="{DynamicResource TextSec}" HorizontalAlignment="Center"
                                        TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                            <ui:Button x:Name="OverlayReconnect" Content="Połącz ponownie" Appearance="Primary"
+                            <ui:Button x:Name="OverlayReconnect" Content="{DynamicResource S.reconnect}" Appearance="Primary"
                                        Click="OverlayAction_Click" HorizontalAlignment="Center" Margin="0,18,0,0" Visibility="Collapsed"/>
                         </StackPanel>
                     </Border>
@@ -393,7 +407,7 @@
             <!-- Pulpit -->
             <ScrollViewer x:Name="DashboardView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">
                 <StackPanel Margin="28,24">
-                    <TextBlock Text="{DynamicResource S.nav.dashboard}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+                    <TextBlock Text="{DynamicResource S.nav.dashboard}" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" Margin="0,0,0,18"/>
                     <StackPanel x:Name="DashboardPanel"/>
                 </StackPanel>
             </ScrollViewer>
@@ -401,7 +415,7 @@
             <!-- Ostatnie -->
             <ScrollViewer x:Name="RecentView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">
                 <StackPanel Margin="28,24">
-                    <TextBlock Text="{DynamicResource S.view.recent}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,18"/>
+                    <TextBlock Text="{DynamicResource S.view.recent}" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" Margin="0,0,0,18"/>
                     <StackPanel x:Name="RecentPanel"/>
                 </StackPanel>
             </ScrollViewer>
@@ -417,17 +431,24 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
-                                    <Border x:Name="Bd" CornerRadius="7" Background="Transparent" Padding="12,9"
-                                            BorderThickness="2" BorderBrush="Transparent">
-                                        <Grid>
-                                            <Border x:Name="Bar" Width="3" CornerRadius="2" HorizontalAlignment="Left"
+                                    <Grid>
+                                        <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent"
+                                                BorderThickness="2" BorderBrush="Transparent"/>
+                                        <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Panel}" Opacity="0"/>
+                                        <Grid Margin="12,9">
+                                            <Border x:Name="Bar" Width="3" CornerRadius="{StaticResource RadiusXs}" HorizontalAlignment="Left"
                                                     Background="{DynamicResource Accent}" Visibility="Collapsed"/>
                                             <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
                                         </Grid>
-                                    </Border>
+                                    </Grid>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Panel}"/>
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                            </Trigger.ExitActions>
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Panel}"/>
@@ -450,7 +471,7 @@
 
                 <!-- Lewa kolumna: tytuł + wyszukiwanie + kategorie -->
                 <StackPanel Grid.Column="0" Width="214" Margin="20,24,6,16">
-                    <TextBlock Text="{DynamicResource S.nav.settings}" Foreground="{DynamicResource TextPrim}" FontSize="20" FontWeight="SemiBold" Margin="4,0,0,16"/>
+                    <TextBlock Text="{DynamicResource S.nav.settings}" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" Margin="4,0,0,16"/>
                     <ui:TextBox x:Name="SettingsSearch" PlaceholderText="{DynamicResource S.set.search}" Margin="0,0,0,12"
                                 TextChanged="SettingsSearch_TextChanged">
                         <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
@@ -480,6 +501,8 @@
                             <ui:TextBox x:Name="SetUiScale" Width="120" HorizontalAlignment="Left"/>
                             <TextBlock Text="{DynamicResource S.set.bardelay}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ui:TextBox x:Name="SetBarDelay" Width="120" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{DynamicResource S.set.termfontsize}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
+                            <ui:TextBox x:Name="SetTermFontSize" Width="120" HorizontalAlignment="Left"/>
                             <TextBlock Text="{DynamicResource S.set.theme}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ComboBox x:Name="SetTheme" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
                                 <ComboBoxItem Content="{DynamicResource S.theme.dark}" Tag="Dark"/>
@@ -543,8 +566,8 @@
                         <StackPanel>
                             <TextBlock Text="{DynamicResource S.set.autoconnect}" Style="{DynamicResource CardHead}"/>
                             <TextBlock Text="{DynamicResource S.set.autoconnect.hint}" Foreground="{DynamicResource TextTer}"
-                                       FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                            <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                       FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="10,6">
                                 <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto">
                                     <StackPanel x:Name="AutoConnectList"/>
                                 </ScrollViewer>
@@ -557,8 +580,8 @@
                         <StackPanel>
                             <TextBlock Text="{DynamicResource S.set.profiles}" Style="{DynamicResource CardHead}"/>
                             <TextBlock Text="{DynamicResource S.set.profiles.hint}" Foreground="{DynamicResource TextTer}"
-                                       FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                            <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                       FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="10,6">
                                 <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
                                     <StackPanel x:Name="ProfilesList"/>
                                 </ScrollViewer>
@@ -573,14 +596,14 @@
                             <TextBlock Text="{DynamicResource S.set.data}" Style="{DynamicResource CardHead}"/>
                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                 <TextBlock x:Name="SetDataPath" Foreground="{DynamicResource TextTer}" FontFamily="{DynamicResource Mono}"
-                                           FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
+                                           FontSize="{StaticResource FontSmall}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
                                 <ui:Button Content="{DynamicResource S.set.openfolder}" Appearance="Secondary" Click="OpenDataFolder_Click" Margin="12,0,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                 <ui:Button Content="{DynamicResource S.set.exportprofile}" Appearance="Secondary" Click="ExportProfile_Click"/>
                                 <ui:Button Content="{DynamicResource S.set.importprofile}" Appearance="Secondary" Click="ImportProfile_Click" Margin="8,0,0,0"/>
                             </StackPanel>
-                            <TextBlock Foreground="{DynamicResource TextTer}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                            <TextBlock Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,6,0,0"
                                        Text="{DynamicResource S.set.backupnote}"/>
                             <Border Height="1" Background="{DynamicResource Border}" Margin="0,14,0,0"/>
                             <CheckBox x:Name="SetCheckUpdates" Content="{DynamicResource S.set.checkupdates}" Foreground="{DynamicResource TextSec}" Margin="0,14,0,0"/>
@@ -604,7 +627,7 @@
         <!-- Szybkie przełączanie z paska kart (tryb skupienia): popup = osobny HWND, rysuje się nad sesją -->
         <Popup x:Name="QuickSwitchPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
                StaysOpen="False" AllowsTransparency="True">
-            <Border Background="{DynamicResource RailBg}" CornerRadius="10" Padding="8"
+            <Border Background="{DynamicResource RailBg}" CornerRadius="{StaticResource RadiusLg}" Padding="8"
                     BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="460">
                 <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45"/></Border.Effect>
                 <StackPanel>
@@ -614,13 +637,13 @@
                     </ui:TextBox>
                     <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <TextBlock x:Name="QsSessionsHeader" Text="{DynamicResource S.fs.opensessions}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                            <TextBlock x:Name="QsSessionsHeader" Text="{DynamicResource S.fs.opensessions}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
                                        FontWeight="SemiBold" Margin="6,6,6,4"/>
                             <StackPanel x:Name="QsSessions"/>
-                            <TextBlock x:Name="QsServersHeader" Text="{DynamicResource S.fs.allservers}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                            <TextBlock x:Name="QsServersHeader" Text="{DynamicResource S.fs.allservers}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
                                        FontWeight="SemiBold" Margin="6,8,6,4"/>
                             <StackPanel x:Name="QsServers"/>
-                            <TextBlock x:Name="QsActionsHeader" Text="{DynamicResource S.cmd.actions}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                            <TextBlock x:Name="QsActionsHeader" Text="{DynamicResource S.cmd.actions}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
                                        FontWeight="SemiBold" Margin="6,8,6,4"/>
                             <StackPanel x:Name="QsActions"/>
                         </StackPanel>
@@ -654,17 +677,17 @@
              dzieli ekran (przeciągana sesja → prawy panel). Rozmiar ustawiany w ShowSplitDropZone. -->
         <Popup x:Name="SplitDropZone" Placement="Relative" PlacementTarget="{Binding ElementName=SessionContainer}"
                AllowsTransparency="True" StaysOpen="True" HorizontalOffset="0" VerticalOffset="0">
-            <Border x:Name="SplitDropBorder" AllowDrop="True" Background="#33000000">
+            <Border x:Name="SplitDropBorder" AllowDrop="True" Background="{DynamicResource SplitDim}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Border Grid.Column="1" Background="#662657D6" BorderBrush="#4C86FF" BorderThickness="3">
+                    <Border Grid.Column="1" Background="{DynamicResource AccentStrong}" BorderBrush="{DynamicResource AccentBright}" BorderThickness="3">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="&#x229F;" FontSize="34" Foreground="White" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource S.split.drop}" Foreground="White"
-                                       FontSize="14" Margin="0,10,0,0" HorizontalAlignment="Center" TextAlignment="Center"/>
+                            <TextBlock Text="&#x229F;" FontSize="{StaticResource IconXl}" Foreground="{DynamicResource TextOnColor}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S.split.drop}" Foreground="{DynamicResource TextOnColor}"
+                                       FontSize="{StaticResource FontBodyLg}" Margin="0,10,0,0" HorizontalAlignment="Center" TextAlignment="Center"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -674,7 +697,7 @@
         <!-- floating fullscreen bar (Popup = osobny HWND -> rysuje się nad kontrolką RDP) -->
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
-            <Border Background="{DynamicResource FsBarBg}" CornerRadius="10" Padding="14,7" Margin="12,4,12,12"
+            <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,7" Margin="12,4,12,12"
                     BorderBrush="{DynamicResource Border}" BorderThickness="1">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/>
@@ -686,7 +709,7 @@
                             <Thumb.Template>
                                 <ControlTemplate TargetType="Thumb">
                                     <Border Background="Transparent">
-                                        <TextBlock Text="⠿" FontSize="15" Foreground="{DynamicResource TextTer}"
+                                        <TextBlock Text="⠿" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                 </ControlTemplate>
@@ -699,14 +722,14 @@
                         <ui:Button x:Name="PinBtn" Content="{DynamicResource S.fs.pin}" Appearance="Secondary" Click="TogglePin_Click"/>
                         <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
                         <Button Style="{DynamicResource IconBtn}" Click="Minimize_Click" ToolTip="{DynamicResource S.tip.minimize}">
-                            <TextBlock Text="&#x2212;" FontSize="15" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#x2212;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                         </Button>
                         <ui:Button Content="{DynamicResource S.fs.restore}" Appearance="Secondary" Click="Fullscreen_Click" Margin="6,0,0,0"/>
                     </StackPanel>
 
                     <!-- flyout "inne połączenia" -->
                     <Border x:Name="FsFlyout" Visibility="Collapsed" Width="300" Margin="0,8,0,0"
-                            Background="{DynamicResource FsFlyoutBg}" CornerRadius="8" Padding="8">
+                            Background="{DynamicResource FsFlyoutBg}" CornerRadius="{StaticResource RadiusMd}" Padding="8">
                         <StackPanel>
                             <ui:TextBox x:Name="FsFlyoutSearch" PlaceholderText="{DynamicResource S.search}"
                                         Margin="0,0,0,6" TextChanged="FsFlyoutSearch_TextChanged">
@@ -714,10 +737,10 @@
                             </ui:TextBox>
                             <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
-                                    <TextBlock Text="{DynamicResource S.fs.opensessions}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                                    <TextBlock Text="{DynamicResource S.fs.opensessions}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
                                                FontWeight="SemiBold" Margin="6,6,6,4"/>
                                     <StackPanel x:Name="FlyoutSessions"/>
-                                    <TextBlock Text="{DynamicResource S.fs.allservers}" Foreground="{DynamicResource TextTer}" FontSize="10"
+                                    <TextBlock Text="{DynamicResource S.fs.allservers}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
                                                FontWeight="SemiBold" Margin="6,8,6,4"/>
                                     <StackPanel x:Name="FlyoutServers"/>
                                 </StackPanel>
