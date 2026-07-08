@@ -113,6 +113,28 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void SaveLoad_PreservesEnvironments()
+        {
+            string dir = TempDir();
+            try
+            {
+                var env = new RestEnvironment { Name = "dev", Variables = { new RestVariable { Key = "token", Value = "abc" } } };
+                var data = new Dictionary<string, RestCollection>
+                {
+                    ["srv1"] = new RestCollection { Environments = { env }, ActiveEnvironmentId = env.Id }
+                };
+                RestStore.Save(data, dir);
+                var loaded = RestStore.Load(dir)["srv1"];
+                Assert.Single(loaded.Environments);
+                Assert.Equal("dev", loaded.Environments[0].Name);
+                Assert.Equal("token", loaded.Environments[0].Variables[0].Key);
+                Assert.Equal("abc", loaded.Environments[0].Variables[0].Value);
+                Assert.Equal(env.Id, loaded.ActiveEnvironmentId);
+            }
+            finally { try { Directory.Delete(dir, true); } catch { } }
+        }
+
+        [Fact]
         public void Load_MissingFile_ReturnsEmpty()
         {
             string dir = TempDir();
