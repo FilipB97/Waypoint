@@ -19,9 +19,11 @@ namespace RdpManager
         public static (int Type, string Username, string Secret, RestFolder SourceFolder) Resolve(RestCollection coll, string startFolderId)
         {
             var folder = coll.Folders.FirstOrDefault(f => f.Id == startFolderId);
+            var visited = new HashSet<string>();
             while (folder != null)
             {
                 if (folder.AuthType != Inherit) return (folder.AuthType, folder.AuthUsername, folder.AuthSecret, folder);
+                if (!visited.Add(folder.Id)) break;   // cykliczny ParentId (A9 z przeglądu) — zatrzymaj się, nie wisimy w pętli
                 folder = coll.Folders.FirstOrDefault(f => f.Id == folder.ParentId);
             }
             return (coll.AuthType, coll.AuthUsername, coll.AuthSecret, null);

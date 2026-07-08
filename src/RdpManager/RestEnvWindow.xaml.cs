@@ -27,7 +27,9 @@ namespace RdpManager
             Title = L("S.rest.env.title");
             WinTitleBar.Title = Title;
 
-            _envs = new ObservableCollection<RestEnvironment>(_coll.Environments);
+            // Kopie robocze — edycja pól (binding TwoWay) NIE MOŻE dotykać obiektów z _coll, inaczej
+            // zamknięcie okna „na krzyżyku" (bez Close_Click) i tak zapisywałoby zmiany (A8 z przeglądu).
+            _envs = new ObservableCollection<RestEnvironment>(_coll.Environments.Select(CloneEnv));
             EnvList.ItemsSource = _envs;
             if (_envs.Count > 0) EnvList.SelectedIndex = 0;
             else { _vars = new ObservableCollection<RestVariable>(); VarsList.ItemsSource = _vars; VarsList.IsEnabled = false; }
@@ -125,5 +127,14 @@ namespace RdpManager
             if (!names.Contains(baseName)) return baseName;
             for (int i = 2; ; i++) { string n = baseName + " " + i; if (!names.Contains(n)) return n; }
         }
+
+        private static RestEnvironment CloneEnv(RestEnvironment e) => new RestEnvironment
+        {
+            Id = e.Id,
+            Name = e.Name,
+            Variables = e.Variables.Select(CloneVar).ToList()
+        };
+
+        private static RestVariable CloneVar(RestVariable v) => new RestVariable { Key = v.Key, Value = v.Value };
     }
 }

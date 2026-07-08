@@ -61,5 +61,22 @@ namespace RdpManager.Tests
             Assert.Equal(0, type);
             Assert.Null(source);
         }
+
+        [Fact]
+        public void Resolve_CyclicParentId_DoesNotHangAndFallsBackToCollection()
+        {
+            // Zepsute dane (np. ręcznie edytowany JSON): A wskazuje na B, B wskazuje na A. Bez ochrony
+            // przed cyklem Resolve wisiałby w nieskończonej pętli (A9 z przeglądu).
+            var a = new RestFolder { Name = "A", AuthType = RestAuthResolve.Inherit };
+            var b = new RestFolder { Name = "B", AuthType = RestAuthResolve.Inherit, ParentId = a.Id };
+            a.ParentId = b.Id;
+            var coll = new RestCollection { AuthType = 2, AuthSecret = "root-pass", Folders = { a, b } };
+
+            var (type, _, secret, source) = RestAuthResolve.Resolve(coll, a.Id);
+
+            Assert.Equal(2, type);
+            Assert.Equal("root-pass", secret);
+            Assert.Null(source);
+        }
     }
 }

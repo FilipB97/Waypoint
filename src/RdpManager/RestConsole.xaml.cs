@@ -226,11 +226,16 @@ namespace RdpManager
             CollTree.ItemsSource = _roots;
         }
 
-        private RestNode BuildFolderNode(RestFolder f)
+        private RestNode BuildFolderNode(RestFolder f) => BuildFolderNode(f, new HashSet<string>());
+
+        // visited: broni przed zapętleniem po cyklicznym/zduplikowanym ParentId (np. ręcznie edytowany
+        // JSON albo relikt starego buga klonowania folderów) — A9 z przeglądu.
+        private RestNode BuildFolderNode(RestFolder f, HashSet<string> visited)
         {
             var node = new RestNode { IsFolder = true, Folder = f, IsExpanded = true };
+            if (!visited.Add(f.Id)) return node;
             foreach (var sub in _coll.Folders.Where(x => x.ParentId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-                node.Children.Add(BuildFolderNode(sub));
+                node.Children.Add(BuildFolderNode(sub, visited));
             foreach (var r in _coll.Requests.Where(x => x.FolderId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
                 node.Children.Add(new RestNode { IsFolder = false, Request = r });
             return node;
@@ -326,16 +331,22 @@ namespace RdpManager
             SelectNodeFor(_req);
         }
 
-        private bool FolderContains(RestFolder f, RestRequest req)
+        private bool FolderContains(RestFolder f, RestRequest req) => FolderContains(f, req, new HashSet<string>());
+
+        private bool FolderContains(RestFolder f, RestRequest req, HashSet<string> visited)
         {
-            if (req == null) return false;
+            if (req == null || !visited.Add(f.Id)) return false;
             if (req.FolderId == f.Id) return true;
-            return _coll.Folders.Where(x => x.ParentId == f.Id).Any(sub => FolderContains(sub, req));
+            return _coll.Folders.Where(x => x.ParentId == f.Id).Any(sub => FolderContains(sub, req, visited));
         }
 
-        private void DeleteFolder(RestFolder f)
+        private void DeleteFolder(RestFolder f) => DeleteFolder(f, new HashSet<string>());
+
+        // visited: jak w BuildFolderNode — cykliczny ParentId nie może zapętlić kasowania (A9 z przeglądu).
+        private void DeleteFolder(RestFolder f, HashSet<string> visited)
         {
-            foreach (var sub in _coll.Folders.Where(x => x.ParentId == f.Id).ToList()) DeleteFolder(sub);
+            if (!visited.Add(f.Id)) return;
+            foreach (var sub in _coll.Folders.Where(x => x.ParentId == f.Id).ToList()) DeleteFolder(sub, visited);
             foreach (var r in _coll.Requests.Where(x => x.FolderId == f.Id).ToList()) DeleteRequest(r);
             _coll.Folders.Remove(f);
         }

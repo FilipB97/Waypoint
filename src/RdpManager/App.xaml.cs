@@ -56,10 +56,18 @@ namespace RdpManager
             // pełnoekranowego. try/catch wokół wywołania nie pomaga, bo wyjątek leci później.
             // Nie pozwalamy, by jeden kaprys kontrolki ubił wszystkie otwarte sesje:
             // logujemy do %APPDATA%\RdpManager\crash.log i jedziemy dalej.
+            //
+            // To jedyny UDOKUMENTOWANY, oczekiwany przypadek połykania (SEHException/COMException z RDP).
+            // Każdy INNY wyjątek (np. NRE — realny bug, nie kaprys ActiveX) w Debug niech wybuchnie od razu,
+            // żeby był widoczny przy pracy/testach, a nie dopiero po przeczytaniu crash.log (A5 z przeglądu).
             DispatcherUnhandledException += (s, args) =>
             {
                 LogCrash("Dispatcher", args.Exception);
-                args.Handled = true;
+                bool expectedFromRdpControl = args.Exception is SEHException || args.Exception is COMException;
+#if DEBUG
+                if (!expectedFromRdpControl) return;   // Handled zostaje false → zwykła ścieżka WPF (debugger/crash)
+#endif
+                args.Handled = true;   // Release: nadal chronimy otwarte sesje, ale przyczyna trafia do crash.log
             };
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
                 LogCrash("AppDomain", args.ExceptionObject as Exception);
