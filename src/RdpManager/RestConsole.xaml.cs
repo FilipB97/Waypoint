@@ -34,6 +34,12 @@ namespace RdpManager
             public Brush IconBrush =>
                 (Brush)(Application.Current?.TryFindResource(IsFolder ? "Accent" : "TextSec")) ?? Brushes.Gray;
 
+            // Folder → ikona folderu; żądanie → kolorowy tag metody (GET/POST…) zamiast kuli.
+            public Visibility FolderIconVis => IsFolder ? Visibility.Visible : Visibility.Collapsed;
+            public Visibility MethodVis => IsFolder ? Visibility.Collapsed : Visibility.Visible;
+            public string MethodText => IsFolder ? "" : (Request.Method ?? "GET").ToUpperInvariant();
+            public Brush MethodBrush => IsFolder ? Brushes.Transparent : RestConsole.MethodBrush(Request.Method);
+
             public string Name
             {
                 get => IsFolder ? Folder.Name : Request.Name;

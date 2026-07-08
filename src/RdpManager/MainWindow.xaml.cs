@@ -4428,6 +4428,7 @@ namespace RdpManager
                 Name = res.Name,
                 Protocol = RemoteProtocol.Rest,
                 Host = "",
+                Group = "HTTP",   // kolekcje zbierają się w grupie HTTP w drzewie serwerów
                 Initials = RdpUtils.MakeInitials(res.Name)
             };
             _vm.Add(entry);

@@ -312,7 +312,8 @@ namespace RdpManager
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(HostBox.Text))
+            bool restProto = ProtocolCombo.SelectedIndex == 8;   // REST: kolekcja — URL bazowy opcjonalny
+            if (string.IsNullOrWhiteSpace(NameBox.Text) || (!restProto && string.IsNullOrWhiteSpace(HostBox.Text)))
             {
                 MessageBox.Show(LocalizationManager.S("S.se.needname"), LocalizationManager.S("S.se.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -375,7 +376,10 @@ namespace RdpManager
             _server.Host = HostBox.Text.Trim();
             _server.Port = int.TryParse(PortBox.Text.Trim(), out var p) ? p : DefaultPortFor(idx);
             // Puste pole grupy = domyślny „kosz" lokalizowany przy wyświetlaniu (nie zapisujemy nazwy PL).
-            _server.Group = string.IsNullOrWhiteSpace(GroupBox.Text) ? "" : GroupBox.Text.Trim();
+            // REST bez grupy → domyślnie „HTTP", żeby kolekcje ładnie zbierały się w drzewie serwerów.
+            _server.Group = string.IsNullOrWhiteSpace(GroupBox.Text)
+                ? (protocol == RemoteProtocol.Rest ? "HTTP" : "")
+                : GroupBox.Text.Trim();
             // Profil poświadczeń (tylko RDP/SSH): gdy wybrany, login/domena/hasło biorą się z profilu → własne czyścimy.
             string profileId = SelectedProfileId();
             _server.CredentialProfileId = (creds && profileId.Length > 0) ? profileId : "";
