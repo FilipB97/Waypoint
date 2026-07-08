@@ -90,6 +90,29 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void SaveLoad_PreservesHistory()
+        {
+            string dir = TempDir();
+            try
+            {
+                var data = new Dictionary<string, RestCollection>
+                {
+                    ["srv1"] = new RestCollection
+                    {
+                        History = { new RestHistoryEntry { Method = "GET", Url = "https://api.test/x", Status = 200, ElapsedMs = 42, WhenIso = "2026-07-08 10:00:00" } }
+                    }
+                };
+                RestStore.Save(data, dir);
+                var h = RestStore.Load(dir)["srv1"].History;
+                Assert.Single(h);
+                Assert.Equal(200, h[0].Status);
+                Assert.Equal("GET", h[0].Method);
+                Assert.Equal(42, h[0].ElapsedMs);
+            }
+            finally { try { Directory.Delete(dir, true); } catch { } }
+        }
+
+        [Fact]
         public void Load_MissingFile_ReturnsEmpty()
         {
             string dir = TempDir();

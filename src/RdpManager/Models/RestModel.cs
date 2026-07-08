@@ -72,7 +72,7 @@ namespace RdpManager.Models
         public List<RestVariable> Variables { get; set; } = new List<RestVariable>();
     }
 
-    /// <summary>Wpis historii wysłanego żądania (PR4).</summary>
+    /// <summary>Wpis historii wysłanego żądania.</summary>
     public sealed class RestHistoryEntry
     {
         public string Method { get; set; } = "";
@@ -80,6 +80,10 @@ namespace RdpManager.Models
         public int Status { get; set; }
         public long ElapsedMs { get; set; }
         public string WhenIso { get; set; } = "";
+
+        /// <summary>Druga linia na liście historii: status · czas · kiedy.</summary>
+        [JsonIgnore]
+        public string Summary => (Status > 0 ? Status.ToString() : "—") + " · " + ElapsedMs + " ms · " + WhenIso;
     }
 
     /// <summary>
