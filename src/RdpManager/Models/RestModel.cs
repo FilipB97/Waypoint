@@ -115,6 +115,18 @@ namespace RdpManager.Models
     /// </summary>
     public sealed class RestCollection
     {
+        /// <summary>Wersja kształtu pól. CELOWO bez domyślnej wartości = CurrentSchemaVersion — inaczej stary
+        /// plik (bez tego pola) i świeży obiekt byłyby nie do odróżnienia (System.Text.Json nie zeruje pól
+        /// nieobecnych w JSON, tylko zostawia wartość z inicjalizatora). 0 = nieoznaczone/sprzed wprowadzenia
+        /// znacznika. RestStore.Save wpisuje bieżącą wersję. RestRequest/RestFolder.AuthType dostały wartość
+        /// 3=Inherit bez żadnego znacznika wersji; stare pliki nie są przez to zepsute (0/1/2 znaczą to samo
+        /// co wcześniej), ale nie ma jak odróżnić kolekcji sprzed tej zmiany. Sam znacznik na przyszłość,
+        /// na razie bez kroku Migrate() (B5 z przeglądu).</summary>
+        public int SchemaVersion { get; set; }
+
+        /// <summary>Publiczne dla testów (C5) i ewentualnej przyszłej migracji.</summary>
+        public const int CurrentSchemaVersion = 2;
+
         public string BaseUrl { get; set; } = "";
         public List<RestFolder> Folders { get; set; } = new List<RestFolder>();
         public List<RestRequest> Requests { get; set; } = new List<RestRequest>();

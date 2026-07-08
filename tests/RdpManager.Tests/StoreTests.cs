@@ -269,5 +269,40 @@ namespace RdpManager.Tests
             var result = SettingsStore.ConsumeUpdateSnapshot(new AppSettings { DefaultPort = 3391 }, _dir);
             Assert.Equal(3391, result.DefaultPort);
         }
+
+        // SchemaVersion (B5/C5): Save() stempluje bieżącą wersję; pliki sprzed jej wprowadzenia (brak
+        // pola w JSON) deserializują się jako 0 — celowo BEZ domyślnej wartości na właściwości, inaczej
+        // stary plik i świeży obiekt byłyby nie do odróżnienia (patrz komentarz na SchemaVersion).
+        [Fact]
+        public void SettingsStore_Save_StampsCurrentSchemaVersion()
+        {
+            SettingsStore.Save(new AppSettings(), _dir);
+            var loaded = SettingsStore.Load(_dir);
+            Assert.Equal(AppSettings.CurrentSchemaVersion, loaded.SchemaVersion);
+        }
+
+        [Fact]
+        public void SettingsStore_FileWithoutSchemaVersion_DefaultsToZero()
+        {
+            File.WriteAllText(Path.Combine(_dir, "settings.json"), "{\"DefaultPort\":3391}");
+            var loaded = SettingsStore.Load(_dir);
+            Assert.Equal(0, loaded.SchemaVersion);
+        }
+
+        [Fact]
+        public void ServerRepository_Save_StampsCurrentSchemaVersion()
+        {
+            ServerRepository.Save(new List<ServerInfo> { new ServerInfo { Name = "srv" } }, _dir);
+            var loaded = ServerRepository.Load(_dir);
+            Assert.Equal(ServerInfo.CurrentSchemaVersion, loaded[0].SchemaVersion);
+        }
+
+        [Fact]
+        public void ServerRepository_FileWithoutSchemaVersion_DefaultsToZero()
+        {
+            File.WriteAllText(Path.Combine(_dir, "servers.json"), "[{\"Name\":\"srv\",\"Host\":\"h\"}]");
+            var loaded = ServerRepository.Load(_dir);
+            Assert.Equal(0, loaded[0].SchemaVersion);
+        }
     }
 }

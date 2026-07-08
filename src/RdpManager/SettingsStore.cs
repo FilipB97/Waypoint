@@ -74,6 +74,7 @@ namespace RdpManager
         /// <summary>Zapisuje ustawienia do podanego katalogu (testowalne).</summary>
         public static void Save(AppSettings settings, string dir)
         {
+            settings.SchemaVersion = AppSettings.CurrentSchemaVersion;   // B5: plik zapisany tym buildem = aktualna wersja
             var path = FilePath(dir);
             PersistLog.Write(dir, $"settings.Save: score={DataScore(settings)}");
             AtomicFile.Backup(path);   // kopia poprzedniej wersji na wypadek błędnego zapisu

@@ -7,6 +7,17 @@ namespace RdpManager
     /// <summary>Ustawienia aplikacji (JSON w %APPDATA%\RdpManager\settings.json).</summary>
     public class AppSettings
     {
+        /// <summary>Wersja kształtu pól. CELOWO bez domyślnej wartości = CurrentSchemaVersion — inaczej stary
+        /// plik (bez tego pola) i świeży obiekt byłyby nie do odróżnienia (System.Text.Json nie zeruje pól
+        /// nieobecnych w JSON, tylko zostawia wartość z inicjalizatora). 0 = nieoznaczone/sprzed wprowadzenia
+        /// znacznika. SettingsStore.Save wpisuje bieżącą wersję. Żadne pole nie zmieniło jeszcze znaczenia,
+        /// więc nie ma kroku Migrate() — sam znacznik na przyszłość (B5 z przeglądu). [JsonExtensionData]
+        /// poniżej i tak chroni przed utratą nieznanych pól.</summary>
+        public int SchemaVersion { get; set; }
+
+        /// <summary>Publiczne dla testów (C5) i ewentualnej przyszłej migracji.</summary>
+        public const int CurrentSchemaVersion = 1;
+
         public int DefaultPort { get; set; } = 3389;
         public int FullscreenBarDelayMs { get; set; } = 450;
         public bool ReachabilityEnabled { get; set; } = true;
