@@ -146,10 +146,13 @@ namespace RdpManager.Core
             }
             else if (mode == "urlencoded" && body.TryGetProperty("urlencoded", out var ue) && ue.ValueKind == JsonValueKind.Array)
             {
+                // Pary klucz=wartość zapisujemy SUROWO (bez EscapeDataString) — inaczej placeholdery {{var}}
+                // zamieniłyby się w %7B%7Bvar%7D%7D i podstawianie by nie działało. Kodowanie robi klient
+                // przy wysyłce, PO podstawieniu zmiennych (RestClient.BuildFormBody).
                 var parts = new List<string>();
                 foreach (var kv in ue.EnumerateArray())
                     if (!Bool(kv, "disabled"))
-                        parts.Add(Uri.EscapeDataString(Str(kv, "key") ?? "") + "=" + Uri.EscapeDataString(Str(kv, "value") ?? ""));
+                        parts.Add((Str(kv, "key") ?? "") + "=" + (Str(kv, "value") ?? ""));
                 req.Body = string.Join("&", parts);
                 req.BodyContentType = "application/x-www-form-urlencoded";
             }
