@@ -8,6 +8,15 @@ using System.Windows.Media;
 
 namespace RdpManager
 {
+    /// <summary>Ładunek przeciągania wiersza między panelami (dual-pane): źródłowy panel + wpis.</summary>
+    public sealed class FileDragData
+    {
+        public FileTransferPanel Source;
+        public string Full;
+        public string Name;
+        public bool IsDir;
+    }
+
     /// <summary>
     /// Panel plików zdalnego systemu (<see cref="IRemoteFs"/>): nawigacja (breadcrumb), wyślij/pobierz,
     /// nowy folder, usuwanie oraz upuszczanie plików z Eksploratora (upload). Działa dla SFTP i FTP/FTPS —
@@ -41,10 +50,53 @@ namespace RdpManager
         private static string L(string key) => LocalizationManager.S(key);
         private static Brush Res(string key) => Application.Current.TryFindResource(key) as Brush ?? Brushes.Gray;
 
-        public FileTransferPanel(Func<IRemoteFs> factory)
+        public FileTransferPanel(Func<IRemoteFs> factory, bool localMode = false)
         {
             InitializeComponent();
             _factory = factory;
+            if (localMode)   // panel lokalny w dual-pane: transfer robią strzałki/drag, nie dialogi
+            {
+                UploadBtn.Visibility = Visibility.Collapsed;
+                DownloadBtn.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>Bieżący katalog panelu (do transferu w dual-pane).</summary>
+        public string CurrentDir => _path;
+
+        /// <summary>Zaznaczony PLIK (nie katalog) — do transferu; false gdy brak zaznaczenia lub katalog.</summary>
+        public bool TryGetSelectedFile(out string full, out string name)
+        {
+            full = name = null;
+            if (FileList.SelectedItem is Row r && !r.IsDir) { full = r.FullName; name = r.Name; return true; }
+            return false;
+        }
+
+        /// <summary>Upuszczenie pliku z DRUGIEGO panelu na ten (dual-pane) — host wykonuje transfer.</summary>
+        public event Action<FileDragData> CrossPaneDrop;
+
+        /// <summary>Wysyła lokalny plik do bieżącego katalogu TEGO panelu (przez RunAsync + odśwież).</summary>
+        public async Task<bool> TransferInLocalFileAsync(string localPath)
+        {
+            if (!System.IO.File.Exists(localPath)) return false;
+            string dir = _path.TrimEnd('/');
+            string name = System.IO.Path.GetFileName(localPath);
+            bool ok = await RunAsync(string.Format(L("S.sftp.uploading"), name), fs =>
+            {
+                using (var s = System.IO.File.OpenRead(localPath)) fs.Upload(s, dir + "/" + name, true);
+            });
+            if (ok) RefreshAsync();
+            return ok;
+        }
+
+        /// <summary>Pobiera plik z TEGO panelu do lokalnego katalogu (przez RunAsync; wołający odświeża cel).</summary>
+        public Task<bool> TransferOutToLocalAsync(string remoteFull, string remoteName, string localDir)
+        {
+            string dest = System.IO.Path.Combine(localDir.Replace('/', '\\'), remoteName);
+            return RunAsync(string.Format(L("S.sftp.downloading"), remoteName), fs =>
+            {
+                using (var s = System.IO.File.Create(dest)) fs.Download(remoteFull, s);
+            });
         }
 
         // Jedna operacja naraz; łączy przy pierwszym użyciu (dispatcher wolny — praca w tle).
@@ -234,7 +286,22 @@ namespace RdpManager
             }
         }
 
-        // ---------- Drag&drop z Eksploratora (upload) ----------
+        // ---------- Przeciąganie wiersza (dual-pane: między panelami) ----------
+
+        private System.Windows.Point _dragStart;
+        private void List_PreviewDown(object sender, System.Windows.Input.MouseButtonEventArgs e) => _dragStart = e.GetPosition(null);
+        private void List_PreviewMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+            if (!(FileList.SelectedItem is Row r)) return;
+            var pos = e.GetPosition(null);
+            if (Math.Abs(pos.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(pos.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+            try { DragDrop.DoDragDrop(FileList, new FileDragData { Source = this, Full = r.FullName, Name = r.Name, IsDir = r.IsDir }, DragDropEffects.Copy); }
+            catch { }
+        }
+
+        // ---------- Drag&drop z Eksploratora (upload) + między panelami ----------
 
         private void Panel_DragEnter(object sender, DragEventArgs e) => UpdateDropEffect(e);
         private void Panel_DragOver(object sender, DragEventArgs e) => UpdateDropEffect(e);
@@ -243,14 +310,22 @@ namespace RdpManager
         private void UpdateDropEffect(DragEventArgs e)
         {
             bool files = e.Data.GetDataPresent(DataFormats.FileDrop);
-            e.Effects = files ? DragDropEffects.Copy : DragDropEffects.None;
-            DropOverlay.Visibility = files ? Visibility.Visible : Visibility.Collapsed;
+            bool cross = e.Data.GetDataPresent(typeof(FileDragData))
+                         && (e.Data.GetData(typeof(FileDragData)) as FileDragData)?.Source != this;
+            bool ok = files || cross;
+            e.Effects = ok ? DragDropEffects.Copy : DragDropEffects.None;
+            DropOverlay.Visibility = ok ? Visibility.Visible : Visibility.Collapsed;
             e.Handled = true;
         }
 
         private async void Panel_Drop(object sender, DragEventArgs e)
         {
             DropOverlay.Visibility = Visibility.Collapsed;
+            if (e.Data.GetDataPresent(typeof(FileDragData)))   // z drugiego panelu → host robi transfer
+            {
+                if (e.Data.GetData(typeof(FileDragData)) is FileDragData d && d.Source != this) CrossPaneDrop?.Invoke(d);
+                return;
+            }
             if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
             var paths = e.Data.GetData(DataFormats.FileDrop) as string[];
             if (paths != null) await UploadPaths(paths);

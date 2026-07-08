@@ -421,6 +421,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.downloading">Pobieranie {0}…</sys:String>
     <sys:String x:Key="S.sftp.done">Gotowe ✓</sys:String>
     <sys:String x:Key="S.sftp.drophint">Upuść pliki tutaj, aby wysłać</sys:String>
+    <sys:String x:Key="S.dual.push">Wyślij zaznaczony plik na serwer →</sys:String>
+    <sys:String x:Key="S.dual.pull">← Pobierz zaznaczony plik na dysk</sys:String>
 
     <sys:String x:Key="S.ssh.tunnel.up">tunel {0} aktywny — nasłuch na 127.0.0.1</sys:String>
     <sys:String x:Key="S.ssh.tunnel.fail">tunel {0}: {1}</sys:String>

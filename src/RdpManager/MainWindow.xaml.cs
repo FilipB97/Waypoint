@@ -2184,7 +2184,7 @@ namespace RdpManager
                     TrustHostKey = AskTrustHostKey,
                     RequestKeyPassphrase = AskKeyPassphrase
                 };
-                var panel = new FileTransferPanel(() => conn.NewFs());
+                var panel = new DualFilePanel(() => conn.NewFs());
                 SessionContainer.Children.Add(panel);
                 session = new Session(server, panel, conn);
                 WireFilesEvents(session);
@@ -2193,7 +2193,7 @@ namespace RdpManager
             {
                 // FTP/FTPS jako osobny protokół: ten sam panel plików (IRemoteFs), konektor FluentFTP.
                 var conn = new FtpConnector();
-                var panel = new FileTransferPanel(() => conn.NewFs());
+                var panel = new DualFilePanel(() => conn.NewFs());
                 SessionContainer.Children.Add(panel);
                 session = new Session(server, panel, conn);
                 WireFilesEvents(session);
