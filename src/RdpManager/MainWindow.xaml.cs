@@ -1710,7 +1710,7 @@ namespace RdpManager
             var row = new Border
             {
                 CornerRadius = new CornerRadius(6),
-                Margin = new Thickness(0, 1, 0, 1),
+                Margin = new Thickness(14, 1, 0, 1),   // wcięcie = element należy do grupy powyżej
                 Padding = new Thickness(6, 7, 8, 7),
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
@@ -1746,7 +1746,7 @@ namespace RdpManager
             grid.Children.Add(avatar);
 
             var meta = new StackPanel { Margin = new Thickness(9, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12.5 });
+            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12 });
             meta.Children.Add(new TextBlock
             {
                 Text = DisplayHost(server), Foreground = Res("TextTer"), FontSize = 10.5,
@@ -1790,7 +1790,7 @@ namespace RdpManager
             var row = new Border
             {
                 CornerRadius = new CornerRadius(6),
-                Margin = new Thickness(0, 1, 0, 1),
+                Margin = new Thickness(14, 1, 0, 1),   // wcięcie = element należy do grupy powyżej
                 Padding = new Thickness(0, 3, 8, 3),
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
@@ -1824,7 +1824,7 @@ namespace RdpManager
 
             var name = new TextBlock
             {
-                Text = server.Name, Foreground = Res("TextPrim"), FontSize = 13, FontWeight = FontWeights.Medium,
+                Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12, FontWeight = FontWeights.Medium,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(9, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis
             };
             Grid.SetColumn(name, 2);
