@@ -206,6 +206,9 @@
                                         <Separator/>
                                         <MenuItem Header="{DynamicResource S.import.hdr.files}" IsEnabled="False"/>
                                         <MenuItem Header="{DynamicResource S.import.filezilla}" Click="ImportFileZilla_Click"/>
+                                        <Separator/>
+                                        <MenuItem Header="{DynamicResource S.import.hdr.rest}" IsEnabled="False"/>
+                                        <MenuItem Header="{DynamicResource S.import.postman}" Click="ImportPostman_Click"/>
                                     </ContextMenu>
                                 </ui:Button.ContextMenu>
                             </ui:Button>

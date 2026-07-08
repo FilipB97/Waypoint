@@ -4401,6 +4401,51 @@ namespace RdpManager
                 text => ExternalImport.ParseFileZilla(text),
                 System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FileZilla"));
 
+        // Import kolekcji Postman: tworzy JEDEN wpis REST (= kolekcja) i zasila jego drzewo w rest.json.
+        // Sekrety (Bearer/Basic) → Credential Manager. Inaczej niż ImportExternal (który dodaje wiele serwerów).
+        private void ImportPostman_Click(object sender, RoutedEventArgs e)
+        {
+            string title = L("S.dlg.importpostman.title");
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = title, Filter = L("S.dlg.postman.filter") };
+            if (dlg.ShowDialog(this) != true) return;
+
+            Core.PostmanImport.Result res;
+            try { res = Core.PostmanImport.Parse(System.IO.File.ReadAllText(dlg.FileName)); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(string.Format(L("S.msg.importrdp.fail"), System.IO.Path.GetFileName(dlg.FileName)) + "\n" + ex.Message,
+                    title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (res.RequestCount == 0)
+            {
+                MessageBox.Show(L("S.msg.postman.empty"), title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var entry = new ServerInfo
+            {
+                Name = res.Name,
+                Protocol = RemoteProtocol.Rest,
+                Host = "",
+                Initials = RdpUtils.MakeInitials(res.Name)
+            };
+            _vm.Add(entry);
+            RestStore.Put(entry.Id, res.Collection);
+            int secrets = 0;
+            foreach (var kv in res.Secrets)
+                if (!string.IsNullOrEmpty(kv.Value)) { CredentialStore.TrySave(kv.Key, "", kv.Value); secrets++; }
+
+            PersistServers();
+            RenderTree(SearchBox.Text);
+            SetStatus(string.Format(L("S.st.imported"), 1), StatusKind.Ok);
+
+            MessageBox.Show(
+                string.Format(L("S.msg.postman.done"), res.RequestCount, res.Collection.Folders.Count)
+                + (secrets > 0 ? "\n" + string.Format(L("S.msg.import.withpass"), secrets) : ""),
+                title, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         // Wspólny przebieg importu z innego menedżera: plik → parser → dedup po host:port → zapis.
         // Hasła nie są przenoszone (mRemoteNG/RDCMan szyfrują je własnymi kluczami).
         private void ImportExternal(string title, string filter, Func<string, ExternalImport.Result> parse, string initialDir = null)
