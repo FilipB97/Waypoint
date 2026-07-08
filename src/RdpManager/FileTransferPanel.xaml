@@ -128,7 +128,7 @@
                 </ScrollViewer>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.upload}" Click="Upload_Click">
+                    <Button x:Name="UploadBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.upload}" Click="Upload_Click">
                         <ui:SymbolIcon Symbol="ArrowUpload24"/>
                     </Button>
                     <Button x:Name="DownloadBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.download}" Click="Download_Click">
@@ -164,7 +164,8 @@
                 <ListView x:Name="FileList" BorderThickness="0" Background="Transparent" Margin="4,4,6,2"
                           ItemContainerStyle="{StaticResource FtRow}" ItemTemplate="{StaticResource FtRowTemplate}"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          MouseDoubleClick="List_DoubleClick"/>
+                          MouseDoubleClick="List_DoubleClick"
+                          PreviewMouseLeftButtonDown="List_PreviewDown" PreviewMouseMove="List_PreviewMove"/>
                 <Border x:Name="DropOverlay" Visibility="Collapsed" Margin="6" CornerRadius="10"
                         Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Accent}" BorderThickness="2" Opacity="0.96">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">

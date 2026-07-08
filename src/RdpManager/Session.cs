@@ -28,8 +28,8 @@ namespace RdpManager
         public SshTerminalControl Ssh => Term as SshTerminalControl;
         public bool IsSsh => Term is SshTerminalControl;
 
-        /// <summary>Panel plików (SFTP/FTP) — null dla pozostałych protokołów.</summary>
-        public FileTransferPanel Files { get; }
+        /// <summary>Widok plików (SFTP/FTP): dwupanelowy lokalny↔zdalny — null dla pozostałych protokołów.</summary>
+        public DualFilePanel Files { get; }
         public bool IsFiles => Files != null;
 
         /// <summary>Konektor sesji plikowej: poświadczenia + fabryka <see cref="IRemoteFs"/> (null poza SFTP/FTP).</summary>
@@ -78,7 +78,7 @@ namespace RdpManager
         }
 
         /// <summary>Sesja plikowa (SFTP/FTP) — panel plików zamiast kontrolki/terminala; łączy się leniwie.</summary>
-        public Session(ServerInfo server, FileTransferPanel files, IFileConnector conn)
+        public Session(ServerInfo server, DualFilePanel files, IFileConnector conn)
         {
             Server = server;
             Files = files;
