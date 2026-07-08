@@ -454,7 +454,7 @@
 
                 <!-- Prawa kolumna: treść wybranej kategorii (lub wyniki wyszukiwania) -->
                 <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel x:Name="SettingsCards" Margin="12,24,28,24" MaxWidth="900" HorizontalAlignment="Left">
+                    <StackPanel x:Name="SettingsCards" Margin="12,24,28,24" MaxWidth="1100" HorizontalAlignment="Stretch">
 
                     <!-- Interfejs -->
                     <Border Style="{DynamicResource Card}">
@@ -529,7 +529,7 @@
                             <TextBlock Text="{DynamicResource S.set.autoconnect.hint}" Foreground="{DynamicResource TextTer}"
                                        FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
                             <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="10,6">
-                                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto">
                                     <StackPanel x:Name="AutoConnectList"/>
                                 </ScrollViewer>
                             </Border>
