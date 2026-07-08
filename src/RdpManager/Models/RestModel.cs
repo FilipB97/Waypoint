@@ -36,6 +36,11 @@ namespace RdpManager.Models
         /// <summary>Folder-rodzic w drzewie kolekcji (puste = korzeń). Używane od PR2 (foldery).</summary>
         public string FolderId { get; set; } = "";
 
+        /// <summary>Skrypt JS uruchamiany PRZED wysyłką (pm.request/pm.environment). To kod, nie sekret — może być w JSON.</summary>
+        public string PreScript { get; set; } = "";
+        /// <summary>Skrypt JS uruchamiany PO odpowiedzi (pm.response/pm.test/pm.environment.set). Kod, nie sekret.</summary>
+        public string TestScript { get; set; } = "";
+
         /// <summary>Klucz sekretu uwierzytelniania w Credential Manager (token/hasło Basic — nigdy w JSON).</summary>
         [JsonIgnore]
         public string AuthCredTarget => "RdpManager:rest:" + Id;

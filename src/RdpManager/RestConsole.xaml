@@ -386,6 +386,29 @@
                                    FontSize="11.5" TextWrapping="Wrap" Margin="0,12,0,0"/>
                     </StackPanel>
                 </TabItem>
+
+                <TabItem Header="{DynamicResource S.rest.tab.scripts}">
+                    <Grid Margin="0,8,0,0" ToolTip="{DynamicResource S.rest.script.hint}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="{DynamicResource S.rest.script.pre}" Foreground="{DynamicResource TextSec}" FontWeight="SemiBold" Margin="2,0,0,3"/>
+                        <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="6" Margin="0,0,0,8">
+                            <TextBox x:Name="PreScriptBox" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource TextPrim}"
+                                     CaretBrush="{DynamicResource TextPrim}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12.5" Padding="8"/>
+                        </Border>
+                        <TextBlock Grid.Row="2" Text="{DynamicResource S.rest.script.post}" Foreground="{DynamicResource TextSec}" FontWeight="SemiBold" Margin="2,0,0,3"/>
+                        <Border Grid.Row="3" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="6">
+                            <TextBox x:Name="TestScriptBox" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource TextPrim}"
+                                     CaretBrush="{DynamicResource TextPrim}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12.5" Padding="8"/>
+                        </Border>
+                    </Grid>
+                </TabItem>
             </TabControl>
 
             <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center"
@@ -446,6 +469,14 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="{DynamicResource S.rest.resp.script}">
+                        <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="6" Margin="0,6,0,0">
+                            <TextBox x:Name="ScriptOutput" BorderThickness="0" Background="Transparent" IsReadOnly="True"
+                                     Foreground="{DynamicResource TextPrim}" AcceptsReturn="True" TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                     FontFamily="Consolas" FontSize="12.5" Padding="8"/>
+                        </Border>
                     </TabItem>
                 </TabControl>
             </Grid>
