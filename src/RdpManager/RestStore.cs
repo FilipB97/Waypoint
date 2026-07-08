@@ -62,13 +62,31 @@ namespace RdpManager
             Save(all);
         }
 
-        /// <summary>Głęboka kopia kolekcji ze świeżymi Id żądań (do duplikowania wpisu). Historia czyszczona.
-        /// <paramref name="requestIdMap"/> = stare Id → nowe Id (do przeniesienia sekretów w Credential Manager).</summary>
-        public static RestCollection DeepCopy(RestCollection src, out Dictionary<string, string> requestIdMap)
+        /// <summary>Głęboka kopia kolekcji ze świeżymi Id żądań I folderów (do duplikowania wpisu). Historia czyszczona.
+        /// Foldery też dostają świeże Id, bo od (patrz auth dziedziczone) mają własny sekret w Credential Managerze
+        /// pod celem liczonym z Id — bez tego duplikat współdzieliłby cel z oryginałem. Referencje ParentId/FolderId
+        /// przepisane na nowe Id. <paramref name="requestIdMap"/>/<paramref name="folderIdMap"/> = stare Id → nowe Id
+        /// (do przeniesienia sekretów w Credential Manager).</summary>
+        public static RestCollection DeepCopy(RestCollection src, out Dictionary<string, string> requestIdMap, out Dictionary<string, string> folderIdMap)
         {
             requestIdMap = new Dictionary<string, string>();
+            folderIdMap = new Dictionary<string, string>();
             var copy = JsonSerializer.Deserialize<RestCollection>(JsonSerializer.Serialize(src, Options)) ?? new RestCollection();
             copy.History.Clear();
+
+            foreach (var f in copy.Folders)
+            {
+                string oldId = f.Id;
+                f.Id = System.Guid.NewGuid().ToString("N");
+                folderIdMap[oldId] = f.Id;
+            }
+            foreach (var f in copy.Folders)
+                if (!string.IsNullOrEmpty(f.ParentId) && folderIdMap.TryGetValue(f.ParentId, out var newParent))
+                    f.ParentId = newParent;
+            foreach (var r in copy.Requests)
+                if (!string.IsNullOrEmpty(r.FolderId) && folderIdMap.TryGetValue(r.FolderId, out var newFolder))
+                    r.FolderId = newFolder;
+
             foreach (var r in copy.Requests)
             {
                 string oldId = r.Id;

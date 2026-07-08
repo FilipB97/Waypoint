@@ -57,9 +57,12 @@ namespace RdpManager.Core
         /// <summary>
         /// Import osobnego pliku środowiska Postman (eksport „environment", z tablicą „values") → <see cref="RestEnvironment"/>.
         /// Wartości typu „secret" wczytujemy z PUSTĄ wartością (sekrety nie trafiają do jawnego rest.json — patrz zakładka Auth).
+        /// <paramref name="blankedSecretKeys"/> = klucze zmiennych, których wartość wyczyszczono (do ostrzeżenia w UI —
+        /// inaczej użytkownik po cichu dostaje pustą zmienną tam, gdzie w Postmanie była realna wartość).
         /// </summary>
-        public static RestEnvironment ParseEnvironment(string json)
+        public static RestEnvironment ParseEnvironment(string json, out List<string> blankedSecretKeys)
         {
+            blankedSecretKeys = new List<string>();
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("values", out var values) || values.ValueKind != JsonValueKind.Array)
@@ -71,6 +74,7 @@ namespace RdpManager.Core
                 string key = Str(v, "key");
                 if (string.IsNullOrWhiteSpace(key)) continue;
                 bool secret = string.Equals(Str(v, "type"), "secret", StringComparison.OrdinalIgnoreCase);
+                if (secret) blankedSecretKeys.Add(key);
                 env.Variables.Add(new RestVariable { Key = key, Value = secret ? "" : (Str(v, "value") ?? "") });
             }
             return env;
@@ -90,7 +94,9 @@ namespace RdpManager.Core
                 }
                 else if (it.TryGetProperty("request", out var reqEl))
                 {
-                    res.Collection.Requests.Add(ParseRequest(reqEl, Str(it, "name"), parentFolderId, res));
+                    var req = ParseRequest(reqEl, Str(it, "name"), parentFolderId, res);
+                    ParseEvents(it, req);
+                    res.Collection.Requests.Add(req);
                     res.RequestCount++;
                 }
             }
@@ -146,13 +152,18 @@ namespace RdpManager.Core
             }
             else if (mode == "urlencoded" && body.TryGetProperty("urlencoded", out var ue) && ue.ValueKind == JsonValueKind.Array)
             {
-                // Pary klucz=wartość zapisujemy SUROWO (bez EscapeDataString) — inaczej placeholdery {{var}}
-                // zamieniłyby się w %7B%7Bvar%7D%7D i podstawianie by nie działało. Kodowanie robi klient
-                // przy wysyłce, PO podstawieniu zmiennych (RestClient.BuildFormBody).
+                // Pola trafiają do FormFields (tabela klucz/wartość — edytor) SUROWO (bez EscapeDataString),
+                // inaczej placeholdery {{var}} zamieniłyby się w %7B%7Bvar%7D%7D i podstawianie by nie działało.
+                // Kodowanie robi klient przy wysyłce, PO podstawieniu zmiennych. Body (starszy surowy format,
+                // pomija wyłączone) trzymany dla kompatybilności wstecznej — RestClient preferuje FormFields.
                 var parts = new List<string>();
                 foreach (var kv in ue.EnumerateArray())
-                    if (!Bool(kv, "disabled"))
-                        parts.Add((Str(kv, "key") ?? "") + "=" + (Str(kv, "value") ?? ""));
+                {
+                    bool enabled = !Bool(kv, "disabled");
+                    string k = Str(kv, "key") ?? "", v = Str(kv, "value") ?? "";
+                    req.FormFields.Add(new RestKeyValue { Enabled = enabled, Key = k, Value = v });
+                    if (enabled) parts.Add(k + "=" + v);
+                }
                 req.Body = string.Join("&", parts);
                 req.BodyContentType = "application/x-www-form-urlencoded";
             }
@@ -175,6 +186,32 @@ namespace RdpManager.Core
                     if (!string.IsNullOrEmpty(pw)) res.Secrets[req.AuthCredTarget] = pw;
                     break;
             }
+        }
+
+        // Skrypty pre-request/test z poziomu elementu Postmana (event[] jest siostrą "request", nie jej częścią).
+        // "listen" == "prerequest"/"test"; linie script.exec[] łączone \n. Kod, nie sekret — trafia wprost do JSON.
+        private static void ParseEvents(JsonElement item, RestRequest req)
+        {
+            if (!item.TryGetProperty("event", out var events) || events.ValueKind != JsonValueKind.Array) return;
+            foreach (var ev in events.EnumerateArray())
+            {
+                string listen = Str(ev, "listen");
+                if (listen != "prerequest" && listen != "test") continue;
+                if (!ev.TryGetProperty("script", out var script)) continue;
+                string code = JoinExec(script);
+                if (string.IsNullOrEmpty(code)) continue;
+                if (listen == "prerequest") req.PreScript = code;
+                else req.TestScript = code;
+            }
+        }
+
+        private static string JoinExec(JsonElement script)
+        {
+            if (!script.TryGetProperty("exec", out var exec) || exec.ValueKind != JsonValueKind.Array) return "";
+            var lines = new List<string>();
+            foreach (var l in exec.EnumerateArray())
+                if (l.ValueKind == JsonValueKind.String) lines.Add(l.GetString() ?? "");
+            return string.Join("\n", lines);
         }
 
         // ---------- pomocnicze ----------

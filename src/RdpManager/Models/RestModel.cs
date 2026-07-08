@@ -27,9 +27,14 @@ namespace RdpManager.Models
         public List<RestKeyValue> Headers { get; set; } = new List<RestKeyValue>();
         public string Body { get; set; } = "";
         public string BodyContentType { get; set; } = "application/json";
+        /// <summary>Pola treści application/x-www-form-urlencoded jako tabela klucz/wartość (edytor przyjazny jak w Postmanie).
+        /// Gdy niepuste, mają pierwszeństwo przy wysyłce nad <see cref="Body"/> (zob. RestClient.Build).</summary>
+        public List<RestKeyValue> FormFields { get; set; } = new List<RestKeyValue>();
 
-        /// <summary>Rodzaj uwierzytelniania: 0 = brak, 1 = Bearer (token), 2 = Basic (login + hasło).</summary>
-        public int AuthType { get; set; }
+        /// <summary>Rodzaj uwierzytelniania: 0 = brak, 1 = Bearer (token), 2 = Basic (login + hasło),
+        /// 3 = dziedzicz z folderu-rodzica / kolekcji (zob. RestAuthResolve). Domyślne dla nowych żądań —
+        /// jak w Postmanie ("Inherit auth from parent").</summary>
+        public int AuthType { get; set; } = 3;
         /// <summary>Login dla Basic (hasło idzie do Credential Manager, nie do JSON).</summary>
         public string AuthUsername { get; set; } = "";
 
@@ -60,6 +65,19 @@ namespace RdpManager.Models
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
         public string Name { get; set; } = "";
         public string ParentId { get; set; } = "";
+
+        /// <summary>Uwierzytelnianie na poziomie folderu: 0=brak,1=Bearer,2=Basic,3=dziedzicz z nadfolderu/kolekcji
+        /// (domyślne — jak w Postmanie). Używane, gdy żądanie w tym folderze samo ma AuthType=3.</summary>
+        public int AuthType { get; set; } = 3;
+        public string AuthUsername { get; set; } = "";
+
+        /// <summary>Klucz sekretu auth folderu w Credential Manager (nigdy w JSON).</summary>
+        [JsonIgnore]
+        public string AuthCredTarget => "RdpManager:restfolder:" + Id;
+
+        /// <summary>Sekret auth folderu w PAMIĘCI na czas sesji. Nigdy do JSON.</summary>
+        [JsonIgnore]
+        public string AuthSecret { get; set; } = "";
     }
 
     /// <summary>Zmienna środowiskowa (PR3) — podstawiana w URL/nagłówkach/body jako {{klucz}}.</summary>
@@ -103,6 +121,16 @@ namespace RdpManager.Models
         public List<RestEnvironment> Environments { get; set; } = new List<RestEnvironment>();
         public string ActiveEnvironmentId { get; set; } = "";
         public List<RestHistoryEntry> History { get; set; } = new List<RestHistoryEntry>();
+
+        /// <summary>Uwierzytelnianie domyślne całej kolekcji (korzeń dziedziczenia): 0=brak,1=Bearer,2=Basic.
+        /// Bez opcji "dziedzicz" — kolekcja nie ma rodzica.</summary>
+        public int AuthType { get; set; }
+        public string AuthUsername { get; set; } = "";
+
+        /// <summary>Sekret auth kolekcji w PAMIĘCI na czas sesji. Cel w Credential Manager liczony po Id wpisu
+        /// (serwera) — kolekcja go nie zna, patrz RestConsole. Nigdy do JSON.</summary>
+        [JsonIgnore]
+        public string AuthSecret { get; set; } = "";
 
         [JsonExtensionData]
         public Dictionary<string, JsonElement> Extra { get; set; }

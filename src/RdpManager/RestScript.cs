@@ -90,6 +90,15 @@ var pm = {
             below: function(v){ if(!(a<v)) throw new Error('expected '+a+' < '+v); } }
   } }; }
 };
+// Starsze API skryptów Postmana (sprzed pm.*, wciąż powszechne w kopiowanych kolekcjach) — te same magazyny co pm.environment.
+var postman = {
+  setEnvironmentVariable:   function(k,v){ __set(k,v); },
+  getEnvironmentVariable:   function(k){ return __get(k); },
+  clearEnvironmentVariable: function(k){ __unset(k); },
+  setGlobalVariable:        function(k,v){ __set(k,v); },
+  getGlobalVariable:        function(k){ return __get(k); },
+  clearGlobalVariable:      function(k){ __unset(k); }
+};
 var console = { log: function(){ var s=''; for(var i=0;i<arguments.length;i++){ var x=arguments[i]; s+=(i?' ':'')+(typeof x==='object'?JSON.stringify(x):x); } __log(s); } };
 ";
     }

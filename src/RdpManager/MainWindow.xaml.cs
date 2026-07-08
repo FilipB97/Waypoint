@@ -4699,13 +4699,19 @@ namespace RdpManager
             CheckReachabilityAsync();
         }
 
-        // Kopiuje dane kolekcji REST (rest.json) na nowy wpis: świeże Id żądań + przeniesione sekrety auth.
+        // Kopiuje dane kolekcji REST (rest.json) na nowy wpis: świeże Id żądań/folderów + przeniesione sekrety auth
+        // (żądania, foldery — auth dziedziczone — i kolekcja jako całość, jeśli mają własne uwierzytelnianie).
         private void DuplicateRestData(string srcId, string dstId)
         {
-            var copy = RestStore.DeepCopy(RestStore.For(srcId), out var map);
-            foreach (var kv in map)
+            var copy = RestStore.DeepCopy(RestStore.For(srcId), out var reqMap, out var folderMap);
+            foreach (var kv in reqMap)
                 if (CredentialStore.TryRead("RdpManager:rest:" + kv.Key, out var sec) && !string.IsNullOrEmpty(sec))
                     CredentialStore.TrySave("RdpManager:rest:" + kv.Value, "", sec);
+            foreach (var kv in folderMap)
+                if (CredentialStore.TryRead("RdpManager:restfolder:" + kv.Key, out var sec) && !string.IsNullOrEmpty(sec))
+                    CredentialStore.TrySave("RdpManager:restfolder:" + kv.Value, "", sec);
+            if (CredentialStore.TryRead("RdpManager:restcoll:" + srcId, out var collSec) && !string.IsNullOrEmpty(collSec))
+                CredentialStore.TrySave("RdpManager:restcoll:" + dstId, "", collSec);
             RestStore.Put(dstId, copy);
         }
 

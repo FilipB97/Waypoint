@@ -59,6 +59,7 @@ namespace RdpManager
         private RestRequest _req;
         private ObservableCollection<RestKeyValue> _params;
         private ObservableCollection<RestKeyValue> _headers;
+        private ObservableCollection<RestKeyValue> _formFields;
         private ObservableCollection<RestNode> _roots;
         private ObservableCollection<RestHistoryEntry> _history;
         private CancellationTokenSource _cts;
@@ -354,10 +355,24 @@ namespace RdpManager
 
         // ---------- Wczytanie / zapis żądania ----------
 
+        // Cel w Credential Managerze dla auth CAŁEJ kolekcji (korzeń dziedziczenia) — kolekcja nie zna
+        // własnego Id (kluczowana zewnętrznie po Id wpisu), więc liczymy to tutaj z _server.Id.
+        private string CollAuthCredTarget => "RdpManager:restcoll:" + _server.Id;
+
         private void LoadSecrets()
         {
             foreach (var r in _coll.Requests)
                 r.AuthSecret = CredentialStore.TryRead(r.AuthCredTarget, out var s) ? s : "";
+            foreach (var f in _coll.Folders)
+                f.AuthSecret = CredentialStore.TryRead(f.AuthCredTarget, out var s) ? s : "";
+            _coll.AuthSecret = CredentialStore.TryRead(CollAuthCredTarget, out var cs) ? cs : "";
+        }
+
+        private void CollectionAuth_Click(object sender, RoutedEventArgs e)
+        {
+            bool committed = new RestAuthWindow(_coll, CollAuthCredTarget) { Owner = Window.GetWindow(this) }.ShowDialog() == true;
+            if (committed) RestStore.Put(_server.Id, _coll);   // od razu, nie czekamy na „Zapisz" (lekcja PR #100)
+            UpdateAuthPanels();   // opis dziedziczenia mógł się zmienić, jeśli aktywne żądanie ma "Dziedzicz"
         }
 
         private void LoadIntoUi(RestRequest req)
@@ -371,7 +386,12 @@ namespace RdpManager
             HeadersList.ItemsSource = _headers;
             BodyBox.Text = req.Body;
             SelectContentType(req.BodyContentType);
-            AuthCombo.SelectedIndex = Math.Clamp(req.AuthType, 0, 2);
+            bool isForm = string.Equals(req.BodyContentType, "application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase);
+            _formFields = new ObservableCollection<RestKeyValue>(
+                req.FormFields.Count > 0 ? req.FormFields : isForm ? ParseLegacyFormBody(req.Body) : new List<RestKeyValue>());
+            FormFieldsList.ItemsSource = _formFields;
+            UpdateBodyMode();
+            AuthCombo.SelectedIndex = Math.Clamp(req.AuthType, 0, 3);
             AuthUserBox.Text = req.AuthUsername;
             TokenBox.Password = req.AuthType == 1 ? (req.AuthSecret ?? "") : "";
             AuthPassBox.Password = req.AuthType == 2 ? (req.AuthSecret ?? "") : "";
@@ -392,6 +412,7 @@ namespace RdpManager
             _req.Headers = _headers.ToList();
             _req.Body = BodyBox.Text ?? "";
             _req.BodyContentType = SelectedContentType();
+            _req.FormFields = _formFields.ToList();
             _req.AuthType = AuthCombo.SelectedIndex < 0 ? 0 : AuthCombo.SelectedIndex;
             _req.AuthUsername = AuthUserBox.Text ?? "";
             _req.AuthSecret = SecretFromUi();
@@ -426,6 +447,9 @@ namespace RdpManager
 
             // Skrypty i wysyłka na KOPII żądania — mutacje z pre-skryptu nie brudzą zapisanego żądania.
             var eff = CloneForSend(_req);
+            // AuthType=Dziedzicz na klonie zastępujemy już ROZWIĄZANYM (folder → nadfolder → kolekcja) —
+            // RestClient nie zna dziedziczenia, dostaje zawsze gotowy, jawny typ.
+            (eff.AuthType, eff.AuthUsername, eff.AuthSecret) = ResolveEffectiveAuth(_req);
             var pre = RestScript.Run(_req.PreScript, eff, null, GetScriptVar, SetScriptVar, UnsetScriptVar);
             if (!pre.Ok)
             {
@@ -461,7 +485,8 @@ namespace RdpManager
             Body = r.Body, BodyContentType = r.BodyContentType,
             AuthType = r.AuthType, AuthUsername = r.AuthUsername, AuthSecret = r.AuthSecret,
             QueryParams = r.QueryParams.Select(p => new RestKeyValue { Enabled = p.Enabled, Key = p.Key, Value = p.Value }).ToList(),
-            Headers = r.Headers.Select(p => new RestKeyValue { Enabled = p.Enabled, Key = p.Key, Value = p.Value }).ToList()
+            Headers = r.Headers.Select(p => new RestKeyValue { Enabled = p.Enabled, Key = p.Key, Value = p.Value }).ToList(),
+            FormFields = r.FormFields.Select(p => new RestKeyValue { Enabled = p.Enabled, Key = p.Key, Value = p.Value }).ToList()
         };
 
         private void ShowScriptOutput(ScriptOutcome pre, ScriptOutcome post)
@@ -549,10 +574,14 @@ namespace RdpManager
 
         private void AddParam_Click(object sender, RoutedEventArgs e) => _params.Add(new RestKeyValue());
         private void AddHeader_Click(object sender, RoutedEventArgs e) => _headers.Add(new RestKeyValue());
+        private void AddFormField_Click(object sender, RoutedEventArgs e) => _formFields.Add(new RestKeyValue());
 
         private void DeleteKv_Click(object sender, RoutedEventArgs e)
         {
-            if ((sender as FrameworkElement)?.DataContext is RestKeyValue kv && !_params.Remove(kv)) _headers.Remove(kv);
+            if (!((sender as FrameworkElement)?.DataContext is RestKeyValue kv)) return;
+            if (_params.Remove(kv)) return;
+            if (_headers.Remove(kv)) return;
+            _formFields.Remove(kv);
         }
 
         // ---------- Metoda / typ treści / auth ----------
@@ -567,6 +596,28 @@ namespace RdpManager
             int i = AuthCombo.SelectedIndex;
             BearerPanel.Visibility = i == 1 ? Visibility.Visible : Visibility.Collapsed;
             BasicPanel.Visibility = i == 2 ? Visibility.Visible : Visibility.Collapsed;
+            bool inherit = i == RestAuthResolve.Inherit;
+            InheritHint.Visibility = inherit ? Visibility.Visible : Visibility.Collapsed;
+            if (inherit && _req != null) InheritHint.Text = DescribeInheritedAuth(_req);
+        }
+
+        // Rozwiązuje efektywne uwierzytelnianie żądania: jawny typ używany wprost; "Dziedzicz" idzie w górę
+        // łańcucha folderów (ParentId) aż do pierwszego jawnego poziomu, na końcu do korzenia kolekcji.
+        private (int type, string username, string secret) ResolveEffectiveAuth(RestRequest req)
+        {
+            if (req.AuthType != RestAuthResolve.Inherit) return (req.AuthType, req.AuthUsername, req.AuthSecret);
+            var (t, u, s, _) = RestAuthResolve.Resolve(_coll, req.FolderId);
+            return (t, u, s);
+        }
+
+        // Opis "skąd" dla podpowiedzi w UI (bez sekretu) — dokładnie ta klasa błędu, która wywołała tę funkcję:
+        // użytkownik widzi "Dziedziczy", ale nie wie skąd i czy tam w ogóle coś jest ustawione.
+        private string DescribeInheritedAuth(RestRequest req)
+        {
+            var (type, _, _, source) = RestAuthResolve.Resolve(_coll, req.FolderId);
+            string place = source != null ? source.Name : L("S.rest.collection");
+            string typeLabel = type == 1 ? L("S.rest.auth.bearer") : type == 2 ? L("S.rest.auth.basic") : L("S.rest.auth.none");
+            return string.Format(L("S.rest.auth.inherit.desc"), place, typeLabel);
         }
 
         private string SelectedMethod() => (MethodCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "GET";
@@ -585,6 +636,54 @@ namespace RdpManager
                 if (obj is ComboBoxItem it && string.Equals(it.Content?.ToString(), ct, StringComparison.OrdinalIgnoreCase))
                 { ContentTypeCombo.SelectedItem = it; return; }
             ContentTypeCombo.SelectedIndex = 0;
+        }
+
+        private void ContentType_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (_loading) return;
+            UpdateBodyMode();
+        }
+
+        // Treść: tabela pól dla x-www-form-urlencoded (jak w Postmanie), surowy edytor dla reszty typów.
+        private void UpdateBodyMode()
+        {
+            bool form = string.Equals(SelectedContentType(), "application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase);
+            BodyRawHost.Visibility = form ? Visibility.Collapsed : Visibility.Visible;
+            FormFieldsHost.Visibility = form ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Migracja przy wczytaniu: starsze żądania (sprzed edytora tabelarycznego) mają tylko surowy Body "k=v&k=v".
+        private static List<RestKeyValue> ParseLegacyFormBody(string body)
+        {
+            var list = new List<RestKeyValue>();
+            if (string.IsNullOrEmpty(body)) return list;
+            foreach (var seg in body.Split('&'))
+            {
+                if (seg.Length == 0) continue;
+                int eq = seg.IndexOf('=');
+                list.Add(eq < 0
+                    ? new RestKeyValue { Key = seg, Value = "" }
+                    : new RestKeyValue { Key = seg.Substring(0, eq), Value = seg.Substring(eq + 1) });
+            }
+            return list;
+        }
+
+        // Podgląd wartości po podstawieniu {{zmiennych}} z aktywnego środowiska — pokazywany na hover jak w Postmanie.
+        private void ValuePreview_ToolTipOpening(object sender, ToolTipEventArgs e)
+        {
+            if (!(sender is TextBox tb)) { e.Handled = true; return; }
+            string preview = VarPreview(tb.Text);
+            if (preview == null) { e.Handled = true; return; }
+            tb.ToolTip = preview;
+        }
+
+        // null = nic do pokazania (brak {{...}} albo nieznana zmienna — Subst zwróci tekst bez zmian).
+        private string VarPreview(string raw)
+        {
+            if (string.IsNullOrEmpty(raw) || raw.IndexOf("{{", StringComparison.Ordinal) < 0) return null;
+            string resolved = RestClient.Subst(raw, Vars());
+            if (resolved == raw) return null;
+            return resolved.Length == 0 ? L("S.rest.var.empty") : resolved;
         }
 
         // ---------- Pomocnicze ----------

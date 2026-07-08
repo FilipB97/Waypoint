@@ -110,6 +110,36 @@ namespace RdpManager.Tests
             var req = PostmanImport.Parse(json).Collection.Requests.First(x => x.Name == "Token");
             Assert.Equal("application/x-www-form-urlencoded", req.BodyContentType);
             Assert.Equal("username={{username}}&grant_type=password", req.Body);   // placeholder literalny, disabled pominięty
+
+            Assert.Equal(3, req.FormFields.Count);   // tabela zachowuje TEŻ wyłączone pola (edytor je pokazuje)
+            Assert.Contains(req.FormFields, f => f.Key == "username" && f.Value == "{{username}}" && f.Enabled);
+            Assert.Contains(req.FormFields, f => f.Key == "grant_type" && f.Value == "password" && f.Enabled);
+            Assert.Contains(req.FormFields, f => f.Key == "skip" && !f.Enabled);
+        }
+
+        [Fact]
+        public void Parse_ImportsPrerequestAndTestScripts()
+        {
+            string json = @"{ ""info"": { ""name"": ""Auth"" }, ""item"": [
+                { ""name"": ""Login"",
+                  ""event"": [
+                    { ""listen"": ""prerequest"", ""script"": { ""exec"": [ ""console.log('pre');"", ""pm.environment.set('x','1');"" ] } },
+                    { ""listen"": ""test"", ""script"": { ""exec"": [ ""var d = JSON.parse(responseBody);"", ""postman.setEnvironmentVariable('token', d.access_token);"" ] } }
+                  ],
+                  ""request"": { ""method"": ""POST"", ""url"": { ""raw"": ""https://x/y"" } }
+                }
+            ] }";
+            var req = PostmanImport.Parse(json).Collection.Requests.First();
+            Assert.Equal("console.log('pre');\npm.environment.set('x','1');", req.PreScript);
+            Assert.Equal("var d = JSON.parse(responseBody);\npostman.setEnvironmentVariable('token', d.access_token);", req.TestScript);
+        }
+
+        [Fact]
+        public void Parse_NoEvents_LeavesScriptsEmpty()
+        {
+            var post = PostmanImport.Parse(Sample).Collection.Requests.First(x => x.Name == "Create");
+            Assert.Equal("", post.PreScript);
+            Assert.Equal("", post.TestScript);
         }
 
         [Fact]
@@ -125,16 +155,17 @@ namespace RdpManager.Tests
                 { ""key"": ""base_url"", ""value"": ""https://dev.example.com"", ""type"": ""default"" },
                 { ""key"": ""token"", ""value"": ""abc"", ""type"": ""secret"" }
             ], ""_postman_variable_scope"": ""environment"" }";
-            var env = PostmanImport.ParseEnvironment(json);
+            var env = PostmanImport.ParseEnvironment(json, out var blanked);
             Assert.Equal("Dev", env.Name);
             Assert.Contains(env.Variables, v => v.Key == "base_url" && v.Value == "https://dev.example.com");
             Assert.Equal("", env.Variables.First(v => v.Key == "token").Value);   // sekret wyzerowany
+            Assert.Equal(new[] { "token" }, blanked);   // do ostrzeżenia w UI
         }
 
         [Fact]
         public void ParseEnvironment_NotAnEnvironment_Throws()
         {
-            Assert.Throws<InvalidOperationException>(() => PostmanImport.ParseEnvironment(@"{ ""foo"": 1 }"));
+            Assert.Throws<InvalidOperationException>(() => PostmanImport.ParseEnvironment(@"{ ""foo"": 1 }", out _));
         }
     }
 }

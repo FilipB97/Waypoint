@@ -443,6 +443,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.remove">Usuń</sys:String>
     <sys:String x:Key="S.rest.key">Klucz</sys:String>
     <sys:String x:Key="S.rest.value">Wartość</sys:String>
+    <sys:String x:Key="S.rest.var.empty">(pusta wartość)</sys:String>
     <sys:String x:Key="S.rest.collection">Kolekcja</sys:String>
     <sys:String x:Key="S.rest.newreq">Nowe żądanie</sys:String>
     <sys:String x:Key="S.rest.newfolder">Nowy folder</sys:String>
@@ -461,6 +462,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.env.close">Zamknij</sys:String>
     <sys:String x:Key="S.rest.env.import">Importuj środowisko z Postmana</sys:String>
     <sys:String x:Key="S.rest.env.importtitle">Import środowiska z Postmana</sys:String>
+    <sys:String x:Key="S.rest.env.import.secretswarn">Postman oznaczył jako „secret" następujące zmienne — ich wartości NIE zostały zaimportowane (sekrety nigdy nie trafiają jawnie do pliku): {0}. Jeśli są potrzebne, uzupełnij je ręcznie poniżej.</sys:String>
     <sys:String x:Key="S.rest.hist">Historia (dwuklik = ponów żądanie)</sys:String>
     <sys:String x:Key="S.rest.tab.scripts">Skrypty</sys:String>
     <sys:String x:Key="S.rest.script.pre">Pre-request</sys:String>
@@ -478,6 +480,12 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.auth.user">Login</sys:String>
     <sys:String x:Key="S.rest.auth.pass">Hasło</sys:String>
     <sys:String x:Key="S.rest.auth.hint">Sekret (token / hasło) trafia do Menedżera poświadczeń Windows, nie do pliku.</sys:String>
+    <sys:String x:Key="S.rest.auth.inherit">Dziedzicz</sys:String>
+    <sys:String x:Key="S.rest.auth.inherit.desc">Dziedziczy z: {0} ({1})</sys:String>
+    <sys:String x:Key="S.rest.authmgr.open">Uwierzytelnianie kolekcji</sys:String>
+    <sys:String x:Key="S.rest.authmgr.title">Uwierzytelnianie kolekcji</sys:String>
+    <sys:String x:Key="S.rest.authmgr.root">Kolekcja (główne)</sys:String>
+    <sys:String x:Key="S.rest.authmgr.list">Kolekcja i foldery</sys:String>
     <sys:String x:Key="S.rest.pretty">Formatuj JSON</sys:String>
     <sys:String x:Key="S.rest.copy">Kopiuj treść</sys:String>
     <sys:String x:Key="S.rest.resp.body">Treść</sys:String>
