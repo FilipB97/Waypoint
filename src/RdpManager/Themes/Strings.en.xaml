@@ -53,6 +53,13 @@
     <sys:String x:Key="S.set.sec.updates">UPDATES</sys:String>
     <sys:String x:Key="S.set.sec.about">ABOUT</sys:String>
     <sys:String x:Key="S.set.sec.changelog">CHANGELOG</sys:String>
+    <sys:String x:Key="S.set.sec.rdpdefaults">DEFAULT RDP</sys:String>
+    <sys:String x:Key="S.set.sec.network">NETWORK</sys:String>
+    <sys:String x:Key="S.set.sec.profiles">CREDENTIAL PROFILES</sys:String>
+    <sys:String x:Key="S.set.redirclip">Redirect clipboard</sys:String>
+    <sys:String x:Key="S.set.redirdrives">Redirect drives and printers</sys:String>
+    <sys:String x:Key="S.set.timeout">Connection timeout (s)</sys:String>
+    <sys:String x:Key="S.set.timeout.sub">Seconds before aborting the attempt (reachability probe)</sys:String>
     <sys:String x:Key="S.set.about.sub">Version, updates and changelog.</sys:String>
     <sys:String x:Key="S.about.whatsnew">What's new</sys:String>
     <sys:String x:Key="S.about.installedver">Installed version {0} · .NET 8 · Windows</sys:String>

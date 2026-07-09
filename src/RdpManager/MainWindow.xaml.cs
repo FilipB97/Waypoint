@@ -133,6 +133,7 @@ namespace RdpManager
             _settings = SettingsStore.Load();
             _settings = SettingsStore.ConsumeUpdateSnapshot(_settings);   // po aktualizacji: przywróć stan sprzed update (migawka)
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
+            _probeTimeoutMs = Math.Clamp(_settings.ProbeTimeoutSeconds, 1, 60) * 1000;
             _prevRunVersion = _settings.LastRunVersion ?? "";           // zapamiętaj wersję sprzed tego startu
             var curVer = CurrentVersion().ToString();
             if (_settings.LastRunVersion != curVer) { _settings.LastRunVersion = curVer; SettingsStore.Save(_settings); }
@@ -1214,7 +1215,10 @@ namespace RdpManager
             BuildThemePresets();
             BuildAccentSwatches();
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
-            SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
+            SelectColorDepthSeg(_settings.ColorDepth);
+            SetRedirClip.IsChecked = _settings.DefaultRedirectClipboard;
+            SetRedirDrives.IsChecked = _settings.DefaultRedirectDrives;
+            SetProbeTimeout.Text = _settings.ProbeTimeoutSeconds.ToString();
             SetAutoReconnect.IsChecked = _settings.AutoReconnect;
             SetReachEnabled.IsChecked = _settings.ReachabilityEnabled;
             SetReachInterval.Text = _settings.ReachabilityIntervalSec.ToString();
@@ -1292,20 +1296,25 @@ namespace RdpManager
         };
 
         // ---------- Profile poświadczeń (lista w Ustawieniach) ----------
+        // Profile poświadczeń renderowane w DWÓCH miejscach: dedykowana kategoria (ProfilesList) oraz
+        // inline w „Połączenie" wg mockupu (ConnProfilesList). BuildProfileRow tworzy świeże elementy, więc
+        // wołamy per panel.
         private void BuildProfilesList()
         {
-            ProfilesList.Children.Clear();
+            FillProfiles(ProfilesList);
+            if (ConnProfilesList != null) FillProfiles(ConnProfilesList);
+        }
+
+        private void FillProfiles(Panel panel)
+        {
+            panel.Children.Clear();
             if (_credProfiles.Count == 0)
             {
-                ProfilesList.Children.Add(new TextBlock
-                {
-                    Text = L("S.prof.empty"),
-                    Foreground = Res("TextTer"), FontSize = 12
-                });
+                panel.Children.Add(new TextBlock { Text = L("S.prof.empty"), Foreground = Res("TextTer"), FontSize = 12 });
                 return;
             }
             foreach (var pr in _credProfiles)
-                ProfilesList.Children.Add(BuildProfileRow(pr));
+                panel.Children.Add(BuildProfileRow(pr));
         }
 
         private FrameworkElement BuildProfileRow(CredentialProfile profile)
@@ -1460,6 +1469,9 @@ namespace RdpManager
             _settings.TerminalFontSize = int.TryParse(SetTermFontSize.Text.Trim(), out var tfs) ? Math.Clamp(tfs, 8, 24) : 14;
             _settings.DefaultPort = int.TryParse(SetDefaultPort.Text.Trim(), out var p) ? Math.Clamp(p, 1, 65535) : 3389;
             _settings.ColorDepth = ParseColorDepth();
+            _settings.DefaultRedirectClipboard = SetRedirClip.IsChecked == true;
+            _settings.DefaultRedirectDrives = SetRedirDrives.IsChecked == true;
+            _settings.ProbeTimeoutSeconds = int.TryParse(SetProbeTimeout.Text.Trim(), out var pt) ? Math.Clamp(pt, 1, 60) : 2;
             _settings.AutoReconnect = SetAutoReconnect.IsChecked == true;
             _settings.ReachabilityEnabled = SetReachEnabled.IsChecked == true;
             _settings.ReachabilityIntervalSec = int.TryParse(SetReachInterval.Text.Trim(), out var r) ? Math.Clamp(r, 5, 3600) : 30;
@@ -1488,15 +1500,20 @@ namespace RdpManager
             SettingsStatus.Text = L("S.st.saved");
         }
 
-        private int ParseColorDepth()
+        private int ParseColorDepth() => RdpUtils.ParseColorDepth(SegTag(ColorDepthSeg));
+
+        // Zaznacza segment głębi kolorów (16/24/32) wg wartości z ustawień.
+        private void SelectColorDepthSeg(int depth)
         {
-            var text = (SetColorDepth.SelectedItem as ComboBoxItem)?.Content?.ToString();
-            return RdpUtils.ParseColorDepth(text);
+            string tag = depth == 16 ? "16" : depth == 24 ? "24" : "32";
+            foreach (var rb in ColorDepthSeg.Children.OfType<RadioButton>())
+                rb.IsChecked = (rb.Tag as string) == tag;
         }
 
         private void ApplySettings()
         {
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
+            _probeTimeoutMs = Math.Clamp(_settings.ProbeTimeoutSeconds, 1, 60) * 1000;
             ApplyUiScale(_settings.UiScale);
             // Clampy także tutaj — ustawienia mogą przyjść z importu profilu (plik zewnętrzny).
             _fsBarDelay.Interval = TimeSpan.FromMilliseconds(Math.Clamp(_settings.FullscreenBarDelayMs, 0, 3000));
@@ -5108,7 +5125,14 @@ namespace RdpManager
         private void AddServer_Click(object sender, RoutedEventArgs e)
         {
             // Pusta grupa = domyślny „kosz" lokalizowany przy wyświetlaniu (RenderTree), nie zapisujemy tu nazwy PL.
-            var server = new ServerInfo { Group = "", Status = ServerStatus.Offline, Port = _settings.DefaultPort };
+            // Domyślne przekierowania z Ustawień → Połączenie (nowe serwery; „dyski" obejmują też drukarki).
+            var server = new ServerInfo
+            {
+                Group = "", Status = ServerStatus.Offline, Port = _settings.DefaultPort,
+                RedirectClipboard = _settings.DefaultRedirectClipboard,
+                RedirectDrives = _settings.DefaultRedirectDrives,
+                RedirectPrinters = _settings.DefaultRedirectDrives
+            };
             var dlg = new ServerEditWindow(server, "", _credProfiles) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
@@ -5809,6 +5833,10 @@ namespace RdpManager
         private static readonly SemaphoreSlim ProbeConcurrency = new SemaphoreSlim(32);
 
         // Zwraca status oraz zmierzone opóźnienie połączenia TCP (ms); rttMs = -1 gdy nieosiągalny/nieznany.
+        // Limit czasu sondy (ms) — z Ustawień → Połączenie (ProbeTimeoutSeconds). Domyślnie 1500 do czasu
+        // wczytania ustawień; aktualizowany w ApplySettings/Window_Loaded.
+        private static int _probeTimeoutMs = 1500;
+
         private static async Task<(ServerStatus status, int rttMs)> ProbeAsync(string host, int port)
         {
             if (string.IsNullOrWhiteSpace(host)) return (ServerStatus.Offline, -1);
@@ -5820,7 +5848,7 @@ namespace RdpManager
                 {
                     // Task.WaitAsync (nie blokujący wątek WaitOne) — Dispose przy timeout/wyjątku ubija
                     // wciąż-trwające ConnectAsync pod spodem (zamknięcie gniazda przerywa próbę połączenia).
-                    await c.ConnectAsync(host, port).WaitAsync(TimeSpan.FromMilliseconds(1500));
+                    await c.ConnectAsync(host, port).WaitAsync(TimeSpan.FromMilliseconds(_probeTimeoutMs));
                     sw.Stop();
                     return c.Connected ? (ServerStatus.Online, (int)sw.ElapsedMilliseconds) : (ServerStatus.Offline, -1);
                 }

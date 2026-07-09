@@ -734,6 +734,7 @@
                             <TextBlock Text="{DynamicResource S.set.conn}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.conn.sub}" Style="{DynamicResource SetPageSub}"/>
 
+                            <TextBlock Text="{DynamicResource S.set.sec.rdpdefaults}" Style="{DynamicResource SetSec}"/>
                             <Border Style="{DynamicResource SetRow}">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -745,11 +746,39 @@
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="{DynamicResource S.set.colordepth}" Style="{DynamicResource SetLbl}"/>
-                                    <ComboBox x:Name="SetColorDepth" Grid.Column="1" Width="90">
-                                        <ComboBoxItem>16</ComboBoxItem>
-                                        <ComboBoxItem>24</ComboBoxItem>
-                                        <ComboBoxItem>32</ComboBoxItem>
-                                    </ComboBox>
+                                    <Border Grid.Column="1" Style="{DynamicResource SegBar}">
+                                        <StackPanel x:Name="ColorDepthSeg" Orientation="Horizontal">
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="16" Content="16-bit"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="24" Content="24-bit"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="32" Content="32-bit"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.redirclip}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetRedirClip" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.redirdrives}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetRedirDrives" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="{DynamicResource S.set.sec.network}" Style="{DynamicResource SetSec}"/>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.set.timeout}" Style="{DynamicResource SetLbl}"/>
+                                        <TextBlock Text="{DynamicResource S.set.timeout.sub}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:TextBox x:Name="SetProbeTimeout" Grid.Column="1" Width="90" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
                             <Border Style="{DynamicResource SetRow}" BorderThickness="0">
@@ -759,6 +788,13 @@
                                     <ui:ToggleSwitch x:Name="SetAutoReconnect" Grid.Column="1" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
+
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{DynamicResource S.set.sec.profiles}" Style="{DynamicResource SetSec}" VerticalAlignment="Center"/>
+                                <ui:Button Grid.Column="1" Content="{DynamicResource S.prof.add}" Appearance="Secondary" Click="AddProfile_Click"/>
+                            </Grid>
+                            <StackPanel x:Name="ConnProfilesList" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 

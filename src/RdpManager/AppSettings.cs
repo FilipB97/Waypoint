@@ -49,6 +49,11 @@ namespace RdpManager
         /// <summary>Domyślne ustawienia połączeń RDP.</summary>
         public bool AutoReconnect { get; set; } = true;
         public int ColorDepth { get; set; } = 32;
+        // Domyślne przekierowania dla NOWO tworzonych serwerów RDP (istniejące zachowują swoje).
+        public bool DefaultRedirectClipboard { get; set; } = true;
+        public bool DefaultRedirectDrives { get; set; } = false;   // dyski + drukarki
+        // Ile sekund czekać na TCP zanim serwer uznamy za offline (sonda osiągalności).
+        public int ProbeTimeoutSeconds { get; set; } = 2;
 
         /// <summary>Pytaj przed zamknięciem połączonej sesji.</summary>
         public bool ConfirmCloseConnected { get; set; } = true;
