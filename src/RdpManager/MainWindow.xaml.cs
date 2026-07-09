@@ -39,6 +39,11 @@ namespace RdpManager
         // Minimal: pasek koloru→akcent+tło). UpdateActiveRows woła te akcje zamiast znać elementy.
         private readonly Dictionary<ServerInfo, Action<bool>> _serverActivate = new Dictionary<ServerInfo, Action<bool>>();
         private readonly Dictionary<ServerInfo, Ellipse> _serverStatusDot = new Dictionary<ServerInfo, Ellipse>();
+        // Etykieta opóźnienia (ms) w wierszu — aktualizowana na żywo po sondzie osiągalności (gdy włączone).
+        private readonly Dictionary<ServerInfo, TextBlock> _serverLatency = new Dictionary<ServerInfo, TextBlock>();
+        // Aktywny filtr protokołu z paska chipów (null = „Wszystkie"). Stan sesyjny — po restarcie zawsze „Wszystkie",
+        // żeby użytkownik nie zobaczył „znikniętych" serwerów przez zapamiętany filtr (świadome odstępstwo od §4.2).
+        private RemoteProtocol? _protocolFilter;
         private readonly Dictionary<Session, Rectangle> _tabUnderline = new Dictionary<Session, Rectangle>();
         private readonly Dictionary<Session, Ellipse> _tabStatus = new Dictionary<Session, Ellipse>();
         private readonly Dictionary<Session, TextBlock> _tabName = new Dictionary<Session, TextBlock>();
@@ -895,6 +900,7 @@ namespace RdpManager
                                     : string.IsNullOrEmpty(_settings.WindowBorderColor) ? 0 : 1;
             SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
             SetListStyle.SelectedIndex = _settings.ListStyle == "Minimal" ? 1 : 0;
+            SetShowLatency.IsChecked = _settings.ShowLatency;
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
             SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
             SetAutoReconnect.IsChecked = _settings.AutoReconnect;
@@ -1153,6 +1159,7 @@ namespace RdpManager
             _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
             _settings.ListStyle = (SetListStyle.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Default";
+            _settings.ShowLatency = SetShowLatency.IsChecked == true;
 
             SettingsStore.Save(_settings);
             ApplySettings();
@@ -1523,6 +1530,74 @@ namespace RdpManager
             _ => p.ToString()
         };
 
+        // Krótki znacznik protokołu do etykiety w wierszu (kolumna wąska; „Serial (COM)" → „COM").
+        private static string ProtocolShort(RemoteProtocol p) => p switch
+        {
+            RemoteProtocol.Telnet => "TEL",
+            RemoteProtocol.Serial => "COM",
+            RemoteProtocol.Http => "WWW",
+            _ => ProtocolLabel(p)
+        };
+
+        // Kolor etykiety protokołu (Compass §2). VNC dzieli kolor z RDP (pulpit zdalny), FTP z SFTP
+        // (transfer plików), Serial z Telnet (terminal) — brak osobnych kluczy dla tych trzech.
+        private Brush ProtocolBrush(RemoteProtocol p) => p switch
+        {
+            RemoteProtocol.Rdp => Res("ProtoRdp"),
+            RemoteProtocol.Vnc => Res("ProtoRdp"),
+            RemoteProtocol.Ssh => Res("ProtoSsh"),
+            RemoteProtocol.Sftp => Res("ProtoSftp"),
+            RemoteProtocol.Ftp => Res("ProtoSftp"),
+            RemoteProtocol.Rest => Res("ProtoRest"),
+            RemoteProtocol.Http => Res("ProtoWeb"),
+            RemoteProtocol.Telnet => Res("ProtoTelnet"),
+            RemoteProtocol.Serial => Res("ProtoTelnet"),
+            _ => Res("TextSec")
+        };
+
+        // Pasek chipów filtra protokołów nad listą (Compass §4.2). Chipy budowane dynamicznie z protokołów
+        // faktycznie obecnych na liście — bez martwych chipów. Ukryty, gdy < 2 różne protokoły (nie ma czego
+        // filtrować). Pojedynczy wybór; „Wszystkie" = brak filtra. Stan sesyjny (nie zapisywany).
+        private void BuildProtocolFilter()
+        {
+            ProtoFilterBar.Children.Clear();
+            var protos = _vm.Servers.Select(s => s.Protocol).Distinct().OrderBy(p => (int)p).ToList();
+
+            // Filtr wskazujący nieobecny już protokół (usunięto ostatni taki serwer) → reset do „Wszystkie".
+            if (_protocolFilter.HasValue && !protos.Contains(_protocolFilter.Value)) _protocolFilter = null;
+
+            if (protos.Count < 2) { ProtoFilterBar.Visibility = Visibility.Collapsed; return; }
+            ProtoFilterBar.Visibility = Visibility.Visible;
+
+            ProtoFilterBar.Children.Add(MakeProtocolChip(L("S.proto.filter.all"), null, Res("TextSec")));
+            foreach (var p in protos)
+                ProtoFilterBar.Children.Add(MakeProtocolChip(ProtocolShort(p), p, ProtocolBrush(p)));
+        }
+
+        private FrameworkElement MakeProtocolChip(string text, RemoteProtocol? proto, Brush accent)
+        {
+            bool selected = _protocolFilter == proto || (proto == null && _protocolFilter == null);
+            var chip = new Border
+            {
+                CornerRadius = new CornerRadius(9),
+                Padding = new Thickness(9, 3, 9, 3),
+                Margin = new Thickness(0, 0, 5, 5),
+                Background = selected ? Res("AccentSoft") : Brushes.Transparent,
+                BorderBrush = selected ? Res("Accent") : Res("Border"),
+                BorderThickness = new Thickness(1),
+                Cursor = Cursors.Hand,
+                Child = new TextBlock
+                {
+                    Text = text,
+                    Foreground = selected ? Res("TextPrim") : accent,
+                    FontSize = (double)TryFindResource("FontCaption"),
+                    FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal
+                }
+            };
+            chip.MouseLeftButtonUp += (s, e) => { _protocolFilter = proto; RenderTree(SearchBox.Text); };
+            return chip;
+        }
+
         private FrameworkElement StatCard(string label, string value)
         {
             var card = new Border
@@ -1570,16 +1645,21 @@ namespace RdpManager
             _serverRows.Clear();
             _serverActivate.Clear();
             _serverStatusDot.Clear();
+            _serverLatency.Clear();
             _multiSelect.Clear();
             _selectAnchor = null;
             _visibleOrder.Clear();
+
+            // Pasek chipów filtra protokołów nad listą (Compass §4.2); też weryfikuje _protocolFilter
+            // względem obecnych serwerów (gdy protokół zniknął — reset do „Wszystkie").
+            BuildProtocolFilter();
 
             // Dostępność: strzałki i Tab przenoszą fokus między wierszami serwerów.
             System.Windows.Input.KeyboardNavigation.SetDirectionalNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
             System.Windows.Input.KeyboardNavigation.SetTabNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
 
             // Sekcja „Przypięte" na górze — ulubione serwery (kolejność z listy), niezależnie od grupy.
-            var pinned = _vm.Servers.Where(s => s.Pinned && RdpUtils.MatchesFilter(s, filter)).ToList();
+            var pinned = _vm.Servers.Where(s => s.Pinned && RdpUtils.MatchesFilter(s, filter) && RdpUtils.MatchesProtocol(s, _protocolFilter)).ToList();
             if (pinned.Count > 0)
             {
                 bool pinCollapsed = _settings.CollapsedGroups.Contains(PinnedGroupKey);
@@ -1595,6 +1675,7 @@ namespace RdpManager
             {
                 if (s.Pinned) continue;
                 if (!RdpUtils.MatchesFilter(s, filter)) continue;
+                if (!RdpUtils.MatchesProtocol(s, _protocolFilter)) continue;
                 var g = string.IsNullOrWhiteSpace(s.Group) ? L("S.group.serversdefault") : s.Group;
                 if (!byGroup.ContainsKey(g)) { order.Add(g); byGroup[g] = new List<ServerInfo>(); }
                 byGroup[g].Add(s);
@@ -1613,7 +1694,15 @@ namespace RdpManager
             // liczymy dopasowania, nie _visibleOrder (te pomija zwinięte grupy, więc byłoby mylące gdy wszystko zwinięte).
             int matchCount = pinned.Count + byGroup.Values.Sum(l => l.Count);
             if (_vm.Servers.Count == 0) { TreeEmptyHint.Text = L("S.tree.empty"); TreeEmptyHint.Visibility = Visibility.Visible; }
-            else if (matchCount == 0) { TreeEmptyHint.Text = string.Format(L("S.tree.noresults"), filterDisplay); TreeEmptyHint.Visibility = Visibility.Visible; }
+            else if (matchCount == 0)
+            {
+                // Puste dopasowanie może wynikać z tekstu w polu szukania i/lub z filtra protokołu — pokaż
+                // to, co faktycznie zawęża (sam „{0}" byłby pusty, gdy filtruje tylko chip protokołu).
+                string needle = filterDisplay.Length > 0 ? filterDisplay
+                              : _protocolFilter.HasValue ? ProtocolLabel(_protocolFilter.Value) : "";
+                TreeEmptyHint.Text = string.Format(L("S.tree.noresults"), needle);
+                TreeEmptyHint.Visibility = Visibility.Visible;
+            }
             else TreeEmptyHint.Visibility = Visibility.Collapsed;
         }
 
@@ -1725,7 +1814,7 @@ namespace RdpManager
             var row = new Border
             {
                 CornerRadius = new CornerRadius(6),
-                Margin = new Thickness(14, 1, 0, 1),   // wcięcie = element należy do grupy powyżej
+                Margin = new Thickness(18, 1, 0, 1),   // wcięcie = element należy do grupy powyżej (Compass §4.3)
                 Padding = new Thickness(6, 7, 8, 7),
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
@@ -1761,7 +1850,7 @@ namespace RdpManager
             grid.Children.Add(avatar);
 
             var meta = new StackPanel { Margin = new Thickness(9, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12 });
+            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
             meta.Children.Add(new TextBlock
             {
                 Text = DisplayHost(server), Foreground = Res("TextTer"), FontSize = 10.5,
@@ -1778,6 +1867,8 @@ namespace RdpManager
             _serverStatusDot[server] = status;
 
             var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            right.Children.Add(BuildProtocolTag(server));
+            AddLatencyLabel(right, server);
             if (server.Pinned)
                 right.Children.Add(new TextBlock
                 {
@@ -1805,7 +1896,7 @@ namespace RdpManager
             var row = new Border
             {
                 CornerRadius = new CornerRadius(6),
-                Margin = new Thickness(14, 1, 0, 1),   // wcięcie = element należy do grupy powyżej
+                Margin = new Thickness(18, 1, 0, 1),   // wcięcie = element należy do grupy powyżej (Compass §4.3)
                 Padding = new Thickness(0, 3, 8, 3),
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
@@ -1850,6 +1941,8 @@ namespace RdpManager
             {
                 Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center
             };
+            rightPanel.Children.Add(BuildProtocolTag(server));
+            AddLatencyLabel(rightPanel, server);
             if (server.Pinned)
                 rightPanel.Children.Add(new TextBlock
                 {
@@ -1874,6 +1967,33 @@ namespace RdpManager
             };
             WireServerRow(row, server);
             return row;
+        }
+
+        // Kolorowa etykieta protokołu (mono) po prawej stronie wiersza — świadoma protokołów lista (Compass §3).
+        private TextBlock BuildProtocolTag(ServerInfo server) => new TextBlock
+        {
+            Text = ProtocolShort(server.Protocol),
+            Foreground = ProtocolBrush(server.Protocol),
+            FontSize = (double)TryFindResource("FontCaption"),
+            FontFamily = (FontFamily)TryFindResource("Mono"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0)
+        };
+
+        // Etykieta opóźnienia (ms) — tylko gdy włączone „Pokazuj opóźnienia"; rejestrowana do aktualizacji na żywo.
+        private void AddLatencyLabel(Panel host, ServerInfo server)
+        {
+            if (_settings == null || !_settings.ShowLatency) return;
+            var lat = new TextBlock
+            {
+                Text = RdpUtils.FormatLatency(server.LatencyMs),
+                Foreground = Res("TextTer"),
+                FontSize = (double)TryFindResource("FontCaption"),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            _serverLatency[server] = lat;
+            host.Children.Add(lat);
         }
 
         // Wspólne zachowanie wiersza (hover / przeciąganie-zmiana kolejności / klik / menu) — jednakowe w obu stylach.
@@ -5019,17 +5139,20 @@ namespace RdpManager
                 var servers = _vm.Servers.ToList();
                 var results = await Task.WhenAll(servers.Select(async srv =>
                 {
-                    // Serial (COM), WWW i REST (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status.
-                    var status = srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http || srv.Protocol == RemoteProtocol.Rest
-                        ? srv.Status : await ProbeAsync(srv.Host, srv.Port);
-                    return new KeyValuePair<ServerInfo, ServerStatus>(srv, status);
+                    // Serial (COM), WWW i REST (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status/opóźnienie.
+                    var r = srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http || srv.Protocol == RemoteProtocol.Rest
+                        ? (srv.Status, srv.LatencyMs) : await ProbeAsync(srv.Host, srv.Port);
+                    return new KeyValuePair<ServerInfo, (ServerStatus status, int rttMs)>(srv, r);
                 }));
 
                 foreach (var kv in results)
                 {
-                    kv.Key.Status = kv.Value;
+                    kv.Key.Status = kv.Value.status;
+                    kv.Key.LatencyMs = kv.Value.rttMs;
                     if (_serverStatusDot.TryGetValue(kv.Key, out var dot))
-                        dot.Fill = StatusBrush(kv.Value);
+                        dot.Fill = StatusBrush(kv.Value.status);
+                    if (_serverLatency.TryGetValue(kv.Key, out var lat))
+                        lat.Text = RdpUtils.FormatLatency(kv.Value.rttMs);
                 }
                 _vm.RaiseCounts();   // odśwież liczniki pulpitu (Osiągalne)
             }
@@ -5075,10 +5198,12 @@ namespace RdpManager
 
             SetStatus(string.Format(L("S.st.diagnosing"), host, port), StatusKind.Connecting);
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            bool ok = await ProbeAsync(host, port) == ServerStatus.Online;
+            var probe = await ProbeAsync(host, port);
             sw.Stop();
+            bool ok = probe.status == ServerStatus.Online;
+            long elapsed = ok && probe.rttMs >= 0 ? probe.rttMs : sw.ElapsedMilliseconds;
 
-            string msg = RdpUtils.FormatDiagnostics(host, port, ok, sw.ElapsedMilliseconds,
+            string msg = RdpUtils.FormatDiagnostics(host, port, ok, elapsed,
                 L("S.diag.open"), L("S.diag.closed"));
             SetStatus(msg, ok ? StatusKind.Ok : StatusKind.Error);
             MessageBox.Show(msg, string.Format(L("S.msg.diag.titlefmt"), server.Name ?? host),
@@ -5088,10 +5213,12 @@ namespace RdpManager
         // Limit jednoczesnych sond — setki serwerów naraz zalewałyby pulę wątków/gniazd (A4 z przeglądu).
         private static readonly SemaphoreSlim ProbeConcurrency = new SemaphoreSlim(32);
 
-        private static async Task<ServerStatus> ProbeAsync(string host, int port)
+        // Zwraca status oraz zmierzone opóźnienie połączenia TCP (ms); rttMs = -1 gdy nieosiągalny/nieznany.
+        private static async Task<(ServerStatus status, int rttMs)> ProbeAsync(string host, int port)
         {
-            if (string.IsNullOrWhiteSpace(host)) return ServerStatus.Offline;
+            if (string.IsNullOrWhiteSpace(host)) return (ServerStatus.Offline, -1);
             await ProbeConcurrency.WaitAsync();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var c = new TcpClient())
@@ -5099,12 +5226,13 @@ namespace RdpManager
                     // Task.WaitAsync (nie blokujący wątek WaitOne) — Dispose przy timeout/wyjątku ubija
                     // wciąż-trwające ConnectAsync pod spodem (zamknięcie gniazda przerywa próbę połączenia).
                     await c.ConnectAsync(host, port).WaitAsync(TimeSpan.FromMilliseconds(1500));
-                    return c.Connected ? ServerStatus.Online : ServerStatus.Offline;
+                    sw.Stop();
+                    return c.Connected ? (ServerStatus.Online, (int)sw.ElapsedMilliseconds) : (ServerStatus.Offline, -1);
                 }
             }
             catch
             {
-                return ServerStatus.Offline;   // timeout (TimeoutException) albo błąd połączenia
+                return (ServerStatus.Offline, -1);   // timeout (TimeoutException) albo błąd połączenia
             }
             finally { ProbeConcurrency.Release(); }
         }

@@ -96,6 +96,10 @@ namespace RdpManager
         /// <summary>Styl renderowania listy serwerów i paska kart: „Default" | „Minimal".</summary>
         public string ListStyle { get; set; } = "Default";
 
+        /// <summary>Pokazuj opóźnienie (ms) obok kropki dostępności w liście serwerów (Compass §4.3).
+        /// Domyślnie wyłączone — dane z sondowania osiągalności w tle.</summary>
+        public bool ShowLatency { get; set; }
+
         /// <summary>Zachowuje pola zapisane przez NOWSZĄ wersję aplikacji, których ta (starsza) wersja
         /// jeszcze nie zna: [JsonExtensionData] wczytuje nieznane właściwości tutaj i zapisuje je z powrotem.
         /// Dzięki temu uruchomienie starszego builda nie kasuje ustawień dodanych przez nowszy

@@ -135,6 +135,12 @@ namespace RdpManager.Models
         /// </summary>
         public ServerStatus Status { get; set; } = ServerStatus.Offline;
 
+        /// <summary>Ostatnie zmierzone opóźnienie sondy TCP (ms); -1 = brak pomiaru. Transient (nie zapisywane
+        /// do JSON) — wypełniane przez sondowanie osiągalności w tle, pokazywane w wierszu gdy włączone
+        /// „Pokazuj opóźnienia" (Compass §4.3).</summary>
+        [JsonIgnore]
+        public int LatencyMs { get; set; } = -1;
+
         /// <summary>Zachowuje pola zapisane przez NOWSZĄ wersję aplikacji, których ta (starsza) wersja
         /// jeszcze nie zna (analogicznie do AppSettings.Extra) — chroni definicje serwerów przed utratą
         /// pól przy uruchomieniu starszego builda. Hasła i tak nigdy nie trafiają do JSON.</summary>
