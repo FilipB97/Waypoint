@@ -11,12 +11,17 @@
 
     <!-- secret generator -->
     <sys:String x:Key="S.gen.title">Password generator</sys:String>
+    <sys:String x:Key="S.gen.heading">Password &amp; key generator</sys:String>
     <sys:String x:Key="S.gen.type">Type</sys:String>
     <sys:String x:Key="S.gen.type.password">Password</sys:String>
-    <sys:String x:Key="S.gen.type.hex">Hex token (key / API)</sys:String>
+    <sys:String x:Key="S.gen.type.hex">Token</sys:String>
     <sys:String x:Key="S.gen.type.guid">GUID</sys:String>
     <sys:String x:Key="S.gen.length">Length</sys:String>
     <sys:String x:Key="S.gen.bytes">Bytes</sys:String>
+    <sys:String x:Key="S.gen.opt.upper">Uppercase (A–Z)</sys:String>
+    <sys:String x:Key="S.gen.opt.lower">Lowercase (a–z)</sys:String>
+    <sys:String x:Key="S.gen.opt.digits">Digits (0–9)</sys:String>
+    <sys:String x:Key="S.gen.opt.symbols">Symbols (!@#$%)</sys:String>
     <sys:String x:Key="S.gen.noambiguous">Exclude ambiguous (O0Il1…)</sys:String>
     <sys:String x:Key="S.gen.regenerate">Generate</sys:String>
     <sys:String x:Key="S.gen.copy">Copy</sys:String>

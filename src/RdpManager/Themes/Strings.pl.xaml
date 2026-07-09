@@ -11,13 +11,18 @@
 
     <!-- generator sekretów -->
     <sys:String x:Key="S.gen.title">Generator haseł</sys:String>
+    <sys:String x:Key="S.gen.heading">Generator haseł i kluczy</sys:String>
     <sys:String x:Key="S.gen.type">Typ</sys:String>
     <sys:String x:Key="S.gen.type.password">Hasło</sys:String>
-    <sys:String x:Key="S.gen.type.hex">Token hex (klucz / API)</sys:String>
+    <sys:String x:Key="S.gen.type.hex">Token</sys:String>
     <sys:String x:Key="S.gen.type.guid">GUID</sys:String>
     <sys:String x:Key="S.gen.length">Długość</sys:String>
     <sys:String x:Key="S.gen.bytes">Bajty</sys:String>
-    <sys:String x:Key="S.gen.noambiguous">Bez znaków mylących (O0Il1…)</sys:String>
+    <sys:String x:Key="S.gen.opt.upper">Wielkie litery (A–Z)</sys:String>
+    <sys:String x:Key="S.gen.opt.lower">Małe litery (a–z)</sys:String>
+    <sys:String x:Key="S.gen.opt.digits">Cyfry (0–9)</sys:String>
+    <sys:String x:Key="S.gen.opt.symbols">Symbole (!@#$%)</sys:String>
+    <sys:String x:Key="S.gen.noambiguous">Wyklucz podobne (l · 1 · O · 0)</sys:String>
     <sys:String x:Key="S.gen.regenerate">Generuj</sys:String>
     <sys:String x:Key="S.gen.copy">Kopiuj</sys:String>
     <sys:String x:Key="S.gen.copied">Skopiowano ✓</sys:String>
