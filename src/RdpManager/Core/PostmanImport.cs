@@ -8,8 +8,9 @@ namespace RdpManager.Core
     /// <summary>
     /// Import kolekcji Postman (schemat v2.1) → <see cref="RestCollection"/> (foldery + żądania:
     /// metoda/URL/parametry/nagłówki/treść/auth). Sekrety (token Bearer / hasło Basic) zwracane osobno
-    /// i trafiają do Windows Credential Manager (nigdy do JSON). Zmienne kolekcji i auth na poziomie
-    /// kolekcji ({{var}}) — poza zakresem PR3 (środowiska = kolejny PR).
+    /// i trafiają do Windows Credential Manager (nigdy do JSON). Auth z poziomu kolekcji i folderu jest
+    /// importowany (żądania „Inherit" faktycznie dziedziczą), a domyślne nagłówki kolekcji/folderów są
+    /// spłaszczane na każde żądanie. Zmienne kolekcji ({{var}}) trafiają do środowiska.
     /// </summary>
     public static class PostmanImport
     {
@@ -17,8 +18,13 @@ namespace RdpManager.Core
         {
             public string Name = "Postman";
             public RestCollection Collection = new RestCollection();
-            /// <summary>Klucz = <see cref="RestRequest.AuthCredTarget"/>, wartość = sekret (token/hasło).</summary>
+            /// <summary>Klucz = <see cref="RestRequest.AuthCredTarget"/> lub <see cref="RestFolder.AuthCredTarget"/>,
+            /// wartość = sekret (token/hasło).</summary>
             public Dictionary<string, string> Secrets = new Dictionary<string, string>();
+            /// <summary>Sekret auth CAŁEJ kolekcji (token/hasło). Cel w Credential Manager to
+            /// „RdpManager:restcoll:&lt;serverId&gt;", ale serverId powstaje dopiero przy tworzeniu wpisu —
+            /// wołający (MainWindow.ImportPostman_Click) zapisuje go, gdy zna już Id.</summary>
+            public string CollectionSecret;
             public int RequestCount;
         }
 
@@ -34,7 +40,16 @@ namespace RdpManager.Core
             string name = Str(root.TryGetProperty("info", out var info) ? info : default, "name");
             if (!string.IsNullOrWhiteSpace(name)) res.Name = name;
 
-            WalkItems(items, "", res);
+            // Auth na poziomie kolekcji (korzeń dziedziczenia). Sekret bez celu — serverId powstanie później.
+            if (root.TryGetProperty("auth", out var cauth))
+            {
+                var (t, u, sec) = ReadAuth(cauth);
+                if (t >= 0) { res.Collection.AuthType = t; res.Collection.AuthUsername = u; }
+                if (!string.IsNullOrEmpty(sec)) res.CollectionSecret = sec;
+            }
+
+            // Domyślne nagłówki kolekcji (rzadkie w eksporcie, ale bywają) dziedziczą wszystkie żądania.
+            WalkItems(items, "", res, ReadHeaders(root));
 
             // Zmienne kolekcji ({{...}}) → środowisko. Jawne (jak w eksporcie Postmana) — nie na sekrety.
             if (root.TryGetProperty("variable", out var vars) && vars.ValueKind == JsonValueKind.Array)
@@ -80,7 +95,7 @@ namespace RdpManager.Core
             return env;
         }
 
-        private static void WalkItems(JsonElement items, string parentFolderId, Result res)
+        private static void WalkItems(JsonElement items, string parentFolderId, Result res, List<RestKeyValue> inheritedHeaders)
         {
             foreach (var it in items.EnumerateArray())
             {
@@ -89,12 +104,23 @@ namespace RdpManager.Core
                 if (it.TryGetProperty("item", out var children) && children.ValueKind == JsonValueKind.Array)
                 {
                     var folder = new RestFolder { Name = Str(it, "name") ?? "Folder", ParentId = parentFolderId };
+                    // Auth folderu (poziom pośredni w dziedziczeniu żądanie → folder → kolekcja).
+                    if (it.TryGetProperty("auth", out var fauth))
+                    {
+                        var (t, u, sec) = ReadAuth(fauth);
+                        if (t >= 0) { folder.AuthType = t; folder.AuthUsername = u; }
+                        if (!string.IsNullOrEmpty(sec)) res.Secrets[folder.AuthCredTarget] = sec;
+                    }
                     res.Collection.Folders.Add(folder);
-                    WalkItems(children, folder.Id, res);
+                    // Nagłówki folderu dziedziczą jego podelementy (kolekcja → folder → podfolder → żądanie).
+                    var childHeaders = new List<RestKeyValue>(inheritedHeaders);
+                    childHeaders.AddRange(ReadHeaders(it));
+                    WalkItems(children, folder.Id, res, childHeaders);
                 }
                 else if (it.TryGetProperty("request", out var reqEl))
                 {
                     var req = ParseRequest(reqEl, Str(it, "name"), parentFolderId, res);
+                    MergeDefaultHeaders(req, inheritedHeaders);
                     ParseEvents(it, req);
                     res.Collection.Requests.Add(req);
                     res.RequestCount++;
@@ -109,15 +135,40 @@ namespace RdpManager.Core
 
             req.Method = (Str(reqEl, "method") ?? "GET").ToUpperInvariant();
 
-            if (reqEl.TryGetProperty("header", out var hs) && hs.ValueKind == JsonValueKind.Array)
-                foreach (var h in hs.EnumerateArray())
-                    req.Headers.Add(new RestKeyValue { Enabled = !Bool(h, "disabled"), Key = Str(h, "key") ?? "", Value = Str(h, "value") ?? "" });
+            req.Headers.AddRange(ReadHeaders(reqEl));
 
             if (reqEl.TryGetProperty("url", out var url)) ParseUrl(url, req);
             if (reqEl.TryGetProperty("body", out var body)) ParseBody(body, req);
-            if (reqEl.TryGetProperty("auth", out var auth)) ParseAuth(auth, req, res);
+            if (reqEl.TryGetProperty("auth", out var auth))
+            {
+                var (t, u, sec) = ReadAuth(auth);
+                if (t >= 0) { req.AuthType = t; req.AuthUsername = u; }   // t==-1 (inherit/nieznany) → zostaw domyślny 3
+                if (!string.IsNullOrEmpty(sec)) res.Secrets[req.AuthCredTarget] = sec;
+            }
 
             return req;
+        }
+
+        // Czyta tablicę „header" elementu (żądanie/folder/kolekcja) na listę par klucz/wartość.
+        private static List<RestKeyValue> ReadHeaders(JsonElement el)
+        {
+            var list = new List<RestKeyValue>();
+            if (el.ValueKind == JsonValueKind.Object && el.TryGetProperty("header", out var hs) && hs.ValueKind == JsonValueKind.Array)
+                foreach (var h in hs.EnumerateArray())
+                    list.Add(new RestKeyValue { Enabled = !Bool(h, "disabled"), Key = Str(h, "key") ?? "", Value = Str(h, "value") ?? "" });
+            return list;
+        }
+
+        // Dokłada domyślne nagłówki (odziedziczone z kolekcji/folderów) do żądania — tylko te, których żądanie
+        // samo nie ma (dopasowanie po nazwie, bez wielkości liter; nagłówek żądania wygrywa).
+        private static void MergeDefaultHeaders(RestRequest req, List<RestKeyValue> defaults)
+        {
+            if (defaults == null || defaults.Count == 0) return;
+            var have = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var h in req.Headers) if (!string.IsNullOrWhiteSpace(h.Key)) have.Add(h.Key);
+            foreach (var d in defaults)
+                if (!string.IsNullOrWhiteSpace(d.Key) && have.Add(d.Key))
+                    req.Headers.Add(new RestKeyValue { Enabled = d.Enabled, Key = d.Key, Value = d.Value });
         }
 
         private static void ParseUrl(JsonElement url, RestRequest req)
@@ -170,21 +221,16 @@ namespace RdpManager.Core
             // formdata / file → pomijamy (brak odwzorowania w modelu v1)
         }
 
-        private static void ParseAuth(JsonElement auth, RestRequest req, Result res)
+        // Czyta blok Postman „auth" na (typ, login, sekret). Wspólne dla żądania/folderu/kolekcji.
+        // typ: -1 = inherit/nieznany (nie zmieniaj domyślnego), 0 = brak, 1 = Bearer, 2 = Basic.
+        private static (int type, string username, string secret) ReadAuth(JsonElement auth)
         {
             switch (Str(auth, "type"))
             {
-                case "bearer":
-                    req.AuthType = 1;
-                    string token = ArrVal(auth, "bearer", "token");
-                    if (!string.IsNullOrEmpty(token)) res.Secrets[req.AuthCredTarget] = token;
-                    break;
-                case "basic":
-                    req.AuthType = 2;
-                    req.AuthUsername = ArrVal(auth, "basic", "username") ?? "";
-                    string pw = ArrVal(auth, "basic", "password");
-                    if (!string.IsNullOrEmpty(pw)) res.Secrets[req.AuthCredTarget] = pw;
-                    break;
+                case "bearer": return (1, "", ArrVal(auth, "bearer", "token"));
+                case "basic":  return (2, ArrVal(auth, "basic", "username") ?? "", ArrVal(auth, "basic", "password"));
+                case "noauth": return (0, "", null);
+                default:       return (-1, "", null);   // inherit / apikey / oauth2 / brak — zostaw domyślny typ
             }
         }
 

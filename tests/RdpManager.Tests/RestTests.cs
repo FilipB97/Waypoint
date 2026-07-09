@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -87,6 +88,25 @@ namespace RdpManager.Tests
         {
             Assert.Equal("", RestClient.BuildFormBody("", null));
             Assert.Equal("grant_type=password", RestClient.BuildFormBody("grant_type=password", null));
+        }
+
+        [Fact]
+        public void AddDefaultHeaders_AddsAcceptAndUserAgentWhenMissing()
+        {
+            using var m = new HttpRequestMessage(HttpMethod.Get, "https://x/y");
+            RestClient.AddDefaultHeaders(m);
+            Assert.True(m.Headers.Contains("Accept"));
+            Assert.True(m.Headers.Contains("User-Agent"));
+            Assert.StartsWith("Waypoint/", string.Concat(m.Headers.GetValues("User-Agent")));
+        }
+
+        [Fact]
+        public void AddDefaultHeaders_DoesNotOverwriteExplicit()
+        {
+            using var m = new HttpRequestMessage(HttpMethod.Get, "https://x/y");
+            m.Headers.TryAddWithoutValidation("Accept", "application/json");
+            RestClient.AddDefaultHeaders(m);
+            Assert.Equal("application/json", string.Concat(m.Headers.GetValues("Accept")));
         }
 
         [Fact]

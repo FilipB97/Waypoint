@@ -142,6 +142,56 @@ namespace RdpManager.Tests
             Assert.Equal("", post.TestScript);
         }
 
+        // Auth na poziomie kolekcji i folderu + dziedziczenie nagłówków (kolekcja/folder → żądanie).
+        private const string AuthHeadersSample = @"{
+  ""info"": { ""name"": ""Poseidon"" },
+  ""auth"": { ""type"": ""bearer"", ""bearer"": [ { ""key"": ""token"", ""value"": ""coll-token"" } ] },
+  ""header"": [ { ""key"": ""X-Coll"", ""value"": ""c"" } ],
+  ""item"": [
+    {
+      ""name"": ""Secured"",
+      ""auth"": { ""type"": ""basic"", ""basic"": [ { ""key"": ""username"", ""value"": ""fu"" }, { ""key"": ""password"", ""value"": ""fp"" } ] },
+      ""header"": [ { ""key"": ""X-Folder"", ""value"": ""f"" } ],
+      ""item"": [
+        { ""name"": ""In folder"", ""request"": {
+            ""method"": ""GET"",
+            ""header"": [ { ""key"": ""X-Trace"", ""value"": ""r"" }, { ""key"": ""X-Coll"", ""value"": ""own"" } ],
+            ""url"": { ""raw"": ""https://x/y"" }
+        } }
+      ]
+    }
+  ]
+}";
+
+        [Fact]
+        public void Parse_ImportsCollectionAuth_AsBearerWithSecret()
+        {
+            var r = PostmanImport.Parse(AuthHeadersSample);
+            Assert.Equal(1, r.Collection.AuthType);          // Bearer na korzeniu dziedziczenia
+            Assert.Equal("coll-token", r.CollectionSecret);  // sekret kolekcji zwrócony osobno (cel liczy wołający)
+        }
+
+        [Fact]
+        public void Parse_ImportsFolderAuth_AsBasicWithSecret()
+        {
+            var r = PostmanImport.Parse(AuthHeadersSample);
+            var folder = r.Collection.Folders.First(f => f.Name == "Secured");
+            Assert.Equal(2, folder.AuthType);
+            Assert.Equal("fu", folder.AuthUsername);
+            Assert.Equal("fp", r.Secrets[folder.AuthCredTarget]);
+        }
+
+        [Fact]
+        public void Parse_FlattensInheritedHeaders_RequestWins()
+        {
+            var req = PostmanImport.Parse(AuthHeadersSample).Collection.Requests.First(x => x.Name == "In folder");
+            Assert.Contains(req.Headers, h => h.Key == "X-Trace" && h.Value == "r");    // własny
+            Assert.Contains(req.Headers, h => h.Key == "X-Folder" && h.Value == "f");   // odziedziczony z folderu
+            var xcoll = req.Headers.Where(h => h.Key == "X-Coll").ToList();
+            Assert.Single(xcoll);                     // bez duplikatu z kolekcji
+            Assert.Equal("own", xcoll[0].Value);      // nagłówek żądania wygrywa nad odziedziczonym
+        }
+
         [Fact]
         public void Parse_NotACollection_Throws()
         {
