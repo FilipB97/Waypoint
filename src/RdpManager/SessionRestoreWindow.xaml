@@ -5,7 +5,7 @@
         Title="{DynamicResource S.restore.title}" Width="430" SizeToContent="Height"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource CanvasBrush}">
 
     <Grid>
         <Grid.RowDefinitions>

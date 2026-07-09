@@ -5,7 +5,7 @@
         Title="{DynamicResource S.update.title}" Width="560" Height="560" MinWidth="460" MinHeight="380"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
-        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource CanvasBrush}">
 
     <Grid>
         <Grid.RowDefinitions>
