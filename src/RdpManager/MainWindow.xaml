@@ -108,6 +108,79 @@
             <Setter Property="FontSize" Value="{StaticResource FontBodyLg}"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
+
+        <!-- ===== Ustawienia w stylu mockupu Compass: nagłówek kategorii + podtytuł, pod-sekcje,
+             wiersze dwukolumnowe (etykieta z lewej / kontrolka z prawej), kontrolki segmentowe. ===== -->
+        <Style x:Key="SetPageHead" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="{StaticResource FontTitle}"/>
+        </Style>
+        <Style x:Key="SetPageSub" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+            <Setter Property="Margin" Value="0,5,0,20"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <!-- Pod-sekcja (WYGLĄD / LISTA SERWERÓW …) -->
+        <Style x:Key="SetSec" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextTer}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontCaption}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,18,0,2"/>
+        </Style>
+        <!-- Wiersz ustawienia: cienki dzielnik u dołu, wyśrodkowanie w pionie -->
+        <Style x:Key="SetRow" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="0,11"/>
+            <Setter Property="MinHeight" Value="46"/>
+        </Style>
+        <Style x:Key="SetLbl" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SetSub" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextTer}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+        <!-- Kontener kontrolki segmentowej (pasek pigułek) -->
+        <Style x:Key="SegBar" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Elevated}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusMd}"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <!-- Segment (RadioButton jako pigułka); zaznaczony = tło akcentu + tekst akcentu -->
+        <Style x:Key="Seg" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Height="28" Padding="13,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -533,88 +606,239 @@
                     <StackPanel x:Name="SettingsCards" Margin="12,24,28,24" MaxWidth="1100" HorizontalAlignment="Stretch">
 
                     <!-- Interfejs -->
-                    <Border Style="{DynamicResource Card}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource S.set.iface}" Style="{DynamicResource CardHead}"/>
-                            <TextBlock Text="{DynamicResource S.set.uiscale}" Foreground="{DynamicResource TextSec}" Margin="0,6,0,4"/>
-                            <ui:TextBox x:Name="SetUiScale" Width="120" HorizontalAlignment="Left"/>
-                            <TextBlock Text="{DynamicResource S.set.bardelay}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ui:TextBox x:Name="SetBarDelay" Width="120" HorizontalAlignment="Left"/>
-                            <TextBlock Text="{DynamicResource S.set.focuspeekopacity}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ui:TextBox x:Name="SetFocusPeekOpacity" Width="120" HorizontalAlignment="Left"/>
-                            <TextBlock Text="{DynamicResource S.set.termfontsize}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ui:TextBox x:Name="SetTermFontSize" Width="120" HorizontalAlignment="Left"/>
-                            <TextBlock Text="{DynamicResource S.set.theme}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ComboBox x:Name="SetTheme" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
-                                <ComboBoxItem Content="{DynamicResource S.theme.dark}" Tag="Dark"/>
-                                <ComboBoxItem Content="{DynamicResource S.theme.light}" Tag="Light"/>
-                                <ComboBoxItem Content="{DynamicResource S.theme.system}" Tag="System"/>
-                            </ComboBox>
-                            <TextBlock Text="{DynamicResource S.set.themepreset}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,6"/>
-                            <!-- Siatka presetów palety dla bieżącego trybu (Compass §4.9) — budowana w kodzie (BuildThemePresets). -->
-                            <WrapPanel x:Name="ThemePresetGrid" Orientation="Horizontal" MaxWidth="600" HorizontalAlignment="Left"/>
-                            <TextBlock Text="{DynamicResource S.set.language}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ComboBox x:Name="SetLanguage" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
-                                <ComboBoxItem Content="Polski" Tag="pl"/>
-                                <ComboBoxItem Content="English" Tag="en"/>
-                            </ComboBox>
-                            <TextBlock Text="{DynamicResource S.set.liststyle}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ComboBox x:Name="SetListStyle" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
-                                <ComboBoxItem Content="{DynamicResource S.liststyle.default}" Tag="Default"/>
-                                <ComboBoxItem Content="{DynamicResource S.liststyle.minimal}" Tag="Minimal"/>
-                            </ComboBox>
-                            <CheckBox x:Name="SetShowLatency" Content="{DynamicResource S.set.showlatency}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
-                            <TextBlock Text="{DynamicResource S.set.border}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ComboBox x:Name="SetBorder" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
-                                <ComboBoxItem Content="{DynamicResource S.border.none}" Tag=""/>
-                                <ComboBoxItem Content="{DynamicResource S.border.cobalt}" Tag="#2657D6"/>
-                                <ComboBoxItem Content="{DynamicResource S.border.system}" Tag="System"/>
-                            </ComboBox>
-                            <TextBlock Text="{DynamicResource S.set.accent}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,6"/>
-                            <!-- Próbnik akcentu (Compass §4.7): budowany w kodzie (BuildAccentSwatches). -->
-                            <WrapPanel x:Name="AccentSwatches" Orientation="Horizontal"/>
+                    <Border Padding="0">
+                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                            <TextBlock Text="{DynamicResource S.set.iface}" Style="{DynamicResource SetPageHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.iface.sub}" Style="{DynamicResource SetPageSub}"/>
+
+                            <TextBlock Text="{DynamicResource S.set.sec.appearance}" Style="{DynamicResource SetSec}"/>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.theme}" Style="{DynamicResource SetLbl}"/>
+                                    <Border Grid.Column="1" Style="{DynamicResource SegBar}">
+                                        <StackPanel x:Name="ThemeSeg" Orientation="Horizontal">
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Dark" Content="{DynamicResource S.theme.dark}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Light" Content="{DynamicResource S.theme.light}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="System" Content="{DynamicResource S.theme.system}" Checked="SegSetting_Changed"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="{DynamicResource S.set.themepreset}" Foreground="{DynamicResource TextSec}"
+                                       FontSize="{StaticResource FontBody}" Margin="0,14,0,8"/>
+                            <!-- Siatka presetów palety (Compass §4.9) — budowana w kodzie (BuildThemePresets). -->
+                            <WrapPanel x:Name="ThemePresetGrid" Orientation="Horizontal" MaxWidth="580"/>
+
+                            <Border Style="{DynamicResource SetRow}" Margin="0,16,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.accent}" Style="{DynamicResource SetLbl}"/>
+                                    <!-- Próbnik akcentu (Compass §4.7): budowany w kodzie (BuildAccentSwatches). -->
+                                    <WrapPanel x:Name="AccentSwatches" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.language}" Style="{DynamicResource SetLbl}"/>
+                                    <ComboBox x:Name="SetLanguage" Grid.Column="1" Width="150" SelectionChanged="InterfaceSetting_Changed">
+                                        <ComboBoxItem Content="Polski" Tag="pl"/>
+                                        <ComboBoxItem Content="English" Tag="en"/>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.set.uiscale}" Style="{DynamicResource SetLbl}"/>
+                                        <TextBlock Text="{DynamicResource S.set.uiscale.sub}" Style="{DynamicResource SetSub}"/>
+                                    </StackPanel>
+                                    <ui:TextBox x:Name="SetUiScale" Grid.Column="1" Width="90" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="{DynamicResource S.set.sec.list}" Style="{DynamicResource SetSec}"/>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.liststyle}" Style="{DynamicResource SetLbl}"/>
+                                    <Border Grid.Column="1" Style="{DynamicResource SegBar}">
+                                        <StackPanel x:Name="ListStyleSeg" Orientation="Horizontal">
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Default" Content="{DynamicResource S.liststyle.default}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Minimal" Content="{DynamicResource S.liststyle.minimal}" Checked="SegSetting_Changed"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.showlatency}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetShowLatency" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="{DynamicResource S.set.sec.advanced}" Style="{DynamicResource SetSec}"/>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.bardelay}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:TextBox x:Name="SetBarDelay" Grid.Column="1" Width="90" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.focuspeekopacity}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:TextBox x:Name="SetFocusPeekOpacity" Grid.Column="1" Width="90" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.termfontsize}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:TextBox x:Name="SetTermFontSize" Grid.Column="1" Width="90" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.border}" Style="{DynamicResource SetLbl}"/>
+                                    <Border Grid.Column="1" Style="{DynamicResource SegBar}">
+                                        <StackPanel x:Name="BorderSeg" Orientation="Horizontal">
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="" Content="{DynamicResource S.border.none}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="#2657D6" Content="{DynamicResource S.border.cobalt}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="System" Content="{DynamicResource S.border.system}" Checked="SegSetting_Changed"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
 
                     <!-- Połączenie -->
-                    <Border Style="{DynamicResource Card}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource S.set.conn}" Style="{DynamicResource CardHead}"/>
-                            <TextBlock Text="{DynamicResource S.set.port}" Foreground="{DynamicResource TextSec}" Margin="0,6,0,4"/>
-                            <ui:TextBox x:Name="SetDefaultPort" Width="120" HorizontalAlignment="Left"/>
-                            <TextBlock Text="{DynamicResource S.set.colordepth}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
-                            <ComboBox x:Name="SetColorDepth" Width="120" HorizontalAlignment="Left">
-                                <ComboBoxItem>16</ComboBoxItem>
-                                <ComboBoxItem>24</ComboBoxItem>
-                                <ComboBoxItem>32</ComboBoxItem>
-                            </ComboBox>
-                            <CheckBox x:Name="SetAutoReconnect" Content="{DynamicResource S.set.autoreconnect}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
+                    <Border Padding="0">
+                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                            <TextBlock Text="{DynamicResource S.set.conn}" Style="{DynamicResource SetPageHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.conn.sub}" Style="{DynamicResource SetPageSub}"/>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.port}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:TextBox x:Name="SetDefaultPort" Grid.Column="1" Width="90" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.colordepth}" Style="{DynamicResource SetLbl}"/>
+                                    <ComboBox x:Name="SetColorDepth" Grid.Column="1" Width="90">
+                                        <ComboBoxItem>16</ComboBoxItem>
+                                        <ComboBoxItem>24</ComboBoxItem>
+                                        <ComboBoxItem>32</ComboBoxItem>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.autoreconnect}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetAutoReconnect" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
 
                     <!-- Zachowanie -->
-                    <Border Style="{DynamicResource Card}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource S.set.behavior}" Style="{DynamicResource CardHead}"/>
-                            <CheckBox x:Name="SetReachEnabled" Content="{DynamicResource S.set.reach}" Foreground="{DynamicResource TextSec}" Margin="0,6,0,0"/>
-                            <TextBlock Text="{DynamicResource S.set.reachinterval}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,4"/>
-                            <ui:TextBox x:Name="SetReachInterval" Width="120" HorizontalAlignment="Left"/>
-                            <CheckBox x:Name="SetConfirmClose" Content="{DynamicResource S.set.confirmclose}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
-                            <CheckBox x:Name="SetConnLog" Content="{DynamicResource S.set.connlog}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
-                            <CheckBox x:Name="SetOpenNewWindow" Content="{DynamicResource S.set.opennewwin}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
-                            <CheckBox x:Name="SetImmersive" Content="{DynamicResource S.set.immersive}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
-                            <CheckBox x:Name="SetMinimizeToTray" Content="{DynamicResource S.set.traymin}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
-                            <CheckBox x:Name="SetHotkey" Content="{DynamicResource S.set.hotkey}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
-                            <CheckBox x:Name="SetRestorePrompt" Content="{DynamicResource S.set.restoreprompt}" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
+                    <Border Padding="0">
+                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                            <TextBlock Text="{DynamicResource S.set.behavior}" Style="{DynamicResource SetPageHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.behavior.sub}" Style="{DynamicResource SetPageSub}"/>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.reach}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetReachEnabled" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.reachinterval}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:TextBox x:Name="SetReachInterval" Grid.Column="1" Width="90" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.confirmclose}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetConfirmClose" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.connlog}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetConnLog" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.opennewwin}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetOpenNewWindow" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.immersive}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetImmersive" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.traymin}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetMinimizeToTray" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.hotkey}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetHotkey" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.restoreprompt}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetRestorePrompt" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
 
                     <!-- Połącz na starcie -->
-                    <Border Style="{DynamicResource Card}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource S.set.autoconnect}" Style="{DynamicResource CardHead}"/>
-                            <TextBlock Text="{DynamicResource S.set.autoconnect.hint}" Foreground="{DynamicResource TextTer}"
-                                       FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <Border Padding="0">
+                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                            <TextBlock Text="{DynamicResource S.set.autoconnect}" Style="{DynamicResource SetPageHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.autoconnect.hint}" Style="{DynamicResource SetPageSub}"/>
                             <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="10,6">
                                 <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto">
                                     <StackPanel x:Name="AutoConnectList"/>
@@ -624,25 +848,25 @@
                     </Border>
 
                     <!-- Profile poświadczeń -->
-                    <Border Style="{DynamicResource Card}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource S.set.profiles}" Style="{DynamicResource CardHead}"/>
-                            <TextBlock Text="{DynamicResource S.set.profiles.hint}" Foreground="{DynamicResource TextTer}"
-                                       FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <Border Padding="0">
+                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                            <TextBlock Text="{DynamicResource S.set.profiles}" Style="{DynamicResource SetPageHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.profiles.hint}" Style="{DynamicResource SetPageSub}"/>
                             <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="10,6">
                                 <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
                                     <StackPanel x:Name="ProfilesList"/>
                                 </ScrollViewer>
                             </Border>
-                            <ui:Button Content="{DynamicResource S.prof.add}" Appearance="Secondary" Click="AddProfile_Click" Margin="0,8,0,0"/>
+                            <ui:Button Content="{DynamicResource S.prof.add}" Appearance="Secondary" Click="AddProfile_Click" Margin="0,10,0,0"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Dane -->
-                    <Border Style="{DynamicResource Card}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource S.set.data}" Style="{DynamicResource CardHead}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Border Padding="0">
+                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                            <TextBlock Text="{DynamicResource S.set.data}" Style="{DynamicResource SetPageHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.data.sub}" Style="{DynamicResource SetPageSub}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
                                 <TextBlock x:Name="SetDataPath" Foreground="{DynamicResource TextTer}" FontFamily="{DynamicResource Mono}"
                                            FontSize="{StaticResource FontSmall}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="380"/>
                                 <ui:Button Content="{DynamicResource S.set.openfolder}" Appearance="Secondary" Click="OpenDataFolder_Click" Margin="12,0,0,0"/>
@@ -654,7 +878,13 @@
                             <TextBlock Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,6,0,0"
                                        Text="{DynamicResource S.set.backupnote}"/>
                             <Border Height="1" Background="{DynamicResource Border}" Margin="0,14,0,0"/>
-                            <CheckBox x:Name="SetCheckUpdates" Content="{DynamicResource S.set.checkupdates}" Foreground="{DynamicResource TextSec}" Margin="0,14,0,0"/>
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0" Margin="0,6,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource S.set.checkupdates}" Style="{DynamicResource SetLbl}"/>
+                                    <ui:ToggleSwitch x:Name="SetCheckUpdates" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                 <ui:Button Content="{DynamicResource S.set.checkupdatesnow}" Appearance="Secondary" Click="CheckUpdatesNow_Click"/>
                                 <TextBlock x:Name="UpdateCheckStatus" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource TextSec}"/>

@@ -38,7 +38,15 @@
 
     <sys:String x:Key="S.set.search">Szukaj w ustawieniach…</sys:String>
     <sys:String x:Key="S.set.iface">Interfejs</sys:String>
-    <sys:String x:Key="S.set.uiscale">Skala interfejsu (%) — także Ctrl + kółko myszy</sys:String>
+    <sys:String x:Key="S.set.iface.sub">Wygląd, motyw i sposób wyświetlania listy serwerów.</sys:String>
+    <sys:String x:Key="S.set.conn.sub">Domyślne parametry nowych połączeń.</sys:String>
+    <sys:String x:Key="S.set.behavior.sub">Jak aplikacja zachowuje się podczas pracy.</sys:String>
+    <sys:String x:Key="S.set.data.sub">Kopie danych, import/eksport profilu i aktualizacje.</sys:String>
+    <sys:String x:Key="S.set.sec.appearance">WYGLĄD</sys:String>
+    <sys:String x:Key="S.set.sec.list">LISTA SERWERÓW</sys:String>
+    <sys:String x:Key="S.set.sec.advanced">ZAAWANSOWANE</sys:String>
+    <sys:String x:Key="S.set.uiscale">Skala interfejsu (%)</sys:String>
+    <sys:String x:Key="S.set.uiscale.sub">Ctrl + kółko myszy</sys:String>
     <sys:String x:Key="S.set.bardelay">Opóźnienie paska pełnoekranowego (ms)</sys:String>
     <sys:String x:Key="S.set.focuspeekopacity">Krycie panelu w trybie skupienia (%)</sys:String>
     <sys:String x:Key="S.set.termfontsize">Rozmiar czcionki terminala (8-24)</sys:String>

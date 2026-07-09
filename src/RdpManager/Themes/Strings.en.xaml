@@ -38,7 +38,15 @@
 
     <sys:String x:Key="S.set.search">Search settings…</sys:String>
     <sys:String x:Key="S.set.iface">Interface</sys:String>
-    <sys:String x:Key="S.set.uiscale">UI scale (%) — also Ctrl + mouse wheel</sys:String>
+    <sys:String x:Key="S.set.iface.sub">Appearance, theme and how the server list is shown.</sys:String>
+    <sys:String x:Key="S.set.conn.sub">Defaults for new connections.</sys:String>
+    <sys:String x:Key="S.set.behavior.sub">How the app behaves while you work.</sys:String>
+    <sys:String x:Key="S.set.data.sub">Backups, profile import/export and updates.</sys:String>
+    <sys:String x:Key="S.set.sec.appearance">APPEARANCE</sys:String>
+    <sys:String x:Key="S.set.sec.list">SERVER LIST</sys:String>
+    <sys:String x:Key="S.set.sec.advanced">ADVANCED</sys:String>
+    <sys:String x:Key="S.set.uiscale">UI scale (%)</sys:String>
+    <sys:String x:Key="S.set.uiscale.sub">Ctrl + mouse wheel</sys:String>
     <sys:String x:Key="S.set.bardelay">Fullscreen bar delay (ms)</sys:String>
     <sys:String x:Key="S.set.focuspeekopacity">Focus-mode panel opacity (%)</sys:String>
     <sys:String x:Key="S.set.termfontsize">Terminal font size (8-24)</sys:String>
