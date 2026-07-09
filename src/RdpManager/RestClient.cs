@@ -248,12 +248,31 @@ namespace RdpManager
         public static string NormalizeNewlines(string s)
             => string.IsNullOrEmpty(s) ? (s ?? "") : s.Replace("\r\n", "\n").Replace("\r", "\n");
 
+        // Jeden wzorzec zmiennej {{klucz}} dla podstawiania i walidacji (kolorowanie pól w konsoli).
+        private static readonly Regex VarRx = new Regex(@"\{\{\s*([^{}\s]+)\s*\}\}", RegexOptions.Compiled);
+
         // Podstawia {{klucz}} wartościami zmiennych (nieznane {{x}} zostają bez zmian). Publiczne dla testów.
         public static string Subst(string s, IReadOnlyDictionary<string, string> vars)
         {
             if (string.IsNullOrEmpty(s) || vars == null || vars.Count == 0) return s ?? "";
-            return Regex.Replace(s, @"\{\{\s*([^{}\s]+)\s*\}\}",
-                m => vars.TryGetValue(m.Groups[1].Value, out var v) ? (v ?? "") : m.Value);
+            return VarRx.Replace(s, m => vars.TryGetValue(m.Groups[1].Value, out var v) ? (v ?? "") : m.Value);
+        }
+
+        /// <summary>Czy tekst zawiera jakąkolwiek zmienną {{x}}? (sygnalizacja w UI)</summary>
+        public static bool HasVars(string s) => !string.IsNullOrEmpty(s) && VarRx.IsMatch(s);
+
+        /// <summary>Nazwy zmiennych {{x}} z tekstu, których NIE ma w słowniku (null słownik = wszystkie
+        /// nieznane). Pusta lista = wszystko znane albo brak zmiennych. Publiczne dla testów i UI.</summary>
+        public static List<string> MissingVars(string s, IReadOnlyDictionary<string, string> vars)
+        {
+            var missing = new List<string>();
+            if (string.IsNullOrEmpty(s)) return missing;
+            foreach (Match m in VarRx.Matches(s))
+            {
+                string k = m.Groups[1].Value;
+                if ((vars == null || !vars.ContainsKey(k)) && !missing.Contains(k)) missing.Add(k);
+            }
+            return missing;
         }
 
         /// <summary>Buduje docelowy URI: podstawia {{zmienne}}, dokleja włączone parametry zapytania

@@ -52,6 +52,30 @@ namespace RdpManager.Tests
             Assert.Equal("{{a}}", RestClient.Subst("{{a}}", null));         // brak zmiennych = bez zmian
         }
 
+        // Sygnalizacja zmiennych w UI (kolor pól): które {{x}} są nieznane w aktywnym środowisku.
+        [Fact]
+        public void MissingVars_ReportsUnknown_SkipsKnown_Dedups()
+        {
+            var vars = new Dictionary<string, string> { ["token"] = "abc" };
+            Assert.Empty(RestClient.MissingVars("Bearer {{token}}", vars));
+            Assert.Equal(new[] { "user" }, RestClient.MissingVars("{{token}}/{{user}}", vars));
+            Assert.Equal(new[] { "x" }, RestClient.MissingVars("{{x}} i znowu {{x}}", vars));   // bez duplikatów
+            Assert.Equal(new[] { "a" }, RestClient.MissingVars("{{a}}", null));                 // null = wszystkie nieznane
+            Assert.Empty(RestClient.MissingVars("bez zmiennych", vars));
+            Assert.Empty(RestClient.MissingVars(null, vars));
+        }
+
+        [Fact]
+        public void HasVars_DetectsVariableSyntax()
+        {
+            Assert.True(RestClient.HasVars("{{a}}"));
+            Assert.True(RestClient.HasVars("Bearer {{ token }}"));   // tolerancja spacji jak w Subst
+            Assert.False(RestClient.HasVars("{a}"));
+            Assert.False(RestClient.HasVars("{\"json\":{\"x\":1}}"));   // JSON to nie zmienna
+            Assert.False(RestClient.HasVars(""));
+            Assert.False(RestClient.HasVars(null));
+        }
+
         [Fact]
         public void BuildUri_SubstitutesVariablesInUrlAndQuery()
         {

@@ -91,7 +91,7 @@ namespace RdpManager
             BuildTypeCombo(isFolder);
             TypeCombo.SelectedIndex = ClampType(_current.AuthType, isFolder);
             UserBox.Text = _current.AuthUsername;
-            TokenBox.Password = _current.AuthType == 1 ? _current.AuthSecret : "";
+            TokenBox.Text = _current.AuthType == 1 ? _current.AuthSecret : "";
             PassBox.Password = _current.AuthType == 2 ? _current.AuthSecret : "";
             UpdatePanels();
             _loading = false;
@@ -139,9 +139,30 @@ namespace RdpManager
             if (_current == null) return;
             _current.AuthType = TypeCombo.SelectedIndex < 0 ? 0 : TypeCombo.SelectedIndex;
             _current.AuthUsername = UserBox.Text ?? "";
-            _current.AuthSecret = _current.AuthType == 1 ? TokenBox.Password
+            _current.AuthSecret = _current.AuthType == 1 ? TokenBox.Text
                                  : _current.AuthType == 2 ? PassBox.Password
                                  : "";
+        }
+
+        // Kolor {{zmiennych}} w polu tokenu — wg aktywnego środowiska KOLEKCJI (wybór jest per-kolekcja).
+        // Zmienne wczytane raz przy otwarciu okna (edycje środowisk w innym oknie — rzadkie, wystarczy).
+        private Dictionary<string, string> _envVars;
+
+        private void Token_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            if (!(sender is TextBox tb)) return;
+            string t = tb.Text ?? "";
+            if (!RestClient.HasVars(t)) { tb.ClearValue(System.Windows.Controls.Control.ForegroundProperty); return; }
+            if (_envVars == null)
+            {
+                _envVars = new Dictionary<string, string>();
+                var env = EnvironmentStore.Load().FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
+                if (env != null)
+                    foreach (var v in env.Variables)
+                        if (!string.IsNullOrWhiteSpace(v.Key)) _envVars[v.Key] = v.Value ?? "";
+            }
+            bool missing = RestClient.MissingVars(t, _envVars).Count > 0;
+            tb.Foreground = (System.Windows.Media.Brush)TryFindResource(missing ? "Danger" : "AccentBright") ?? tb.Foreground;
         }
 
         private void Close_Click(object sender, RoutedEventArgs e)

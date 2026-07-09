@@ -568,6 +568,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.auth.bearer">Bearer (token)</sys:String>
     <sys:String x:Key="S.rest.auth.basic">Basic (login/hasło)</sys:String>
     <sys:String x:Key="S.rest.auth.token">Token</sys:String>
+    <sys:String x:Key="S.rest.auth.tokenvar">Możesz użyć {{zmiennej}} środowiska — niebieski = znaleziona, czerwony = brak (podstawiana przy wysyłce).</sys:String>
     <sys:String x:Key="S.rest.auth.user">Login</sys:String>
     <sys:String x:Key="S.rest.auth.pass">Hasło</sys:String>
     <sys:String x:Key="S.rest.auth.hint">Sekret (token / hasło) trafia do Menedżera poświadczeń Windows, nie do pliku.</sys:String>

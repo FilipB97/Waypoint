@@ -168,6 +168,7 @@ namespace RdpManager
         {
             if (_envLoading) return;
             _coll.ActiveEnvironmentId = (EnvCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
+            RecolorAllVars();   // inne środowisko = inne znane zmienne → przelicz kolory pól
         }
 
         private void ManageEnv_Click(object sender, RoutedEventArgs e)
@@ -180,6 +181,7 @@ namespace RdpManager
             BuildEnvCombo();
             CaptureCurrent();
             RestStore.Put(_server.Id, _coll);
+            RecolorAllVars();   // zmienne mogły dojść/zniknąć w edytorze
         }
 
         private RestEnvironment ActiveEnv() => _envs?.FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
@@ -425,13 +427,15 @@ namespace RdpManager
             UpdateBodyMode();
             AuthCombo.SelectedIndex = Math.Clamp(req.AuthType, 0, 3);
             AuthUserBox.Text = req.AuthUsername;
-            TokenBox.Password = req.AuthType == 1 ? (req.AuthSecret ?? "") : "";
+            TokenBox.Text = req.AuthType == 1 ? (req.AuthSecret ?? "") : "";
             AuthPassBox.Password = req.AuthType == 2 ? (req.AuthSecret ?? "") : "";
             PreScriptBox.Text = req.PreScript ?? "";
             TestScriptBox.Text = req.TestScript ?? "";
             UpdateAuthPanels();
             ClearResponse();
             _loading = false;
+            // Kolory zmiennych w komórkach tabel — kontenery wierszy powstają asynchronicznie, więc po layoucie.
+            Dispatcher.BeginInvoke(new Action(RecolorAllVars), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
         // Zbiera stan formularza do aktywnego żądania (przed przełączeniem/wysyłką/zapisem). Sekret → transient.
@@ -465,9 +469,48 @@ namespace RdpManager
         }
 
         private string SecretFromUi()
-            => AuthCombo.SelectedIndex == 1 ? TokenBox.Password
+            => AuthCombo.SelectedIndex == 1 ? TokenBox.Text
              : AuthCombo.SelectedIndex == 2 ? AuthPassBox.Password
              : "";
+
+        // ---------- Kolor zmiennych {{...}} (niebieski = wszystkie znane w środowisku, czerwony = brak) ----------
+
+        private void VarCell_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is TextBox tb) ColorizeVars(tb);
+        }
+
+        // Pole bez zmiennych wraca do koloru ze stylu (ClearValue); ze zmiennymi — całe pole sygnalizuje
+        // stan: wszystkie znane → AccentBright, jakakolwiek nieznana → Danger. Wartość pokazuje tooltip.
+        private void ColorizeVars(TextBox tb)
+        {
+            if (tb == null) return;
+            string t = tb.Text ?? "";
+            if (!RestClient.HasVars(t)) { tb.ClearValue(Control.ForegroundProperty); return; }
+            bool missing = RestClient.MissingVars(t, Vars()).Count > 0;
+            tb.Foreground = (Brush)TryFindResource(missing ? "Danger" : "AccentBright") ?? tb.Foreground;
+        }
+
+        // Po zmianie środowiska / załadowaniu żądania — przelicz kolory we wszystkich polach ze zmiennymi.
+        private void RecolorAllVars()
+        {
+            ColorizeVars(UrlBox);
+            ColorizeVars(TokenBox);
+            ColorizeVars(AuthUserBox);
+            foreach (var host in new ItemsControl[] { ParamsList, HeadersList, FormFieldsList })
+                foreach (var tb in Descendants<TextBox>(host)) ColorizeVars(tb);
+        }
+
+        private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+        {
+            if (root == null) yield break;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var c = VisualTreeHelper.GetChild(root, i);
+                if (c is T t) yield return t;
+                foreach (var d in Descendants<T>(c)) yield return d;
+            }
+        }
 
         // ---------- Wysyłka ----------
 
