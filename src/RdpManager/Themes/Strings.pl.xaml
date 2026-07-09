@@ -45,6 +45,10 @@
     <sys:String x:Key="S.set.sec.appearance">WYGLĄD</sys:String>
     <sys:String x:Key="S.set.sec.list">LISTA SERWERÓW</sys:String>
     <sys:String x:Key="S.set.sec.advanced">ZAAWANSOWANE</sys:String>
+    <sys:String x:Key="S.set.sec.updates">AKTUALIZACJE</sys:String>
+    <sys:String x:Key="S.set.sec.about">O PROGRAMIE</sys:String>
+    <sys:String x:Key="S.set.about.sub">Wersja, aktualizacje i informacje o programie.</sys:String>
+    <sys:String x:Key="S.about.whatsnew">Co nowego</sys:String>
     <sys:String x:Key="S.set.uiscale">Skala interfejsu (%)</sys:String>
     <sys:String x:Key="S.set.uiscale.sub">Ctrl + kółko myszy</sys:String>
     <sys:String x:Key="S.set.bardelay">Opóźnienie paska pełnoekranowego (ms)</sys:String>
