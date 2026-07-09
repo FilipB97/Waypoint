@@ -1849,13 +1849,9 @@ namespace RdpManager
             Grid.SetColumn(avatar, 1);
             grid.Children.Add(avatar);
 
+            // Sam adres (DisplayHost) zdjęty z wiersza — nie mieścił się z nazwą; jest w tooltipie (WireServerRow).
             var meta = new StackPanel { Margin = new Thickness(9, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             meta.Children.Add(new TextBlock { Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
-            meta.Children.Add(new TextBlock
-            {
-                Text = DisplayHost(server), Foreground = Res("TextTer"), FontSize = 10.5,
-                FontFamily = (FontFamily)TryFindResource("Mono"), TextTrimming = TextTrimming.CharacterEllipsis
-            });
             Grid.SetColumn(meta, 2);
             grid.Children.Add(meta);
 
@@ -1936,7 +1932,8 @@ namespace RdpManager
             Grid.SetColumn(name, 2);
             grid.Children.Add(name);
 
-            // Host dosunięty do prawej (z opcjonalną gwiazdką przypięcia), przycinany przy długich nazwach.
+            // Po prawej: znacznik protokołu (+ opcjonalne opóźnienie / gwiazdka). Adres (DisplayHost) zdjęty
+            // z wiersza — nazwa nie mieściła się z adresem; adres jest w tooltipie (WireServerRow).
             var rightPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center
@@ -1949,12 +1946,6 @@ namespace RdpManager
                     Text = "★", Foreground = Res("Idle"), FontSize = 9,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
-            rightPanel.Children.Add(new TextBlock
-            {
-                Text = DisplayHost(server), Foreground = Res("TextTer"), FontSize = 11.5,
-                FontFamily = (FontFamily)TryFindResource("Mono"), VerticalAlignment = VerticalAlignment.Center,
-                MaxWidth = 100, TextTrimming = TextTrimming.CharacterEllipsis
-            });
             Grid.SetColumn(rightPanel, 3);
             grid.Children.Add(rightPanel);
 
@@ -2005,8 +1996,13 @@ namespace RdpManager
             string tagText = (server.Tags != null && server.Tags.Count > 0) ? "  #" + string.Join(" #", server.Tags) : "";
             System.Windows.Automation.AutomationProperties.SetName(row,
                 server.Name + " — " + DisplayHost(server) + " — " + StatusLabel(server.Status) + tagText);
+            // Adres zdjęty z wiersza (nie mieścił się z nazwą) → pokazujemy go tutaj, w tooltipie, razem
+            // z tagami i notatką (jeśli są). Nazwa zawsze; adres prawie zawsze — więc tooltip jest zawsze.
+            string dh = DisplayHost(server);
+            string hostText = string.IsNullOrWhiteSpace(dh) ? "" : "\n" + dh;
+            string tagsTip = (server.Tags != null && server.Tags.Count > 0) ? "\n#" + string.Join(" #", server.Tags) : "";
             string noteText = string.IsNullOrWhiteSpace(server.Notes) ? "" : "\n" + server.Notes.Trim();
-            if (tagText.Length > 0 || noteText.Length > 0) row.ToolTip = server.Name + tagText + noteText;   // tagi + notatka po najechaniu
+            row.ToolTip = server.Name + hostText + tagsTip + noteText;
             if (_serverStatusDot.TryGetValue(server, out var statusDot))
                 System.Windows.Automation.AutomationProperties.SetName(statusDot, StatusLabel(server.Status));
 
