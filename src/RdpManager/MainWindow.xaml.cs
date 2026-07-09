@@ -695,6 +695,19 @@ namespace RdpManager
         // Lewy panel w trybie skupienia: pokaż/schowaj (wywoływane z pollingu krawędzi).
         // Rail+Sidebar są przenoszone do FocusPeekPopup (osobny HWND) — nakłada się na sesję BEZ jej
         // resize, więc RDP/WebView2 się nie renegocjuje i nie miga. Wejście = płynny slide z lewej.
+        // Podłoże peeku panelu w trybie skupienia: solidny kolor zbliżony do kanwy z kryciem z ustawień
+        // (FocusPeekOpacity). Panele reparentowane do peeku mają prawie przezroczyste tło, więc bez tego
+        // podłoża jasna sesja przebija spod panelu (Compass — czytelność w skupieniu).
+        private Brush FocusPeekBackground()
+        {
+            int pct = Math.Clamp(_settings.FocusPeekOpacity, 0, 100);
+            byte a = (byte)Math.Round(pct * 255.0 / 100.0);
+            var c = ThemeManager.IsLight
+                ? System.Windows.Media.Color.FromArgb(a, 0xF2, 0xF3, 0xF5)
+                : System.Windows.Media.Color.FromArgb(a, 0x0E, 0x0F, 0x14);
+            return new SolidColorBrush(c);
+        }
+
         private void ShowFocusPeek()
         {
             if (!IsImmersive() || _focusPeeking) return;
@@ -710,6 +723,8 @@ namespace RdpManager
             // samą skalę co panel dokowany i mieścił się na ekranie (przy <100% był ucięty od dołu).
             FocusPeekScale.ScaleX = FocusPeekScale.ScaleY = RootScale.ScaleY;
             FocusPeekClip.Height = BodyGrid.ActualHeight;
+            // Solidne podłoże pod prześwitującym panelem (Panel ~3%) — bez niego treść sesji przebija peek.
+            FocusPeekClip.Background = FocusPeekBackground();
             FocusPeekPopup.IsOpen = true;
 
             var slide = new System.Windows.Media.Animation.DoubleAnimation(-280, 0,
@@ -938,6 +953,7 @@ namespace RdpManager
             SettingsCats.SelectedIndex = 0;   // domyślna kategoria (Interfejs) → pokazuje pierwszą kartę
             SetUiScale.Text = ((int)Math.Round(_settings.UiScale * 100)).ToString();
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
+            SetFocusPeekOpacity.Text = _settings.FocusPeekOpacity.ToString();
             SetTermFontSize.Text = _settings.TerminalFontSize.ToString();
             SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
             SetBorder.SelectedIndex = _settings.WindowBorderColor == "System" ? 2
@@ -1181,6 +1197,7 @@ namespace RdpManager
         {
             if (int.TryParse(SetUiScale.Text.Trim(), out var us)) _settings.UiScale = Math.Clamp(us / 100.0, 0.7, 1.8);
             _settings.FullscreenBarDelayMs = int.TryParse(SetBarDelay.Text.Trim(), out var d) ? Math.Clamp(d, 0, 3000) : 450;
+            _settings.FocusPeekOpacity = int.TryParse(SetFocusPeekOpacity.Text.Trim(), out var fpo) ? Math.Clamp(fpo, 0, 100) : 92;
             _settings.TerminalFontSize = int.TryParse(SetTermFontSize.Text.Trim(), out var tfs) ? Math.Clamp(tfs, 8, 24) : 14;
             _settings.DefaultPort = int.TryParse(SetDefaultPort.Text.Trim(), out var p) ? Math.Clamp(p, 1, 65535) : 3389;
             _settings.ColorDepth = ParseColorDepth();
