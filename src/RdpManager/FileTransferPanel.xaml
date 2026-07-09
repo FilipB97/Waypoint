@@ -221,6 +221,7 @@
             <!-- Lista + nakładka „upuść, aby wysłać" -->
             <Grid Grid.Row="2">
                 <ListView x:Name="FileList" BorderThickness="0" Background="Transparent" Margin="4,4,6,2"
+                          SelectionMode="Extended"
                           ItemContainerStyle="{StaticResource FtRow}" ItemTemplate="{StaticResource FtRowTemplate}"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           MouseDoubleClick="List_DoubleClick"
