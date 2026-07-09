@@ -87,12 +87,17 @@ namespace RdpManager.Models
         public string Value { get; set; } = "";
     }
 
-    /// <summary>Środowisko (PR3): nazwany zestaw zmiennych (np. „dev", „prod").</summary>
+    /// <summary>Środowisko: nazwany zestaw zmiennych (np. „dev", „prod"). Od PR środowisk globalnych
+    /// przechowywane w environments.json (EnvironmentStore), wspólne dla wszystkich kolekcji; kolekcja
+    /// wskazuje wybrane środowisko przez <see cref="RestCollection.ActiveEnvironmentId"/>.</summary>
     public sealed class RestEnvironment
     {
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
         public string Name { get; set; } = "";
         public List<RestVariable> Variables { get; set; } = new List<RestVariable>();
+
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement> Extra { get; set; }
     }
 
     /// <summary>Wpis historii wysłanego żądania.</summary>

@@ -8,28 +8,27 @@ using RdpManager.Models;
 namespace RdpManager
 {
     /// <summary>
-    /// Zarządzanie środowiskami REST i ich zmiennymi ({{klucz}}). Edytuje kolekcję w pamięci (przekazaną
-    /// przez referencję); trwały zapis robi konsola przez „Zapisz". Zmienne są jawne w pliku — nie na sekrety.
+    /// Zarządzanie GLOBALNYMI środowiskami REST i ich zmiennymi ({{klucz}}) — wspólnymi dla wszystkich
+    /// kolekcji (EnvironmentStore). Edytuje kopie robocze; trwały zapis (do environments.json) następuje
+    /// dopiero w „Zamknij". Zmienne są jawne w pliku — nie na sekrety.
     /// </summary>
     public partial class RestEnvWindow
     {
-        private readonly RestCollection _coll;
         private ObservableCollection<RestEnvironment> _envs;
         private ObservableCollection<RestVariable> _vars;
         private RestEnvironment _current;
 
         private static string L(string key) => LocalizationManager.S(key);
 
-        public RestEnvWindow(RestCollection coll)
+        public RestEnvWindow()
         {
             InitializeComponent();
-            _coll = coll;
             Title = L("S.rest.env.title");
             WinTitleBar.Title = Title;
 
-            // Kopie robocze — edycja pól (binding TwoWay) NIE MOŻE dotykać obiektów z _coll, inaczej
+            // Kopie robocze — edycja pól (binding TwoWay) NIE MOŻE dotykać obiektów ze store'u, inaczej
             // zamknięcie okna „na krzyżyku" (bez Close_Click) i tak zapisywałoby zmiany (A8 z przeglądu).
-            _envs = new ObservableCollection<RestEnvironment>(_coll.Environments.Select(CloneEnv));
+            _envs = new ObservableCollection<RestEnvironment>(EnvironmentStore.Load().Select(CloneEnv));
             EnvList.ItemsSource = _envs;
             if (_envs.Count > 0) EnvList.SelectedIndex = 0;
             else { _vars = new ObservableCollection<RestVariable>(); VarsList.ItemsSource = _vars; VarsList.IsEnabled = false; }
@@ -77,7 +76,7 @@ namespace RdpManager
             else { _current = null; _vars = new ObservableCollection<RestVariable>(); VarsList.ItemsSource = _vars; VarsList.IsEnabled = false; }
         }
 
-        // Import osobnego pliku środowiska Postman (dodaje nowe środowisko do tej kolekcji).
+        // Import osobnego pliku środowiska Postman (dodaje nowe środowisko do globalnej listy).
         private void ImportEnv_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new Microsoft.Win32.OpenFileDialog { Title = L("S.rest.env.importtitle"), Filter = L("S.dlg.postman.filter") };
@@ -117,7 +116,7 @@ namespace RdpManager
         private void Close_Click(object sender, RoutedEventArgs e)
         {
             CommitVars();
-            _coll.Environments = _envs.ToList();
+            EnvironmentStore.Save(_envs.ToList());   // zapis dopiero tutaj (A8: „krzyżyk" nie utrwala zmian)
             DialogResult = true;
         }
 
