@@ -8,6 +8,8 @@
     <sys:String x:Key="S.nav.about">About</sys:String>
     <sys:String x:Key="S.nav.settings">Settings</sys:String>
     <sys:String x:Key="S.nav.tools">Password generator</sys:String>
+    <sys:String x:Key="S.nav.rest">REST collections</sys:String>
+    <sys:String x:Key="S.rest.module.empty">No REST collections. Add a REST server to see its requests here.</sys:String>
 
     <!-- secret generator -->
     <sys:String x:Key="S.gen.title">Password generator</sys:String>

@@ -8,6 +8,8 @@
     <sys:String x:Key="S.nav.about">O aplikacji</sys:String>
     <sys:String x:Key="S.nav.settings">Ustawienia</sys:String>
     <sys:String x:Key="S.nav.tools">Generator haseł</sys:String>
+    <sys:String x:Key="S.nav.rest">Kolekcje REST</sys:String>
+    <sys:String x:Key="S.rest.module.empty">Brak kolekcji REST. Dodaj serwer typu REST, aby zobaczyć tu żądania.</sys:String>
 
     <!-- generator sekretów -->
     <sys:String x:Key="S.gen.title">Generator haseł</sys:String>

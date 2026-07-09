@@ -226,6 +226,9 @@
                         <Button x:Name="NavRecent" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.recent}" AutomationProperties.Name="{DynamicResource S.nav.recent}" Tag="Recent" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoRecent" Symbol="History24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
+                        <Button x:Name="NavRest" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.rest}" AutomationProperties.Name="{DynamicResource S.nav.rest}" Click="NavRest_Click">
+                            <ui:SymbolIcon x:Name="IcoRest" Symbol="Braces24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
+                        </Button>
                         <Button x:Name="NavTools" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.tools}" AutomationProperties.Name="{DynamicResource S.nav.tools}" Click="OpenPasswordGen_Click">
                             <ui:SymbolIcon x:Name="IcoTools" Symbol="Key24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
@@ -266,7 +269,7 @@
                          ukryte, gdy jest tylko jeden protokół (nie ma czego filtrować). -->
                     <WrapPanel x:Name="ProtoFilterBar" Grid.Row="1" Orientation="Horizontal" Margin="12,0,8,4" Visibility="Collapsed"/>
 
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="8,0">
+                    <ScrollViewer x:Name="ServerScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="8,0">
                         <AdornerDecorator>
                             <StackPanel x:Name="ServerTree"/>
                         </AdornerDecorator>
@@ -275,6 +278,24 @@
                     <TextBlock x:Name="TreeEmptyHint" Grid.Row="2" Visibility="Collapsed" Text=""
                                Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" TextAlignment="Center"
                                VerticalAlignment="Top" HorizontalAlignment="Center" Margin="20,32,20,0"/>
+
+                    <!-- Moduł REST (Compass §4.4): rail „REST" przełącza sidebar na drzewo kolekcji. Nakłada się na
+                         rzędy 0–2 (wyszukiwarka/chipy/drzewo serwerów są chowane, gdy aktywny). -->
+                    <Grid x:Name="RestModule" Grid.Row="0" Grid.RowSpan="3" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Margin="14,14,14,8">
+                            <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextTer}"
+                                       FontWeight="Bold" FontSize="{StaticResource FontCaption}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="RestModuleCount" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextTer}" FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontCaption}"/>
+                        </Grid>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8,0">
+                            <StackPanel x:Name="RestModuleTree"/>
+                        </ScrollViewer>
+                    </Grid>
 
                     <Border Grid.Row="3" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10">
                         <StackPanel>
