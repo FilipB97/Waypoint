@@ -3461,23 +3461,29 @@ namespace RdpManager
         private void SendCtrlAltDel_Click(object sender, RoutedEventArgs e) => SendCtrlAltDel(_active);
 
         // Wysyła zdalne Ctrl+Alt+Del. OCX RDP nie ma na to scriptowalnej metody, więc — jak w mstsc — dajemy
-        // klientowi Ctrl+Alt+End, który (przy KeyboardHookMode=2 i z fokusem na kontrolce) tłumaczy je na
-        // zdalną sekwencję SAS. Iniekcja przez keybd_event po ustawieniu fokusu na kontrolce sesji.
+        // klientowi Ctrl+Alt+End, który z fokusem na kontrolce tłumaczy je na zdalną sekwencję SAS.
         private void SendCtrlAltDel(Session s)
         {
             if (s == null || s.Server.Protocol != RemoteProtocol.Rdp || !s.Connected) return;
             if (s != _active && s != _paneLeft && s != _paneRight) Activate(s);   // sesja musi być widoczna
-            try { s.Rdp.Focus(); } catch { }
+            // Fokus MUSI trafić na kontrolkę OCX, nie na przycisk WPF — inaczej globalny keybd_event poszedłby
+            // w próżnię. WindowsFormsHost.Focus() + WinForms Focus() nie zawsze przenoszą fokus za granicę hosta.
+            try { s.Host?.Focus(); s.Rdp.Focus(); } catch { }
             // Po przetworzeniu fokusu (Input) wstrzykujemy Ctrl↓ Alt↓ End↓ End↑ Alt↑ Ctrl↑.
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 // keybd_event jest globalny — wyślij TYLKO gdy nasze okno jest na pierwszym planie, inaczej
                 // klawisze trafiłyby do aplikacji, na którą użytkownik zdążył przełączyć (iniekcja jest odroczona).
                 if (GetForegroundWindow() != new WindowInteropHelper(this).Handle) return;
+                // Natywne SetFocus na uchwyt OCX tuż przed iniekcją — najpewniejszy sposób, by klawisze
+                // trafiły do sesji RDP (nasze okno jest na pierwszym planie, więc SetFocus na dziecko działa).
+                try { SetFocus(s.Rdp.Handle); } catch { }
+                // End = klawisz ROZSZERZONY; bez KEYEVENTF_EXTENDEDKEY bywa mylony z numpad-1 (zależnie od NumLock),
+                // przez co OCX nie rozpoznaje Ctrl+Alt+End jako zdalnego SAS.
                 keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
                 keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
-                keybd_event(VK_END, 0, 0, UIntPtr.Zero);
-                keybd_event(VK_END, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                keybd_event(VK_END, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
+                keybd_event(VK_END, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, UIntPtr.Zero);
                 keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                 keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
             }), System.Windows.Threading.DispatcherPriority.Input);
@@ -3941,6 +3947,10 @@ namespace RdpManager
         private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
         private const byte VK_CONTROL = 0x11, VK_MENU = 0x12, VK_END = 0x23;
         private const uint KEYEVENTF_KEYUP = 0x0002;
+        private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SetFocus(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
