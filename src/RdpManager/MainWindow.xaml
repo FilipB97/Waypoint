@@ -886,46 +886,62 @@
                             <TextBlock Text="{DynamicResource S.nav.about}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.about.sub}" Style="{DynamicResource SetPageSub}"/>
 
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                <Image Source="pack://application:,,,/Assets/app.ico" Width="52" Height="52" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
-                                    <TextBlock Text="Waypoint" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrim}"/>
-                                    <TextBlock x:Name="AboutVersion" Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}"/>
+                            <!-- Karta z wersją -->
+                            <Border Style="{DynamicResource Card}" Padding="16,14">
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="pack://application:,,,/Assets/app.ico" Width="44" Height="44" RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center" Margin="14,0,0,0">
+                                        <TextBlock Text="Waypoint" FontSize="{StaticResource FontBodyLg}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrim}"/>
+                                        <TextBlock x:Name="AboutVersion" Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}" Margin="0,2,0,0"/>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                            <TextBlock Text="{DynamicResource S.msg.about.desc}" TextWrapping="Wrap" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
-                            <TextBlock Foreground="{DynamicResource TextSec}" Margin="0,10,0,0">
-                                <Run Text="{DynamicResource S.about.author}"/><Hyperlink Click="AboutAuthor_Click" Foreground="{DynamicResource Accent}" ToolTip="https://github.com/FilipB97"><Run Text="Filip Benklewski" FontWeight="SemiBold"/></Hyperlink>
-                            </TextBlock>
+                            </Border>
 
-                            <TextBlock Text="{DynamicResource S.set.sec.updates}" Style="{DynamicResource SetSec}"/>
-                            <Border Style="{DynamicResource SetRow}">
+                            <!-- Karta aktualizacji: „Masz najnowszą…" / „Dostępna aktualizacja — X" + Zainstaluj (kod ustawia stan) -->
+                            <Border x:Name="AboutUpdateCard" Style="{DynamicResource Card}" Padding="16,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ui:SymbolIcon x:Name="AboutUpdateIcon" Symbol="CheckmarkCircle24" FontSize="{StaticResource IconLg}"
+                                                   Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,12,0">
+                                        <TextBlock x:Name="AboutUpdateTitle" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontBodyLg}"
+                                                   FontWeight="SemiBold" Text="{DynamicResource S.update.uptodate}"/>
+                                        <TextBlock x:Name="AboutUpdateSub" Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontSmall}"
+                                                   Margin="0,2,0,0" Visibility="Collapsed"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <ui:Button x:Name="AboutUpdateInstall" Visibility="Collapsed" Appearance="Primary"
+                                                   Content="{DynamicResource S.about.install}" Click="Update_Click"/>
+                                        <ui:Button x:Name="AboutCheckNow" Content="{DynamicResource S.set.checkupdatesnow}" Appearance="Secondary"
+                                                   Click="CheckUpdatesNow_Click" Margin="8,0,0,0"/>
+                                        <ui:Button Content="{DynamicResource S.about.whatsnew}" Appearance="Secondary" Click="AboutWhatsNew_Click" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0" Margin="2,0,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="{DynamicResource S.set.checkupdates}" Style="{DynamicResource SetLbl}"/>
                                     <ui:ToggleSwitch x:Name="SetCheckUpdates" Grid.Column="1" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
-                            <Border Style="{DynamicResource SetRow}" BorderThickness="0">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="UpdateCheckStatus" Style="{DynamicResource SetLbl}" Foreground="{DynamicResource TextSec}" Text="{DynamicResource S.update.uptodate}"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <!-- Widoczny tylko, gdy dostępna nowsza wersja (ustawiane razem z UpdateBtn na pasku). -->
-                                        <ui:Button x:Name="AboutUpdateInstall" Visibility="Collapsed" Appearance="Info" Click="Update_Click"/>
-                                        <ui:Button Content="{DynamicResource S.about.whatsnew}" Appearance="Secondary" Click="AboutWhatsNew_Click" Margin="8,0,0,0"/>
-                                        <ui:Button Content="{DynamicResource S.set.checkupdatesnow}" Appearance="Secondary" Click="CheckUpdatesNow_Click" Margin="8,0,0,0"/>
-                                    </StackPanel>
-                                </Grid>
+
+                            <!-- Historia zmian (kurowana lista z Changelog.cs) -->
+                            <TextBlock Text="{DynamicResource S.set.sec.changelog}" Style="{DynamicResource SetSec}"/>
+                            <Border Style="{DynamicResource Card}" Padding="16,6">
+                                <StackPanel x:Name="ChangelogList"/>
                             </Border>
 
-                            <TextBlock Text="{DynamicResource S.set.sec.about}" Style="{DynamicResource SetSec}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <ui:Button Content="{DynamicResource S.about.repo}" Appearance="Secondary" Click="AboutRepo_Click"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <ui:Button Content="{DynamicResource S.about.github}" Appearance="Secondary" Click="AboutRepo_Click"/>
+                                <ui:Button Content="{DynamicResource S.about.license}" Appearance="Secondary" Click="AboutLicense_Click" Margin="8,0,0,0"/>
+                                <ui:Button Content="{DynamicResource S.about.reportissue}" Appearance="Secondary" Click="AboutReportIssue_Click" Margin="8,0,0,0"/>
                                 <ui:Button Content="{DynamicResource S.set.openfolder}" Appearance="Secondary" Click="OpenDataFolder_Click" Margin="8,0,0,0"/>
                             </StackPanel>
                             <TextBlock x:Name="AboutDataPath" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
-                                       FontFamily="{DynamicResource Mono}" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                                       FontFamily="{DynamicResource Mono}" TextWrapping="Wrap" Margin="2,10,0,0"/>
                         </StackPanel>
                     </Border>
 
