@@ -30,19 +30,39 @@ namespace RdpManager
         /// same reagować na DynamicResource (D5 z przeglądu).</summary>
         public static bool IsLight { get; private set; }
 
-        /// <param name="accentHex">Własny akcent użytkownika (np. „#7C6CFB"); pusty/niepoprawny = domyślny Compass.</param>
-        public static void Apply(string theme, string accentHex = null)
+        // Nakładka wybranego presetu motywu (§4.9) w MergedDictionaries — trzymana po referencji, bo generowana
+        // w kodzie (brak Source, więc SwapPalette jej nie usuwa po URI).
+        private static ResourceDictionary _presetOverlay;
+
+        /// <param name="accentHex">Własny akcent użytkownika (np. „#7C6CFB"); pusty/niepoprawny = domyślny presetu/palety.</param>
+        /// <param name="variantDark">Preset ciemny (Id z <see cref="ThemePresets"/>); „Waypoint"/pusty = baza.</param>
+        /// <param name="variantLight">Preset jasny; „Waypoint"/pusty = baza.</param>
+        public static void Apply(string theme, string accentHex = null, string variantDark = null, string variantLight = null)
         {
             bool light = theme == "Light" || (theme == "System" && SystemIsLight());
             IsLight = light;
             var appTheme = light ? ApplicationTheme.Light : ApplicationTheme.Dark;
             ApplicationThemeManager.Apply(appTheme);
 
-            Color accent = ParseAccent(accentHex) ?? (light ? AccentLight : AccentDark);
+            SwapPalette(light);                                       // baza palety Waypoint
+            ApplyPreset(light ? variantLight : variantDark, light);  // nakładka presetu (ton), jeśli wybrany
+
+            // Akcent: własny (§4.7) > akcent presetu/palety > domyślny Compass.
+            var res = Application.Current.Resources;
+            foreach (var k in AccentKeys) res.Remove(k);   // zdejmij stare nadpisania, by odczyt = paleta/preset
+            Color? custom = ParseAccent(accentHex);
+            Color accent = custom
+                ?? (res["Accent"] as SolidColorBrush)?.Color
+                ?? (light ? AccentLight : AccentDark);
             ApplicationAccentColorManager.Apply(accent, appTheme);   // akcent kontrolek WPF-UI
+            if (custom != null)
+            {
+                res["Accent"] = new SolidColorBrush(accent);
+                res["AccentSoft"] = new SolidColorBrush(Color.FromArgb(0x1F, accent.R, accent.G, accent.B));
+                res["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
+                res["AccentBright"] = new SolidColorBrush(Lighten(accent, 0.30));
+            }
             WindowBorder.ReapplyAll();   // WPF-UI po zmianie motywu/akcentu przemalowuje krawędź — przywróć wybraną obwódkę
-            SwapPalette(light);
-            ApplyAccentOverride(accentHex, accent);   // po SwapPalette — nadpisz klucze palety, jeśli akcent własny
         }
 
         private static Color? ParseAccent(string hex)
@@ -52,17 +72,27 @@ namespace RdpManager
             catch { return null; }
         }
 
-        // Własny akcent: nadpisz rodzinę kluczy Accent* bezpośrednio w zasobach App (biją paletę z MergedDictionaries).
-        // Domyślny: usuń nadpisania — wracają wartości z palety Compass. Soft/Strong = ten sam kolor z alfą, Bright = rozjaśniony.
-        private static void ApplyAccentOverride(string hex, Color accent)
+        // Nakłada „tonowe" klucze presetu na bazę (statusy/grupy/protokoły/gradienty zostają z bazy). Domyślny
+        // „Waypoint" (Find == null) = brak nakładki. Akcent presetu wraz z pochodnymi (Soft/Strong/Bright).
+        private static void ApplyPreset(string id, bool light)
         {
-            var res = Application.Current.Resources;
-            foreach (var k in AccentKeys) res.Remove(k);
-            if (string.IsNullOrWhiteSpace(hex)) return;
-            res["Accent"] = new SolidColorBrush(accent);
-            res["AccentSoft"] = new SolidColorBrush(Color.FromArgb(0x1F, accent.R, accent.G, accent.B));
-            res["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
-            res["AccentBright"] = new SolidColorBrush(Lighten(accent, 0.30));
+            var dicts = Application.Current.Resources.MergedDictionaries;
+            if (_presetOverlay != null) { dicts.Remove(_presetOverlay); _presetOverlay = null; }
+
+            var p = ThemePresets.Find(id, light);
+            if (p == null) return;
+
+            var d = new ResourceDictionary();
+            void B(string k, Color c) => d[k] = new SolidColorBrush(c);
+            B("CanvasBrush", p.Canvas); B("Canvas", p.Canvas);
+            B("Panel", p.Panel); B("Border", p.Border); B("RailBg", p.RailBg);
+            B("TextPrim", p.TextPrim); B("TextSec", p.TextSec); B("TextTer", p.TextTer);
+            B("Accent", p.Accent);
+            d["AccentSoft"] = new SolidColorBrush(Color.FromArgb(0x1F, p.Accent.R, p.Accent.G, p.Accent.B));
+            d["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, p.Accent.R, p.Accent.G, p.Accent.B));
+            d["AccentBright"] = new SolidColorBrush(Lighten(p.Accent, 0.25));
+            dicts.Add(d);
+            _presetOverlay = d;
         }
 
         private static Color Lighten(Color c, double f) => Color.FromRgb(
