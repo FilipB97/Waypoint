@@ -1731,8 +1731,8 @@ namespace RdpManager
             kpi.Children.Add(KpiCell(groups.ToString(), "", L("S.dash.groups"), Res("TextPrim"), true));
             DashboardPanel.Children.Add(kpi);
 
-            // Siatka 2×2 kart hairline.
-            var grid = new Grid { MaxWidth = 1080, HorizontalAlignment = HorizontalAlignment.Left };
+            // Siatka 2×2 kart hairline — rozciągnięta na szerokość pulpitu (górny limit, by nie urosła absurdalnie).
+            var grid = new Grid { MaxWidth = 1500, HorizontalAlignment = HorizontalAlignment.Stretch };
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.55, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -1794,7 +1794,7 @@ namespace RdpManager
 
         private FrameworkElement ChartHint(string text) => new TextBlock
         {
-            Text = text, Foreground = Res("TextTer"), Height = 150, TextAlignment = TextAlignment.Center,
+            Text = text, Foreground = Res("TextTer"), Height = 210, TextAlignment = TextAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
         };
 
@@ -1809,7 +1809,7 @@ namespace RdpManager
             var area = new Polygon { Fill = new SolidColorBrush(Color.FromArgb(38, acc.R, acc.G, acc.B)) };
             var line = new Polyline { Stroke = new SolidColorBrush(acc), StrokeThickness = 2, StrokeLineJoin = PenLineJoin.Round };
             var dot = new Ellipse { Width = 7, Height = 7, Fill = new SolidColorBrush(acc) };
-            var canvas = new Canvas { Height = 150, ClipToBounds = true };
+            var canvas = new Canvas { Height = 210, ClipToBounds = true };
             canvas.Children.Add(area);
             canvas.Children.Add(line);
             canvas.Children.Add(dot);
@@ -1848,7 +1848,7 @@ namespace RdpManager
             int total = online + idle + offline;
             if (total == 0) return ChartHint(L("S.dash.nodata"));
 
-            const double size = 128, r = 52, thick = 9, cx = size / 2, cy = size / 2;
+            const double size = 158, r = 65, thick = 11, cx = size / 2, cy = size / 2;
             var canvas = new Canvas { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
 
             // Tor pierścienia (pełny okrąg).
@@ -1876,11 +1876,12 @@ namespace RdpManager
             }
             Arc(online, Res("Online")); Arc(idle, Res("Idle")); Arc(offline, Res("Offline"));
 
-            var legend = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(18, 0, 0, 0) };
+            var legend = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(26, 0, 0, 0) };
             legend.Children.Add(LegendRow(Res("Online"), L("S.status.online"), online));
             legend.Children.Add(LegendRow(Res("Idle"), L("S.status.idle"), idle));
             legend.Children.Add(LegendRow(Res("Offline"), L("S.status.offline"), offline));
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Height = 150 };
+            // Wyśrodkowane w karcie (donut + legenda), żeby nie zostawiać pustej prawej strony po rozciągnięciu.
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Height = 210, HorizontalAlignment = HorizontalAlignment.Center };
             row.Children.Add(canvas);
             row.Children.Add(legend);
             return row;
@@ -1904,13 +1905,13 @@ namespace RdpManager
             var acc = Col("Accent", Color.FromRgb(0x4C, 0x86, 0xFF));
             var fill = new SolidColorBrush(Color.FromArgb(215, acc.R, acc.G, acc.B));
 
-            var bars = new UniformGrid { Rows = 1, Columns = weekday.Length, Height = 118, VerticalAlignment = VerticalAlignment.Bottom };
+            var bars = new UniformGrid { Rows = 1, Columns = weekday.Length, Height = 178, VerticalAlignment = VerticalAlignment.Bottom };
             var lbls = new UniformGrid { Rows = 1, Columns = weekday.Length, Margin = new Thickness(0, 6, 0, 0) };
             for (int i = 0; i < weekday.Length; i++)
             {
                 bars.Children.Add(new Border
                 {
-                    Height = Math.Max(3, 104.0 * weekday[i] / max),
+                    Height = Math.Max(3, 164.0 * weekday[i] / max),
                     VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 6, 0),
                     CornerRadius = new CornerRadius(4, 4, 0, 0),
                     Background = weekday[i] > 0 ? (Brush)fill : Res("Elevated"),
@@ -1922,7 +1923,7 @@ namespace RdpManager
                     Foreground = Res("TextTer"), FontSize = 11, TextAlignment = TextAlignment.Center
                 });
             }
-            var host = new StackPanel { Height = 150 };
+            var host = new StackPanel { Height = 210 };
             host.Children.Add(bars);
             host.Children.Add(lbls);
             return host;
@@ -1955,7 +1956,7 @@ namespace RdpManager
                 item.Children.Add(new TextBlock { Text = p.Count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(7, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
                 legend.Children.Add(item);
             }
-            var host = new StackPanel { Height = 150 };
+            var host = new StackPanel { Height = 210 };
             host.Children.Add(bar);
             host.Children.Add(legend);
             return host;
