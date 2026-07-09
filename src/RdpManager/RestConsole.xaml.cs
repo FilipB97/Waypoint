@@ -66,6 +66,9 @@ namespace RdpManager
         private string _rawBody;
         // Zmienne ustawione przez skrypt gdy BRAK aktywnego środowiska (sesyjne; z env-em skrypt pisze do env).
         private readonly Dictionary<string, string> _scriptVars = new Dictionary<string, string>();
+        // Środowiska są GLOBALNE (EnvironmentStore) — wspólne dla wszystkich kolekcji. Kolekcja tylko
+        // wskazuje wybrane przez _coll.ActiveEnvironmentId. Trzymane w pamięci na czas życia konsoli.
+        private List<RestEnvironment> _envs;
         private bool _loading;
         private bool _envLoading;
 
@@ -86,6 +89,7 @@ namespace RdpManager
             _req = _coll.Requests[0];
             LoadIntoUi(_req);
             SelectNodeFor(_req);
+            _envs = EnvironmentStore.Load();   // środowiska globalne (wspólne dla wszystkich kolekcji)
             BuildEnvCombo();
             _history = new ObservableCollection<RestHistoryEntry>(_coll.History);
             HistoryList.ItemsSource = _history;
@@ -150,7 +154,7 @@ namespace RdpManager
             _envLoading = true;
             EnvCombo.Items.Clear();
             EnvCombo.Items.Add(new ComboBoxItem { Content = L("S.rest.env.none"), Tag = "" });
-            foreach (var env in _coll.Environments)
+            foreach (var env in _envs)
                 EnvCombo.Items.Add(new ComboBoxItem { Content = env.Name, Tag = env.Id });
             int sel = 0;
             for (int i = 1; i < EnvCombo.Items.Count; i++)
@@ -167,15 +171,17 @@ namespace RdpManager
 
         private void ManageEnv_Click(object sender, RoutedEventArgs e)
         {
-            bool committed = new RestEnvWindow(_coll) { Owner = Window.GetWindow(this) }.ShowDialog() == true;
-            if (!_coll.Environments.Any(x => x.Id == _coll.ActiveEnvironmentId)) _coll.ActiveEnvironmentId = "";
+            // Edytor operuje na GLOBALNYM store — po zamknięciu przeładuj listę i napraw wybór, gdy aktywne
+            // środowisko zostało usunięte. Wybór (ActiveEnvironmentId) jest per-kolekcja, więc utrwalamy kolekcję.
+            new RestEnvWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+            _envs = EnvironmentStore.Load();
+            if (!_envs.Any(x => x.Id == _coll.ActiveEnvironmentId)) _coll.ActiveEnvironmentId = "";
             BuildEnvCombo();
-            // Import/edycja środowisk to trwała zmiana — utrwalamy od razu, nie czekając na „Zapisz"/wysyłkę
-            // (inaczej po zamknięciu aplikacji zaimportowane środowiska ginęły).
-            if (committed) { CaptureCurrent(); RestStore.Put(_server.Id, _coll); }
+            CaptureCurrent();
+            RestStore.Put(_server.Id, _coll);
         }
 
-        private RestEnvironment ActiveEnv() => _coll.Environments.FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
+        private RestEnvironment ActiveEnv() => _envs?.FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
 
         // Zmienne do podstawiania {{klucz}}: aktywne środowisko + nakładka zmiennych ustawionych przez skrypt.
         private IReadOnlyDictionary<string, string> Vars()
@@ -206,12 +212,14 @@ namespace RdpManager
             var v = env.Variables.FirstOrDefault(x => x.Key == key);
             if (v == null) env.Variables.Add(new RestVariable { Key = key, Value = val ?? "" });
             else v.Value = val ?? "";
+            EnvironmentStore.Save(_envs);   // środowiska są globalne — utrwal od razu (nie zależy od RestStore.Put)
         }
 
         private void UnsetScriptVar(string key)
         {
             _scriptVars.Remove(key);
-            ActiveEnv()?.Variables.RemoveAll(x => x.Key == key);
+            var env = ActiveEnv();
+            if (env != null && env.Variables.RemoveAll(x => x.Key == key) > 0) EnvironmentStore.Save(_envs);
         }
 
         // ---------- Drzewo kolekcji ----------

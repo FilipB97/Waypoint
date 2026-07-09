@@ -4461,6 +4461,18 @@ namespace RdpManager
                 Initials = RdpUtils.MakeInitials(res.Name)
             };
             _vm.Add(entry);
+
+            // Środowiska z importu są teraz GLOBALNE — przenieś je do wspólnego store (ActiveEnvironmentId
+            // kolekcji wskazuje ich Id, więc wybór po imporcie działa). Wyczyść z kolekcji, by nie dublować w rest.json.
+            if (res.Collection.Environments.Count > 0)
+            {
+                var envs = EnvironmentStore.Load();
+                foreach (var env in res.Collection.Environments)
+                    if (!envs.Any(x => x.Id == env.Id)) envs.Add(env);
+                EnvironmentStore.Save(envs);
+                res.Collection.Environments.Clear();
+            }
+
             RestStore.Put(entry.Id, res.Collection);
             int secrets = 0;
             foreach (var kv in res.Secrets)
