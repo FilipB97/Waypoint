@@ -110,6 +110,11 @@ namespace RdpManager
         /// nadpisuje rodzinę kluczy Accent* i akcent kontrolek WPF-UI (ThemeManager).</summary>
         public string AccentColor { get; set; } = "";
 
+        /// <summary>Nazwany preset palety (Compass §4.9), osobno dla trybu ciemnego i jasnego. „Waypoint" =
+        /// domyślna baza. Id z <see cref="ThemePresets"/>. Akcent (AccentColor) nakłada się na wierzch presetu.</summary>
+        public string ThemeVariantDark { get; set; } = "Waypoint";
+        public string ThemeVariantLight { get; set; } = "Waypoint";
+
         /// <summary>Zachowuje pola zapisane przez NOWSZĄ wersję aplikacji, których ta (starsza) wersja
         /// jeszcze nie zna: [JsonExtensionData] wczytuje nieznane właściwości tutaj i zapisuje je z powrotem.
         /// Dzięki temu uruchomienie starszego builda nie kasuje ustawień dodanych przez nowszy

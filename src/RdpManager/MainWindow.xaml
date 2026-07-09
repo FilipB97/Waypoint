@@ -550,6 +550,9 @@
                                 <ComboBoxItem Content="{DynamicResource S.theme.light}" Tag="Light"/>
                                 <ComboBoxItem Content="{DynamicResource S.theme.system}" Tag="System"/>
                             </ComboBox>
+                            <TextBlock Text="{DynamicResource S.set.themepreset}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,6"/>
+                            <!-- Siatka presetów palety dla bieżącego trybu (Compass §4.9) — budowana w kodzie (BuildThemePresets). -->
+                            <WrapPanel x:Name="ThemePresetGrid" Orientation="Horizontal" MaxWidth="600" HorizontalAlignment="Left"/>
                             <TextBlock Text="{DynamicResource S.set.language}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ComboBox x:Name="SetLanguage" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
                                 <ComboBoxItem Content="Polski" Tag="pl"/>

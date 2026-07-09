@@ -877,9 +877,10 @@ namespace RdpManager
             foreach (var (key, hex) in AccentOptions)
             {
                 bool selected = string.Equals(cur, hex, StringComparison.OrdinalIgnoreCase);
+                // „Domyślny" pokazuje akcent, jaki faktycznie obowiązuje bez własnego koloru — czyli akcent
+                // aktywnego presetu (§4.9), a nie tylko domyślny motywu.
                 var color = hex.Length == 0
-                    ? (ThemeManager.IsLight ? System.Windows.Media.Color.FromRgb(0x26, 0x57, 0xD6)
-                                            : System.Windows.Media.Color.FromRgb(0x4C, 0x86, 0xFF))
+                    ? DefaultAccentColor()
                     : (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
                 var dot = new Border
                 {
@@ -894,11 +895,72 @@ namespace RdpManager
                 dot.MouseLeftButtonUp += (s, e) =>
                 {
                     _settings.AccentColor = h;
-                    ThemeManager.Apply(_settings.Theme, h);   // podgląd na żywo (nadpisuje Accent* + akcent WPF-UI)
+                    ThemeManager.Apply(_settings.Theme, h, _settings.ThemeVariantDark, _settings.ThemeVariantLight);   // podgląd na żywo (akcent na wierzchu presetu)
                     QueueSettingsSave();
                     BuildAccentSwatches();                    // odśwież zaznaczenie (obwódka)
                 };
                 AccentSwatches.Children.Add(dot);
+            }
+        }
+
+        // Akcent obowiązujący przy „Domyślnym" wyborze: z aktywnego presetu, a jak brak — domyślny Compass per motyw.
+        private System.Windows.Media.Color DefaultAccentColor()
+        {
+            bool light = ThemeManager.IsLight;
+            var p = ThemePresets.Find(light ? _settings.ThemeVariantLight : _settings.ThemeVariantDark, light);
+            return p?.Accent ?? (light ? System.Windows.Media.Color.FromRgb(0x26, 0x57, 0xD6)
+                                       : System.Windows.Media.Color.FromRgb(0x4C, 0x86, 0xFF));
+        }
+
+        // Siatka presetów motywu (Compass §4.9) — karty z podglądem palety, dla bieżącego trybu (ciemny/jasny).
+        // Klik = ustaw preset dla tego trybu, zastosuj na żywo, zapisz (debounce).
+        private void BuildThemePresets()
+        {
+            ThemePresetGrid.Children.Clear();
+            bool light = ThemeManager.IsLight;
+            string cur = light ? _settings.ThemeVariantLight : _settings.ThemeVariantDark;
+            foreach (var p in ThemePresets.For(light))
+            {
+                bool selected = string.Equals(cur, p.Id, StringComparison.OrdinalIgnoreCase);
+
+                var prow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(7), VerticalAlignment = VerticalAlignment.Center };
+                prow.Children.Add(new Border
+                {
+                    Width = 26, Height = 18, CornerRadius = new CornerRadius(4),
+                    Background = new SolidColorBrush(p.Panel), BorderBrush = new SolidColorBrush(p.Border),
+                    BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 6, 0)
+                });
+                prow.Children.Add(new Ellipse { Width = 12, Height = 12, Fill = new SolidColorBrush(p.Accent), VerticalAlignment = VerticalAlignment.Center });
+                var preview = new Border
+                {
+                    Height = 40, CornerRadius = new CornerRadius(6), Background = new SolidColorBrush(p.Canvas), Child = prow
+                };
+                var name = new TextBlock
+                {
+                    Text = p.Name, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontCaption"),
+                    Margin = new Thickness(2, 4, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis
+                };
+                var sp = new StackPanel();
+                sp.Children.Add(preview);
+                sp.Children.Add(name);
+                var card = new Border
+                {
+                    Width = 108, CornerRadius = new CornerRadius(9), Padding = new Thickness(4),
+                    Margin = new Thickness(0, 0, 8, 8), Cursor = Cursors.Hand, Background = Res("Panel"),
+                    BorderBrush = selected ? Res("Accent") : Res("Border"),
+                    BorderThickness = new Thickness(selected ? 2 : 1),
+                    Child = sp, ToolTip = p.Name
+                };
+                string id = p.Id;
+                card.MouseLeftButtonUp += (s, e) =>
+                {
+                    if (light) _settings.ThemeVariantLight = id; else _settings.ThemeVariantDark = id;
+                    ThemeManager.Apply(_settings.Theme, _settings.AccentColor, _settings.ThemeVariantDark, _settings.ThemeVariantLight);
+                    QueueSettingsSave();
+                    BuildThemePresets();
+                    BuildAccentSwatches();   // „Domyślny" akcent zależy od presetu
+                };
+                ThemePresetGrid.Children.Add(card);
             }
         }
 
@@ -961,6 +1023,7 @@ namespace RdpManager
             SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
             SetListStyle.SelectedIndex = _settings.ListStyle == "Minimal" ? 1 : 0;
             SetShowLatency.IsChecked = _settings.ShowLatency;
+            BuildThemePresets();
             BuildAccentSwatches();
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
             SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
@@ -1255,7 +1318,7 @@ namespace RdpManager
             // Cykliczne sprawdzanie aktualizacji wg tego samego przełącznika co start.
             if (_updateTimer != null) { if (_settings.CheckUpdates) _updateTimer.Start(); else _updateTimer.Stop(); }
 
-            ThemeManager.Apply(_settings.Theme, _settings.AccentColor);
+            ThemeManager.Apply(_settings.Theme, _settings.AccentColor, _settings.ThemeVariantDark, _settings.ThemeVariantLight);
             LocalizationManager.Apply(_settings.Language);
             BuildTrayMenu();   // etykiety menu zasobnika w nowym języku
             ApplyHotkey();
@@ -1323,6 +1386,9 @@ namespace RdpManager
             _settings.WindowBorderColor = (SetBorder.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "";
             WindowBorder.SetSpec(_settings.WindowBorderColor);
             ApplySettings();
+            // Zmiana motywu może przełączyć tryb (ciemny/jasny) → odśwież siatkę presetów i próbnik akcentu.
+            BuildThemePresets();
+            BuildAccentSwatches();
             QueueSettingsSave();
         }
 
@@ -4403,7 +4469,7 @@ namespace RdpManager
         private void ToggleTheme()
         {
             _settings.Theme = _settings.Theme == "Light" ? "Dark" : "Light";
-            ThemeManager.Apply(_settings.Theme, _settings.AccentColor);
+            ThemeManager.Apply(_settings.Theme, _settings.AccentColor, _settings.ThemeVariantDark, _settings.ThemeVariantLight);
             RenderTree(SearchBox.Text);   // wiersze/karty zależą od motywu
             RebuildTabStrip();
             QueueSettingsSave();

@@ -43,6 +43,7 @@
     <sys:String x:Key="S.set.focuspeekopacity">Krycie panelu w trybie skupienia (%)</sys:String>
     <sys:String x:Key="S.set.termfontsize">Rozmiar czcionki terminala (8-24)</sys:String>
     <sys:String x:Key="S.set.theme">Motyw</sys:String>
+    <sys:String x:Key="S.set.themepreset">Preset palety</sys:String>
     <sys:String x:Key="S.theme.dark">Ciemny</sys:String>
     <sys:String x:Key="S.theme.light">Jasny</sys:String>
     <sys:String x:Key="S.theme.system">Systemowy</sys:String>
