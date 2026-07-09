@@ -40,7 +40,8 @@
         </Style>
     </ui:FluentWindow.Resources>
 
-    <Grid>
+    <!-- Tło = CanvasBrush (jak treść głównego okna), spójne z motywem/presetem — nie systemowa Mica. -->
+    <Grid Background="{DynamicResource CanvasBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>

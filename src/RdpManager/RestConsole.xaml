@@ -102,7 +102,8 @@
         </Style>
     </UserControl.Resources>
 
-    <Border Background="{DynamicResource Panel}">
+    <!-- Baza = CanvasBrush jak reszta widoków (pulpit/ustawienia/sesje); panele wyróżnia hairline, nie tło. -->
+    <Border Background="{DynamicResource CanvasBrush}">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="240" MinWidth="150"/>
