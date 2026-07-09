@@ -236,6 +236,17 @@ namespace RdpManager
             if (CollCount != null) CollCount.Text = _coll.Requests.Count.ToString();
         }
 
+        /// <summary>Zaznacza żądanie po Id (moduł REST w railu otwiera konkretne żądanie w tej konsoli).</summary>
+        public void SelectRequestById(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return;
+            var req = _coll.Requests.FirstOrDefault(r => r.Id == id);
+            if (req == null) return;
+            _req = req;
+            LoadIntoUi(req);
+            SelectNodeFor(req);
+        }
+
         private RestNode BuildFolderNode(RestFolder f) => BuildFolderNode(f, new HashSet<string>());
 
         // visited: broni przed zapętleniem po cyklicznym/zduplikowanym ParentId (np. ręcznie edytowany
@@ -743,8 +754,8 @@ namespace RdpManager
         }
 
         // Kolory metod wg mockupu Compass (m-get/m-post/m-put/m-del): GET zielony, POST niebieski,
-        // PUT bursztyn, DELETE czerwony, PATCH fiolet, reszta szary.
-        private static Brush MethodBrush(string method)
+        // PUT bursztyn, DELETE czerwony, PATCH fiolet, reszta szary. Publiczne — używa też moduł REST w railu.
+        public static Brush MethodBrush(string method)
         {
             switch (method)
             {
@@ -757,8 +768,8 @@ namespace RdpManager
             }
         }
 
-        // Tinta tła badge'a metody (ten sam kolor, niska alfa) — jak .mb w mockupie.
-        private static Brush MethodBadgeBg(string method)
+        // Tinta tła badge'a metody (ten sam kolor, niska alfa) — jak .mb w mockupie. Publiczne — moduł REST.
+        public static Brush MethodBadgeBg(string method)
         {
             var c = ((MethodBrush(method) as SolidColorBrush)?.Color) ?? Colors.Gray;
             return new SolidColorBrush(Color.FromArgb(0x26, c.R, c.G, c.B));

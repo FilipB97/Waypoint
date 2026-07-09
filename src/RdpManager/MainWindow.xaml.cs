@@ -837,6 +837,115 @@ namespace RdpManager
             ico.Foreground = active ? Res("Accent") : Res("TextTer");
         }
 
+        // ---------- Moduł REST (rail „REST" przełącza sidebar na kolekcje; Compass §4.4) ----------
+
+        private bool _restMode;
+
+        private void NavRest_Click(object sender, RoutedEventArgs e) => SetRestMode(!_restMode);
+
+        // Przełącza sidebar: drzewo serwerów <-> drzewo kolekcji REST. Zawartość (sesje) niezależna.
+        private void SetRestMode(bool on)
+        {
+            _restMode = on;
+            SearchBox.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+            ServerScroll.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+            RestModule.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            SetNav(NavRest, IcoRest, on);
+            if (on) { ProtoFilterBar.Visibility = Visibility.Collapsed; TreeEmptyHint.Visibility = Visibility.Collapsed; BuildRestModule(); }
+            else RenderTree(SearchBox.Text);   // przywróć drzewo serwerów + chipy + hint
+        }
+
+        // Każdy wpis REST = kolekcja → foldery → żądania (dane z RestStore.For per serwer).
+        private void BuildRestModule()
+        {
+            RestModuleTree.Children.Clear();
+            var rest = _vm.Servers.Where(s => s.Protocol == RemoteProtocol.Rest)
+                                  .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            int total = 0;
+            foreach (var srv in rest)
+            {
+                var s = srv;
+                var coll = RestStore.For(srv.Id);
+                RestModuleTree.Children.Add(RestModuleRow(RestCollHeaderContent(srv.Name), 0, () => OpenRestRequest(s, null)));
+                foreach (var f in coll.Folders.Where(x => string.IsNullOrEmpty(x.ParentId)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                    AddRestFolder(s, coll, f, 1, new HashSet<string>());
+                foreach (var r in coll.Requests.Where(x => string.IsNullOrEmpty(x.FolderId)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                { var rr = r; RestModuleTree.Children.Add(RestModuleRow(RestReqContent(rr), 1, () => OpenRestRequest(s, rr.Id))); }
+                total += coll.Requests.Count;
+            }
+            RestModuleCount.Text = total.ToString();
+            if (rest.Count == 0)
+                RestModuleTree.Children.Add(new TextBlock { Text = L("S.rest.module.empty"), Foreground = Res("TextTer"),
+                    TextWrapping = TextWrapping.Wrap, Margin = new Thickness(10, 12, 10, 0) });
+        }
+
+        private void AddRestFolder(ServerInfo srv, RestCollection coll, RestFolder f, int depth, HashSet<string> seen)
+        {
+            if (depth > 8 || !seen.Add(f.Id)) return;   // broń przed cyklem ParentId (A9)
+            RestModuleTree.Children.Add(RestModuleRow(RestFolderContent(f.Name), depth, null));
+            foreach (var sub in coll.Folders.Where(x => x.ParentId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                AddRestFolder(srv, coll, sub, depth + 1, seen);
+            foreach (var r in coll.Requests.Where(x => x.FolderId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+            { var rr = r; RestModuleTree.Children.Add(RestModuleRow(RestReqContent(rr), depth + 1, () => OpenRestRequest(srv, rr.Id))); }
+        }
+
+        // Wiersz modułu: wcięcie wg głębokości, hover, opcjonalny klik (folder = bez klika).
+        private FrameworkElement RestModuleRow(FrameworkElement content, int depth, Action onClick)
+        {
+            var bd = new Border
+            {
+                Padding = new Thickness(8 + depth * 14, 5, 8, 5),
+                CornerRadius = new CornerRadius(6),
+                Background = Brushes.Transparent,
+                Cursor = onClick != null ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow,
+                Child = content
+            };
+            if (onClick != null)
+            {
+                bd.MouseEnter += (s, e) => bd.Background = Res("Panel");
+                bd.MouseLeave += (s, e) => bd.Background = Brushes.Transparent;
+                bd.MouseLeftButtonUp += (s, e) => onClick();
+            }
+            return bd;
+        }
+
+        private FrameworkElement RestCollHeaderContent(string name)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Folder24, FontSize = (double)TryFindResource("IconSm"), Foreground = Res("Accent"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            sp.Children.Add(new TextBlock { Text = name, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+            return sp;
+        }
+
+        private FrameworkElement RestFolderContent(string name)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Folder24, FontSize = (double)TryFindResource("IconXs"), Foreground = Res("TextTer"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+            sp.Children.Add(new TextBlock { Text = name, Foreground = Res("TextTer"), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+            return sp;
+        }
+
+        private FrameworkElement RestReqContent(RestRequest r)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            string method = (r.Method ?? "GET").ToUpperInvariant();
+            sp.Children.Add(new Border
+            {
+                Background = RestConsole.MethodBadgeBg(method), CornerRadius = new CornerRadius(5),
+                Padding = new Thickness(5, 1, 5, 1), MinWidth = 38, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0),
+                Child = new TextBlock { Text = method, Foreground = RestConsole.MethodBrush(method), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Center }
+            });
+            sp.Children.Add(new TextBlock { Text = r.Name, Foreground = Res("TextSec"), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+            return sp;
+        }
+
+        // Otwiera (lub uaktywnia) konsolę REST danego wpisu i zaznacza żądanie po Id.
+        private void OpenRestRequest(ServerInfo srv, string reqId)
+        {
+            LaunchServer(srv, autoConnect: true);
+            _sessions.Find(x => x.Server == srv)?.Rest?.SelectRequestById(reqId);
+        }
+
         private PasswordGeneratorWindow _genWindow;
 
         // Generator haseł/tokenów/GUID — niemodalny, jedno okno (drugie kliknięcie aktywuje istniejące).
