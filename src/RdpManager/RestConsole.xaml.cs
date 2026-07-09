@@ -92,6 +92,9 @@ namespace RdpManager
             SelectNodeFor(_req);
             _envs = EnvironmentStore.Load();   // środowiska globalne (wspólne dla wszystkich kolekcji)
             BuildEnvCombo();
+            // Środowiska mogły przybyć PO otwarciu konsoli (import Postmana, inna konsola) — odśwież listę
+            // przy każdym rozwinięciu (BuildEnvCombo przywraca wybór z _coll.ActiveEnvironmentId).
+            EnvCombo.DropDownOpened += (s, e) => { _envs = EnvironmentStore.Load(); BuildEnvCombo(); };
             _history = new ObservableCollection<RestHistoryEntry>(_coll.History);
             HistoryList.ItemsSource = _history;
             UrlBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) Send_Click(s, e); };
@@ -213,14 +216,26 @@ namespace RdpManager
             var v = env.Variables.FirstOrDefault(x => x.Key == key);
             if (v == null) env.Variables.Add(new RestVariable { Key = key, Value = val ?? "" });
             else v.Value = val ?? "";
-            EnvironmentStore.Save(_envs);   // środowiska są globalne — utrwal od razu (nie zależy od RestStore.Put)
+            SaveEnvMerged(env);   // środowiska są globalne — utrwal od razu (nie zależy od RestStore.Put)
         }
 
         private void UnsetScriptVar(string key)
         {
             _scriptVars.Remove(key);
             var env = ActiveEnv();
-            if (env != null && env.Variables.RemoveAll(x => x.Key == key) > 0) EnvironmentStore.Save(_envs);
+            if (env != null && env.Variables.RemoveAll(x => x.Key == key) > 0) SaveEnvMerged(env);
+        }
+
+        // Zapis NIE może użyć starej migawki _envs — środowiska mogły przybyć po otwarciu konsoli
+        // (import Postmana, inna konsola); nadpisanie pliku migawką po cichu by je USUWAŁO.
+        // Scala zmienione środowisko ze świeżym odczytem store'u.
+        private void SaveEnvMerged(RestEnvironment env)
+        {
+            var all = EnvironmentStore.Load();
+            int i = all.FindIndex(x => x.Id == env.Id);
+            if (i >= 0) all[i] = env; else all.Add(env);
+            EnvironmentStore.Save(all);
+            _envs = all;
         }
 
         // ---------- Drzewo kolekcji ----------

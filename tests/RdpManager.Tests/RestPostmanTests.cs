@@ -217,5 +217,19 @@ namespace RdpManager.Tests
         {
             Assert.Throws<InvalidOperationException>(() => PostmanImport.ParseEnvironment(@"{ ""foo"": 1 }", out _));
         }
+
+        // Rozpoznanie env vs kolekcja — wspólna karta importu „kolekcje i środowiska" kieruje plik
+        // do właściwego parsera (env-eksport wywalał parser kolekcji na braku „item").
+        [Fact]
+        public void LooksLikeEnvironment_DistinguishesEnvFromCollection()
+        {
+            Assert.True(PostmanImport.LooksLikeEnvironment(
+                @"{ ""name"": ""Dev"", ""values"": [ { ""key"": ""a"", ""value"": ""1"" } ] }"));
+            Assert.False(PostmanImport.LooksLikeEnvironment(
+                @"{ ""info"": { ""name"": ""Coll"" }, ""item"": [] }"));
+            Assert.False(PostmanImport.LooksLikeEnvironment(@"{ ""foo"": 1 }"));          // ani env, ani kolekcja
+            Assert.False(PostmanImport.LooksLikeEnvironment("nie json"));                  // nie-JSON → false, nie wyjątek
+            Assert.False(PostmanImport.LooksLikeEnvironment(@"{ ""values"": 5 }"));        // „values" nie-tablica
+        }
     }
 }

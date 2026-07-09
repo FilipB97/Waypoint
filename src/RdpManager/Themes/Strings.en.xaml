@@ -553,6 +553,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.env.close">Close</sys:String>
     <sys:String x:Key="S.rest.env.import">Import environment from Postman</sys:String>
     <sys:String x:Key="S.rest.env.importtitle">Import environment from Postman</sys:String>
+    <sys:String x:Key="S.rest.env.imported">Imported environment “{0}”. Select it in the REST console (the “Environment” list).</sys:String>
+    <sys:String x:Key="S.dlg.postmanenv.filter">Postman environment (*.json)|*.json|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.rest.env.import.secretswarn">Postman marked the following variables as “secret” — their values were NOT imported (secrets are never stored in plain text): {0}. Fill them in manually below if needed.</sys:String>
     <sys:String x:Key="S.rest.hist">History (double-click to replay)</sys:String>
     <sys:String x:Key="S.rest.tab.scripts">Scripts</sys:String>
