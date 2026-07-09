@@ -22,11 +22,6 @@ using MSTSCLib;
 using RdpManager.Core;
 using RdpManager.Models;
 using RdpManager.ViewModels;
-using LiveChartsCore;                          // ISeries (pulpit — wykresy)
-using LiveChartsCore.SkiaSharpView;            // LineSeries/ColumnSeries/PieSeries/Axis
-using LiveChartsCore.SkiaSharpView.Painting;   // SolidColorPaint
-using SkiaSharp;                               // SKColor
-using LvcWpf = LiveChartsCore.SkiaSharpView.WPF;   // CartesianChart / PieChart (alias — bez kolizji nazw)
 
 namespace RdpManager
 {
@@ -1759,11 +1754,8 @@ namespace RdpManager
             };
         }
 
-        private static SKColor Sk(Brush b)
-        {
-            var c = (b as SolidColorBrush)?.Color ?? Colors.Gray;
-            return new SKColor(c.R, c.G, c.B, c.A);
-        }
+        // Kolor z zasobu pędzla (fallback, gdy zasób nie jest SolidColorBrush).
+        private Color Col(string key, Color fallback) => (Res(key) as SolidColorBrush)?.Color ?? fallback;
 
         private FrameworkElement ChartHint(string text) => new TextBlock
         {
@@ -1771,48 +1763,90 @@ namespace RdpManager
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
         };
 
-        // Opóźnienie: liniowy z wypełnieniem (area) z próbek sesji; podpowiedź gdy za mało danych.
+        // Opóźnienie: sparkline z wypełnieniem (linia + area + kropka na końcu) — natywne kształty WPF,
+        // rysowane na Canvasie przy każdej zmianie rozmiaru (rozciąga się na szerokość karty jak w mockupie).
         private FrameworkElement MakeLatencyChart()
         {
             if (_latencySamples.Count < 2) return ChartHint(L("S.dash.nolatency"));
-            var acc = Sk(Res("Accent"));
-            var series = new LineSeries<double>
+            var samples = _latencySamples.ToArray();
+            var acc = Col("Accent", Color.FromRgb(0x4C, 0x86, 0xFF));
+
+            var area = new Polygon { Fill = new SolidColorBrush(Color.FromArgb(38, acc.R, acc.G, acc.B)) };
+            var line = new Polyline { Stroke = new SolidColorBrush(acc), StrokeThickness = 2, StrokeLineJoin = PenLineJoin.Round };
+            var dot = new Ellipse { Width = 7, Height = 7, Fill = new SolidColorBrush(acc) };
+            var canvas = new Canvas { Height = 150, ClipToBounds = true };
+            canvas.Children.Add(area);
+            canvas.Children.Add(line);
+            canvas.Children.Add(dot);
+
+            double min = samples.Min(), span = Math.Max(1, samples.Max() - min);
+            void Redraw()
             {
-                Values = _latencySamples.ToArray(),
-                Stroke = new SolidColorPaint(acc) { StrokeThickness = 2 },
-                Fill = new SolidColorPaint(new SKColor(acc.Red, acc.Green, acc.Blue, 40)),
-                GeometrySize = 0, GeometryStroke = null, GeometryFill = null, LineSmoothness = 0.6
-            };
-            return new LvcWpf.CartesianChart
-            {
-                Height = 150,
-                Series = new ISeries[] { series },
-                XAxes = new[] { new Axis { IsVisible = false } },
-                YAxes = new[] { new Axis { IsVisible = false } },
-                TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden
-            };
+                double w = canvas.ActualWidth, h = canvas.ActualHeight;
+                if (w <= 0 || h <= 0) return;
+                const double pad = 8;   // margines od góry/dołu, żeby linia nie dotykała krawędzi
+                var pts = new PointCollection();
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    double x = samples.Length == 1 ? w : w * i / (samples.Length - 1);
+                    double y = pad + (h - 2 * pad) * (1 - (samples[i] - min) / span);
+                    pts.Add(new Point(x, y));
+                }
+                line.Points = pts;
+                var poly = new PointCollection(pts);
+                poly.Add(new Point(pts[pts.Count - 1].X, h));
+                poly.Add(new Point(pts[0].X, h));
+                area.Points = poly;
+                var last = pts[pts.Count - 1];
+                Canvas.SetLeft(dot, last.X - dot.Width / 2);
+                Canvas.SetTop(dot, last.Y - dot.Height / 2);
+            }
+            canvas.SizeChanged += (s, e) => Redraw();
+            canvas.Loaded += (s, e) => Redraw();
+            return canvas;
         }
 
-        // Dostępność: pierścień (online/idle/offline) + legenda z licznikami.
+        // Dostępność: pierścień (online/idle/offline) + legenda z licznikami — natywny donut
+        // (tor + łuki rysowane Path/ArcSegment, grubym obrysem; zgodnie z mockupem).
         private FrameworkElement MakeAvailabilityChart(int online, int idle, int offline)
         {
-            if (online + idle + offline == 0) return ChartHint(L("S.dash.nodata"));
-            var series = new List<ISeries>();
-            void Slice(int v, Brush br) { if (v > 0) series.Add(new PieSeries<double> { Values = new double[] { v }, Fill = new SolidColorPaint(Sk(br)), Stroke = null, InnerRadius = 42 }); }
-            Slice(online, Res("Online")); Slice(idle, Res("Idle")); Slice(offline, Res("Offline"));
+            int total = online + idle + offline;
+            if (total == 0) return ChartHint(L("S.dash.nodata"));
 
-            var pie = new LvcWpf.PieChart
+            const double size = 128, r = 52, thick = 9, cx = size / 2, cy = size / 2;
+            var canvas = new Canvas { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
+
+            // Tor pierścienia (pełny okrąg).
+            var track = new Ellipse { Width = 2 * r, Height = 2 * r, Stroke = Res("Elevated"), StrokeThickness = thick };
+            Canvas.SetLeft(track, cx - r); Canvas.SetTop(track, cy - r);
+            canvas.Children.Add(track);
+
+            Point P(double frac) { double a = frac * 2 * Math.PI - Math.PI / 2; return new Point(cx + r * Math.Cos(a), cy + r * Math.Sin(a)); }
+            double cursor = 0;
+            void Arc(int count, Brush color)
             {
-                Width = 130, Height = 130, Series = series,
-                LegendPosition = LiveChartsCore.Measure.LegendPosition.Hidden,
-                TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden
-            };
-            var legend = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
+                if (count <= 0) return;
+                double frac = (double)count / total;
+                if (frac >= 0.999)   // jeden segment na pełen okrąg — ArcSegment byłby zdegenerowany
+                {
+                    var full = new Ellipse { Width = 2 * r, Height = 2 * r, Stroke = color, StrokeThickness = thick };
+                    Canvas.SetLeft(full, cx - r); Canvas.SetTop(full, cy - r);
+                    canvas.Children.Add(full); cursor += frac; return;
+                }
+                var fig = new PathFigure { StartPoint = P(cursor), IsClosed = false };
+                fig.Segments.Add(new ArcSegment { Point = P(cursor + frac), Size = new Size(r, r), SweepDirection = SweepDirection.Clockwise, IsLargeArc = frac > 0.5 });
+                var geo = new PathGeometry(); geo.Figures.Add(fig);
+                canvas.Children.Add(new Path { Data = geo, Stroke = color, StrokeThickness = thick, StrokeStartLineCap = PenLineCap.Flat, StrokeEndLineCap = PenLineCap.Flat });
+                cursor += frac;
+            }
+            Arc(online, Res("Online")); Arc(idle, Res("Idle")); Arc(offline, Res("Offline"));
+
+            var legend = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(18, 0, 0, 0) };
             legend.Children.Add(LegendRow(Res("Online"), L("S.status.online"), online));
             legend.Children.Add(LegendRow(Res("Idle"), L("S.status.idle"), idle));
             legend.Children.Add(LegendRow(Res("Offline"), L("S.status.offline"), offline));
             var row = new StackPanel { Orientation = Orientation.Horizontal, Height = 150 };
-            row.Children.Add(pie);
+            row.Children.Add(canvas);
             row.Children.Add(legend);
             return row;
         }
@@ -1826,26 +1860,37 @@ namespace RdpManager
             return sp;
         }
 
-        // Połączenia w tygodniu: słupki (Pn–Nd) z dziennika audytu.
+        // Połączenia w tygodniu: słupki (Pn–Nd) z dziennika audytu — natywne prostokąty z etykietami.
         private FrameworkElement MakeWeekdayChart(int[] weekday)
         {
             if (weekday == null || weekday.Sum() == 0) return ChartHint(L("S.dash.nodata"));
             var labels = L("S.dash.weekdays").Split(',').Select(x => x.Trim()).ToArray();
-            var acc = Sk(Res("Accent"));
-            var col = new ColumnSeries<double>
+            int max = Math.Max(1, weekday.Max());
+            var acc = Col("Accent", Color.FromRgb(0x4C, 0x86, 0xFF));
+            var fill = new SolidColorBrush(Color.FromArgb(215, acc.R, acc.G, acc.B));
+
+            var bars = new UniformGrid { Rows = 1, Columns = weekday.Length, Height = 118, VerticalAlignment = VerticalAlignment.Bottom };
+            var lbls = new UniformGrid { Rows = 1, Columns = weekday.Length, Margin = new Thickness(0, 6, 0, 0) };
+            for (int i = 0; i < weekday.Length; i++)
             {
-                Values = weekday.Select(x => (double)x).ToArray(),
-                Fill = new SolidColorPaint(new SKColor(acc.Red, acc.Green, acc.Blue, 130)),
-                Stroke = null
-            };
-            return new LvcWpf.CartesianChart
-            {
-                Height = 150,
-                Series = new ISeries[] { col },
-                XAxes = new[] { new Axis { Labels = labels, LabelsPaint = new SolidColorPaint(Sk(Res("TextTer"))), TextSize = 11, SeparatorsPaint = null } },
-                YAxes = new[] { new Axis { IsVisible = false } },
-                TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden
-            };
+                bars.Children.Add(new Border
+                {
+                    Height = Math.Max(3, 104.0 * weekday[i] / max),
+                    VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 6, 0),
+                    CornerRadius = new CornerRadius(4, 4, 0, 0),
+                    Background = weekday[i] > 0 ? (Brush)fill : Res("Elevated"),
+                    ToolTip = (i < labels.Length ? labels[i] : "") + " — " + weekday[i]
+                });
+                lbls.Children.Add(new TextBlock
+                {
+                    Text = i < labels.Length ? labels[i] : "",
+                    Foreground = Res("TextTer"), FontSize = 11, TextAlignment = TextAlignment.Center
+                });
+            }
+            var host = new StackPanel { Height = 150 };
+            host.Children.Add(bars);
+            host.Children.Add(lbls);
+            return host;
         }
 
         // Protokoły: poziomy pasek udziału (segmenty w kolorach protokołów) + legenda z licznikami.

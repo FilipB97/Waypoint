@@ -29,12 +29,6 @@
   <ItemGroup>
     <PackageReference Include="FluentFTP" Version="54.2.0" />
     <PackageReference Include="Jint" Version="4.1.0" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.5" />
-    <!-- Przypięte do 3.119.0 — spójna rodzina SkiaSharp, której WYMAGA LiveCharts2 2.0.5 (jego WPF +
-         SkiaSharp.HarfBuzz ciągną SkiaSharp >= 3.119.0). Jawne wpisy wymuszają jedną wersję natywnego
-         SkiaSharpa w całym grafie (bez rozjazdu 2.88 vs 3.x). -->
-    <PackageReference Include="SkiaSharp" Version="3.119.0" />
-    <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
     <PackageReference Include="RemoteViewing" Version="1.1.0" />
     <PackageReference Include="SSH.NET" Version="2025.1.0" />
