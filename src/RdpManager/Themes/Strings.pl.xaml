@@ -445,10 +445,28 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
     <sys:String x:Key="S.import.rdm">Devolutions RDM (.rdm/.xml)…</sys:String>
     <sys:String x:Key="S.import.filezilla">FileZilla (sitemanager.xml)…</sys:String>
-    <sys:String x:Key="S.import.hdr.remote">Pulpit i terminale</sys:String>
-    <sys:String x:Key="S.import.hdr.files">Transfer plików</sys:String>
-    <sys:String x:Key="S.import.hdr.rest">REST / API</sys:String>
+    <sys:String x:Key="S.import.hdr.remote">Menedżery zdalnego pulpitu</sys:String>
+    <sys:String x:Key="S.import.hdr.files">Pliki / FTP</sys:String>
+    <sys:String x:Key="S.import.hdr.rest">REST</sys:String>
     <sys:String x:Key="S.import.postman">Kolekcja Postman (.json)…</sys:String>
+
+    <!-- Modal importu (Compass §4.7): nagłówek + podtytuł + nazwy i opisy kart źródeł -->
+    <sys:String x:Key="S.import.title">Importuj połączenia</sys:String>
+    <sys:String x:Key="S.import.sub">Wybierz źródło. Hasła trafiają do Menedżera poświadczeń Windows — nigdy do plików aplikacji.</sys:String>
+    <sys:String x:Key="S.import.name.mstsc">Historia mstsc</sys:String>
+    <sys:String x:Key="S.import.desc.mstsc">Ostatnie połączenia Podłączania pulpitu zdalnego</sys:String>
+    <sys:String x:Key="S.import.name.rdp">Pliki .rdp</sys:String>
+    <sys:String x:Key="S.import.desc.rdp">Import z plików Podłączania pulpitu</sys:String>
+    <sys:String x:Key="S.import.name.mrng">mRemoteNG</sys:String>
+    <sys:String x:Key="S.import.desc.mrng">confCons.xml — grupy i serwery</sys:String>
+    <sys:String x:Key="S.import.name.rdcman">RDCMan</sys:String>
+    <sys:String x:Key="S.import.desc.rdcman">Pliki .rdg — grupy serwerów</sys:String>
+    <sys:String x:Key="S.import.name.rdm">Remote Desktop Manager</sys:String>
+    <sys:String x:Key="S.import.desc.rdm">Eksport połączeń z RDM</sys:String>
+    <sys:String x:Key="S.import.name.filezilla">FileZilla</sys:String>
+    <sys:String x:Key="S.import.desc.filezilla">Zapisane sesje SFTP / FTP</sys:String>
+    <sys:String x:Key="S.import.name.postman">Postman</sys:String>
+    <sys:String x:Key="S.import.desc.postman">Kolekcje i środowiska (+ skrypty)</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Importuj z mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|Wszystkie pliki (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Importuj z RDCMan</sys:String>

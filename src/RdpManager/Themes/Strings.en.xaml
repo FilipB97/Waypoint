@@ -445,10 +445,28 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.import.rdcman">RDCMan (.rdg)…</sys:String>
     <sys:String x:Key="S.import.rdm">Devolutions RDM (.rdm/.xml)…</sys:String>
     <sys:String x:Key="S.import.filezilla">FileZilla (sitemanager.xml)…</sys:String>
-    <sys:String x:Key="S.import.hdr.remote">Desktops &amp; terminals</sys:String>
-    <sys:String x:Key="S.import.hdr.files">File transfer</sys:String>
-    <sys:String x:Key="S.import.hdr.rest">REST / API</sys:String>
+    <sys:String x:Key="S.import.hdr.remote">Remote desktop managers</sys:String>
+    <sys:String x:Key="S.import.hdr.files">Files / FTP</sys:String>
+    <sys:String x:Key="S.import.hdr.rest">REST</sys:String>
     <sys:String x:Key="S.import.postman">Postman collection (.json)…</sys:String>
+
+    <!-- Import modal (Compass §4.7): heading + subtitle + source card names and descriptions -->
+    <sys:String x:Key="S.import.title">Import connections</sys:String>
+    <sys:String x:Key="S.import.sub">Choose a source. Passwords go to Windows Credential Manager — never to app files.</sys:String>
+    <sys:String x:Key="S.import.name.mstsc">mstsc history</sys:String>
+    <sys:String x:Key="S.import.desc.mstsc">Recent Remote Desktop Connection sessions</sys:String>
+    <sys:String x:Key="S.import.name.rdp">.rdp files</sys:String>
+    <sys:String x:Key="S.import.desc.rdp">Import from Remote Desktop Connection files</sys:String>
+    <sys:String x:Key="S.import.name.mrng">mRemoteNG</sys:String>
+    <sys:String x:Key="S.import.desc.mrng">confCons.xml — groups and servers</sys:String>
+    <sys:String x:Key="S.import.name.rdcman">RDCMan</sys:String>
+    <sys:String x:Key="S.import.desc.rdcman">.rdg files — server groups</sys:String>
+    <sys:String x:Key="S.import.name.rdm">Remote Desktop Manager</sys:String>
+    <sys:String x:Key="S.import.desc.rdm">Exported RDM connections</sys:String>
+    <sys:String x:Key="S.import.name.filezilla">FileZilla</sys:String>
+    <sys:String x:Key="S.import.desc.filezilla">Saved SFTP / FTP sessions</sys:String>
+    <sys:String x:Key="S.import.name.postman">Postman</sys:String>
+    <sys:String x:Key="S.import.desc.postman">Collections and environments (+ scripts)</sys:String>
     <sys:String x:Key="S.dlg.importmrng.title">Import from mRemoteNG</sys:String>
     <sys:String x:Key="S.dlg.mrng.filter">mRemoteNG confCons (*.xml)|*.xml|All files (*.*)|*.*</sys:String>
     <sys:String x:Key="S.dlg.importrdg.title">Import from RDCMan</sys:String>

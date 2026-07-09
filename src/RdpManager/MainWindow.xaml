@@ -232,6 +232,9 @@
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">
+                        <Button x:Name="NavImport" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.import}" AutomationProperties.Name="{DynamicResource S.import}" Click="OpenImport_Click">
+                            <ui:SymbolIcon Symbol="ArrowImport24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
+                        </Button>
                         <!-- „O aplikacji" przeniesione do Ustawień (Compass §4.6) — usunięte z raila. -->
                         <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.settings}" AutomationProperties.Name="{DynamicResource S.nav.settings}" Tag="Settings" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
@@ -294,27 +297,9 @@
                                        ToolTip="{DynamicResource S.quickConnect.tip}"/>
                             <ui:Button Content="{DynamicResource S.addServer}" HorizontalAlignment="Stretch"
                                        Appearance="Secondary" Margin="0,6,0,0" Click="AddServer_Click"/>
-                            <!-- Jeden przycisk importu z menu źródeł (mstsc / .rdp / mRemoteNG / RDCMan). -->
+                            <!-- Import: otwiera modal z kartami źródeł (mstsc/.rdp/mRemoteNG/RDCMan/RDM/FileZilla/Postman). -->
                             <ui:Button Content="{DynamicResource S.import}" HorizontalAlignment="Stretch"
-                                       Appearance="Secondary" Margin="0,6,0,0" Click="ImportMenu_Click">
-                                <ui:Button.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="{DynamicResource S.import.hdr.remote}" IsEnabled="False"/>
-                                        <MenuItem Header="{DynamicResource S.import.mstsc}" Click="ImportMstsc_Click"
-                                                  ToolTip="{DynamicResource S.importMstsc.tip}"/>
-                                        <MenuItem Header="{DynamicResource S.import.rdpfile}" Click="ImportRdp_Click"/>
-                                        <MenuItem Header="{DynamicResource S.import.mrng}" Click="ImportMrng_Click"/>
-                                        <MenuItem Header="{DynamicResource S.import.rdcman}" Click="ImportRdg_Click"/>
-                                        <MenuItem Header="{DynamicResource S.import.rdm}" Click="ImportRdm_Click"/>
-                                        <Separator/>
-                                        <MenuItem Header="{DynamicResource S.import.hdr.files}" IsEnabled="False"/>
-                                        <MenuItem Header="{DynamicResource S.import.filezilla}" Click="ImportFileZilla_Click"/>
-                                        <Separator/>
-                                        <MenuItem Header="{DynamicResource S.import.hdr.rest}" IsEnabled="False"/>
-                                        <MenuItem Header="{DynamicResource S.import.postman}" Click="ImportPostman_Click"/>
-                                    </ContextMenu>
-                                </ui:Button.ContextMenu>
-                            </ui:Button>
+                                       Appearance="Secondary" Margin="0,6,0,0" Click="OpenImport_Click"/>
                         </StackPanel>
                     </Border>
                 </Grid>
