@@ -5,6 +5,30 @@
              AllowDrop="True" DragEnter="Panel_DragEnter" DragOver="Panel_DragOver"
              DragLeave="Panel_DragLeave" Drop="Panel_Drop">
     <UserControl.Resources>
+        <!-- Klikalny nagłówek kolumny (sortowanie) — bez chromu, hover rozjaśnia tekst. -->
+        <Style x:Key="FtHead" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextTer}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- Pasek narzędzi: przezroczysty przycisk-ikona z podświetleniem akcentem (bez przygaszania ikony). -->
         <Style x:Key="FtIconBtn" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
@@ -172,9 +196,25 @@
                         <ColumnDefinition Width="88"/>
                         <ColumnDefinition Width="140"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Text="{DynamicResource S.sftp.name}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" Margin="6,0,0,0"/>
-                    <TextBlock Grid.Column="2" Text="{DynamicResource S.sftp.size}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" HorizontalAlignment="Right" Margin="0,0,12,0"/>
-                    <TextBlock Grid.Column="3" Text="{DynamicResource S.sftp.modified}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}"/>
+                    <Button Grid.Column="1" Style="{DynamicResource FtHead}" Tag="name" Click="HeaderSort_Click" Margin="6,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{DynamicResource S.sftp.name}"/>
+                            <TextBlock x:Name="SortArrowName" FontSize="{StaticResource FontMicro}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Style="{DynamicResource FtHead}" Tag="size" Click="HeaderSort_Click"
+                            HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,0,12,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="SortArrowSize" FontSize="{StaticResource FontMicro}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S.sftp.size}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="3" Style="{DynamicResource FtHead}" Tag="modified" Click="HeaderSort_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{DynamicResource S.sftp.modified}"/>
+                            <TextBlock x:Name="SortArrowMod" FontSize="{StaticResource FontMicro}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </Grid>
             </Border>
 
