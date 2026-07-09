@@ -1240,6 +1240,7 @@ namespace RdpManager
                 {
                     _settings.AccentColor = h;
                     ThemeManager.Apply(_settings.Theme, h, _settings.ThemeVariantDark, _settings.ThemeVariantLight);   // podgląd na żywo (akcent na wierzchu presetu)
+                    RefreshThemedViews();
                     QueueSettingsSave();
                     BuildAccentSwatches();                    // odśwież zaznaczenie (obwódka)
                 };
@@ -1300,6 +1301,7 @@ namespace RdpManager
                 {
                     if (light) _settings.ThemeVariantLight = id; else _settings.ThemeVariantDark = id;
                     ThemeManager.Apply(_settings.Theme, _settings.AccentColor, _settings.ThemeVariantDark, _settings.ThemeVariantLight);
+                    RefreshThemedViews();
                     QueueSettingsSave();
                     BuildThemePresets();
                     BuildAccentSwatches();   // „Domyślny" akcent zależy od presetu
@@ -1694,6 +1696,16 @@ namespace RdpManager
             // Styl widoku (Domyślny/Minimalny) i motyw zmieniają wygląd wierszy/kart — przerysuj oba na żywo.
             RenderTree(SearchBox.Text);
             RebuildTabStrip();
+            RefreshThemedViews();
+        }
+
+        // Pulpit i „Ostatnie" budują karty/wiersze z MIGAWKAMI kolorów (Res(...) w chwili budowy), więc nie
+        // reagują na zmianę motywu/presetu „na żywo" — trzeba przebudować aktywny widok. Wołane po każdym
+        // ThemeManager.Apply (ApplySettings, klik presetu, akcent, przełącz motyw).
+        private void RefreshThemedViews()
+        {
+            if (_currentView == "Dashboard") BuildDashboard();
+            else if (_currentView == "Recent") BuildRecent();
         }
 
         // Filtr Ustawień: chowa karty, których zagregowany (zlokalizowany) tekst nie zawiera zapytania.
@@ -5066,6 +5078,7 @@ namespace RdpManager
             ThemeManager.Apply(_settings.Theme, _settings.AccentColor, _settings.ThemeVariantDark, _settings.ThemeVariantLight);
             RenderTree(SearchBox.Text);   // wiersze/karty zależą od motywu
             RebuildTabStrip();
+            RefreshThemedViews();
             QueueSettingsSave();
         }
 
