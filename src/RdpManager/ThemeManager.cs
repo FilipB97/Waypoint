@@ -12,10 +12,15 @@ namespace RdpManager
     /// </summary>
     public static class ThemeManager
     {
-        // Marka = kobalt #2657D6. WPF-UI domyślnie bierze akcent SYSTEMOWY (stąd „szare" przyciski Primary,
-        // ProgressRing, focus, przełączniki) — wymuszamy własny akcent PO zastosowaniu motywu, żeby akcentowe
-        // kontrolki były kobaltowe i UI przestało wyglądać monochromatycznie.
-        private static readonly System.Windows.Media.Color BrandAccent =
+        // WPF-UI domyślnie bierze akcent SYSTEMOWY (stąd „szare" przyciski Primary, ProgressRing, focus,
+        // przełączniki) — wymuszamy własny akcent PO zastosowaniu motywu, żeby akcentowe kontrolki WPF-UI
+        // zgadzały się z paletą Waypoint (klucz „Accent") i UI nie było monochromatyczne.
+        // Compass §2 rozróżnia akcent interakcji per motyw: ciemny #4C86FF (jaśniejszy, na chłodnej czerni),
+        // jasny #2657D6 (kobalt — lepszy kontrast białego tekstu na akcencie). Faza 4 (§4.7) uczyni to
+        // konfigurowalnym; tu zostaje domyślna para Compass.
+        private static readonly System.Windows.Media.Color AccentDark =
+            System.Windows.Media.Color.FromRgb(0x4C, 0x86, 0xFF);
+        private static readonly System.Windows.Media.Color AccentLight =
             System.Windows.Media.Color.FromRgb(0x26, 0x57, 0xD6);
 
         /// <summary>Czy aktualnie obowiązuje jasny motyw — ostatni wynik <see cref="Apply"/>. Czytane m.in.
@@ -29,7 +34,7 @@ namespace RdpManager
             IsLight = light;
             var appTheme = light ? ApplicationTheme.Light : ApplicationTheme.Dark;
             ApplicationThemeManager.Apply(appTheme);
-            ApplicationAccentColorManager.Apply(BrandAccent, appTheme);   // nadpisz akcent systemowy marką (kobalt)
+            ApplicationAccentColorManager.Apply(light ? AccentLight : AccentDark, appTheme);   // akcent Compass per motyw
             WindowBorder.ReapplyAll();   // WPF-UI po zmianie motywu/akcentu przemalowuje krawędź — przywróć wybraną obwódkę
             SwapPalette(light);
         }

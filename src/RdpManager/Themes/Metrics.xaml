@@ -6,19 +6,21 @@
          w runtime (ThemeManager.SwapPalette dopasowuje po "Palette." w URI źródła), więc StaticResource
          (nie DynamicResource) jest tu właściwym wyborem (2.1/2.2/2.4/2.5 z przeglądu). -->
 
-    <!-- Promienie zaokrągleń -->
-    <CornerRadius x:Key="RadiusXs">2</CornerRadius>
-    <CornerRadius x:Key="RadiusSm">6</CornerRadius>
-    <CornerRadius x:Key="RadiusMd">8</CornerRadius>
-    <CornerRadius x:Key="RadiusLg">10</CornerRadius>
+    <!-- Promienie zaokrągleń (Compass §2: 4 / 7 / 9 / 14) -->
+    <CornerRadius x:Key="RadiusXs">4</CornerRadius>
+    <CornerRadius x:Key="RadiusSm">7</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">9</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">14</CornerRadius>
 
-    <!-- Skala fontów: tekst czytelny (podpisy → nagłówki) -->
+    <!-- Skala fontów: tekst czytelny (podpisy → nagłówki). Dostrojona do Compass §2 (Body 13, BodyLg 15,
+         Subtitle 18, Heading 22); tekst niosący informację ≥ 12 (REVIEW 1.6). FontMicro pozostaje dla
+         czysto dekoracyjnych glifów. -->
     <sys:Double x:Key="FontMicro">7.5</sys:Double>
-    <sys:Double x:Key="FontCaption">10.5</sys:Double>
-    <sys:Double x:Key="FontSmall">11.5</sys:Double>
-    <sys:Double x:Key="FontBody">12.5</sys:Double>
-    <sys:Double x:Key="FontBodyLg">14</sys:Double>
-    <sys:Double x:Key="FontSubtitle">15.5</sys:Double>
+    <sys:Double x:Key="FontCaption">11</sys:Double>
+    <sys:Double x:Key="FontSmall">12</sys:Double>
+    <sys:Double x:Key="FontBody">13</sys:Double>
+    <sys:Double x:Key="FontBodyLg">15</sys:Double>
+    <sys:Double x:Key="FontSubtitle">16</sys:Double>
     <sys:Double x:Key="FontTitle">18</sys:Double>
     <sys:Double x:Key="FontHeading">20</sys:Double>
     <sys:Double x:Key="FontDisplay">22</sys:Double>
