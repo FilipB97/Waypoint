@@ -32,12 +32,13 @@
     <SolidColorBrush x:Key="ProtoWeb"    Color="#9C93FF"/>
     <SolidColorBrush x:Key="ProtoTelnet" Color="#C0C3CC"/>
 
-    <!-- Kolory metod REST (Compass §2) — używane od Fazy 7 (badge metody). -->
-    <SolidColorBrush x:Key="MethodGet"    Color="#3DDC97"/>
-    <SolidColorBrush x:Key="MethodPost"   Color="#4C86FF"/>
-    <SolidColorBrush x:Key="MethodPut"    Color="#FFB454"/>
-    <SolidColorBrush x:Key="MethodDelete" Color="#E8463F"/>
-    <SolidColorBrush x:Key="MethodPatch"  Color="#7C6CFB"/>
+    <!-- Kolory metod REST (Compass §2) — odcienie badge'y jak w mockupie (.m-get/.m-post/…):
+         jaśniejsze „tekst na tincie", czytelne na tintowanym tle. -->
+    <SolidColorBrush x:Key="MethodGet"    Color="#4BD6A0"/>
+    <SolidColorBrush x:Key="MethodPost"   Color="#7BA6FF"/>
+    <SolidColorBrush x:Key="MethodPut"    Color="#F0B45F"/>
+    <SolidColorBrush x:Key="MethodDelete" Color="#F0736C"/>
+    <SolidColorBrush x:Key="MethodPatch"  Color="#B08CE8"/>
 
     <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
 

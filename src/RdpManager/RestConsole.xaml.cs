@@ -753,19 +753,17 @@ namespace RdpManager
             return new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
         }
 
-        // Kolory metod wg mockupu Compass (m-get/m-post/m-put/m-del): GET zielony, POST niebieski,
-        // PUT bursztyn, DELETE czerwony, PATCH fiolet, reszta szary. Publiczne — używa też moduł REST w railu.
+        // Kolory metod z PALETY (MethodGet/…, per motyw — ciemny wg mockupu, jasny przyciemniony);
+        // wcześniej zaszyte odcienie ciemne psuły kontrast w jasnym motywie. Publiczne — używa też moduł REST.
         public static Brush MethodBrush(string method)
         {
-            switch (method)
+            string key = method switch
             {
-                case "GET": return new SolidColorBrush(Color.FromRgb(0x4B, 0xD6, 0xA0));
-                case "POST": return new SolidColorBrush(Color.FromRgb(0x7B, 0xA6, 0xFF));
-                case "PUT": return new SolidColorBrush(Color.FromRgb(0xF0, 0xB4, 0x5F));
-                case "PATCH": return new SolidColorBrush(Color.FromRgb(0xB0, 0x8C, 0xE8));
-                case "DELETE": return new SolidColorBrush(Color.FromRgb(0xF0, 0x73, 0x6C));
-                default: return new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
-            }
+                "GET" => "MethodGet", "POST" => "MethodPost", "PUT" => "MethodPut",
+                "PATCH" => "MethodPatch", "DELETE" => "MethodDelete", _ => null
+            };
+            var b = key != null ? Application.Current?.TryFindResource(key) as Brush : null;
+            return b ?? new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
         }
 
         // Tinta tła badge'a metody (ten sam kolor, niska alfa) — jak .mb w mockupie. Publiczne — moduł REST.
