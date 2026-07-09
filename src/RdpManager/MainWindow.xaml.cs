@@ -545,6 +545,9 @@ namespace RdpManager
         private void Nav_Click(object sender, RoutedEventArgs e)
         {
             if (!(sender is Button b) || !(b.Tag is string v)) return;
+            // „Połączenia" to dom listy serwerów — wyjście z modułu REST (moduł opuszcza się TYLKO tędy;
+            // ponowny klik REST go nie zamyka).
+            if (v == "Sessions" && _restMode) { SetRestMode(false); ShowView(v); return; }
             if (v == _currentView) { _sidebarCollapsed = !_sidebarCollapsed; UpdateImmersive(); }   // ta sama ikona → zwiń/rozwiń panel
             else ShowView(v);
         }
@@ -558,7 +561,7 @@ namespace RdpManager
             SettingsView.Visibility = view == "Settings" ? Visibility.Visible : Visibility.Collapsed;
 
             SetNav(NavDashboard, IcoDashboard, view == "Dashboard");
-            SetNav(NavSessions, IcoSessions, view == "Sessions");
+            SetNav(NavSessions, IcoSessions, view == "Sessions" && !_restMode);   // w module REST świeci REST, nie Połączenia
             SetNav(NavRecent, IcoRecent, view == "Recent");
             SetNav(NavSettings, IcoSettings, view == "Settings");
 
@@ -841,7 +844,15 @@ namespace RdpManager
 
         private bool _restMode;
 
-        private void NavRest_Click(object sender, RoutedEventArgs e) => SetRestMode(!_restMode);
+        // REST to PEŁNOPRAWNY moduł: klik wchodzi (i przełącza główny widok na sesje — tam żyją konsole);
+        // ponowny klik zwija/rozwija panel boczny (konwencja pozostałych ikon raila), NIE wychodzi z modułu.
+        // Wyjście = klik „Połączenia" (Nav_Click).
+        private void NavRest_Click(object sender, RoutedEventArgs e)
+        {
+            if (_restMode) { _sidebarCollapsed = !_sidebarCollapsed; UpdateImmersive(); return; }
+            SetRestMode(true);
+            if (_currentView != "Sessions") ShowView("Sessions");
+        }
 
         // Przełącza sidebar: drzewo serwerów <-> drzewo kolekcji REST. Zawartość (sesje) niezależna.
         private void SetRestMode(bool on)
