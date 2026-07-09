@@ -884,10 +884,10 @@ namespace RdpManager
                     : (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
                 var dot = new Border
                 {
-                    Width = 24, Height = 24, CornerRadius = new CornerRadius(12),
+                    Width = 20, Height = 20, CornerRadius = new CornerRadius(6),
                     Background = new SolidColorBrush(color),
                     Margin = new Thickness(0, 0, 8, 0), Cursor = Cursors.Hand,
-                    BorderBrush = selected ? Res("TextPrim") : Res("Border"),
+                    BorderBrush = selected ? Res("Accent") : Res("Border"),
                     BorderThickness = new Thickness(selected ? 2 : 1),
                     ToolTip = L(key)
                 };
@@ -923,30 +923,30 @@ namespace RdpManager
             {
                 bool selected = string.Equals(cur, p.Id, StringComparison.OrdinalIgnoreCase);
 
-                var prow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(7), VerticalAlignment = VerticalAlignment.Center };
-                prow.Children.Add(new Border
+                // Podgląd palety = trzy pasy (tło / powierzchnia / akcent) w proporcji 52/30/18 (jak w mockupie).
+                var bars = new Grid { Height = 30 };
+                bars.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52, GridUnitType.Star) });
+                bars.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30, GridUnitType.Star) });
+                bars.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18, GridUnitType.Star) });
+                void Bar(Color c, int col) { var b = new Border { Background = new SolidColorBrush(c) }; Grid.SetColumn(b, col); bars.Children.Add(b); }
+                Bar(p.Canvas, 0); Bar(p.Panel, 1); Bar(p.Accent, 2);
+                var preview = new Border { CornerRadius = new CornerRadius(7), ClipToBounds = true, Child = bars };
+
+                var nameRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 7, 0, 0) };
+                nameRow.Children.Add(new Ellipse { Width = 9, Height = 9, Fill = new SolidColorBrush(p.Accent), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+                nameRow.Children.Add(new TextBlock
                 {
-                    Width = 26, Height = 18, CornerRadius = new CornerRadius(4),
-                    Background = new SolidColorBrush(p.Panel), BorderBrush = new SolidColorBrush(p.Border),
-                    BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 6, 0)
+                    Text = p.Name, Foreground = Res("TextPrim"), FontSize = (double)TryFindResource("FontSmall"),
+                    FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis
                 });
-                prow.Children.Add(new Ellipse { Width = 12, Height = 12, Fill = new SolidColorBrush(p.Accent), VerticalAlignment = VerticalAlignment.Center });
-                var preview = new Border
-                {
-                    Height = 40, CornerRadius = new CornerRadius(6), Background = new SolidColorBrush(p.Canvas), Child = prow
-                };
-                var name = new TextBlock
-                {
-                    Text = p.Name, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontCaption"),
-                    Margin = new Thickness(2, 4, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis
-                };
+
                 var sp = new StackPanel();
                 sp.Children.Add(preview);
-                sp.Children.Add(name);
+                sp.Children.Add(nameRow);
                 var card = new Border
                 {
-                    Width = 108, CornerRadius = new CornerRadius(9), Padding = new Thickness(4),
-                    Margin = new Thickness(0, 0, 8, 8), Cursor = Cursors.Hand, Background = Res("Panel"),
+                    Width = 172, CornerRadius = new CornerRadius(11), Padding = new Thickness(9),
+                    Margin = new Thickness(0, 0, 10, 10), Cursor = Cursors.Hand, Background = Res("Panel"),
                     BorderBrush = selected ? Res("Accent") : Res("Border"),
                     BorderThickness = new Thickness(selected ? 2 : 1),
                     Child = sp, ToolTip = p.Name
@@ -1017,11 +1017,10 @@ namespace RdpManager
             SetBarDelay.Text = _settings.FullscreenBarDelayMs.ToString();
             SetFocusPeekOpacity.Text = _settings.FocusPeekOpacity.ToString();
             SetTermFontSize.Text = _settings.TerminalFontSize.ToString();
-            SetTheme.SelectedIndex = _settings.Theme == "Light" ? 1 : _settings.Theme == "System" ? 2 : 0;
-            SetBorder.SelectedIndex = _settings.WindowBorderColor == "System" ? 2
-                                    : string.IsNullOrEmpty(_settings.WindowBorderColor) ? 0 : 1;
+            SegSet(ThemeSeg, _settings.Theme);
+            SegSet(BorderSeg, _settings.WindowBorderColor ?? "");
             SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
-            SetListStyle.SelectedIndex = _settings.ListStyle == "Minimal" ? 1 : 0;
+            SegSet(ListStyleSeg, _settings.ListStyle);
             SetShowLatency.IsChecked = _settings.ShowLatency;
             BuildThemePresets();
             BuildAccentSwatches();
@@ -1281,9 +1280,10 @@ namespace RdpManager
                 .Where(cb => cb != null && cb.IsChecked == true)
                 .Select(cb => cb.Tag as string)
                 .Where(id => !string.IsNullOrEmpty(id)).ToList();
-            _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
+            _settings.Theme = SegTag(ThemeSeg) ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
-            _settings.ListStyle = (SetListStyle.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Default";
+            _settings.ListStyle = SegTag(ListStyleSeg) ?? "Default";
+            _settings.WindowBorderColor = SegTag(BorderSeg) ?? "";
             _settings.ShowLatency = SetShowLatency.IsChecked == true;
 
             SettingsStore.Save(_settings);
@@ -1375,21 +1375,35 @@ namespace RdpManager
                     CollectSettingsText(kid, sb);
         }
 
-        // Ustawienia interfejsu (motyw / język / styl listy) działają OD RAZU po zmianie — bez scrollowania do
-        // „Zapisz". Zapis pliku jest odroczony (debounce). Pozostałe ustawienia nadal zatwierdza przycisk Zapisz.
-        private void InterfaceSetting_Changed(object sender, SelectionChangedEventArgs e)
+        // Ustawienia interfejsu (motyw / język / styl listy / obwódka) działają OD RAZU po zmianie — bez
+        // scrollowania do „Zapisz". Zapis pliku jest odroczony (debounce). Reszta zatwierdza przycisk Zapisz.
+        // Combo (Język) → SelectionChanged; segmenty (Motyw/Styl/Obwódka) → Checked (SegSetting_Changed).
+        private void InterfaceSetting_Changed(object sender, SelectionChangedEventArgs e) => ApplyInterfaceLive();
+        private void SegSetting_Changed(object sender, RoutedEventArgs e) => ApplyInterfaceLive();
+
+        private void ApplyInterfaceLive()
         {
             if (_loadingSettings || _settings == null) return;
-            _settings.Theme = (SetTheme.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Dark";
+            _settings.Theme = SegTag(ThemeSeg) ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
-            _settings.ListStyle = (SetListStyle.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Default";
-            _settings.WindowBorderColor = (SetBorder.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "";
+            _settings.ListStyle = SegTag(ListStyleSeg) ?? "Default";
+            _settings.WindowBorderColor = SegTag(BorderSeg) ?? "";
             WindowBorder.SetSpec(_settings.WindowBorderColor);
             ApplySettings();
             // Zmiana motywu może przełączyć tryb (ciemny/jasny) → odśwież siatkę presetów i próbnik akcentu.
             BuildThemePresets();
             BuildAccentSwatches();
             QueueSettingsSave();
+        }
+
+        // Kontrolka segmentowa = grupa RadioButtonów (Tag = wartość) w jednym StackPanelu. Odczyt/zapis po Tagu.
+        private static string SegTag(Panel seg)
+            => seg.Children.OfType<RadioButton>().FirstOrDefault(r => r.IsChecked == true)?.Tag as string;
+
+        private static void SegSet(Panel seg, string tag)
+        {
+            foreach (var r in seg.Children.OfType<RadioButton>())
+                r.IsChecked = string.Equals(r.Tag as string ?? "", tag ?? "", StringComparison.OrdinalIgnoreCase);
         }
 
         private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
