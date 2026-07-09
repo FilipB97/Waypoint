@@ -313,7 +313,7 @@ namespace RdpManager
                     _update = info;
                     UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
                     UpdateBtn.Visibility = Visibility.Visible;
-                    ShowAboutUpdateAvailable(info.Version);
+                    ShowAboutUpdateAvailable(info.Version, info.ExeSize);
                 }
                 else if (Core.UpdateCheck.ParseTag(_prevRunVersion) is Version prev && prev < current
                          && !string.IsNullOrWhiteSpace(info.Notes))
@@ -344,36 +344,30 @@ namespace RdpManager
         {
             if (_updateChecking) return;
             _updateChecking = true;
-            UpdateCheckStatus.Foreground = Res("TextSec");
-            UpdateCheckStatus.Text = L("S.update.checking");
+            if (AboutUpdateTitle != null) AboutUpdateTitle.Text = L("S.update.checking");   // transient stan w karcie
             try
             {
                 var info = await FetchLatestReleaseAsync();
                 var current = CurrentVersion();
                 if (info == null)   // pobrano, ale nie dało się odczytać wydania → to NIE „aktualne", tylko błąd
                 {
-                    UpdateCheckStatus.Foreground = Res("Danger");
-                    UpdateCheckStatus.Text = L("S.update.checkfailed");
+                    SetAboutUpToDate(L("S.update.checkfailed"), error: true);
                 }
                 else if (Core.UpdateCheck.IsNewer(info.Version, current))
                 {
                     _update = info;
                     UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
                     UpdateBtn.Visibility = Visibility.Visible;
-                    UpdateCheckStatus.Foreground = Res("Online");
-                    UpdateCheckStatus.Text = string.Format(L("S.update.available"), info.Version);
-                    ShowAboutUpdateAvailable(info.Version);
+                    ShowAboutUpdateAvailable(info.Version, info.ExeSize);
                 }
                 else
                 {
-                    UpdateCheckStatus.Foreground = Res("TextSec");
-                    UpdateCheckStatus.Text = L("S.update.uptodate");
+                    SetAboutUpToDate(L("S.update.uptodate"));
                 }
             }
             catch
             {
-                UpdateCheckStatus.Foreground = Res("Danger");
-                UpdateCheckStatus.Text = L("S.update.checkfailed");
+                SetAboutUpToDate(L("S.update.checkfailed"), error: true);
             }
             finally { _updateChecking = false; }
         }
@@ -823,17 +817,109 @@ namespace RdpManager
             }
         }
 
-        // Pokaż przycisk instalacji w kategorii „O aplikacji", gdy dostępna nowsza wersja (obok banera na pasku).
-        private void ShowAboutUpdateAvailable(object version)
+        // Karta aktualizacji w „O aplikacji": stan „dostępna" (tytuł + rozmiar + akcent + przycisk instalacji).
+        private void ShowAboutUpdateAvailable(object version, long sizeBytes)
         {
-            if (AboutUpdateInstall == null) return;
-            AboutUpdateInstall.Content = string.Format(L("S.update.available"), version);
+            if (AboutUpdateCard == null) return;
+            AboutUpdateIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.ArrowDownload24;
+            AboutUpdateIcon.Foreground = Res("Accent");
+            AboutUpdateTitle.Text = string.Format(L("S.about.updateavailable"), version);
+            AboutUpdateSub.Text = string.Format(L("S.about.updateready"), (sizeBytes / 1048576.0).ToString("0.0") + " MB");
+            AboutUpdateSub.Visibility = sizeBytes > 0 ? Visibility.Visible : Visibility.Collapsed;
             AboutUpdateInstall.Visibility = Visibility.Visible;
+            AboutUpdateCard.BorderBrush = Res("Accent");
+            AboutUpdateCard.Background = Res("AccentSoft");
         }
 
-        // „O aplikacji" mieszka teraz w Ustawieniach (kategoria O aplikacji) — patrz handlery About*_Click niżej.
-        private void AboutAuthor_Click(object sender, RoutedEventArgs e) => OpenUrl("https://github.com/FilipB97");
-        private void AboutRepo_Click(object sender, RoutedEventArgs e) => OpenUrl("https://github.com/FilipB97/Waypoint");
+        // Karta aktualizacji: stan „masz najnowszą" (albo błąd sprawdzania) — bez przycisku instalacji.
+        private void SetAboutUpToDate(string title, bool error = false)
+        {
+            if (AboutUpdateCard == null) return;
+            AboutUpdateIcon.Symbol = error ? Wpf.Ui.Controls.SymbolRegular.Warning24 : Wpf.Ui.Controls.SymbolRegular.CheckmarkCircle24;
+            AboutUpdateIcon.Foreground = error ? Res("Danger") : Res("TextSec");
+            AboutUpdateTitle.Text = title;
+            AboutUpdateSub.Visibility = Visibility.Collapsed;
+            AboutUpdateInstall.Visibility = Visibility.Collapsed;
+            AboutUpdateCard.BorderBrush = Res("Border");
+            AboutUpdateCard.Background = Res("Panel");
+        }
+
+        private static readonly string RepoUrl = "https://github.com/FilipB97/Waypoint";
+        private void AboutRepo_Click(object sender, RoutedEventArgs e) => OpenUrl(RepoUrl);
+        private void AboutLicense_Click(object sender, RoutedEventArgs e) => OpenUrl(RepoUrl + "/blob/master/LICENSE");
+        private void AboutReportIssue_Click(object sender, RoutedEventArgs e) => OpenUrl(RepoUrl + "/issues/new");
+
+        // Historia zmian (Compass §4.11): renderuje kurowaną listę Changelog.Entries do karty w „O aplikacji".
+        private void BuildChangelog()
+        {
+            ChangelogList.Children.Clear();
+            var culture = new System.Globalization.CultureInfo(_settings != null && _settings.Language == "en" ? "en-US" : "pl-PL");
+            bool first = true;
+            foreach (var entry in Changelog.Entries)
+            {
+                if (!first)
+                    ChangelogList.Children.Add(new Border { Height = 1, Background = Res("Border"), Margin = new Thickness(0, 12, 0, 12) });
+                first = false;
+
+                var grid = new Grid { Margin = new Thickness(0, 6, 0, 6) };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(96) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                // Lewa kolumna: wersja (+ badge NOWA) + data
+                var left = new StackPanel();
+                var verRow = new StackPanel { Orientation = Orientation.Horizontal };
+                verRow.Children.Add(new TextBlock
+                {
+                    Text = entry.Version, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold,
+                    FontFamily = (FontFamily)TryFindResource("Mono"), FontSize = (double)TryFindResource("FontBody"), VerticalAlignment = VerticalAlignment.Center
+                });
+                if (entry.Latest)
+                    verRow.Children.Add(MakePill(L("S.chg.latest"), Res("Accent")));
+                left.Children.Add(verRow);
+                string dateText = System.DateTime.TryParse(entry.Date, out var dt) ? dt.ToString("d MMM yyyy", culture) : entry.Date;
+                left.Children.Add(new TextBlock { Text = dateText, Foreground = Res("TextTer"),
+                    FontFamily = (FontFamily)TryFindResource("Mono"), FontSize = (double)TryFindResource("FontCaption"), Margin = new Thickness(0, 3, 0, 0) });
+                Grid.SetColumn(left, 0);
+                grid.Children.Add(left);
+
+                // Prawa kolumna: pozycje z etykietą rodzaju
+                var items = new StackPanel();
+                foreach (var it in entry.Items)
+                {
+                    var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 5) };
+                    row.Children.Add(MakePill(ChangeKindLabel(it.Kind), ChangeKindBrush(it.Kind), leadingMargin: false));
+                    row.Children.Add(new TextBlock
+                    {
+                        Text = it.Text, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"),
+                        TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
+                    });
+                    items.Children.Add(row);
+                }
+                Grid.SetColumn(items, 1);
+                grid.Children.Add(items);
+                ChangelogList.Children.Add(grid);
+            }
+        }
+
+        private string ChangeKindLabel(ChangeKind k)
+            => k == ChangeKind.New ? L("S.chg.new") : k == ChangeKind.Change ? L("S.chg.change") : L("S.chg.fix");
+        private Brush ChangeKindBrush(ChangeKind k)
+            => k == ChangeKind.New ? Res("Online") : k == ChangeKind.Change ? Res("Accent") : Res("Idle");
+
+        // Mała pigułka (badge) — kolorowe tło z alfą + tekst w kolorze; do etykiet rodzaju zmiany / „NOWA".
+        private FrameworkElement MakePill(string text, Brush color, bool leadingMargin = true)
+        {
+            var c = (color as SolidColorBrush)?.Color ?? System.Windows.Media.Colors.Gray;
+            return new Border
+            {
+                CornerRadius = new CornerRadius(4),
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x28, c.R, c.G, c.B)),
+                Padding = new Thickness(6, 1, 6, 1),
+                Margin = leadingMargin ? new Thickness(8, 0, 0, 0) : new Thickness(0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock { Text = text, Foreground = color, FontSize = (double)TryFindResource("FontMicro") + 1.5, FontWeight = FontWeights.SemiBold }
+            };
+        }
 
         private static void OpenUrl(string url)
         {
@@ -1073,8 +1159,12 @@ namespace RdpManager
             BuildProfilesList();
             SetDataPath.Text = SettingsStore.Dir;
             var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            AboutVersion.Text = "v" + ver.Major + "." + ver.Minor + "." + Math.Max(ver.Build, 0);
+            string verStr = ver.Major + "." + ver.Minor + "." + Math.Max(ver.Build, 0);
+            AboutVersion.Text = string.Format(L("S.about.installedver"), verStr);
             AboutDataPath.Text = L("S.msg.about.datafolder") + " " + SettingsStore.Dir;
+            if (_update == null) SetAboutUpToDate(L("S.update.uptodate"));   // stan domyślny karty aktualizacji
+            else ShowAboutUpdateAvailable(_update.Version, _update.ExeSize);  // gdy sprawdzenie w tle już coś znalazło
+            BuildChangelog();
             SettingsStatus.Text = "";
             _loadingSettings = false;
         }
