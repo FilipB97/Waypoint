@@ -16,7 +16,9 @@ namespace RdpManager
     {
         private sealed class AuthEntry
         {
-            public string Label;
+            // WŁAŚCIWOŚĆ, nie pole: DisplayMemberPath („Label") binduje tylko do właściwości — jako pole
+            // każdy wiersz listy renderował się z PUSTYM tekstem (niewidoczne pozycje).
+            public string Label { get; set; }
             public RestFolder Folder;   // null = korzeń kolekcji
             public int AuthType;
             public string AuthUsername = "";
