@@ -5,7 +5,7 @@
         Title="" Width="680" Height="460"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize" MinWidth="560" MinHeight="360"
-        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource CanvasBrush}">
     <Window.Resources>
         <Style x:Key="EnvIconBtn" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>

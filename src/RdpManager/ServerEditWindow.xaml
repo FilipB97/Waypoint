@@ -6,7 +6,7 @@
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
         MinWidth="520" MinHeight="420"
-        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource CanvasBrush}">
 
     <Window.Resources>
         <Style x:Key="SeSub" TargetType="TextBlock">
