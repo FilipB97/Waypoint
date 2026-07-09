@@ -92,10 +92,12 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <Grid Grid.Row="0" Margin="2,0,0,6">
+                    <!-- Nagłówek w DWÓCH wierszach: tytuł nad paskiem ikon. Wcześniej tytuł i pasek ikon
+                         dzieliły jedną komórkę Grid i nakładały się przy wąskim panelu (150-240px). -->
+                    <StackPanel Grid.Row="0" Margin="2,0,0,6">
                         <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextSec}"
-                                   FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                   FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                             <ToggleButton x:Name="HistoryToggle" ToolTip="{DynamicResource S.rest.hist}" AutomationProperties.Name="{DynamicResource S.rest.hist}" Click="History_Toggled"
                                           Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6,0" Height="28">
                                 <ui:SymbolIcon Symbol="History24" FontSize="{StaticResource IconMd}"/>
@@ -117,7 +119,7 @@
                                 <ui:SymbolIcon Symbol="Delete24" FontSize="{StaticResource IconMd}"/>
                             </Button>
                         </StackPanel>
-                    </Grid>
+                    </StackPanel>
                     <Grid Grid.Row="1">
                     <TreeView x:Name="CollTree" BorderThickness="0" Background="Transparent"
                               SelectedItemChanged="Tree_SelectionChanged">
