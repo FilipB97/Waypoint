@@ -79,7 +79,7 @@ namespace RdpManager
         // Import osobnego pliku środowiska Postman (dodaje nowe środowisko do globalnej listy).
         private void ImportEnv_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Title = L("S.rest.env.importtitle"), Filter = L("S.dlg.postman.filter") };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = L("S.rest.env.importtitle"), Filter = L("S.dlg.postmanenv.filter") };
             if (dlg.ShowDialog(this) != true) return;
 
             RestEnvironment env;
@@ -94,6 +94,12 @@ namespace RdpManager
             env.Name = UniqueEnvName(string.IsNullOrWhiteSpace(env.Name) ? L("S.rest.env.newenv") : env.Name);
             _envs.Add(env);
             EnvList.SelectedItem = env;
+
+            // Import to jawna akcja — utrwal OD RAZU (tylko nowe środowisko): zamknięcie „krzyżykiem"
+            // nie może go zgubić. Pozostałe edycje dalej zapisują się dopiero w „Zamknij" (A8).
+            var stored = EnvironmentStore.Load();
+            stored.Add(CloneEnv(env));
+            EnvironmentStore.Save(stored);
 
             // Postman oznaczył te zmienne jako „secret" — ich wartości NIE zaimportowano (nigdy jawnie w rest.json).
             // Bez tego ostrzeżenia użytkownik po cichu dostaje puste zmienne tam, gdzie w Postmanie były realne wartości.

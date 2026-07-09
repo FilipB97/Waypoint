@@ -75,6 +75,24 @@ namespace RdpManager.Core
         /// <paramref name="blankedSecretKeys"/> = klucze zmiennych, których wartość wyczyszczono (do ostrzeżenia w UI —
         /// inaczej użytkownik po cichu dostaje pustą zmienną tam, gdzie w Postmanie była realna wartość).
         /// </summary>
+        /// <summary>
+        /// Czy JSON wygląda na eksport ŚRODOWISKA Postmana (obiekt z „values", bez „item")? Rozróżnia
+        /// env od kolekcji przy wspólnej karcie importu „kolekcje i środowiska". false dla nie-JSON.
+        /// </summary>
+        public static bool LooksLikeEnvironment(string json)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                return root.ValueKind == JsonValueKind.Object
+                    && !root.TryGetProperty("item", out _)
+                    && root.TryGetProperty("values", out var values)
+                    && values.ValueKind == JsonValueKind.Array;
+            }
+            catch { return false; }
+        }
+
         public static RestEnvironment ParseEnvironment(string json, out List<string> blankedSecretKeys)
         {
             blankedSecretKeys = new List<string>();

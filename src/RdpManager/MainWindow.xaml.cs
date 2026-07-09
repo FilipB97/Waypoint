@@ -5290,14 +5290,27 @@ namespace RdpManager
 
         // Import kolekcji Postman: tworzy JEDEN wpis REST (= kolekcja) i zasila jego drzewo w rest.json.
         // Sekrety (Bearer/Basic) → Credential Manager. Inaczej niż ImportExternal (który dodaje wiele serwerów).
+        // Plik ŚRODOWISKA (eksport env Postmana: ma „values", brak „item") też jest tu obsługiwany — karta
+        // importu obiecuje „kolekcje i środowiska", a parser kolekcji wywalał się na env-eksporcie.
         private void ImportPostman_Click(object sender, RoutedEventArgs e)
         {
             string title = L("S.dlg.importpostman.title");
             var dlg = new Microsoft.Win32.OpenFileDialog { Title = title, Filter = L("S.dlg.postman.filter") };
             if (dlg.ShowDialog(this) != true) return;
 
+            string text;
+            try { text = System.IO.File.ReadAllText(dlg.FileName); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(string.Format(L("S.msg.importrdp.fail"), System.IO.Path.GetFileName(dlg.FileName)) + "\n" + ex.Message,
+                    title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (TryImportPostmanEnvironment(text)) return;
+
             Core.PostmanImport.Result res;
-            try { res = Core.PostmanImport.Parse(System.IO.File.ReadAllText(dlg.FileName)); }
+            try { res = Core.PostmanImport.Parse(text); }
             catch (Exception ex)
             {
                 MessageBox.Show(string.Format(L("S.msg.importrdp.fail"), System.IO.Path.GetFileName(dlg.FileName)) + "\n" + ex.Message,
@@ -5347,6 +5360,29 @@ namespace RdpManager
                 string.Format(L("S.msg.postman.done"), res.RequestCount, res.Collection.Folders.Count)
                 + (secrets > 0 ? "\n" + string.Format(L("S.msg.import.withpass"), secrets) : ""),
                 title, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        // Rozpoznaje eksport ŚRODOWISKA Postmana (obiekt z „values", bez „item") i importuje go do
+        // globalnego EnvironmentStore. true = plik obsłużony (wołający nie próbuje parsera kolekcji).
+        private bool TryImportPostmanEnvironment(string text)
+        {
+            if (!Core.PostmanImport.LooksLikeEnvironment(text)) return false;   // nie env → parser kolekcji
+
+            var env = Core.PostmanImport.ParseEnvironment(text, out var blanked);
+            var envs = EnvironmentStore.Load();
+            // Unikalna nazwa (jak w RestEnvWindow) — import dwa razy nie tworzy dwóch „Production".
+            string baseName = string.IsNullOrWhiteSpace(env.Name) ? L("S.rest.env.newenv") : env.Name.Trim();
+            var names = new HashSet<string>(envs.Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
+            env.Name = baseName;
+            for (int i = 2; names.Contains(env.Name); i++) env.Name = baseName + " " + i;
+            envs.Add(env);
+            EnvironmentStore.Save(envs);
+
+            string msg = string.Format(L("S.rest.env.imported"), env.Name);
+            if (blanked.Count > 0)
+                msg += "\n\n" + string.Format(L("S.rest.env.import.secretswarn"), string.Join(", ", blanked));
+            MessageBox.Show(msg, L("S.rest.env.importtitle"), MessageBoxButton.OK, MessageBoxImage.Information);
+            return true;
         }
 
         // Wspólny przebieg importu z innego menedżera: plik → parser → dedup po host:port → zapis.
