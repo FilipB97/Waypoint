@@ -36,7 +36,14 @@ namespace RdpManager
             public bool IsDir { get; set; }
             public string SizeText { get; set; }
             public string Modified { get; set; }
+            public long Len { get; set; }        // surowy rozmiar — klucz sortowania (SizeText jest sformatowany)
+            public DateTime Mod { get; set; }     // surowa data — klucz sortowania (Modified jest sformatowany)
         }
+
+        // Sortowanie listy po kolumnie (klik nagłówka). Katalogi ZAWSZE na górze, sortowanie w obrębie grupy.
+        private enum SortCol { Name, Size, Modified }
+        private SortCol _sortCol = SortCol.Name;
+        private bool _sortDesc;
 
         // Stan jednego transferu drzewa (upload/download) — postęp bajtowy do paska, callback per plik do statusu.
         // Klasa (nie struct) celowo: dzielona przez referencję między wątkiem roboczym (ProgressStream) a UI.
@@ -422,8 +429,6 @@ namespace RdpManager
             bool ok = await RunAsync(L("S.sftp.connecting"), fs =>
             {
                 rows = fs.List(_path)
-                    .OrderByDescending(f => f.IsDir)
-                    .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
                     .Select(f => new Row
                     {
                         Icon = f.IsDir ? Wpf.Ui.Controls.SymbolRegular.Folder24 : Wpf.Ui.Controls.SymbolRegular.Document24,
@@ -432,14 +437,63 @@ namespace RdpManager
                         FullName = f.FullName,
                         IsDir = f.IsDir,
                         SizeText = f.IsDir ? "" : FormatSize(f.Length),
-                        Modified = f.Modified.ToString("yyyy-MM-dd HH:mm")
+                        Modified = f.Modified.ToString("yyyy-MM-dd HH:mm"),
+                        Len = f.Length,
+                        Mod = f.Modified
                     })
                     .ToList();
+                rows = SortRows(rows);
             });
             if (!ok) return;
             FileList.ItemsSource = rows;
+            UpdateSortIndicators();
             BuildBreadcrumb();
             SetStatus("");
+        }
+
+        // Katalogi na górze, potem sortowanie wg wybranej kolumny i kierunku. Nazwa bez uwzględniania wielkości liter.
+        private List<Row> SortRows(List<Row> rows)
+        {
+            var byDir = rows.OrderByDescending(r => r.IsDir);
+            IOrderedEnumerable<Row> sorted;
+            switch (_sortCol)
+            {
+                case SortCol.Size:
+                    sorted = _sortDesc ? byDir.ThenByDescending(r => r.Len) : byDir.ThenBy(r => r.Len);
+                    break;
+                case SortCol.Modified:
+                    sorted = _sortDesc ? byDir.ThenByDescending(r => r.Mod) : byDir.ThenBy(r => r.Mod);
+                    break;
+                default:
+                    sorted = _sortDesc
+                        ? byDir.ThenByDescending(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                        : byDir.ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase);
+                    break;
+            }
+            return sorted.ToList();
+        }
+
+        // Klik nagłówka kolumny: ta sama kolumna → odwróć kierunek; inna → ustaw ją (rosnąco). Re-sortuje bez pobierania.
+        private void HeaderSort_Click(object sender, RoutedEventArgs e)
+        {
+            var col = (sender as FrameworkElement)?.Tag as string;
+            var target = col == "size" ? SortCol.Size : col == "modified" ? SortCol.Modified : SortCol.Name;
+            if (_sortCol == target) _sortDesc = !_sortDesc;
+            else { _sortCol = target; _sortDesc = false; }
+
+            if (FileList.ItemsSource is IEnumerable<Row> current)
+            {
+                FileList.ItemsSource = SortRows(current.ToList());
+                UpdateSortIndicators();
+            }
+        }
+
+        private void UpdateSortIndicators()
+        {
+            string arrow = _sortDesc ? " ▼" : " ▲";
+            SortArrowName.Text = _sortCol == SortCol.Name ? arrow : "";
+            SortArrowSize.Text = _sortCol == SortCol.Size ? arrow : "";
+            SortArrowMod.Text = _sortCol == SortCol.Modified ? arrow : "";
         }
 
         // Ścieżka jako klikalne okruszki: „/" › katalog › podkatalog.
