@@ -225,7 +225,13 @@
                           ItemContainerStyle="{StaticResource FtRow}" ItemTemplate="{StaticResource FtRowTemplate}"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           MouseDoubleClick="List_DoubleClick"
-                          PreviewMouseLeftButtonDown="List_PreviewDown" PreviewMouseMove="List_PreviewMove"/>
+                          PreviewMouseLeftButtonDown="List_PreviewDown" PreviewMouseMove="List_PreviewMove"
+                          PreviewMouseLeftButtonUp="List_PreviewUp"/>
+                <!-- Prostokąt zaznaczenia (rubber-band); nie łapie myszy, żeby nie blokować listy. -->
+                <Canvas x:Name="MarqueeCanvas" IsHitTestVisible="False" Margin="4,4,6,2">
+                    <Rectangle x:Name="MarqueeRect" Visibility="Collapsed"
+                               Fill="{DynamicResource AccentSoft}" Stroke="{DynamicResource Accent}" StrokeThickness="1"/>
+                </Canvas>
                 <Border x:Name="DropOverlay" Visibility="Collapsed" Margin="6" CornerRadius="{StaticResource RadiusLg}"
                         Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Accent}" BorderThickness="2" Opacity="0.96">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
