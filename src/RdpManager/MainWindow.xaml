@@ -540,6 +540,8 @@
                             <ui:TextBox x:Name="SetUiScale" Width="120" HorizontalAlignment="Left"/>
                             <TextBlock Text="{DynamicResource S.set.bardelay}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ui:TextBox x:Name="SetBarDelay" Width="120" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{DynamicResource S.set.focuspeekopacity}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
+                            <ui:TextBox x:Name="SetFocusPeekOpacity" Width="120" HorizontalAlignment="Left"/>
                             <TextBlock Text="{DynamicResource S.set.termfontsize}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ui:TextBox x:Name="SetTermFontSize" Width="120" HorizontalAlignment="Left"/>
                             <TextBlock Text="{DynamicResource S.set.theme}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>

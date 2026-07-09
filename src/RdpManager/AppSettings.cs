@@ -20,6 +20,12 @@ namespace RdpManager
 
         public int DefaultPort { get; set; } = 3389;
         public int FullscreenBarDelayMs { get; set; } = 450;
+
+        /// <summary>Krycie (0-100%) panelu bocznego wysuwanego w trybie skupienia. Panel ma prawie przezroczyste
+        /// tło (Panel ~3%), więc nad jasną sesją treść przebijała — solidne podłoże o tym kryciu poprawia
+        /// czytelność. 100 = w pełni kryjące. Domyślnie mocno kryjące.</summary>
+        public int FocusPeekOpacity { get; set; } = 92;
+
         public bool ReachabilityEnabled { get; set; } = true;
         public int ReachabilityIntervalSec { get; set; } = 30;
 
