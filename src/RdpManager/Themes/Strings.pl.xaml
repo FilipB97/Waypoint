@@ -9,7 +9,8 @@
     <sys:String x:Key="S.nav.settings">Ustawienia</sys:String>
     <sys:String x:Key="S.nav.tools">Generator haseł</sys:String>
     <sys:String x:Key="S.nav.rest">Kolekcje REST</sys:String>
-    <sys:String x:Key="S.rest.module.empty">Brak kolekcji REST. Dodaj serwer typu REST, aby zobaczyć tu żądania.</sys:String>
+    <sys:String x:Key="S.rest.module.empty">Brak kolekcji REST. Dodaj kolekcję przyciskiem + powyżej albo zaimportuj z Postmana.</sys:String>
+    <sys:String x:Key="S.rest.module.add">Nowa kolekcja REST</sys:String>
 
     <!-- generator sekretów -->
     <sys:String x:Key="S.gen.title">Generator haseł</sys:String>
@@ -324,6 +325,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.wol">Obudź (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplikuj serwer…</sys:String>
     <sys:String x:Key="S.m.dupcollection">Duplikuj kolekcję…</sys:String>
+    <sys:String x:Key="S.m.opencoll">Otwórz kolekcję</sys:String>
     <sys:String x:Key="S.m.copy">Kopiuj</sys:String>
     <sys:String x:Key="S.m.copy.name">Nazwę</sys:String>
     <sys:String x:Key="S.m.copy.host">Host / adres</sys:String>
