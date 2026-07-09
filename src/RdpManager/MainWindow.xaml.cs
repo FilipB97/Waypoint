@@ -850,12 +850,45 @@ namespace RdpManager
         private void AboutReportIssue_Click(object sender, RoutedEventArgs e) => OpenUrl(RepoUrl + "/issues/new");
 
         // Historia zmian (Compass §4.11): renderuje kurowaną listę Changelog.Entries do karty w „O aplikacji".
+        // Historia zmian z wydań GitHub (jeśli pobrana), inaczej kurowany fallback z Changelog.cs.
+        private System.Collections.Generic.List<ChangelogEntry> _changelog;
+        private bool _changelogLoading;
+
+        // Pobiera wydania z GitHuba i buduje historię zmian z realnych notatek (raz na sesję; przy błędzie
+        // zostaje fallback z Changelog.cs). Wołane przy wejściu w Ustawienia.
+        private async void LoadChangelogAsync()
+        {
+            if (_changelog != null || _changelogLoading) return;
+            _changelogLoading = true;
+            try
+            {
+                string json;
+                using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) })
+                {
+                    http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
+                    json = await http.GetStringAsync("https://api.github.com/repos/FilipB97/Waypoint/releases?per_page=10");
+                }
+                var releases = Core.UpdateCheck.ParseReleaseList(json);
+                var entries = new System.Collections.Generic.List<ChangelogEntry>();
+                foreach (var r in releases)
+                {
+                    var items = Changelog.ParseNotes(r.Notes);
+                    if (items.Count == 0) continue;   // pomiń wydania bez punktowanych notatek
+                    entries.Add(new ChangelogEntry { Version = r.Version, Date = r.Date, Latest = entries.Count == 0, Items = items });
+                }
+                if (entries.Count > 0) { _changelog = entries; BuildChangelog(); }
+            }
+            catch { /* offline / rate limit — zostaje fallback */ }
+            finally { _changelogLoading = false; }
+        }
+
         private void BuildChangelog()
         {
             ChangelogList.Children.Clear();
             var culture = new System.Globalization.CultureInfo(_settings != null && _settings.Language == "en" ? "en-US" : "pl-PL");
+            var source = _changelog != null && _changelog.Count > 0 ? _changelog : (System.Collections.Generic.IReadOnlyList<ChangelogEntry>)Changelog.Entries;
             bool first = true;
-            foreach (var entry in Changelog.Entries)
+            foreach (var entry in source)
             {
                 if (!first)
                     ChangelogList.Children.Add(new Border { Height = 1, Background = Res("Border"), Margin = new Thickness(0, 12, 0, 12) });
@@ -1164,7 +1197,8 @@ namespace RdpManager
             AboutDataPath.Text = L("S.msg.about.datafolder") + " " + SettingsStore.Dir;
             if (_update == null) SetAboutUpToDate(L("S.update.uptodate"));   // stan domyślny karty aktualizacji
             else ShowAboutUpdateAvailable(_update.Version, _update.ExeSize);  // gdy sprawdzenie w tle już coś znalazło
-            BuildChangelog();
+            BuildChangelog();       // od razu fallback z Changelog.cs
+            LoadChangelogAsync();   // w tle podmień na realne wydania z GitHuba
             SettingsStatus.Text = "";
             _loadingSettings = false;
         }
