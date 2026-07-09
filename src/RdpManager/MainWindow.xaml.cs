@@ -164,6 +164,7 @@ namespace RdpManager
             _focusPeekPoll.Tick += FocusPeekPollTick;
 
             BuildServerTree();
+            BuildEmptyRecent();     // chipy „ostatnie" w pustym stanie kanwy — od startu (UpdateCanvas odświeży później)
             WireTreeFileDrop();     // import .rdp: upuść pliki z Eksploratora na drzewo serwerów
             ApplyTabStripStyle();   // margines paska / rozmiar ikon wg stylu (Domyślny/Minimal) — zanim wejdą karty
             UpdateToolbarEnabled();
@@ -2519,7 +2520,8 @@ namespace RdpManager
         private void UpdateCanvas()
         {
             bool has = _active != null;
-            EmptyHint.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
+            EmptyState.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
+            if (!has) BuildEmptyRecent();   // odśwież chipy „ostatnie" przy każdym powrocie do pustego stanu
 
             // Tryb podziału: dwie sesje RDP widoczne naraz (lewy panel = kol.0, prawy = kol.2, splitter w kol.1).
             if (_paneLeft != null && _paneRight != null)
@@ -4497,8 +4499,13 @@ namespace RdpManager
             var dlg = new InputDialog(L("S.quickConnect"),
                 L("S.prompt.quickconnect.label"), "") { Owner = this };
             if (dlg.ShowDialog() != true) return;
+            QuickConnectFromText(dlg.Value);
+        }
 
-            var (host, port, user, domain) = RdpUtils.ParseQuickConnect(dlg.Value, _settings.DefaultPort);
+        // Wspólna ścieżka szybkiego łączenia (dialog z paska bocznego oraz pole w pustym stanie kanwy).
+        private void QuickConnectFromText(string text)
+        {
+            var (host, port, user, domain) = RdpUtils.ParseQuickConnect(text, _settings.DefaultPort);
             if (string.IsNullOrWhiteSpace(host)) return;
 
             var srv = new ServerInfo
@@ -4511,6 +4518,60 @@ namespace RdpManager
             // Tymczasowy — nie trafia do _vm.Servers ani do JSON; otwieramy sesję i łączymy
             // (jeśli brak poświadczeń, zapyta o nie prompt).
             LaunchServer(srv, autoConnect: true, forceNew: true);
+        }
+
+        // Pusty stan kanwy (brak aktywnej sesji): szybkie łączenie + chipy „ostatnie" (Compass §3).
+        private void EmptyQuick_Click(object sender, RoutedEventArgs e) { QuickConnectFromText(EmptyQuickBox.Text); EmptyQuickBox.Text = ""; }
+
+        private void EmptyQuick_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter) return;
+            QuickConnectFromText(EmptyQuickBox.Text);
+            EmptyQuickBox.Text = "";
+            e.Handled = true;
+        }
+
+        private void BuildEmptyRecent()
+        {
+            EmptyRecentChips.Children.Clear();
+            var recent = _vm.RecentServers().Take(6).ToList();
+            Visibility vis = recent.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            EmptyRecentLabel.Visibility = vis;
+            EmptyRecentChips.Visibility = vis;
+            foreach (var srv in recent)
+            {
+                var s = srv;
+                EmptyRecentChips.Children.Add(MakeRecentChip(s));
+            }
+        }
+
+        private FrameworkElement MakeRecentChip(ServerInfo s)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(new Ellipse
+            {
+                Width = 7, Height = 7, Fill = ProtocolBrush(s.Protocol),
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0)
+            });
+            sp.Children.Add(new TextBlock
+            {
+                Text = s.Name, Foreground = Res("TextPrim"),
+                FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center
+            });
+            var chip = new Border
+            {
+                CornerRadius = new CornerRadius(9),
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(0, 0, 6, 6),
+                Background = Res("Panel"),
+                BorderBrush = Res("Border"),
+                BorderThickness = new Thickness(1),
+                Cursor = Cursors.Hand,
+                Child = sp,
+                ToolTip = s.Name + "\n" + DisplayHost(s)
+            };
+            chip.MouseLeftButtonUp += (a, e) => LaunchServer(s, true);
+            return chip;
         }
 
         private void AddServer_Click(object sender, RoutedEventArgs e)

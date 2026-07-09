@@ -139,6 +139,10 @@
     <sys:String x:Key="S.tip.cad">Send Ctrl+Alt+Del</sys:String>
     <sys:String x:Key="S.tip.minimize">Minimize</sys:String>
     <sys:String x:Key="S.emptyhint">Select a server on the left to open a session.</sys:String>
+    <sys:String x:Key="S.empty.title">Choose a connection</sys:String>
+    <sys:String x:Key="S.empty.quick.placeholder">host · user@host · host:port</sys:String>
+    <sys:String x:Key="S.empty.recent">Recent</sys:String>
+    <sys:String x:Key="S.empty.shortcuts">Ctrl+K search · Ctrl+P command palette · F11 fullscreen</sys:String>
     <sys:String x:Key="S.fs.drag">Drag to move the bar</sys:String>
     <sys:String x:Key="S.fs.others">other connections  ▾</sys:String>
     <sys:String x:Key="S.fs.others.up">other connections  ▴</sys:String>
