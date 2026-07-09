@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -14,54 +13,21 @@ using RdpManager.Models;
 namespace RdpManager
 {
     /// <summary>
-    /// Konsola REST dla jednego wpisu-API („wpis = jedno API/kolekcja"). Lewy panel: drzewo kolekcji
-    /// (foldery + żądania); prawy: budowniczy żądania (metoda/URL/params/nagłówki/treść/auth) + podgląd
-    /// odpowiedzi. Sekret auth trzymany w Credential Manager (w pamięci sesji jako transient), nigdy w JSON.
-    /// Środowiska/zmienne i historia — kolejne PR-y (model już to przewiduje).
+    /// Konsola REST dla jednego wpisu-API („wpis = jedno API/kolekcja"): budowniczy żądania
+    /// (metoda/URL/params/nagłówki/treść/auth/skrypty) + podgląd odpowiedzi + historia. Drzewo kolekcji
+    /// żyje WYŁĄCZNIE w module REST w railu (jedno drzewo, nie dwa) — moduł nawiguje i edytuje strukturę
+    /// przez publiczne API po Id (<see cref="SelectRequestById"/>, <see cref="NewRequest"/>, …), a o każdej
+    /// utrwalonej zmianie konsola mówi przez <see cref="CollectionChanged"/> (moduł się przebudowuje).
+    /// Sekret auth trzymany w Credential Manager (w pamięci sesji jako transient), nigdy w JSON.
     /// </summary>
     public partial class RestConsole : UserControl
     {
-        // Węzeł drzewa kolekcji: folder albo żądanie.
-        private sealed class RestNode : INotifyPropertyChanged
-        {
-            public bool IsFolder { get; set; }
-            public RestFolder Folder { get; set; }
-            public RestRequest Request { get; set; }
-            public ObservableCollection<RestNode> Children { get; } = new ObservableCollection<RestNode>();
-
-            public Wpf.Ui.Controls.SymbolRegular Icon =>
-                IsFolder ? Wpf.Ui.Controls.SymbolRegular.Folder24 : Wpf.Ui.Controls.SymbolRegular.Globe24;
-            public Brush IconBrush =>
-                (Brush)(Application.Current?.TryFindResource(IsFolder ? "Accent" : "TextSec")) ?? Brushes.Gray;
-
-            // Folder → ikona folderu; żądanie → kolorowy tag metody (GET/POST…) zamiast kuli.
-            public Visibility FolderIconVis => IsFolder ? Visibility.Visible : Visibility.Collapsed;
-            public Visibility MethodVis => IsFolder ? Visibility.Collapsed : Visibility.Visible;
-            public string MethodText => IsFolder ? "" : (Request.Method ?? "GET").ToUpperInvariant();
-            public Brush MethodBrush => IsFolder ? Brushes.Transparent : RestConsole.MethodBrush(Request.Method);
-            public Brush MethodBadgeBg => IsFolder ? Brushes.Transparent : RestConsole.MethodBadgeBg(Request.Method);
-
-            public string Name
-            {
-                get => IsFolder ? Folder.Name : Request.Name;
-                set { if (IsFolder) Folder.Name = value; else Request.Name = value; Raise(nameof(Name)); }
-            }
-
-            private bool _selected, _expanded;
-            public bool IsSelected { get => _selected; set { _selected = value; Raise(nameof(IsSelected)); } }
-            public bool IsExpanded { get => _expanded; set { _expanded = value; Raise(nameof(IsExpanded)); } }
-
-            public event PropertyChangedEventHandler PropertyChanged;
-            private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-        }
-
         private readonly ServerInfo _server;
         private RestCollection _coll;
         private RestRequest _req;
         private ObservableCollection<RestKeyValue> _params;
         private ObservableCollection<RestKeyValue> _headers;
         private ObservableCollection<RestKeyValue> _formFields;
-        private ObservableCollection<RestNode> _roots;
         private ObservableCollection<RestHistoryEntry> _history;
         private CancellationTokenSource _cts;
         private string _rawBody;
@@ -77,6 +43,10 @@ namespace RdpManager
 
         private static string L(string key) => LocalizationManager.S(key);
 
+        /// <summary>Utrwalona zmiana struktury/zawartości kolekcji (Put w rest.json) — moduł REST
+        /// w railu przebudowuje na tym swoje drzewo (jedyne drzewo kolekcji w aplikacji).</summary>
+        public event Action CollectionChanged;
+
         public RestConsole(ServerInfo server)
         {
             InitializeComponent();
@@ -84,12 +54,13 @@ namespace RdpManager
             _coll = RestStore.For(_server.Id);
             if (string.IsNullOrEmpty(_coll.BaseUrl)) _coll.BaseUrl = _server.Host ?? "";
             if (_coll.Requests.Count == 0)
+            {
                 _coll.Requests.Add(new RestRequest { Name = "Request 1", Url = _coll.BaseUrl });
+                RestStore.Put(_server.Id, _coll);   // moduł czyta z pliku — startowe żądanie ma być widoczne od razu
+            }
             LoadSecrets();
-            BuildTree();
             _req = _coll.Requests[0];
             LoadIntoUi(_req);
-            SelectNodeFor(_req);
             _envs = EnvironmentStore.Load();   // środowiska globalne (wspólne dla wszystkich kolekcji)
             BuildEnvCombo();
             // Środowiska mogły przybyć PO otwarciu konsoli (import Postmana, inna konsola) — odśwież listę
@@ -100,16 +71,7 @@ namespace RdpManager
             UrlBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) Send_Click(s, e); };
         }
 
-        // ---------- Historia ----------
-
-        private void History_Toggled(object sender, RoutedEventArgs e) => ShowHistory(HistoryToggle.IsChecked == true);
-
-        private void ShowHistory(bool on)
-        {
-            HistoryToggle.IsChecked = on;
-            CollTree.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
-            HistoryList.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        }
+        // ---------- Historia (zakładka odpowiedzi) ----------
 
         // Dwuklik wpisu historii → nowe żądanie w kolekcji z tą metodą i URL (bez nadpisywania bieżącego).
         private void History_Activate(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -118,11 +80,9 @@ namespace RdpManager
             CaptureCurrent();
             var req = new RestRequest { Name = UniqueName(HistName(h)), Method = h.Method, Url = h.Url };
             _coll.Requests.Add(req);
-            BuildTree();
             _req = req;
             LoadIntoUi(req);
-            ShowHistory(false);
-            SelectNodeFor(req);
+            PersistColl();   // nowe żądanie ma się pojawić w module (jedynym drzewie)
         }
 
         private void RecordHistory(RestResponse r, RestRequest used)
@@ -240,133 +200,90 @@ namespace RdpManager
             _envs = all;
         }
 
-        // ---------- Drzewo kolekcji ----------
+        // ---------- API struktury kolekcji (dla modułu REST w railu) ----------
+        // Moduł jest jedynym drzewem, ale operuje przez otwartą konsolę, żeby jej kopia _coll pozostała
+        // jedynym źródłem prawdy. Każda mutacja utrwala od razu (PersistColl → Put + CollectionChanged),
+        // bo moduł przebudowuje się z pliku rest.json.
 
-        private void BuildTree()
-        {
-            _roots = new ObservableCollection<RestNode>();
-            foreach (var f in _coll.Folders.Where(f => string.IsNullOrEmpty(f.ParentId)).OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
-                _roots.Add(BuildFolderNode(f));
-            foreach (var r in _coll.Requests.Where(r => string.IsNullOrEmpty(r.FolderId)).OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
-                _roots.Add(new RestNode { IsFolder = false, Request = r });
-            CollTree.ItemsSource = _roots;
-            if (CollCount != null) CollCount.Text = _coll.Requests.Count.ToString();
-        }
-
-        /// <summary>Zaznacza żądanie po Id (moduł REST w railu otwiera konkretne żądanie w tej konsoli).</summary>
+        /// <summary>Przełącza warsztat na żądanie o danym Id (klik w module). Edycję bieżącego zachowuje w pamięci.</summary>
         public void SelectRequestById(string id)
         {
             if (string.IsNullOrEmpty(id)) return;
             var req = _coll.Requests.FirstOrDefault(r => r.Id == id);
-            if (req == null) return;
+            if (req == null || req == _req) return;   // ponowny klik tego samego nie może cofnąć edycji z pól
+            CaptureCurrent();
             _req = req;
             LoadIntoUi(req);
-            SelectNodeFor(req);
         }
 
-        private RestNode BuildFolderNode(RestFolder f) => BuildFolderNode(f, new HashSet<string>());
-
-        // visited: broni przed zapętleniem po cyklicznym/zduplikowanym ParentId (np. ręcznie edytowany
-        // JSON albo relikt starego buga klonowania folderów) — A9 z przeglądu.
-        private RestNode BuildFolderNode(RestFolder f, HashSet<string> visited)
-        {
-            var node = new RestNode { IsFolder = true, Folder = f, IsExpanded = true };
-            if (!visited.Add(f.Id)) return node;
-            foreach (var sub in _coll.Folders.Where(x => x.ParentId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-                node.Children.Add(BuildFolderNode(sub, visited));
-            foreach (var r in _coll.Requests.Where(x => x.FolderId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-                node.Children.Add(new RestNode { IsFolder = false, Request = r });
-            return node;
-        }
-
-        private void Tree_SelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
-        {
-            if (_loading || !(e.NewValue is RestNode node) || node.IsFolder) return;
-            if (node.Request == _req) return;
-            CaptureCurrent();          // zachowaj edycję poprzedniego żądania (w pamięci)
-            _req = node.Request;
-            LoadIntoUi(_req);
-        }
-
-        private RestNode SelectedNode => CollTree.SelectedItem as RestNode;
-
-        // Folder-rodzic dla nowego elementu: wybrany folder, folder wybranego żądania, albo korzeń (null).
-        private RestFolder CurrentParentFolder()
-        {
-            var n = SelectedNode;
-            if (n == null) return null;
-            return n.IsFolder ? n.Folder : _coll.Folders.FirstOrDefault(f => f.Id == n.Request.FolderId);
-        }
-
-        private bool SelectNodeFor(RestRequest req) => SelectIn(_roots, req);
-
-        private bool SelectIn(ObservableCollection<RestNode> nodes, RestRequest req)
-        {
-            foreach (var n in nodes)
-            {
-                if (!n.IsFolder && n.Request == req) { n.IsSelected = true; return true; }
-                if (n.IsFolder && SelectIn(n.Children, req)) { n.IsExpanded = true; return true; }
-            }
-            return false;
-        }
-
-        // ---------- Dodawanie / zmiana nazwy / usuwanie ----------
-
-        private void AddRequest_Click(object sender, RoutedEventArgs e)
+        /// <summary>Nowe żądanie w folderze („" = korzeń kolekcji); warsztat przełącza się na nie.</summary>
+        public void NewRequest(string folderId)
         {
             CaptureCurrent();
-            var parent = CurrentParentFolder();
-            var req = new RestRequest
-            {
-                Name = UniqueName(L("S.rest.newreq")),
-                Url = _coll.BaseUrl,
-                FolderId = parent?.Id ?? ""
-            };
+            var req = new RestRequest { Name = UniqueName(L("S.rest.newreq")), Url = _coll.BaseUrl, FolderId = folderId ?? "" };
             _coll.Requests.Add(req);
-            BuildTree();
             _req = req;
             LoadIntoUi(req);
-            SelectNodeFor(req);
+            PersistColl();
         }
 
-        private void AddFolder_Click(object sender, RoutedEventArgs e)
+        /// <summary>Nowy folder pod rodzicem („" = korzeń kolekcji).</summary>
+        public void NewFolder(string parentId, string name)
         {
-            var dlg = new InputDialog(L("S.rest.newfolder"), L("S.rest.newfolder.label"), "") { Owner = Window.GetWindow(this) };
-            if (dlg.ShowDialog() != true || dlg.Value.Trim().Length == 0) return;
-            var parent = CurrentParentFolder();
-            _coll.Folders.Add(new RestFolder { Name = dlg.Value.Trim(), ParentId = parent?.Id ?? "" });
-            BuildTree();
-            if (_req != null) SelectNodeFor(_req);
+            if (string.IsNullOrWhiteSpace(name)) return;
+            _coll.Folders.Add(new RestFolder { Name = name.Trim(), ParentId = parentId ?? "" });
+            PersistColl();
         }
 
-        private void Rename_Click(object sender, RoutedEventArgs e)
+        public void RenameRequest(string id, string name)
         {
-            var node = SelectedNode;
-            if (node == null) return;
-            var dlg = new InputDialog(L("S.rest.rename"), L("S.rest.rename.label"), node.Name) { Owner = Window.GetWindow(this) };
-            if (dlg.ShowDialog() != true || dlg.Value.Trim().Length == 0) return;
-            node.Name = dlg.Value.Trim();
-            var keep = _req;
-            BuildTree();               // przebuduj (kolejność alfabetyczna)
-            if (keep != null) SelectNodeFor(keep);
+            var r = _coll.Requests.FirstOrDefault(x => x.Id == id);
+            if (r == null || string.IsNullOrWhiteSpace(name)) return;
+            r.Name = name.Trim();
+            if (r == _req) ReqTitle.Text = r.Name;
+            PersistColl();
         }
 
-        private void DeleteNode_Click(object sender, RoutedEventArgs e)
+        public void RenameFolder(string id, string name)
         {
-            var node = SelectedNode;
-            if (node == null) return;
-            if (MessageBox.Show(string.Format(L("S.rest.delete.confirm"), node.Name), L("S.rest.delete"),
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            var f = _coll.Folders.FirstOrDefault(x => x.Id == id);
+            if (f == null || string.IsNullOrWhiteSpace(name)) return;
+            f.Name = name.Trim();
+            PersistColl();
+        }
 
-            bool removedActive = node.IsFolder ? FolderContains(node.Folder, _req) : node.Request == _req;
-            if (node.IsFolder) DeleteFolder(node.Folder);
-            else DeleteRequest(node.Request);
+        public void DeleteRequestById(string id)
+        {
+            var r = _coll.Requests.FirstOrDefault(x => x.Id == id);
+            if (r == null) return;
+            bool removedActive = r == _req;
+            DeleteRequest(r);
+            EnsureNonEmptyAndReload(removedActive);
+        }
 
+        public void DeleteFolderById(string id)
+        {
+            var f = _coll.Folders.FirstOrDefault(x => x.Id == id);
+            if (f == null) return;
+            bool removedActive = FolderContains(f, _req);
+            DeleteFolder(f);
+            EnsureNonEmptyAndReload(removedActive);
+        }
+
+        // Kolekcja nigdy nie zostaje pusta (warsztat zawsze ma co edytować); po skasowaniu aktywnego
+        // żądania warsztat przeskakuje na pierwsze z pozostałych.
+        private void EnsureNonEmptyAndReload(bool removedActive)
+        {
             if (_coll.Requests.Count == 0)
                 _coll.Requests.Add(new RestRequest { Name = "Request 1", Url = _coll.BaseUrl });
-            BuildTree();
             if (removedActive) { _req = _coll.Requests[0]; LoadIntoUi(_req); }
-            SelectNodeFor(_req);
+            PersistColl();
+        }
+
+        private void PersistColl()
+        {
+            RestStore.Put(_server.Id, _coll);
+            CollectionChanged?.Invoke();
         }
 
         private bool FolderContains(RestFolder f, RestRequest req) => FolderContains(f, req, new HashSet<string>());
@@ -427,6 +344,7 @@ namespace RdpManager
         private void LoadIntoUi(RestRequest req)
         {
             _loading = true;
+            ReqTitle.Text = req.Name;   // bez drzewa w konsoli nagłówek mówi, KTÓRE żądanie jest edytowane
             SelectMethod(req.Method);
             UrlBox.Text = req.Url;
             _params = new ObservableCollection<RestKeyValue>(req.QueryParams);
@@ -479,7 +397,7 @@ namespace RdpManager
                 if (r.AuthType == 0 || string.IsNullOrEmpty(r.AuthSecret)) CredentialStore.Delete(r.AuthCredTarget);
                 else CredentialStore.TrySave(r.AuthCredTarget, r.AuthUsername, r.AuthSecret);
             }
-            RestStore.Put(_server.Id, _coll);
+            PersistColl();   // zapis mógł zmienić metodę żądania → moduł odświeża badge
             SetStatus(L("S.rest.saved"));
         }
 
