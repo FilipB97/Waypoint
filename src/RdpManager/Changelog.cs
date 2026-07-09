@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace RdpManager
 {
@@ -111,16 +112,21 @@ namespace RdpManager
             return fallback;
         }
 
-        // Usuwa prefiksy konwencji commitów / etykiet / emoji oraz proste znaczniki markdown z tekstu punktu.
+        // Prefiks konwencji commitów: „typ", opcjonalny „(zakres)", opcjonalny „!", dwukropek. Tylko małe
+        // litery, żeby nie uciąć zwykłej prozy („Uwaga:", „TODO:"). Łapie feat:, fix(rest):, chore(ci)!: itd.
+        private static readonly Regex CommitPrefix = new Regex(@"^[a-z][a-z0-9]*(\([^)]*\))?!?:\s+", RegexOptions.Compiled);
+
+        // Usuwa prefiksy konwencji commitów / emoji oraz proste znaczniki markdown; pierwszą literę na wielką
+        // (tematy commitów są zwykle małą literą → czyta się jak wpis changeloga, nie jak commit).
         private static string Clean(string s)
         {
             s = s.Trim();
             // wiodące emoji / symbole
             while (s.Length > 0 && !char.IsLetterOrDigit(s[0]) && s[0] != '„' && s[0] != '"') s = s.Substring(1).TrimStart();
-            foreach (var pre in new[] { "feat:", "fix:", "chore:", "refactor:", "docs:", "nowe:", "zmiana:", "zmiany:", "poprawka:", "poprawki:", "added:", "changed:", "fixed:", "new:" })
-                if (s.StartsWith(pre, System.StringComparison.OrdinalIgnoreCase)) { s = s.Substring(pre.Length).Trim(); break; }
-            s = s.Replace("**", "").Replace("`", "");
-            return s.Trim();
+            s = CommitPrefix.Replace(s, "");
+            s = s.Replace("**", "").Replace("`", "").Trim();
+            if (s.Length > 0 && char.IsLower(s[0])) s = char.ToUpper(s[0]) + s.Substring(1);
+            return s;
         }
     }
 }

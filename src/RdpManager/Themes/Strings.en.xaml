@@ -124,6 +124,8 @@
     <sys:String x:Key="S.update.willrestart">Open connections will close; Waypoint will restart and offer to restore your session.</sys:String>
     <sys:String x:Key="S.update.downloading">Downloading… {0}%</sys:String>
     <sys:String x:Key="S.update.faildl">Failed to download the update.</sys:String>
+    <sys:String x:Key="S.update.retrying">Retrying… ({0}/{1})</sys:String>
+    <sys:String x:Key="S.update.openbrowserq">Open the download page in your browser?</sys:String>
     <sys:String x:Key="S.update.badsig">The downloaded update is not validly signed by the publisher (it does not match the current version). Installation was cancelled — download the new version manually from the releases page.</sys:String>
     <sys:String x:Key="S.set.traymin">Minimize to the system tray</sys:String>
     <sys:String x:Key="S.set.hotkey">Global quick-connect shortcut (Ctrl+Alt+Q)</sys:String>
