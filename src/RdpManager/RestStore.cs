@@ -63,6 +63,13 @@ namespace RdpManager
             Save(all);
         }
 
+        /// <summary>Usuwa kolekcję wpisu z rest.json (sprzątanie przy kasowaniu wpisu REST). Brak wpisu = no-op.</summary>
+        public static void Remove(string serverId)
+        {
+            var all = Load();
+            if (all.Remove(serverId)) Save(all);
+        }
+
         /// <summary>Głęboka kopia kolekcji ze świeżymi Id żądań I folderów (do duplikowania wpisu). Historia czyszczona.
         /// Foldery też dostają świeże Id, bo od (patrz auth dziedziczone) mają własny sekret w Credential Managerze
         /// pod celem liczonym z Id — bez tego duplikat współdzieliłby cel z oryginałem. Referencje ParentId/FolderId

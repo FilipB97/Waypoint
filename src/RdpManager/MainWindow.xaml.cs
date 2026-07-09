@@ -855,22 +855,41 @@ namespace RdpManager
             else RenderTree(SearchBox.Text);   // przywróć drzewo serwerów + chipy + hint
         }
 
+        // Rozwinięte węzły modułu (Id wpisu-kolekcji / Id folderu). Sesyjne; domyślnie wszystko ZWINIĘTE —
+        // przy wielu kolekcjach z dziesiątkami żądań lista pozostaje kompaktowa (feedback użytkownika).
+        private readonly HashSet<string> _restExpanded = new HashSet<string>();
+
+        private void ToggleRestNode(string id)
+        {
+            if (!_restExpanded.Remove(id)) _restExpanded.Add(id);
+            BuildRestModule();
+        }
+
         // Każdy wpis REST = kolekcja → foldery → żądania (dane z RestStore.For per serwer).
+        // Klik kolekcji/folderu = zwiń/rozwiń; klik żądania = otwórz; PPM na kolekcji = menu
+        // (Otwórz/Przypnij/Edytuj/Duplikuj/Kopiuj/Usuń — wariant REST z BuildServerContextMenu).
         private void BuildRestModule()
         {
             RestModuleTree.Children.Clear();
             var rest = _vm.Servers.Where(s => s.Protocol == RemoteProtocol.Rest)
-                                  .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                                  .OrderByDescending(s => s.Pinned)   // przypięte kolekcje na górze
+                                  .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
             int total = 0;
             foreach (var srv in rest)
             {
                 var s = srv;
                 var coll = RestStore.For(srv.Id);
-                RestModuleTree.Children.Add(RestModuleRow(RestCollHeaderContent(srv.Name), 0, () => OpenRestRequest(s, null)));
-                foreach (var f in coll.Folders.Where(x => string.IsNullOrEmpty(x.ParentId)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-                    AddRestFolder(s, coll, f, 1, new HashSet<string>());
-                foreach (var r in coll.Requests.Where(x => string.IsNullOrEmpty(x.FolderId)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-                { var rr = r; RestModuleTree.Children.Add(RestModuleRow(RestReqContent(rr), 1, () => OpenRestRequest(s, rr.Id))); }
+                bool open = _restExpanded.Contains(s.Id);
+                var row = RestModuleRow(RestCollHeaderContent(s, open), 0, () => ToggleRestNode(s.Id));
+                row.ContextMenu = BuildServerContextMenu(s);
+                RestModuleTree.Children.Add(row);
+                if (open)
+                {
+                    foreach (var f in coll.Folders.Where(x => string.IsNullOrEmpty(x.ParentId)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                        AddRestFolder(s, coll, f, 1, new HashSet<string>());
+                    foreach (var r in coll.Requests.Where(x => string.IsNullOrEmpty(x.FolderId)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                    { var rr = r; RestModuleTree.Children.Add(RestModuleRow(RestReqContent(rr), 1, () => OpenRestRequest(s, rr.Id))); }
+                }
                 total += coll.Requests.Count;
             }
             RestModuleCount.Text = total.ToString();
@@ -882,7 +901,9 @@ namespace RdpManager
         private void AddRestFolder(ServerInfo srv, RestCollection coll, RestFolder f, int depth, HashSet<string> seen)
         {
             if (depth > 8 || !seen.Add(f.Id)) return;   // broń przed cyklem ParentId (A9)
-            RestModuleTree.Children.Add(RestModuleRow(RestFolderContent(f.Name), depth, null));
+            bool open = _restExpanded.Contains(f.Id);
+            RestModuleTree.Children.Add(RestModuleRow(RestFolderContent(f.Name, open), depth, () => ToggleRestNode(f.Id)));
+            if (!open) return;
             foreach (var sub in coll.Folders.Where(x => x.ParentId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
                 AddRestFolder(srv, coll, sub, depth + 1, seen);
             foreach (var r in coll.Requests.Where(x => x.FolderId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
@@ -909,17 +930,28 @@ namespace RdpManager
             return bd;
         }
 
-        private FrameworkElement RestCollHeaderContent(string name)
+        private FrameworkElement RestChevron(bool open) => new Wpf.Ui.Controls.SymbolIcon
+        {
+            Symbol = open ? Wpf.Ui.Controls.SymbolRegular.ChevronDown16 : Wpf.Ui.Controls.SymbolRegular.ChevronRight16,
+            FontSize = (double)TryFindResource("IconXs"), Foreground = Res("TextTer"),
+            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+        };
+
+        private FrameworkElement RestCollHeaderContent(ServerInfo srv, bool open)
         {
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(RestChevron(open));
             sp.Children.Add(new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Folder24, FontSize = (double)TryFindResource("IconSm"), Foreground = Res("Accent"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
-            sp.Children.Add(new TextBlock { Text = name, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+            sp.Children.Add(new TextBlock { Text = srv.Name, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+            if (srv.Pinned)
+                sp.Children.Add(new TextBlock { Text = "★", Foreground = Res("Idle"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) });
             return sp;
         }
 
-        private FrameworkElement RestFolderContent(string name)
+        private FrameworkElement RestFolderContent(string name, bool open)
         {
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(RestChevron(open));
             sp.Children.Add(new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Folder24, FontSize = (double)TryFindResource("IconXs"), Foreground = Res("TextTer"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
             sp.Children.Add(new TextBlock { Text = name, Foreground = Res("TextTer"), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
             return sp;
@@ -944,6 +976,19 @@ namespace RdpManager
         {
             LaunchServer(srv, autoConnect: true);
             _sessions.Find(x => x.Server == srv)?.Rest?.SelectRequestById(reqId);
+        }
+
+        // „+" w nagłówku modułu: nowa kolekcja REST (wpisy REST nie żyją na liście serwerów,
+        // więc moduł potrzebuje własnego wejścia do tworzenia).
+        private void AddRestCollection_Click(object sender, RoutedEventArgs e)
+        {
+            var server = new ServerInfo { Group = "HTTP", Status = ServerStatus.Offline, Protocol = RemoteProtocol.Rest };
+            var dlg = new ServerEditWindow(server, "", _credProfiles) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+            _vm.Add(server);
+            PersistServers();
+            SaveCredential(server, dlg.EnteredPassword);
+            BuildRestModule();
         }
 
         private PasswordGeneratorWindow _genWindow;
@@ -1839,18 +1884,21 @@ namespace RdpManager
 
             var stats = LoadConnectionStats(14);
             int open = _sessions.Count + _sessionWindows.Count;
-            int online = _vm.OnlineCount;
-            int idle = _vm.Servers.Count(s => s.Status == ServerStatus.Idle);
-            int offline = _vm.Servers.Count(s => s.Status == ServerStatus.Offline);
-            int groups = _vm.Servers
+            // KPI „serwerowe" liczone BEZ wpisów REST: kolekcje nie są sondowane (zawsze „offline"),
+            // więc zawyżały segment offline pierścienia; REST ma własny moduł, a nie miejsce na liście.
+            var srvs = _vm.Servers.Where(s => s.Protocol != RemoteProtocol.Rest).ToList();
+            int online = srvs.Count(s => s.Status == ServerStatus.Online);
+            int idle = srvs.Count(s => s.Status == ServerStatus.Idle);
+            int offline = srvs.Count(s => s.Status == ServerStatus.Offline);
+            int groups = srvs
                 .Select(s => string.IsNullOrWhiteSpace(s.Group) ? L("S.group.serversdefault") : s.Group)
                 .Distinct(StringComparer.OrdinalIgnoreCase).Count();
-            var lats = _vm.Servers.Where(s => s.LatencyMs >= 0).Select(s => s.LatencyMs).ToList();
+            var lats = srvs.Where(s => s.LatencyMs >= 0).Select(s => s.LatencyMs).ToList();
             string avgLat = lats.Count > 0 ? ((int)Math.Round(lats.Average())).ToString() : "—";
 
             // KPI — dzielniki pionowe, bez ramek (Compass §4.8).
             var kpi = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 4, 0, 20) };
-            kpi.Children.Add(KpiCell(_vm.Total.ToString(), "", L("S.dash.servers"), Res("TextPrim"), false));
+            kpi.Children.Add(KpiCell(srvs.Count.ToString(), "", L("S.dash.servers"), Res("TextPrim"), false));
             kpi.Children.Add(KpiCell(online.ToString(), "", L("S.dash.online"), Res("Online"), false));
             kpi.Children.Add(KpiCell(open.ToString(), "", L("S.dash.sessions"), Res("TextPrim"), false));
             kpi.Children.Add(KpiCell(avgLat, avgLat == "—" ? "" : " ms", L("S.dash.avglatency"), Res("TextPrim"), false));
@@ -1870,7 +1918,7 @@ namespace RdpManager
                 Grid.SetColumn(card, col); Grid.SetRow(card, row); grid.Children.Add(card);
             }
             Place(ChartCard(L("S.dash.latency24h"), avgLat == "—" ? "" : "śr. " + avgLat + " ms", MakeLatencyChart()), 0, 0);
-            Place(ChartCard(L("S.dash.availability"), online + "/" + _vm.Total, MakeAvailabilityChart(online, idle, offline)), 1, 0);
+            Place(ChartCard(L("S.dash.availability"), online + "/" + srvs.Count, MakeAvailabilityChart(online, idle, offline)), 1, 0);
             Place(ChartCard(L("S.dash.connweek"), stats.PerWeekday.Sum().ToString(), MakeWeekdayChart(stats.PerWeekday)), 0, 1);
             Place(ChartCard(L("S.dash.protocols"), _vm.Total.ToString(), MakeProtocolBar()), 1, 1);
             DashboardPanel.Children.Add(grid);
@@ -2219,7 +2267,9 @@ namespace RdpManager
         private void BuildProtocolFilter()
         {
             ProtoFilterBar.Children.Clear();
-            var protos = _vm.Servers.Select(s => s.Protocol).Distinct().OrderBy(p => (int)p).ToList();
+            // Bez REST — kolekcje mają własny moduł w railu, chip byłby martwy (lista ich nie pokazuje).
+            var protos = _vm.Servers.Select(s => s.Protocol).Where(p => p != RemoteProtocol.Rest)
+                                    .Distinct().OrderBy(p => (int)p).ToList();
 
             // Filtr wskazujący nieobecny już protokół (usunięto ostatni taki serwer) → reset do „Wszystkie".
             if (_protocolFilter.HasValue && !protos.Contains(_protocolFilter.Value)) _protocolFilter = null;
@@ -2317,7 +2367,9 @@ namespace RdpManager
             System.Windows.Input.KeyboardNavigation.SetTabNavigation(ServerTree, System.Windows.Input.KeyboardNavigationMode.Continue);
 
             // Sekcja „Przypięte" na górze — ulubione serwery (kolejność z listy), niezależnie od grupy.
-            var pinned = _vm.Servers.Where(s => s.Pinned && RdpUtils.MatchesFilter(s, filter) && RdpUtils.MatchesProtocol(s, _protocolFilter)).ToList();
+            // Wpisy REST NIE żyją na liście serwerów — mają własny moduł w railu (przypięcie sortuje je TAM).
+            var pinned = _vm.Servers.Where(s => s.Pinned && s.Protocol != RemoteProtocol.Rest
+                && RdpUtils.MatchesFilter(s, filter) && RdpUtils.MatchesProtocol(s, _protocolFilter)).ToList();
             if (pinned.Count > 0)
             {
                 bool pinCollapsed = _settings.CollapsedGroups.Contains(PinnedGroupKey);
@@ -2331,6 +2383,7 @@ namespace RdpManager
             var byGroup = new Dictionary<string, List<ServerInfo>>();
             foreach (var s in _vm.Servers)
             {
+                if (s.Protocol == RemoteProtocol.Rest) continue;   // kolekcje REST → moduł w railu, nie lista
                 if (s.Pinned) continue;
                 if (!RdpUtils.MatchesFilter(s, filter)) continue;
                 if (!RdpUtils.MatchesProtocol(s, _protocolFilter)) continue;
@@ -2459,6 +2512,7 @@ namespace RdpManager
             server.Pinned = !server.Pinned;
             PersistServers();
             RenderTree(SearchBox.Text);
+            if (_restMode) BuildRestModule();   // przypięcie sortuje kolekcje w module
         }
 
         private bool IsMinimalList => _settings != null && _settings.ListStyle == "Minimal";
@@ -2827,6 +2881,14 @@ namespace RdpManager
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
+            // Moduł REST: klik wiersza kolekcji zwija/rozwija, więc otwarcie konsoli ma jawny wpis w menu.
+            if (rest)
+            {
+                var openItem = new MenuItem { Header = L("S.m.opencoll") };
+                openItem.Click += (s, e) => LaunchServer(server, true);
+                menu.Items.Add(openItem);
+                menu.Items.Add(new Separator());
+            }
             menu.Items.Add(pinItem);
             menu.Items.Add(new Separator());
             if (rdp) menu.Items.Add(newWinItem);       // osobne okno sesji jest RDP-owe
@@ -4882,7 +4944,9 @@ namespace RdpManager
                     s.Connected ? ServerStatus.Online : ServerStatus.Offline, s == _active, go), go);
             }
 
-            foreach (var server in RankServers(_vm.Servers, x => x, f))
+            // Bez wpisów REST — kolekcje żyją w module REST, nie na liście serwerów (otwarte konsole
+            // dalej są w sekcji sesji powyżej).
+            foreach (var server in RankServers(_vm.Servers.Where(x => x.Protocol != RemoteProtocol.Rest), x => x, f))
             {
                 var srv = server;
                 Action go = () => { QuickSwitchPopup.IsOpen = false; LaunchServer(srv, true); };
@@ -5250,6 +5314,9 @@ namespace RdpManager
                 SaveCredential(server, dlg.EnteredPassword);
                 RenderTree(SearchBox.Text);
                 CheckReachabilityAsync();
+                // Wpis REST nie pokazuje się na liście serwerów — przełącz na moduł REST, żeby było
+                // widać, gdzie trafił (inaczej „dodałem i zniknęło").
+                if (server.Protocol == RemoteProtocol.Rest) SetRestMode(true);
             }
         }
 
@@ -5629,6 +5696,7 @@ namespace RdpManager
             PersistServers();
             SaveCredential(copy, dlg.EnteredPassword);
             RenderTree(SearchBox.Text);
+            if (_restMode) BuildRestModule();   // duplikat kolekcji ma się pojawić w module
             CheckReachabilityAsync();
         }
 
@@ -5659,6 +5727,7 @@ namespace RdpManager
                 PersistServers();
                 SaveCredential(server, dlg.EnteredPassword);
                 RenderTree(SearchBox.Text);
+                if (_restMode) BuildRestModule();   // nazwa kolekcji mogła się zmienić
                 CheckReachabilityAsync();
 
                 // odśwież otwarte sesje tego serwera (etykiety zakładek + pasek aktywnej)
@@ -5683,9 +5752,23 @@ namespace RdpManager
 
             _vm.Remove(server);
             CredentialStore.Delete(server.CredTarget);
+            CleanupRestData(server);   // wpis REST: kolekcja w rest.json + sekrety auth (inaczej sieroty)
             PersistServers();
             RenderTree(SearchBox.Text);
+            if (_restMode) BuildRestModule();
             CheckReachabilityAsync();
+        }
+
+        // Usuwany wpis REST zostawiał sieroty: kolekcję w rest.json i sekrety auth żądań/folderów/kolekcji
+        // w Credential Managerze (DeleteServer czyścił tylko CredTarget serwera). Sprzątamy komplet.
+        private void CleanupRestData(ServerInfo server)
+        {
+            if (server.Protocol != RemoteProtocol.Rest) return;
+            var coll = RestStore.For(server.Id);
+            foreach (var r in coll.Requests) CredentialStore.Delete(r.AuthCredTarget);
+            foreach (var f in coll.Folders) CredentialStore.Delete(f.AuthCredTarget);
+            CredentialStore.Delete("RdpManager:restcoll:" + server.Id);
+            RestStore.Remove(server.Id);
         }
 
         // Menu zbiorcze dla zaznaczonych serwerów (Ctrl/Shift+klik): przenieś N do grupy / usuń N.
@@ -5753,6 +5836,7 @@ namespace RdpManager
                     CloseSession(open);
                 _vm.Remove(server);
                 CredentialStore.Delete(server.CredTarget);
+                CleanupRestData(server);
             }
             PersistServers();
             RenderTree(SearchBox.Text);

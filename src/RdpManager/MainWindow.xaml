@@ -286,11 +286,20 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <Grid Grid.Row="0" Margin="14,14,14,8">
+                        <Grid Grid.Row="0" Margin="14,14,10,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
                             <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextTer}"
                                        FontWeight="Bold" FontSize="{StaticResource FontCaption}" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="RestModuleCount" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            <TextBlock x:Name="RestModuleCount" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0"
                                        Foreground="{DynamicResource TextTer}" FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontCaption}"/>
+                            <Button Grid.Column="2" ToolTip="{DynamicResource S.rest.module.add}" AutomationProperties.Name="{DynamicResource S.rest.module.add}"
+                                    Click="AddRestCollection_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4,2">
+                                <ui:SymbolIcon Symbol="Add20" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource TextSec}"/>
+                            </Button>
                         </Grid>
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8,0">
                             <StackPanel x:Name="RestModuleTree"/>

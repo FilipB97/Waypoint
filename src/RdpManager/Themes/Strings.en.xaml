@@ -9,7 +9,8 @@
     <sys:String x:Key="S.nav.settings">Settings</sys:String>
     <sys:String x:Key="S.nav.tools">Password generator</sys:String>
     <sys:String x:Key="S.nav.rest">REST collections</sys:String>
-    <sys:String x:Key="S.rest.module.empty">No REST collections. Add a REST server to see its requests here.</sys:String>
+    <sys:String x:Key="S.rest.module.empty">No REST collections. Add one with the + button above or import from Postman.</sys:String>
+    <sys:String x:Key="S.rest.module.add">New REST collection</sys:String>
 
     <!-- secret generator -->
     <sys:String x:Key="S.gen.title">Password generator</sys:String>
@@ -324,6 +325,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.m.wol">Wake up (Wake-on-LAN)</sys:String>
     <sys:String x:Key="S.m.dupserver">Duplicate server…</sys:String>
     <sys:String x:Key="S.m.dupcollection">Duplicate collection…</sys:String>
+    <sys:String x:Key="S.m.opencoll">Open collection</sys:String>
     <sys:String x:Key="S.m.copy">Copy</sys:String>
     <sys:String x:Key="S.m.copy.name">Name</sys:String>
     <sys:String x:Key="S.m.copy.host">Host / address</sys:String>
