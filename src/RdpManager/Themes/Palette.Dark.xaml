@@ -1,12 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Ciemna paleta Waypoint — kierunek „Compass": chłodna czerń, prawie płaskie powierzchnie,
-         cienkie linie (hairline) zamiast cieni, jeden akcent. Przełączana w runtime (ThemeManager)
-         razem z motywem WPF-UI. Powierzchnie są celowo subtelne — kształt definiuje Border, nie wypełnienie. -->
-    <SolidColorBrush x:Key="Panel"      Color="#08FFFFFF"/>
-    <SolidColorBrush x:Key="RailBg"     Color="#B3121319"/>
-    <SolidColorBrush x:Key="Elevated"   Color="#0AFFFFFF"/>
-    <SolidColorBrush x:Key="Border"     Color="#12FFFFFF"/>
+    <!-- Ciemna paleta Waypoint — kierunek „Compass" (chłodna czerń, hairline, jeden akcent), ale z
+         WIDOCZNYMI powierzchniami/obramowaniami (bliżej wyglądu sprzed mockupu — panele czytelne jako
+         karty, nie tylko cienka linia). Przełączana w runtime (ThemeManager) razem z motywem WPF-UI. -->
+    <SolidColorBrush x:Key="Panel"      Color="#1AFFFFFF"/>
+    <SolidColorBrush x:Key="RailBg"     Color="#CC161820"/>
+    <SolidColorBrush x:Key="Elevated"   Color="#22FFFFFF"/>
+    <SolidColorBrush x:Key="Border"     Color="#22FFFFFF"/>
     <SolidColorBrush x:Key="TextPrim"   Color="#E7E8EE"/>
     <SolidColorBrush x:Key="TextSec"    Color="#8A8C97"/>
     <SolidColorBrush x:Key="TextTer"    Color="#5A5C66"/>
@@ -53,12 +53,12 @@
     <LinearGradientBrush x:Key="LogoBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#3A6BE8" Offset="0"/><GradientStop Color="#2657D6" Offset="1"/>
     </LinearGradientBrush>
-    <!-- Tło (Compass §2): chłodna czerń #0C0D11, prawie płaska — ledwie wyczuwalny gradient dla głębi. -->
+    <!-- Tło: chłodna czerń z lekkim uniesieniem i gradientem (bliżej wyglądu sprzed mockupu — mniej płasko). -->
     <LinearGradientBrush x:Key="CanvasBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#0B0C10" Offset="0"/><GradientStop Color="#0E0F15" Offset="1"/>
+        <GradientStop Color="#0F1014" Offset="0"/><GradientStop Color="#181A22" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="Canvas" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#0B0C10" Offset="0"/><GradientStop Color="#0E0F15" Offset="1"/>
+        <GradientStop Color="#0F1014" Offset="0"/><GradientStop Color="#181A22" Offset="1"/>
     </LinearGradientBrush>
 
     <!-- Nakładki (pasek pełnoekranowy / flyout / hover raila) — zależne od motywu. -->
