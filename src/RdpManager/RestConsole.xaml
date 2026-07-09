@@ -104,182 +104,13 @@
         </Style>
     </UserControl.Resources>
 
-    <!-- Baza = CanvasBrush jak reszta widoków (pulpit/ustawienia/sesje); panele wyróżnia hairline, nie tło. -->
+    <!-- Baza = CanvasBrush jak reszta widoków (pulpit/ustawienia/sesje); panele wyróżnia hairline, nie tło.
+         Drzewo kolekcji żyje WYŁĄCZNIE w module REST w railu (jedno drzewo, nie dwa) — konsola to sam
+         warsztat żądania; nawigację i strukturę (foldery/nazwy/usuwanie) obsługuje moduł. -->
     <Border Background="{DynamicResource CanvasBrush}">
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" MinWidth="150"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Lewy panel: drzewo kolekcji (foldery + żądania) -->
-            <Border Grid.Column="0" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">
-                <Grid Margin="8,10,8,8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <!-- Nagłówek w DWÓCH wierszach: tytuł nad paskiem ikon. Wcześniej tytuł i pasek ikon
-                         dzieliły jedną komórkę Grid i nakładały się przy wąskim panelu (150-240px). -->
-                    <StackPanel Grid.Row="0" Margin="2,0,0,6">
-                        <Grid Margin="0,0,4,4">
-                            <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextTer}"
-                                       FontWeight="Bold" FontSize="{StaticResource FontCaption}" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="CollCount" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextTer}" FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontCaption}"/>
-                        </Grid>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                            <ToggleButton x:Name="HistoryToggle" ToolTip="{DynamicResource S.rest.hist}" AutomationProperties.Name="{DynamicResource S.rest.hist}" Click="History_Toggled"
-                                          Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6,0" Height="28">
-                                <ui:SymbolIcon Symbol="History24" FontSize="{StaticResource IconMd}"/>
-                            </ToggleButton>
-                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.authmgr.open}" AutomationProperties.Name="{DynamicResource S.rest.authmgr.open}" Click="CollectionAuth_Click">
-                                <ui:SymbolIcon Symbol="Key24" FontSize="{StaticResource IconMd}"/>
-                            </Button>
-                            <Border Width="1" Margin="3,5" Background="{DynamicResource Border}"/>
-                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.newreq}" AutomationProperties.Name="{DynamicResource S.rest.newreq}" Click="AddRequest_Click">
-                                <ui:SymbolIcon Symbol="DocumentAdd24" FontSize="{StaticResource IconMd}"/>
-                            </Button>
-                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.newfolder}" AutomationProperties.Name="{DynamicResource S.rest.newfolder}" Click="AddFolder_Click">
-                                <ui:SymbolIcon Symbol="FolderAdd24" FontSize="{StaticResource IconMd}"/>
-                            </Button>
-                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.rename}" AutomationProperties.Name="{DynamicResource S.rest.rename}" Click="Rename_Click">
-                                <ui:SymbolIcon Symbol="Rename24" FontSize="{StaticResource IconMd}"/>
-                            </Button>
-                            <Button Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.delete}" AutomationProperties.Name="{DynamicResource S.rest.delete}" Click="DeleteNode_Click">
-                                <ui:SymbolIcon Symbol="Delete24" FontSize="{StaticResource IconMd}"/>
-                            </Button>
-                        </StackPanel>
-                    </StackPanel>
-                    <Grid Grid.Row="1">
-                    <TreeView x:Name="CollTree" BorderThickness="0" Background="Transparent"
-                              SelectedItemChanged="Tree_SelectionChanged">
-                        <TreeView.ItemContainerStyle>
-                            <Style TargetType="TreeViewItem">
-                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="TreeViewItem">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-                                                <Border x:Name="HeaderHost" Grid.Row="0" Cursor="Hand">
-                                                    <Grid>
-                                                        <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
-                                                        <Grid Margin="0,1">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="16"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <ToggleButton x:Name="Expander" Grid.Column="0" Focusable="False" ClickMode="Press"
-                                                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}">
-                                                                <ToggleButton.Template>
-                                                                    <ControlTemplate TargetType="ToggleButton">
-                                                                        <Border Background="Transparent" Width="16" Height="26">
-                                                                            <ui:SymbolIcon x:Name="Chev" Symbol="ChevronRight16" FontSize="{StaticResource IconXs}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
-                                                                        </Border>
-                                                                        <ControlTemplate.Triggers>
-                                                                            <Trigger Property="IsChecked" Value="True">
-                                                                                <Setter TargetName="Chev" Property="Symbol" Value="ChevronDown16"/>
-                                                                            </Trigger>
-                                                                        </ControlTemplate.Triggers>
-                                                                    </ControlTemplate>
-                                                                </ToggleButton.Template>
-                                                            </ToggleButton>
-                                                            <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" Margin="2,4,4,4"/>
-                                                        </Grid>
-                                                    </Grid>
-                                                </Border>
-                                                <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="12,0,0,0"/>
-                                            </Grid>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsExpanded" Value="False">
-                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
-                                                </Trigger>
-                                                <Trigger Property="HasItems" Value="False">
-                                                    <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
-                                                </Trigger>
-                                                <Trigger SourceName="HeaderHost" Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Opacity" Value="0.08"/>
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="Bd" Property="Opacity" Value="0.16"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </TreeView.ItemContainerStyle>
-                        <TreeView.ItemTemplate>
-                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                <StackPanel Orientation="Horizontal" Height="24">
-                                    <ui:SymbolIcon Symbol="{Binding Icon}" Visibility="{Binding FolderIconVis}" FontSize="{StaticResource IconMd}"
-                                                   Foreground="{Binding IconBrush}" VerticalAlignment="Center"/>
-                                    <Border Visibility="{Binding MethodVis}" Background="{Binding MethodBadgeBg}" CornerRadius="5"
-                                            Padding="5,1" MinWidth="38" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding MethodText}" Foreground="{Binding MethodBrush}" FontFamily="{DynamicResource Mono}"
-                                                   FontWeight="Bold" FontSize="9" TextAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock Text="{Binding Name}" Margin="8,0,0,0" VerticalAlignment="Center"
-                                               Foreground="{DynamicResource TextPrim}" TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                            </HierarchicalDataTemplate>
-                        </TreeView.ItemTemplate>
-                    </TreeView>
-
-                    <!-- Historia wysłanych żądań (przełącznik w nagłówku) -->
-                    <ListBox x:Name="HistoryList" Visibility="Collapsed" BorderThickness="0" Background="Transparent"
-                             MouseDoubleClick="History_Activate"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="2,3">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Method}" FontWeight="SemiBold" Width="52"
-                                                   Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}"/>
-                                        <TextBlock Text="{Binding Url}" Foreground="{DynamicResource TextPrim}"
-                                                   TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontBody}"/>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}" Margin="0,1,0,0"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    </Grid>
-
-                    <!-- Wybór aktywnego środowiska (zmienne {{...}}) -->
-                    <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,6,0,0">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{DynamicResource S.rest.env.label}" Foreground="{DynamicResource TextTer}"
-                                       VerticalAlignment="Center" FontSize="{StaticResource FontBody}" Margin="2,0,6,0"/>
-                            <ComboBox Grid.Column="1" x:Name="EnvCombo" SelectionChanged="EnvCombo_Changed" VerticalContentAlignment="Center"/>
-                            <Button Grid.Column="2" Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.env.manage}"
-                                    AutomationProperties.Name="{DynamicResource S.rest.env.manage}" Click="ManageEnv_Click" Margin="4,0,0,0">
-                                <ui:SymbolIcon Symbol="Settings24" FontSize="{StaticResource IconMd}"/>
-                            </Button>
-                        </Grid>
-                    </Border>
-                </Grid>
-            </Border>
-
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
-                          Background="Transparent" ResizeBehavior="PreviousAndNext"/>
-
-            <!-- Prawy panel: budowniczy żądania + odpowiedź -->
-            <Grid Grid.Column="2" Margin="12,10,12,10">
-                <Grid.RowDefinitions>
+        <Grid Margin="12,10,12,10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>   <!-- nagłówek: nazwa żądania + auth kolekcji + środowisko -->
                 <RowDefinition Height="Auto"/>   <!-- pasek: metoda + URL + Wyślij/Zapisz -->
                 <RowDefinition Height="1.1*" MinHeight="150"/>   <!-- żądanie: zakładki -->
                 <RowDefinition Height="Auto"/>   <!-- splitter -->
@@ -287,8 +118,37 @@
                 <RowDefinition Height="Auto"/>   <!-- status -->
             </Grid.RowDefinitions>
 
+            <!-- Nagłówek warsztatu: bez drzewa w konsoli trzeba pokazać, KTÓRE żądanie jest edytowane;
+                 obok auth całej kolekcji i wybór aktywnego środowiska ({{zmienne}}) — jak w Postmanie. -->
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="ReqTitle" Grid.Column="0" FontWeight="SemiBold" FontSize="{StaticResource FontBody}"
+                           Foreground="{DynamicResource TextPrim}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Margin="2,0,12,0"/>
+                <Button Grid.Column="1" Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.authmgr.open}"
+                        AutomationProperties.Name="{DynamicResource S.rest.authmgr.open}" Click="CollectionAuth_Click">
+                    <ui:SymbolIcon Symbol="Key24" FontSize="{StaticResource IconMd}"/>
+                </Button>
+                <Border Grid.Column="2" Width="1" Margin="6,5" Background="{DynamicResource Border}"/>
+                <TextBlock Grid.Column="3" Text="{DynamicResource S.rest.env.label}" Foreground="{DynamicResource TextTer}"
+                           VerticalAlignment="Center" FontSize="{StaticResource FontBody}" Margin="0,0,6,0"/>
+                <ComboBox Grid.Column="4" x:Name="EnvCombo" MinWidth="160" SelectionChanged="EnvCombo_Changed"
+                          VerticalContentAlignment="Center"/>
+                <Button Grid.Column="5" Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.env.manage}"
+                        AutomationProperties.Name="{DynamicResource S.rest.env.manage}" Click="ManageEnv_Click" Margin="4,0,0,0">
+                    <ui:SymbolIcon Symbol="Settings24" FontSize="{StaticResource IconMd}"/>
+                </Button>
+            </Grid>
+
             <!-- Pasek żądania -->
-            <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid Grid.Row="1" Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -319,7 +179,7 @@
             </Grid>
 
             <!-- Zakładki żądania: Parametry / Nagłówki / Treść / Uwierzytelnianie -->
-            <TabControl Grid.Row="1" x:Name="RequestTabs" BorderThickness="0" Background="Transparent" Padding="0,8,0,0"
+            <TabControl Grid.Row="2" x:Name="RequestTabs" BorderThickness="0" Background="Transparent" Padding="0,8,0,0"
                         ItemContainerStyle="{StaticResource RestTab}">
                 <TabItem Header="{DynamicResource S.rest.tab.params}">
                     <Grid>
@@ -513,11 +373,11 @@
                 </TabItem>
             </TabControl>
 
-            <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+            <GridSplitter Grid.Row="3" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center"
                           Background="Transparent" ResizeBehavior="PreviousAndNext"/>
 
             <!-- Odpowiedź -->
-            <Grid Grid.Row="3">
+            <Grid Grid.Row="4">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -580,12 +440,32 @@
                                      FontFamily="Consolas" FontSize="{StaticResource FontBody}" Padding="8"/>
                         </Border>
                     </TabItem>
+                    <!-- Historia wysłanych żądań — była w lewym panelu (usuniętym z konsolą jednodrzewową),
+                         teraz zakładka odpowiedzi. Dwuklik wpisu = nowe żądanie z tą metodą i URL. -->
+                    <TabItem Header="{DynamicResource S.rest.resp.hist}" ToolTip="{DynamicResource S.rest.hist}">
+                        <ListBox x:Name="HistoryList" BorderThickness="0" Background="Transparent" Margin="0,6,0,0"
+                                 MouseDoubleClick="History_Activate"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="2,3">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Method}" FontWeight="SemiBold" Width="52"
+                                                       Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}"/>
+                                            <TextBlock Text="{Binding Url}" Foreground="{DynamicResource TextPrim}"
+                                                       TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontBody}"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </TabItem>
                 </TabControl>
             </Grid>
 
-            <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}"
+            <TextBlock x:Name="StatusText" Grid.Row="5" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}"
                        Margin="2,6,2,0" TextTrimming="CharacterEllipsis"/>
-            </Grid>
         </Grid>
     </Border>
 </UserControl>

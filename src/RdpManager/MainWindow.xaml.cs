@@ -877,8 +877,10 @@ namespace RdpManager
         }
 
         // Każdy wpis REST = kolekcja → foldery → żądania (dane z RestStore.For per serwer).
-        // Klik kolekcji/folderu = zwiń/rozwiń; klik żądania = otwórz; PPM na kolekcji = menu
-        // (Otwórz/Przypnij/Edytuj/Duplikuj/Kopiuj/Usuń — wariant REST z BuildServerContextMenu).
+        // Klik kolekcji/folderu = zwiń/rozwiń; klik żądania = otwórz. To JEDYNE drzewo kolekcji
+        // (konsola nie ma już swojego panelu) — więc PPM obsługuje pełną strukturę: na kolekcji
+        // wariant REST z BuildServerContextMenu (+ nowe żądanie/folder), na folderze i żądaniu
+        // menu z BuildRestFolderMenu/BuildRestReqMenu (nowe/zmień nazwę/usuń).
         private void BuildRestModule()
         {
             RestModuleTree.Children.Clear();
@@ -899,7 +901,12 @@ namespace RdpManager
                     foreach (var f in coll.Folders.Where(x => string.IsNullOrEmpty(x.ParentId)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
                         AddRestFolder(s, coll, f, 1, new HashSet<string>());
                     foreach (var r in coll.Requests.Where(x => string.IsNullOrEmpty(x.FolderId)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-                    { var rr = r; RestModuleTree.Children.Add(RestModuleRow(RestReqContent(rr), 1, () => OpenRestRequest(s, rr.Id))); }
+                    {
+                        var rr = r;
+                        var reqRow = RestModuleRow(RestReqContent(rr), 1, () => OpenRestRequest(s, rr.Id));
+                        reqRow.ContextMenu = BuildRestReqMenu(s, rr);
+                        RestModuleTree.Children.Add(reqRow);
+                    }
                 }
                 total += coll.Requests.Count;
             }
@@ -913,12 +920,91 @@ namespace RdpManager
         {
             if (depth > 8 || !seen.Add(f.Id)) return;   // broń przed cyklem ParentId (A9)
             bool open = _restExpanded.Contains(f.Id);
-            RestModuleTree.Children.Add(RestModuleRow(RestFolderContent(f.Name, open), depth, () => ToggleRestNode(f.Id)));
+            var frow = RestModuleRow(RestFolderContent(f.Name, open), depth, () => ToggleRestNode(f.Id));
+            frow.ContextMenu = BuildRestFolderMenu(srv, f);
+            RestModuleTree.Children.Add(frow);
             if (!open) return;
             foreach (var sub in coll.Folders.Where(x => x.ParentId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
                 AddRestFolder(srv, coll, sub, depth + 1, seen);
             foreach (var r in coll.Requests.Where(x => x.FolderId == f.Id).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-            { var rr = r; RestModuleTree.Children.Add(RestModuleRow(RestReqContent(rr), depth + 1, () => OpenRestRequest(srv, rr.Id))); }
+            {
+                var rr = r;
+                var reqRow = RestModuleRow(RestReqContent(rr), depth + 1, () => OpenRestRequest(srv, rr.Id));
+                reqRow.ContextMenu = BuildRestReqMenu(srv, rr);
+                RestModuleTree.Children.Add(reqRow);
+            }
+        }
+
+        // ---------- Menu kontekstowe modułu REST (struktura kolekcji edytowana wyłącznie tutaj) ----------
+        // Operacje idą przez otwartą konsolę wpisu (EnsureRestConsole): jej kopia kolekcji to jedyne
+        // źródło prawdy, a każdą utrwaloną zmianę zgłasza CollectionChanged → przebudowa modułu.
+
+        private ContextMenu BuildRestFolderMenu(ServerInfo srv, RestFolder f)
+        {
+            var menu = new ContextMenu();
+            var newReq = new MenuItem { Header = L("S.rest.newreq") };
+            newReq.Click += (s, e) => AddRestRequestCmd(srv, f.Id);
+            var newFolder = new MenuItem { Header = L("S.rest.newfolder") };
+            newFolder.Click += (s, e) => AddRestFolderCmd(srv, f.Id);
+            var rename = new MenuItem { Header = L("S.rest.rename") };
+            rename.Click += (s, e) => RenameRestNodeCmd(f.Name, name => EnsureRestConsole(srv)?.RenameFolder(f.Id, name));
+            var del = new MenuItem { Header = L("S.rest.delete") };
+            del.Click += (s, e) => DeleteRestNodeCmd(f.Name, () => EnsureRestConsole(srv)?.DeleteFolderById(f.Id));
+            menu.Items.Add(newReq);
+            menu.Items.Add(newFolder);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(rename);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(del);
+            return menu;
+        }
+
+        private ContextMenu BuildRestReqMenu(ServerInfo srv, RestRequest r)
+        {
+            var menu = new ContextMenu();
+            var open = new MenuItem { Header = L("S.rest.openreq") };
+            open.Click += (s, e) => OpenRestRequest(srv, r.Id);
+            var rename = new MenuItem { Header = L("S.rest.rename") };
+            rename.Click += (s, e) => RenameRestNodeCmd(r.Name, name => EnsureRestConsole(srv)?.RenameRequest(r.Id, name));
+            var del = new MenuItem { Header = L("S.rest.delete") };
+            del.Click += (s, e) => DeleteRestNodeCmd(r.Name, () => EnsureRestConsole(srv)?.DeleteRequestById(r.Id));
+            menu.Items.Add(open);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(rename);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(del);
+            return menu;
+        }
+
+        // Rozwija węzły, w których pojawi się nowy element (rodzice są już rozwinięci — menu było na widocznym wierszu).
+        private void AddRestRequestCmd(ServerInfo srv, string folderId)
+        {
+            _restExpanded.Add(srv.Id);
+            if (!string.IsNullOrEmpty(folderId)) _restExpanded.Add(folderId);
+            EnsureRestConsole(srv)?.NewRequest(folderId);
+        }
+
+        private void AddRestFolderCmd(ServerInfo srv, string parentId)
+        {
+            var dlg = new InputDialog(L("S.rest.newfolder"), L("S.rest.newfolder.label"), "") { Owner = this };
+            if (dlg.ShowDialog() != true || dlg.Value.Trim().Length == 0) return;
+            _restExpanded.Add(srv.Id);
+            if (!string.IsNullOrEmpty(parentId)) _restExpanded.Add(parentId);
+            EnsureRestConsole(srv)?.NewFolder(parentId, dlg.Value.Trim());
+        }
+
+        private void RenameRestNodeCmd(string current, Action<string> apply)
+        {
+            var dlg = new InputDialog(L("S.rest.rename"), L("S.rest.rename.label"), current) { Owner = this };
+            if (dlg.ShowDialog() != true || dlg.Value.Trim().Length == 0) return;
+            apply(dlg.Value.Trim());
+        }
+
+        private void DeleteRestNodeCmd(string name, Action apply)
+        {
+            if (MessageBox.Show(string.Format(L("S.rest.delete.confirm"), name), L("S.rest.delete"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            apply();
         }
 
         // Wiersz modułu: wcięcie wg głębokości, hover, opcjonalny klik (folder = bez klika).
@@ -984,9 +1070,14 @@ namespace RdpManager
 
         // Otwiera (lub uaktywnia) konsolę REST danego wpisu i zaznacza żądanie po Id.
         private void OpenRestRequest(ServerInfo srv, string reqId)
+            => EnsureRestConsole(srv)?.SelectRequestById(reqId);
+
+        // Otwiera (lub uaktywnia) sesję-konsolę wpisu REST i ją zwraca — wspólna brama dla nawigacji
+        // i operacji na strukturze z modułu (mutuje zawsze konsola, nigdy moduł bezpośrednio).
+        private RestConsole EnsureRestConsole(ServerInfo srv)
         {
             LaunchServer(srv, autoConnect: true);
-            _sessions.Find(x => x.Server == srv)?.Rest?.SelectRequestById(reqId);
+            return _sessions.Find(x => x.Server == srv)?.Rest;
         }
 
         // „+" w nagłówku modułu: nowa kolekcja REST (wpisy REST nie żyją na liście serwerów,
@@ -2904,12 +2995,19 @@ namespace RdpManager
             exportItem.Click += (s, e) => ExportRdp(server);
             var delItem = new MenuItem { Header = L("S.m.delete") };
             delItem.Click += (s, e) => DeleteServer(server);
-            // Moduł REST: klik wiersza kolekcji zwija/rozwija, więc otwarcie konsoli ma jawny wpis w menu.
+            // Moduł REST: klik wiersza kolekcji zwija/rozwija, więc otwarcie konsoli ma jawny wpis w menu;
+            // do tego tworzenie żądań/folderów w korzeniu (foldery i żądania mają własne menu z pełną strukturą).
             if (rest)
             {
                 var openItem = new MenuItem { Header = L("S.m.opencoll") };
                 openItem.Click += (s, e) => LaunchServer(server, true);
                 menu.Items.Add(openItem);
+                var newReqItem = new MenuItem { Header = L("S.rest.newreq") };
+                newReqItem.Click += (s, e) => AddRestRequestCmd(server, "");
+                menu.Items.Add(newReqItem);
+                var newFolderItem = new MenuItem { Header = L("S.rest.newfolder") };
+                newFolderItem.Click += (s, e) => AddRestFolderCmd(server, "");
+                menu.Items.Add(newFolderItem);
                 menu.Items.Add(new Separator());
             }
             menu.Items.Add(pinItem);
@@ -3102,6 +3200,8 @@ namespace RdpManager
             {
                 // REST: konsola HTTP jako widok sesji. Narzędzie bez cyklu łączenia — gotowe od razu.
                 var console = new RestConsole(server);
+                // Konsola utrwaliła zmianę kolekcji (nazwa/metoda/struktura) → moduł w railu przebudowuje drzewo.
+                console.CollectionChanged += () => { if (_restMode) BuildRestModule(); };
                 SessionContainer.Children.Add(console);
                 session = new Session(server, console);
                 session.Connected = true;
