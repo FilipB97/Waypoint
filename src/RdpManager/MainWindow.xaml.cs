@@ -844,6 +844,49 @@ namespace RdpManager
             _settingsSaveTimer.Start();
         }
 
+        // Próbnik akcentu (Compass §4.7): „Domyślny" (per motyw) + kilka gotowych kolorów. Klik = zastosuj
+        // od razu (podgląd na żywo) i zapisz (debounce). Wybór nadpisuje rodzinę Accent* w ThemeManager.
+        private static readonly (string key, string hex)[] AccentOptions = new[]
+        {
+            ("S.accent.default", ""),
+            ("S.accent.violet",  "#7C6CFB"),
+            ("S.accent.green",   "#22B07D"),
+            ("S.accent.amber",   "#E0872E"),
+            ("S.accent.rose",    "#E8556B"),
+        };
+
+        private void BuildAccentSwatches()
+        {
+            AccentSwatches.Children.Clear();
+            string cur = _settings.AccentColor ?? "";
+            foreach (var (key, hex) in AccentOptions)
+            {
+                bool selected = string.Equals(cur, hex, StringComparison.OrdinalIgnoreCase);
+                var color = hex.Length == 0
+                    ? (ThemeManager.IsLight ? System.Windows.Media.Color.FromRgb(0x26, 0x57, 0xD6)
+                                            : System.Windows.Media.Color.FromRgb(0x4C, 0x86, 0xFF))
+                    : (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
+                var dot = new Border
+                {
+                    Width = 24, Height = 24, CornerRadius = new CornerRadius(12),
+                    Background = new SolidColorBrush(color),
+                    Margin = new Thickness(0, 0, 8, 0), Cursor = Cursors.Hand,
+                    BorderBrush = selected ? Res("TextPrim") : Res("Border"),
+                    BorderThickness = new Thickness(selected ? 2 : 1),
+                    ToolTip = L(key)
+                };
+                string h = hex;
+                dot.MouseLeftButtonUp += (s, e) =>
+                {
+                    _settings.AccentColor = h;
+                    ThemeManager.Apply(_settings.Theme, h);   // podgląd na żywo (nadpisuje Accent* + akcent WPF-UI)
+                    QueueSettingsSave();
+                    BuildAccentSwatches();                    // odśwież zaznaczenie (obwódka)
+                };
+                AccentSwatches.Children.Add(dot);
+            }
+        }
+
         private void Window_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
         {
             if ((Keyboard.Modifiers & ModifierKeys.Control) == 0 || _isFullscreen) return;
@@ -902,6 +945,7 @@ namespace RdpManager
             SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
             SetListStyle.SelectedIndex = _settings.ListStyle == "Minimal" ? 1 : 0;
             SetShowLatency.IsChecked = _settings.ShowLatency;
+            BuildAccentSwatches();
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
             SetColorDepth.SelectedIndex = _settings.ColorDepth == 16 ? 0 : _settings.ColorDepth == 24 ? 1 : 2;
             SetAutoReconnect.IsChecked = _settings.AutoReconnect;
@@ -1194,7 +1238,7 @@ namespace RdpManager
             // Cykliczne sprawdzanie aktualizacji wg tego samego przełącznika co start.
             if (_updateTimer != null) { if (_settings.CheckUpdates) _updateTimer.Start(); else _updateTimer.Stop(); }
 
-            ThemeManager.Apply(_settings.Theme);
+            ThemeManager.Apply(_settings.Theme, _settings.AccentColor);
             LocalizationManager.Apply(_settings.Language);
             BuildTrayMenu();   // etykiety menu zasobnika w nowym języku
             ApplyHotkey();
@@ -4342,7 +4386,7 @@ namespace RdpManager
         private void ToggleTheme()
         {
             _settings.Theme = _settings.Theme == "Light" ? "Dark" : "Light";
-            ThemeManager.Apply(_settings.Theme);
+            ThemeManager.Apply(_settings.Theme, _settings.AccentColor);
             RenderTree(SearchBox.Text);   // wiersze/karty zależą od motywu
             RebuildTabStrip();
             QueueSettingsSave();

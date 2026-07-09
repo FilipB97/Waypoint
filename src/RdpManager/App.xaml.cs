@@ -73,7 +73,7 @@ namespace RdpManager
                 LogCrash("AppDomain", args.ExceptionObject as Exception);
 
             // Zastosuj zapisany motyw, obwódkę i język ZANIM powstanie okno (bez mignięcia).
-            try { var s = SettingsStore.Load(); ThemeManager.Apply(s.Theme); WindowBorder.SetSpec(s.WindowBorderColor); LocalizationManager.Apply(s.Language); } catch { }
+            try { var s = SettingsStore.Load(); ThemeManager.Apply(s.Theme, s.AccentColor); WindowBorder.SetSpec(s.WindowBorderColor); LocalizationManager.Apply(s.Language); } catch { }
 
             // Nałóż wybraną obwódkę (z ustawień; domyślnie „brak") na KAŻDE okno FluentWindow — jednym
             // class-handlerem, zanim StartupUri utworzy MainWindow. Keep dobija ją po wyrenderowaniu i przy

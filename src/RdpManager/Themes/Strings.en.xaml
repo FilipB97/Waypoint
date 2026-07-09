@@ -55,6 +55,12 @@
     <sys:String x:Key="S.border.none">None</sys:String>
     <sys:String x:Key="S.border.cobalt">Cobalt</sys:String>
     <sys:String x:Key="S.border.system">System</sys:String>
+    <sys:String x:Key="S.set.accent">Accent color</sys:String>
+    <sys:String x:Key="S.accent.default">Default</sys:String>
+    <sys:String x:Key="S.accent.violet">Violet</sys:String>
+    <sys:String x:Key="S.accent.green">Green</sys:String>
+    <sys:String x:Key="S.accent.amber">Amber</sys:String>
+    <sys:String x:Key="S.accent.rose">Rose</sys:String>
     <sys:String x:Key="S.set.conn">Connection</sys:String>
     <sys:String x:Key="S.set.port">Default RDP port</sys:String>
     <sys:String x:Key="S.set.colordepth">Default color depth (bit)</sys:String>
