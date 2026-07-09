@@ -190,7 +190,20 @@ namespace RdpManager
                 msg.Headers.Authorization = new AuthenticationHeaderValue("Basic",
                     Convert.ToBase64String(Encoding.UTF8.GetBytes(Subst(req.AuthUsername ?? "", vars) + ":" + (secret ?? ""))));
 
+            AddDefaultHeaders(msg);
             return msg;
+        }
+
+        private static readonly string UserAgent =
+            "Waypoint/" + (typeof(RestClient).Assembly.GetName().Version?.ToString(3) ?? "1.0");
+
+        /// <summary>Dokłada nagłówki, które Postman dogenerowuje przy wysyłce (a więc nie ma ich w eksporcie,
+        /// stąd „brak standardowych nagłówków" po imporcie): Accept i User-Agent, gdy użytkownik ich nie ustawił.
+        /// Nie nadpisuje jawnych nagłówków. Publiczne dla testów.</summary>
+        public static void AddDefaultHeaders(HttpRequestMessage msg)
+        {
+            if (!msg.Headers.Contains("Accept")) msg.Headers.TryAddWithoutValidation("Accept", "*/*");
+            if (!msg.Headers.Contains("User-Agent")) msg.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
         }
 
         private static bool IsFormUrlEncoded(string contentType)

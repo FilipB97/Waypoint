@@ -4465,6 +4465,9 @@ namespace RdpManager
             int secrets = 0;
             foreach (var kv in res.Secrets)
                 if (!string.IsNullOrEmpty(kv.Value)) { CredentialStore.TrySave(kv.Key, "", kv.Value); secrets++; }
+            // Sekret auth CAŁEJ kolekcji — cel liczony z Id nowego wpisu (importer go nie znał).
+            if (!string.IsNullOrEmpty(res.CollectionSecret)
+                && CredentialStore.TrySave("RdpManager:restcoll:" + entry.Id, "", res.CollectionSecret)) secrets++;
 
             PersistServers();
             RenderTree(SearchBox.Text);
