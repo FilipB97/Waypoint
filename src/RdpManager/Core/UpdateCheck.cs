@@ -67,6 +67,42 @@ namespace RdpManager.Core
             catch { return null; }
         }
 
+        /// <summary>Jedno wydanie do historii zmian: wersja (tekst), data (ISO yyyy-MM-dd) i notatki (markdown).</summary>
+        public sealed class ReleaseNote
+        {
+            public string Version { get; set; }
+            public string Date { get; set; }
+            public string Notes { get; set; }
+        }
+
+        /// <summary>Parsuje odpowiedź GitHub `/releases` (tablica) do listy wydań (bez szkiców). Pusta lista gdy błąd.</summary>
+        public static System.Collections.Generic.List<ReleaseNote> ParseReleaseList(string json)
+        {
+            var list = new System.Collections.Generic.List<ReleaseNote>();
+            try
+            {
+                using (var doc = JsonDocument.Parse(json))
+                {
+                    if (doc.RootElement.ValueKind != JsonValueKind.Array) return list;
+                    foreach (var r in doc.RootElement.EnumerateArray())
+                    {
+                        if (r.TryGetProperty("draft", out var d) && d.ValueKind == JsonValueKind.True) continue;
+                        string tag = r.TryGetProperty("tag_name", out var t) ? t.GetString() : null;
+                        if (string.IsNullOrWhiteSpace(tag)) continue;
+                        string date = r.TryGetProperty("published_at", out var p) ? p.GetString() : null;
+                        list.Add(new ReleaseNote
+                        {
+                            Version = tag.Trim().TrimStart('v', 'V'),
+                            Date = !string.IsNullOrEmpty(date) && date.Length >= 10 ? date.Substring(0, 10) : date,
+                            Notes = r.TryGetProperty("body", out var b) ? b.GetString() : null
+                        });
+                    }
+                }
+            }
+            catch { /* zły JSON → pusta lista, wołający użyje fallbacku */ }
+            return list;
+        }
+
         /// <summary>„v1.2.0" / „1.2" → Version; null gdy nieparsowalne.</summary>
         public static Version ParseTag(string tag)
         {
