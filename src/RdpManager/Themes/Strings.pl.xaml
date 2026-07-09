@@ -139,6 +139,10 @@
     <sys:String x:Key="S.tip.cad">Wyślij Ctrl+Alt+Del</sys:String>
     <sys:String x:Key="S.tip.minimize">Minimalizuj</sys:String>
     <sys:String x:Key="S.emptyhint">Wybierz serwer z listy po lewej, aby otworzyć sesję.</sys:String>
+    <sys:String x:Key="S.empty.title">Wybierz połączenie</sys:String>
+    <sys:String x:Key="S.empty.quick.placeholder">host · user@host · host:port</sys:String>
+    <sys:String x:Key="S.empty.recent">Ostatnie</sys:String>
+    <sys:String x:Key="S.empty.shortcuts">Ctrl+K szukaj · Ctrl+P paleta poleceń · F11 pełny ekran</sys:String>
     <sys:String x:Key="S.fs.drag">Przeciągnij, aby przesunąć pasek</sys:String>
     <sys:String x:Key="S.fs.others">inne połączenia  ▾</sys:String>
     <sys:String x:Key="S.fs.others.up">inne połączenia  ▴</sys:String>

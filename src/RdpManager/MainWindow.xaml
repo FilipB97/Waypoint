@@ -384,8 +384,42 @@
                         <ColumnDefinition x:Name="PaneColSplit" Width="Auto"/>
                         <ColumnDefinition x:Name="PaneColRight" Width="0"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="EmptyHint" Grid.ColumnSpan="3" Text="{DynamicResource S.emptyhint}"
-                               Foreground="{DynamicResource TextTer}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <!-- Pusty stan (brak aktywnej sesji): znak Waypoint + szybkie łączenie + ostatnie + skróty (Compass §3).
+                         Leży w SessionContainer, ale gdy pusto nie ma tu kontrolki RDP, więc airspace nie przeszkadza. -->
+                    <StackPanel x:Name="EmptyState" Grid.ColumnSpan="3" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                MaxWidth="480" Margin="24">
+                        <Border Width="60" Height="60" CornerRadius="{StaticResource RadiusLg}" Background="{DynamicResource LogoBrush}"
+                                HorizontalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Desktop24" FontSize="30" Foreground="{DynamicResource TextOnColor}"/>
+                        </Border>
+                        <TextBlock Text="{DynamicResource S.empty.title}" Foreground="{DynamicResource TextPrim}"
+                                   FontSize="{StaticResource FontSubtitle}" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+                        <TextBlock Text="{DynamicResource S.emptyhint}" Foreground="{DynamicResource TextSec}"
+                                   HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0"/>
+
+                        <!-- Szybkie połączenie: host · user@host · host:port -->
+                        <Grid Width="380" Margin="0,20,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox x:Name="EmptyQuickBox" Grid.Column="0" PlaceholderText="{DynamicResource S.empty.quick.placeholder}"
+                                        KeyDown="EmptyQuick_KeyDown">
+                                <ui:TextBox.Icon><ui:SymbolIcon Symbol="Flash24"/></ui:TextBox.Icon>
+                            </ui:TextBox>
+                            <ui:Button Grid.Column="1" Content="{DynamicResource S.connect}" Appearance="Primary" Margin="8,0,0,0"
+                                       Click="EmptyQuick_Click"/>
+                        </Grid>
+
+                        <!-- Ostatnie połączenia (chipy) -->
+                        <TextBlock x:Name="EmptyRecentLabel" Text="{DynamicResource S.empty.recent}" Foreground="{DynamicResource TextTer}"
+                                   FontSize="{StaticResource FontCaption}" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,22,0,8"/>
+                        <WrapPanel x:Name="EmptyRecentChips" HorizontalAlignment="Center" MaxWidth="440"/>
+
+                        <TextBlock Text="{DynamicResource S.empty.shortcuts}" Foreground="{DynamicResource TextTer}"
+                                   FontSize="{StaticResource FontSmall}" HorizontalAlignment="Center" TextAlignment="Center"
+                                   TextWrapping="Wrap" Margin="0,22,0,0"/>
+                    </StackPanel>
 
                     <!-- Uchwyt podziału między panelami (leży w nieprzykrytej kol.1 → działa mimo airspace hostów). -->
                     <GridSplitter x:Name="PaneSplitter" Grid.Column="1" Width="6" Visibility="Collapsed"
