@@ -14,6 +14,12 @@ namespace RdpManager
     public sealed class FileDragData
     {
         public FileTransferPanel Source;
+        public System.Collections.Generic.List<FileItemRef> Items = new System.Collections.Generic.List<FileItemRef>();
+    }
+
+    /// <summary>Odwołanie do pliku/katalogu w transferze (wielozaznaczenie): pełna ścieżka + nazwa + czy katalog.</summary>
+    public sealed class FileItemRef
+    {
         public string Full;
         public string Name;
         public bool IsDir;
@@ -126,13 +132,20 @@ namespace RdpManager
         /// <summary>Bieżący katalog panelu (do transferu w dual-pane).</summary>
         public string CurrentDir => _path;
 
-        /// <summary>Zaznaczony wpis (plik lub katalog) — do transferu; false gdy brak zaznaczenia.</summary>
+        /// <summary>Zaznaczony wpis (plik lub katalog) — do transferu; false gdy brak zaznaczenia.
+        /// Przy wielozaznaczeniu zwraca pierwszy; pełne zaznaczenie przez <see cref="GetSelection"/>.</summary>
         public bool TryGetSelected(out string full, out string name, out bool isDir)
         {
             full = name = null; isDir = false;
             if (FileList.SelectedItem is Row r) { full = r.FullName; name = r.Name; isDir = r.IsDir; return true; }
             return false;
         }
+
+        /// <summary>Wszystkie zaznaczone wpisy (wielozaznaczenie: Ctrl/Shift/Ctrl+A) — do transferu/usuwania.</summary>
+        public System.Collections.Generic.List<FileItemRef> GetSelection()
+            => FileList.SelectedItems.Cast<Row>()
+                .Select(r => new FileItemRef { Full = r.FullName, Name = r.Name, IsDir = r.IsDir })
+                .ToList();
 
         /// <summary>Upuszczenie pliku z DRUGIEGO panelu na ten (dual-pane) — host wykonuje transfer.</summary>
         public event Action<FileDragData> CrossPaneDrop;
@@ -572,6 +585,15 @@ namespace RdpManager
 
         private async void Download_Click(object sender, RoutedEventArgs e)
         {
+            var sel = GetSelection();
+            if (sel.Count > 1)   // wielozaznaczenie → jeden folder docelowy, po kolei każdy plik/katalog
+            {
+                var mdlg = new Microsoft.Win32.OpenFolderDialog();
+                if (mdlg.ShowDialog() != true) return;
+                foreach (var it in sel)
+                    await TransferOutToLocalAsync(it.Full, it.Name, it.IsDir, mdlg.FolderName);
+                return;
+            }
             if (!(FileList.SelectedItem is Row r)) return;
             if (r.IsDir)   // katalog → wybór folderu docelowego, pobranie rekurencyjne
             {
@@ -614,11 +636,18 @@ namespace RdpManager
 
         private async void Delete_Click(object sender, RoutedEventArgs e)
         {
-            if (!(FileList.SelectedItem is Row r)) return;
-            if (MessageBox.Show(string.Format(L("S.sftp.delete.confirm"), r.Name), L("S.sftp.delete"),
+            var sel = GetSelection();
+            if (sel.Count == 0) return;
+            string prompt = sel.Count == 1
+                ? string.Format(L("S.sftp.delete.confirm"), sel[0].Name)
+                : string.Format(L("S.sftp.delete.confirmmany"), sel.Count);
+            if (MessageBox.Show(prompt, L("S.sftp.delete"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
-            bool ok = await RunAsync(L("S.sftp.connecting"), fs => fs.Delete(r.FullName, r.IsDir));   // katalog: tylko pusty
+            bool ok = await RunAsync(L("S.sftp.connecting"), fs =>
+            {
+                foreach (var it in sel) fs.Delete(it.Full, it.IsDir);   // katalog: tylko pusty
+            });
             if (ok) RefreshAsync();
         }
 
@@ -638,11 +667,12 @@ namespace RdpManager
         private void List_PreviewMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
             if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
-            if (!(FileList.SelectedItem is Row r)) return;
+            var sel = GetSelection();
+            if (sel.Count == 0) return;
             var pos = e.GetPosition(null);
             if (Math.Abs(pos.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
                 Math.Abs(pos.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
-            try { DragDrop.DoDragDrop(FileList, new FileDragData { Source = this, Full = r.FullName, Name = r.Name, IsDir = r.IsDir }, DragDropEffects.Copy); }
+            try { DragDrop.DoDragDrop(FileList, new FileDragData { Source = this, Items = sel }, DragDropEffects.Copy); }
             catch { }
         }
 

@@ -49,25 +49,28 @@ namespace RdpManager
 
         private async void ToRemote_Click(object sender, RoutedEventArgs e)
         {
-            if (_local.TryGetSelected(out var full, out _, out _)) await _remote.TransferInLocalFileAsync(full);
+            foreach (var it in _local.GetSelection()) await _remote.TransferInLocalFileAsync(it.Full);
         }
 
         private async void ToLocal_Click(object sender, RoutedEventArgs e)
         {
-            if (_remote.TryGetSelected(out var full, out var name, out var isDir)
-                && await _remote.TransferOutToLocalAsync(full, name, isDir, _local.CurrentDir))
-                _local.RefreshAsync();
+            bool any = false;
+            foreach (var it in _remote.GetSelection())
+                any |= await _remote.TransferOutToLocalAsync(it.Full, it.Name, it.IsDir, _local.CurrentDir);
+            if (any) _local.RefreshAsync();
         }
 
         private async void OnDropOnRemote(FileDragData d)
         {
-            await _remote.TransferInLocalFileAsync(d.Full);   // plik lub katalog (d.Full = lokalna ścieżka)
+            foreach (var it in d.Items) await _remote.TransferInLocalFileAsync(it.Full);   // plik/katalog (Full = lokalna ścieżka)
         }
 
         private async void OnDropOnLocal(FileDragData d)
         {
-            if (await d.Source.TransferOutToLocalAsync(d.Full, d.Name, d.IsDir, _local.CurrentDir))
-                _local.RefreshAsync();
+            bool any = false;
+            foreach (var it in d.Items)
+                any |= await d.Source.TransferOutToLocalAsync(it.Full, it.Name, it.IsDir, _local.CurrentDir);
+            if (any) _local.RefreshAsync();
         }
     }
 }

@@ -454,6 +454,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.newfolder.label">New folder name:</sys:String>
     <sys:String x:Key="S.sftp.delete">Delete</sys:String>
     <sys:String x:Key="S.sftp.delete.confirm">Delete "{0}"? (directories must be empty)</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirmmany">Delete selected ({0})? (directories must be empty)</sys:String>
     <sys:String x:Key="S.sftp.unsafename">The server returned an unsafe file name: "{0}" — download refused.</sys:String>
     <sys:String x:Key="S.sftp.connecting">Connecting SFTP…</sys:String>
     <sys:String x:Key="S.sftp.uploading">Uploading {0}…</sys:String>
