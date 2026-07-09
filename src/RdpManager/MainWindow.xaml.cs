@@ -22,6 +22,11 @@ using MSTSCLib;
 using RdpManager.Core;
 using RdpManager.Models;
 using RdpManager.ViewModels;
+using LiveChartsCore;                          // ISeries (pulpit — wykresy)
+using LiveChartsCore.SkiaSharpView;            // LineSeries/ColumnSeries/PieSeries/Axis
+using LiveChartsCore.SkiaSharpView.Painting;   // SolidColorPaint
+using SkiaSharp;                               // SKColor
+using LvcWpf = LiveChartsCore.SkiaSharpView.WPF;   // CartesianChart / PieChart (alias — bez kolizji nazw)
 
 namespace RdpManager
 {
@@ -41,6 +46,9 @@ namespace RdpManager
         private readonly Dictionary<ServerInfo, Ellipse> _serverStatusDot = new Dictionary<ServerInfo, Ellipse>();
         // Etykieta opóźnienia (ms) w wierszu — aktualizowana na żywo po sondzie osiągalności (gdy włączone).
         private readonly Dictionary<ServerInfo, TextBlock> _serverLatency = new Dictionary<ServerInfo, TextBlock>();
+        // Próbki średniego opóźnienia (ms) z kolejnych cykli sondowania — źródło wykresu „opóźnienie" na pulpicie.
+        // W pamięci (bez utrwalania), przycinane do ostatnich N; resetują się przy restarcie.
+        private readonly List<double> _latencySamples = new List<double>();
         // Aktywny filtr protokołu z paska chipów (null = „Wszystkie"). Stan sesyjny — po restarcie zawsze „Wszystkie",
         // żeby użytkownik nie zobaczył „znikniętych" serwerów przez zapamiętany filtr (świadome odstępstwo od §4.2).
         private RemoteProtocol? _protocolFilter;
@@ -1673,62 +1681,204 @@ namespace RdpManager
         {
             DashboardPanel.Children.Clear();
 
-            int open = _sessions.Count + _sessionWindows.Count;
             var stats = LoadConnectionStats(14);
-            int last7 = stats.PerDay.Length >= 7
-                ? stats.PerDay.Skip(stats.PerDay.Length - 7).Sum() : stats.PerDay.Sum();
+            int open = _sessions.Count + _sessionWindows.Count;
+            int online = _vm.OnlineCount;
+            int idle = _vm.Servers.Count(s => s.Status == ServerStatus.Idle);
+            int offline = _vm.Servers.Count(s => s.Status == ServerStatus.Offline);
+            int groups = _vm.Servers
+                .Select(s => string.IsNullOrWhiteSpace(s.Group) ? L("S.group.serversdefault") : s.Group)
+                .Distinct(StringComparer.OrdinalIgnoreCase).Count();
+            var lats = _vm.Servers.Where(s => s.LatencyMs >= 0).Select(s => s.LatencyMs).ToList();
+            string avgLat = lats.Count > 0 ? ((int)Math.Round(lats.Average())).ToString() : "—";
 
-            var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 22) };
-            cards.Children.Add(StatCard(L("S.dash.servers"), _vm.Total.ToString()));
-            cards.Children.Add(StatCard(L("S.dash.reachable"), _vm.OnlineCount.ToString()));
-            cards.Children.Add(StatCard(L("S.dash.opensessions"), open.ToString()));
-            cards.Children.Add(StatCard(L("S.dash.conns7"), last7.ToString()));
-            DashboardPanel.Children.Add(cards);
+            // KPI — dzielniki pionowe, bez ramek (Compass §4.8).
+            var kpi = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 4, 0, 20) };
+            kpi.Children.Add(KpiCell(_vm.Total.ToString(), "", L("S.dash.servers"), Res("TextPrim"), false));
+            kpi.Children.Add(KpiCell(online.ToString(), "", L("S.dash.online"), Res("Online"), false));
+            kpi.Children.Add(KpiCell(open.ToString(), "", L("S.dash.sessions"), Res("TextPrim"), false));
+            kpi.Children.Add(KpiCell(avgLat, avgLat == "—" ? "" : " ms", L("S.dash.avglatency"), Res("TextPrim"), false));
+            kpi.Children.Add(KpiCell(groups.ToString(), "", L("S.dash.groups"), Res("TextPrim"), true));
+            DashboardPanel.Children.Add(kpi);
 
-            // Połączenia / dzień (14 dni) — z dziennika audytu.
-            DashboardPanel.Children.Add(DashSection(L("S.dash.perday")));
-            DashboardPanel.Children.Add(stats.TotalConnects > 0
-                ? DashCard(BuildBarChart(stats.PerDay, DateTime.Now))
-                : DashHint(L("S.dash.nodata")));
+            // Siatka 2×2 kart hairline.
+            var grid = new Grid { MaxWidth = 1080, HorizontalAlignment = HorizontalAlignment.Left };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.55, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            // Aktywność wg dnia tygodnia (z dziennika audytu) — te same poziome słupki co „najczęściej używane".
-            if (stats.TotalConnects > 0)
+            void Place(FrameworkElement card, int col, int row)
             {
-                var wdLabels = L("S.dash.weekdays").Split(',');
-                var wd = new List<KeyValuePair<string, int>>();
-                for (int i = 0; i < 7 && i < stats.PerWeekday.Length; i++)
-                    wd.Add(new KeyValuePair<string, int>(i < wdLabels.Length ? wdLabels[i].Trim() : (i + 1).ToString(), stats.PerWeekday[i]));
-                DashboardPanel.Children.Add(DashSection(L("S.dash.weekday")));
-                DashboardPanel.Children.Add(DashCard(BuildTopServers(wd)));
+                card.Margin = new Thickness(col == 0 ? 0 : 9, row == 0 ? 0 : 18, col == 0 ? 9 : 0, 0);
+                Grid.SetColumn(card, col); Grid.SetRow(card, row); grid.Children.Add(card);
             }
+            Place(ChartCard(L("S.dash.latency24h"), avgLat == "—" ? "" : "śr. " + avgLat + " ms", MakeLatencyChart()), 0, 0);
+            Place(ChartCard(L("S.dash.availability"), online + "/" + _vm.Total, MakeAvailabilityChart(online, idle, offline)), 1, 0);
+            Place(ChartCard(L("S.dash.connweek"), stats.PerWeekday.Sum().ToString(), MakeWeekdayChart(stats.PerWeekday)), 0, 1);
+            Place(ChartCard(L("S.dash.protocols"), _vm.Total.ToString(), MakeProtocolBar()), 1, 1);
+            DashboardPanel.Children.Add(grid);
+        }
 
-            // Najczęściej używane serwery.
-            if (stats.TopServers.Count > 0)
+        // Kafelek KPI: duża wartość (+ jednostka) nad etykietą; pionowy dzielnik po prawej (poza ostatnim).
+        private FrameworkElement KpiCell(string value, string unit, string label, Brush valueBrush, bool last)
+        {
+            var val = new TextBlock { FontSize = 25, FontWeight = FontWeights.Bold };
+            val.Inlines.Add(new Run(value) { Foreground = valueBrush });
+            if (!string.IsNullOrEmpty(unit))
+                val.Inlines.Add(new Run(unit) { Foreground = Res("TextTer"), FontSize = 14, FontWeight = FontWeights.SemiBold });
+            var sp = new StackPanel();
+            sp.Children.Add(val);
+            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontCaption"), Margin = new Thickness(0, 4, 0, 0) });
+            return new Border
             {
-                DashboardPanel.Children.Add(DashSection(L("S.dash.top")));
-                DashboardPanel.Children.Add(DashCard(BuildTopServers(stats.TopServers)));
-            }
+                Child = sp,
+                Padding = new Thickness(0, 0, last ? 0 : 28, 0),
+                Margin = new Thickness(0, 0, last ? 0 : 28, 0),
+                BorderBrush = Res("Border"),
+                BorderThickness = new Thickness(0, 0, last ? 0 : 1, 0)
+            };
+        }
 
-            // Rozkład protokołów (z konfiguracji serwerów) — poziome słupki jak wyżej.
-            if (_vm.Total > 0)
+        // Karta wykresu (hairline, radius 14) z nagłówkiem: tytuł + prawy podpis (mono).
+        private FrameworkElement ChartCard(string title, string sub, FrameworkElement body)
+        {
+            var head = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            head.Children.Add(new TextBlock { Text = title, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontBody") });
+            var subTb = new TextBlock { Text = sub, Foreground = Res("TextTer"), FontFamily = (FontFamily)TryFindResource("Mono"), FontSize = (double)TryFindResource("FontCaption"), VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(subTb, 1); head.Children.Add(subTb);
+            var panel = new StackPanel();
+            panel.Children.Add(head);
+            panel.Children.Add(body);
+            return new Border
             {
-                var protos = _vm.Servers.GroupBy(s => s.Protocol)
-                    .Select(g => new KeyValuePair<string, int>(ProtocolLabel(g.Key), g.Count()))
-                    .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key).ToList();
-                DashboardPanel.Children.Add(DashSection(L("S.dash.protocols")));
-                DashboardPanel.Children.Add(DashCard(BuildTopServers(protos)));
-            }
+                Background = Res("Panel"), BorderBrush = Res("Border"), BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(14), Padding = new Thickness(15, 13, 17, 13), Child = panel
+            };
+        }
 
-            // Ostatnie połączenia.
-            DashboardPanel.Children.Add(DashSection(L("S.dash.recent")));
-            int shown = 0;
-            foreach (var srv in _vm.RecentServers())
+        private static SKColor Sk(Brush b)
+        {
+            var c = (b as SolidColorBrush)?.Color ?? Colors.Gray;
+            return new SKColor(c.R, c.G, c.B, c.A);
+        }
+
+        private FrameworkElement ChartHint(string text) => new TextBlock
+        {
+            Text = text, Foreground = Res("TextTer"), Height = 150, TextAlignment = TextAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+        };
+
+        // Opóźnienie: liniowy z wypełnieniem (area) z próbek sesji; podpowiedź gdy za mało danych.
+        private FrameworkElement MakeLatencyChart()
+        {
+            if (_latencySamples.Count < 2) return ChartHint(L("S.dash.nolatency"));
+            var acc = Sk(Res("Accent"));
+            var series = new LineSeries<double>
             {
-                var s = srv;
-                DashboardPanel.Children.Add(BuildFlyoutRow(s, s.Status, false, () => LaunchServer(s, true)));
-                if (++shown >= 5) break;
+                Values = _latencySamples.ToArray(),
+                Stroke = new SolidColorPaint(acc) { StrokeThickness = 2 },
+                Fill = new SolidColorPaint(new SKColor(acc.Red, acc.Green, acc.Blue, 40)),
+                GeometrySize = 0, GeometryStroke = null, GeometryFill = null, LineSmoothness = 0.6
+            };
+            return new LvcWpf.CartesianChart
+            {
+                Height = 150,
+                Series = new ISeries[] { series },
+                XAxes = new[] { new Axis { IsVisible = false } },
+                YAxes = new[] { new Axis { IsVisible = false } },
+                TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden
+            };
+        }
+
+        // Dostępność: pierścień (online/idle/offline) + legenda z licznikami.
+        private FrameworkElement MakeAvailabilityChart(int online, int idle, int offline)
+        {
+            if (online + idle + offline == 0) return ChartHint(L("S.dash.nodata"));
+            var series = new List<ISeries>();
+            void Slice(int v, Brush br) { if (v > 0) series.Add(new PieSeries<double> { Values = new double[] { v }, Fill = new SolidColorPaint(Sk(br)), Stroke = null, InnerRadius = 42 }); }
+            Slice(online, Res("Online")); Slice(idle, Res("Idle")); Slice(offline, Res("Offline"));
+
+            var pie = new LvcWpf.PieChart
+            {
+                Width = 130, Height = 130, Series = series,
+                LegendPosition = LiveChartsCore.Measure.LegendPosition.Hidden,
+                TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden
+            };
+            var legend = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
+            legend.Children.Add(LegendRow(Res("Online"), L("S.status.online"), online));
+            legend.Children.Add(LegendRow(Res("Idle"), L("S.status.idle"), idle));
+            legend.Children.Add(LegendRow(Res("Offline"), L("S.status.offline"), offline));
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Height = 150 };
+            row.Children.Add(pie);
+            row.Children.Add(legend);
+            return row;
+        }
+
+        private FrameworkElement LegendRow(Brush color, string label, int count)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 3) };
+            sp.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = new CornerRadius(2), Background = color, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center });
+            sp.Children.Add(new TextBlock { Text = count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+            return sp;
+        }
+
+        // Połączenia w tygodniu: słupki (Pn–Nd) z dziennika audytu.
+        private FrameworkElement MakeWeekdayChart(int[] weekday)
+        {
+            if (weekday == null || weekday.Sum() == 0) return ChartHint(L("S.dash.nodata"));
+            var labels = L("S.dash.weekdays").Split(',').Select(x => x.Trim()).ToArray();
+            var acc = Sk(Res("Accent"));
+            var col = new ColumnSeries<double>
+            {
+                Values = weekday.Select(x => (double)x).ToArray(),
+                Fill = new SolidColorPaint(new SKColor(acc.Red, acc.Green, acc.Blue, 130)),
+                Stroke = null
+            };
+            return new LvcWpf.CartesianChart
+            {
+                Height = 150,
+                Series = new ISeries[] { col },
+                XAxes = new[] { new Axis { Labels = labels, LabelsPaint = new SolidColorPaint(Sk(Res("TextTer"))), TextSize = 11, SeparatorsPaint = null } },
+                YAxes = new[] { new Axis { IsVisible = false } },
+                TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden
+            };
+        }
+
+        // Protokoły: poziomy pasek udziału (segmenty w kolorach protokołów) + legenda z licznikami.
+        private FrameworkElement MakeProtocolBar()
+        {
+            var protos = _vm.Servers.GroupBy(s => s.Protocol)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count).ThenBy(x => x.Key.ToString()).ToList();
+            int total = protos.Sum(p => p.Count);
+            if (total == 0) return ChartHint(L("S.dash.nodata"));
+
+            var barGrid = new Grid();
+            for (int i = 0; i < protos.Count; i++)
+            {
+                barGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(protos[i].Count, GridUnitType.Star) });
+                var seg = new Border { Background = ProtocolBrush(protos[i].Key), Margin = new Thickness(0, 0, i < protos.Count - 1 ? 2 : 0, 0) };
+                Grid.SetColumn(seg, i); barGrid.Children.Add(seg);
             }
-            if (shown == 0) DashboardPanel.Children.Add(DashHint(L("S.dash.nohistory")));
+            var bar = new Border { Height = 11, CornerRadius = new CornerRadius(6), ClipToBounds = true, Child = barGrid, Margin = new Thickness(0, 6, 0, 14) };
+
+            var legend = new WrapPanel();
+            foreach (var p in protos)
+            {
+                var item = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 16, 8) };
+                item.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = new CornerRadius(2), Background = ProtocolBrush(p.Key), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+                item.Children.Add(new TextBlock { Text = ProtocolLabel(p.Key), Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center });
+                item.Children.Add(new TextBlock { Text = p.Count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(7, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+                legend.Children.Add(item);
+            }
+            var host = new StackPanel { Height = 150 };
+            host.Children.Add(bar);
+            host.Children.Add(legend);
+            return host;
         }
 
         private Core.ConnectionStats LoadConnectionStats(int days)
@@ -5510,6 +5660,13 @@ namespace RdpManager
                         dot.Fill = StatusBrush(kv.Value.status);
                     if (_serverLatency.TryGetValue(kv.Key, out var lat))
                         lat.Text = RdpUtils.FormatLatency(kv.Value.rttMs);
+                }
+                // Zapamiętaj średnie opóźnienie osiągalnych hostów z tego cyklu — do wykresu na pulpicie.
+                var reachable = results.Where(kv => kv.Value.rttMs >= 0).Select(kv => (double)kv.Value.rttMs).ToList();
+                if (reachable.Count > 0)
+                {
+                    _latencySamples.Add(reachable.Average());
+                    if (_latencySamples.Count > 48) _latencySamples.RemoveAt(0);
                 }
                 _vm.RaiseCounts();   // odśwież liczniki pulpitu (Osiągalne)
             }

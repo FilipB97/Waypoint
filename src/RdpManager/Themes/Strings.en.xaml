@@ -366,8 +366,16 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dash.perday">Connections per day (14 days)</sys:String>
     <sys:String x:Key="S.dash.top">Most used</sys:String>
     <sys:String x:Key="S.dash.weekday">Activity by weekday</sys:String>
-    <sys:String x:Key="S.dash.weekdays">Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday</sys:String>
+    <sys:String x:Key="S.dash.weekdays">Mon,Tue,Wed,Thu,Fri,Sat,Sun</sys:String>
     <sys:String x:Key="S.dash.protocols">Protocols</sys:String>
+    <sys:String x:Key="S.dash.online">Online</sys:String>
+    <sys:String x:Key="S.dash.sessions">Sessions</sys:String>
+    <sys:String x:Key="S.dash.avglatency">Avg. latency</sys:String>
+    <sys:String x:Key="S.dash.groups">Groups</sys:String>
+    <sys:String x:Key="S.dash.latency24h">Latency</sys:String>
+    <sys:String x:Key="S.dash.availability">Availability</sys:String>
+    <sys:String x:Key="S.dash.connweek">Connections this week</sys:String>
+    <sys:String x:Key="S.dash.nolatency">Collecting latency data…</sys:String>
     <sys:String x:Key="S.dash.nodata">No data in the connection log yet.</sys:String>
     <sys:String x:Key="S.dash.nohistory">No history.</sys:String>
     <sys:String x:Key="S.dash.norecent">No recent connections.</sys:String>
