@@ -74,6 +74,32 @@
                 </Button>
             </Grid>
         </DataTemplate>
+
+        <!-- Pod-zakładka Compass: podkreślenie akcentem pod aktywną (jak .subtab w mockupie), bez pudełka. -->
+        <Style x:Key="RestTab" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextTer}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" Margin="0,0,22,0" BorderThickness="0,0,0,2" BorderBrush="Transparent">
+                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center" Margin="0,9"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Border Background="{DynamicResource Panel}">
@@ -95,8 +121,12 @@
                     <!-- Nagłówek w DWÓCH wierszach: tytuł nad paskiem ikon. Wcześniej tytuł i pasek ikon
                          dzieliły jedną komórkę Grid i nakładały się przy wąskim panelu (150-240px). -->
                     <StackPanel Grid.Row="0" Margin="2,0,0,6">
-                        <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextSec}"
-                                   FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,4,4">
+                            <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextTer}"
+                                       FontWeight="Bold" FontSize="{StaticResource FontCaption}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="CollCount" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextTer}" FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontCaption}"/>
+                        </Grid>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                             <ToggleButton x:Name="HistoryToggle" ToolTip="{DynamicResource S.rest.hist}" AutomationProperties.Name="{DynamicResource S.rest.hist}" Click="History_Toggled"
                                           Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6,0" Height="28">
@@ -189,9 +219,12 @@
                                 <StackPanel Orientation="Horizontal" Height="24">
                                     <ui:SymbolIcon Symbol="{Binding Icon}" Visibility="{Binding FolderIconVis}" FontSize="{StaticResource IconMd}"
                                                    Foreground="{Binding IconBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding MethodText}" Visibility="{Binding MethodVis}" Foreground="{Binding MethodBrush}"
-                                               FontWeight="SemiBold" FontSize="{StaticResource FontCaption}" Width="42" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Name}" Margin="6,0,0,0" VerticalAlignment="Center"
+                                    <Border Visibility="{Binding MethodVis}" Background="{Binding MethodBadgeBg}" CornerRadius="5"
+                                            Padding="5,1" MinWidth="38" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding MethodText}" Foreground="{Binding MethodBrush}" FontFamily="{DynamicResource Mono}"
+                                                   FontWeight="Bold" FontSize="9" TextAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding Name}" Margin="8,0,0,0" VerticalAlignment="Center"
                                                Foreground="{DynamicResource TextPrim}" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </HierarchicalDataTemplate>
@@ -283,7 +316,8 @@
             </Grid>
 
             <!-- Zakładki żądania: Parametry / Nagłówki / Treść / Uwierzytelnianie -->
-            <TabControl Grid.Row="1" x:Name="RequestTabs" BorderThickness="0" Background="Transparent" Padding="0,8,0,0">
+            <TabControl Grid.Row="1" x:Name="RequestTabs" BorderThickness="0" Background="Transparent" Padding="0,8,0,0"
+                        ItemContainerStyle="{StaticResource RestTab}">
                 <TabItem Header="{DynamicResource S.rest.tab.params}">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -499,15 +533,15 @@
                     </StackPanel>
                 </Grid>
 
-                <TabControl Grid.Row="1" x:Name="ResponseTabs" BorderThickness="0" Background="Transparent">
+                <TabControl Grid.Row="1" x:Name="ResponseTabs" BorderThickness="0" Background="Transparent"
+                            ItemContainerStyle="{StaticResource RestTab}">
                     <TabItem Header="{DynamicResource S.rest.resp.body}">
                         <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusSm}" Margin="0,6,0,0">
-                            <TextBox x:Name="ResponseBody" BorderThickness="0" Background="Transparent" IsReadOnly="True"
-                                     Foreground="{DynamicResource TextPrim}"
-                                     AcceptsReturn="True" TextWrapping="NoWrap"
-                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                     FontFamily="Consolas" FontSize="{StaticResource FontBody}" Padding="8"
-                                     Text="{DynamicResource S.rest.resp.empty}"/>
+                            <!-- RichTextBox: JSON kolorowany tokenami (klucz/łańcuch/liczba/słowo kluczowe). -->
+                            <RichTextBox x:Name="ResponseBody" BorderThickness="0" Background="Transparent" IsReadOnly="True"
+                                         Foreground="{DynamicResource TextPrim}"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                         FontFamily="Consolas" FontSize="{StaticResource FontBody}" Padding="8"/>
                         </Border>
                     </TabItem>
                     <TabItem Header="{DynamicResource S.rest.resp.headers}">

@@ -39,6 +39,7 @@ namespace RdpManager
             public Visibility MethodVis => IsFolder ? Visibility.Collapsed : Visibility.Visible;
             public string MethodText => IsFolder ? "" : (Request.Method ?? "GET").ToUpperInvariant();
             public Brush MethodBrush => IsFolder ? Brushes.Transparent : RestConsole.MethodBrush(Request.Method);
+            public Brush MethodBadgeBg => IsFolder ? Brushes.Transparent : RestConsole.MethodBadgeBg(Request.Method);
 
             public string Name
             {
@@ -232,6 +233,7 @@ namespace RdpManager
             foreach (var r in _coll.Requests.Where(r => string.IsNullOrEmpty(r.FolderId)).OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
                 _roots.Add(new RestNode { IsFolder = false, Request = r });
             CollTree.ItemsSource = _roots;
+            if (CollCount != null) CollCount.Text = _coll.Requests.Count.ToString();
         }
 
         private RestNode BuildFolderNode(RestFolder f) => BuildFolderNode(f, new HashSet<string>());
@@ -554,7 +556,7 @@ namespace RdpManager
                 StatusPillText.Text = L("S.rest.err");
                 MetaText.Text = string.Format(L("S.rest.error"), r.Error);
                 _rawBody = r.Error ?? "";
-                ResponseBody.Text = _rawBody;
+                SetResponseBody(_rawBody, allowColor: false);
                 ResponseHeaders.ItemsSource = null;
                 ResponseTabs.SelectedIndex = 0;
                 return;
@@ -564,7 +566,7 @@ namespace RdpManager
             StatusPillText.Text = r.Status + (string.IsNullOrEmpty(r.ReasonPhrase) ? "" : " " + r.ReasonPhrase);
             MetaText.Text = r.ElapsedMs + " ms · " + FormatSize(r.Size);
             _rawBody = r.Body ?? "";
-            ResponseBody.Text = FormatBody();
+            SetResponseBody(FormatBody(), allowColor: true);
             ResponseHeaders.ItemsSource = r.Headers;
         }
 
@@ -574,7 +576,7 @@ namespace RdpManager
             StatusPill.Visibility = Visibility.Collapsed;
             MetaText.Text = "";
             ResponseHeaders.ItemsSource = null;
-            ResponseBody.Text = L("S.rest.resp.empty");
+            SetResponseBody(L("S.rest.resp.empty"), allowColor: false);
             ScriptOutput.Text = "";
         }
 
@@ -594,12 +596,18 @@ namespace RdpManager
 
         private void Pretty_Changed(object sender, RoutedEventArgs e)
         {
-            if (_rawBody != null) ResponseBody.Text = FormatBody();
+            if (_rawBody != null) SetResponseBody(FormatBody(), allowColor: true);
         }
 
         private void CopyBody_Click(object sender, RoutedEventArgs e)
         {
-            try { Clipboard.SetText(ResponseBody.Text ?? ""); } catch { }
+            try
+            {
+                var doc = ResponseBody.Document;
+                var text = new System.Windows.Documents.TextRange(doc.ContentStart, doc.ContentEnd).Text;
+                Clipboard.SetText(text ?? "");
+            }
+            catch { }
         }
 
         // ---------- Wiersze klucz/wartość ----------
@@ -734,17 +742,60 @@ namespace RdpManager
             return new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
         }
 
+        // Kolory metod wg mockupu Compass (m-get/m-post/m-put/m-del): GET zielony, POST niebieski,
+        // PUT bursztyn, DELETE czerwony, PATCH fiolet, reszta szary.
         private static Brush MethodBrush(string method)
         {
             switch (method)
             {
-                case "GET": return new SolidColorBrush(Color.FromRgb(0x2E, 0xA0, 0x43));
-                case "POST": return new SolidColorBrush(Color.FromRgb(0xF0, 0x9A, 0x1A));
-                case "PUT": return new SolidColorBrush(Color.FromRgb(0x2B, 0x7C, 0xD3));
-                case "PATCH": return new SolidColorBrush(Color.FromRgb(0x8A, 0x4F, 0xC7));
-                case "DELETE": return new SolidColorBrush(Color.FromRgb(0xD1, 0x3B, 0x3B));
+                case "GET": return new SolidColorBrush(Color.FromRgb(0x4B, 0xD6, 0xA0));
+                case "POST": return new SolidColorBrush(Color.FromRgb(0x7B, 0xA6, 0xFF));
+                case "PUT": return new SolidColorBrush(Color.FromRgb(0xF0, 0xB4, 0x5F));
+                case "PATCH": return new SolidColorBrush(Color.FromRgb(0xB0, 0x8C, 0xE8));
+                case "DELETE": return new SolidColorBrush(Color.FromRgb(0xF0, 0x73, 0x6C));
                 default: return new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
             }
+        }
+
+        // Tinta tła badge'a metody (ten sam kolor, niska alfa) — jak .mb w mockupie.
+        private static Brush MethodBadgeBg(string method)
+        {
+            var c = ((MethodBrush(method) as SolidColorBrush)?.Color) ?? Colors.Gray;
+            return new SolidColorBrush(Color.FromArgb(0x26, c.R, c.G, c.B));
+        }
+
+        private Brush JsonBrush(RestJsonTok k)
+        {
+            switch (k)
+            {
+                case RestJsonTok.Key: return new SolidColorBrush(Color.FromRgb(0x7B, 0xA6, 0xFF));
+                case RestJsonTok.Str: return new SolidColorBrush(Color.FromRgb(0x4B, 0xD6, 0xA0));
+                case RestJsonTok.Num: return new SolidColorBrush(Color.FromRgb(0xF0, 0xB4, 0x5F));
+                case RestJsonTok.Keyword: return new SolidColorBrush(Color.FromRgb(0xF0, 0xB4, 0x5F));
+                case RestJsonTok.Punct: return (Brush)TryFindResource("TextTer") ?? Brushes.Gray;
+                default: return (Brush)TryFindResource("TextPrim") ?? Brushes.White;
+            }
+        }
+
+        // Wstawia treść odpowiedzi do RichTextBox: JSON kolorowany tokenami, reszta jednym kolorem.
+        private void SetResponseBody(string text, bool allowColor)
+        {
+            var doc = new System.Windows.Documents.FlowDocument
+            {
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = (double)TryFindResource("FontBody"),
+                PageWidth = 2400   // szeroka strona = brak zawijania + poziomy pasek (jak kod w mockupie)
+            };
+            var p = new System.Windows.Documents.Paragraph { Margin = new Thickness(0), LineHeight = 20 };
+            string t = (text ?? "").TrimStart();
+            bool json = allowColor && t.Length > 0 && (t[0] == '{' || t[0] == '[');
+            if (json)
+                foreach (var (seg, kind) in RestJsonColorizer.Tokenize(text))
+                    p.Inlines.Add(new System.Windows.Documents.Run(seg) { Foreground = JsonBrush(kind) });
+            else
+                p.Inlines.Add(new System.Windows.Documents.Run(text ?? "") { Foreground = (Brush)TryFindResource("TextPrim") });
+            doc.Blocks.Add(p);
+            ResponseBody.Document = doc;
         }
 
         private static string FormatSize(long bytes)
