@@ -313,6 +313,7 @@ namespace RdpManager
                     _update = info;
                     UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
                     UpdateBtn.Visibility = Visibility.Visible;
+                    ShowAboutUpdateAvailable(info.Version);
                 }
                 else if (Core.UpdateCheck.ParseTag(_prevRunVersion) is Version prev && prev < current
                          && !string.IsNullOrWhiteSpace(info.Notes))
@@ -361,6 +362,7 @@ namespace RdpManager
                     UpdateBtn.Visibility = Visibility.Visible;
                     UpdateCheckStatus.Foreground = Res("Online");
                     UpdateCheckStatus.Text = string.Format(L("S.update.available"), info.Version);
+                    ShowAboutUpdateAvailable(info.Version);
                 }
                 else
                 {
@@ -821,8 +823,38 @@ namespace RdpManager
             }
         }
 
-        private void Avatar_Click(object sender, RoutedEventArgs e)
-            => new AboutWindow { Owner = this }.ShowDialog();
+        // Pokaż przycisk instalacji w kategorii „O aplikacji", gdy dostępna nowsza wersja (obok banera na pasku).
+        private void ShowAboutUpdateAvailable(object version)
+        {
+            if (AboutUpdateInstall == null) return;
+            AboutUpdateInstall.Content = string.Format(L("S.update.available"), version);
+            AboutUpdateInstall.Visibility = Visibility.Visible;
+        }
+
+        // „O aplikacji" mieszka teraz w Ustawieniach (kategoria O aplikacji) — patrz handlery About*_Click niżej.
+        private void AboutAuthor_Click(object sender, RoutedEventArgs e) => OpenUrl("https://github.com/FilipB97");
+        private void AboutRepo_Click(object sender, RoutedEventArgs e) => OpenUrl("https://github.com/FilipB97/Waypoint");
+
+        private static void OpenUrl(string url)
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); }
+            catch { /* brak przeglądarki — ignoruj */ }
+        }
+
+        // „Co nowego": pobierz najnowsze wydanie i pokaż jego changelog; przy braku sieci — otwórz stronę wydań.
+        private async void AboutWhatsNew_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var info = await FetchLatestReleaseAsync();
+                if (info != null && !string.IsNullOrWhiteSpace(info.Notes))
+                    new ReleaseNotesWindow(string.Format(L("S.update.newtitle"), info.Version),
+                        info.Version, info.Notes, info.HtmlUrl, confirm: false) { Owner = this }.ShowDialog();
+                else
+                    OpenUrl("https://github.com/FilipB97/Waypoint/releases");
+            }
+            catch { OpenUrl("https://github.com/FilipB97/Waypoint/releases"); }
+        }
 
         // ---------- Zoom interfejsu (Ctrl + kółko / Ctrl +/- / Ctrl 0) ----------
 
@@ -1040,6 +1072,9 @@ namespace RdpManager
             BuildAutoConnectList();
             BuildProfilesList();
             SetDataPath.Text = SettingsStore.Dir;
+            var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            AboutVersion.Text = "v" + ver.Major + "." + ver.Minor + "." + Math.Max(ver.Build, 0);
+            AboutDataPath.Text = L("S.msg.about.datafolder") + " " + SettingsStore.Dir;
             SettingsStatus.Text = "";
             _loadingSettings = false;
         }

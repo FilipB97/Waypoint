@@ -45,6 +45,10 @@
     <sys:String x:Key="S.set.sec.appearance">APPEARANCE</sys:String>
     <sys:String x:Key="S.set.sec.list">SERVER LIST</sys:String>
     <sys:String x:Key="S.set.sec.advanced">ADVANCED</sys:String>
+    <sys:String x:Key="S.set.sec.updates">UPDATES</sys:String>
+    <sys:String x:Key="S.set.sec.about">ABOUT</sys:String>
+    <sys:String x:Key="S.set.about.sub">Version, updates and app info.</sys:String>
+    <sys:String x:Key="S.about.whatsnew">What's new</sys:String>
     <sys:String x:Key="S.set.uiscale">UI scale (%)</sys:String>
     <sys:String x:Key="S.set.uiscale.sub">Ctrl + mouse wheel</sys:String>
     <sys:String x:Key="S.set.bardelay">Fullscreen bar delay (ms)</sys:String>

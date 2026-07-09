@@ -232,9 +232,7 @@
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center">
-                        <Button x:Name="AvatarBtn" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.about}" AutomationProperties.Name="{DynamicResource S.nav.about}" Click="Avatar_Click">
-                            <ui:SymbolIcon Symbol="Info24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
-                        </Button>
+                        <!-- „O aplikacji" przeniesione do Ustawień (Compass §4.6) — usunięte z raila. -->
                         <Button x:Name="NavSettings" Style="{DynamicResource RailBtn}" ToolTip="{DynamicResource S.nav.settings}" AutomationProperties.Name="{DynamicResource S.nav.settings}" Tag="Settings" Click="Nav_Click">
                             <ui:SymbolIcon x:Name="IcoSettings" Symbol="Settings24" FontSize="{StaticResource IconLg}" Foreground="{DynamicResource TextTer}"/>
                         </Button>
@@ -598,6 +596,7 @@
                         <ListBoxItem Content="{DynamicResource S.set.autoconnect}"/>
                         <ListBoxItem Content="{DynamicResource S.set.profiles}"/>
                         <ListBoxItem Content="{DynamicResource S.set.data}"/>
+                        <ListBoxItem Content="{DynamicResource S.nav.about}"/>
                     </ListBox>
                 </StackPanel>
 
@@ -607,7 +606,7 @@
 
                     <!-- Interfejs -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                             <TextBlock Text="{DynamicResource S.set.iface}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.iface.sub}" Style="{DynamicResource SetPageSub}"/>
 
@@ -630,7 +629,7 @@
                             <TextBlock Text="{DynamicResource S.set.themepreset}" Foreground="{DynamicResource TextSec}"
                                        FontSize="{StaticResource FontBody}" Margin="0,14,0,8"/>
                             <!-- Siatka presetów palety (Compass §4.9) — budowana w kodzie (BuildThemePresets). -->
-                            <WrapPanel x:Name="ThemePresetGrid" Orientation="Horizontal" MaxWidth="580"/>
+                            <WrapPanel x:Name="ThemePresetGrid" Orientation="Horizontal" MaxWidth="780"/>
 
                             <Border Style="{DynamicResource SetRow}" Margin="0,16,0,0">
                                 <Grid>
@@ -730,7 +729,7 @@
 
                     <!-- Połączenie -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                             <TextBlock Text="{DynamicResource S.set.conn}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.conn.sub}" Style="{DynamicResource SetPageSub}"/>
 
@@ -764,7 +763,7 @@
 
                     <!-- Zachowanie -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                             <TextBlock Text="{DynamicResource S.set.behavior}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.behavior.sub}" Style="{DynamicResource SetPageSub}"/>
 
@@ -836,7 +835,7 @@
 
                     <!-- Połącz na starcie -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                             <TextBlock Text="{DynamicResource S.set.autoconnect}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.autoconnect.hint}" Style="{DynamicResource SetPageSub}"/>
                             <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="10,6">
@@ -849,7 +848,7 @@
 
                     <!-- Profile poświadczeń -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                             <TextBlock Text="{DynamicResource S.set.profiles}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.profiles.hint}" Style="{DynamicResource SetPageSub}"/>
                             <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="10,6">
@@ -863,7 +862,7 @@
 
                     <!-- Dane -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                             <TextBlock Text="{DynamicResource S.set.data}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.data.sub}" Style="{DynamicResource SetPageSub}"/>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
@@ -877,18 +876,55 @@
                             </StackPanel>
                             <TextBlock Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,6,0,0"
                                        Text="{DynamicResource S.set.backupnote}"/>
-                            <Border Height="1" Background="{DynamicResource Border}" Margin="0,14,0,0"/>
-                            <Border Style="{DynamicResource SetRow}" BorderThickness="0" Margin="0,6,0,0">
+                        </StackPanel>
+                    </Border>
+
+                    <!-- O aplikacji (Compass §4.6/§4.11): treść dawnego okna „O aplikacji" + aktualizacje + changelog -->
+                    <Border Padding="0">
+                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                            <TextBlock Text="{DynamicResource S.nav.about}" Style="{DynamicResource SetPageHead}"/>
+                            <TextBlock Text="{DynamicResource S.set.about.sub}" Style="{DynamicResource SetPageSub}"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Image Source="pack://application:,,,/Assets/app.ico" Width="52" Height="52" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
+                                    <TextBlock Text="Waypoint" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrim}"/>
+                                    <TextBlock x:Name="AboutVersion" Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource S.msg.about.desc}" TextWrapping="Wrap" Foreground="{DynamicResource TextSec}" Margin="0,10,0,0"/>
+                            <TextBlock Foreground="{DynamicResource TextSec}" Margin="0,10,0,0">
+                                <Run Text="{DynamicResource S.about.author}"/><Hyperlink Click="AboutAuthor_Click" Foreground="{DynamicResource Accent}" ToolTip="https://github.com/FilipB97"><Run Text="Filip Benklewski" FontWeight="SemiBold"/></Hyperlink>
+                            </TextBlock>
+
+                            <TextBlock Text="{DynamicResource S.set.sec.updates}" Style="{DynamicResource SetSec}"/>
+                            <Border Style="{DynamicResource SetRow}">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="{DynamicResource S.set.checkupdates}" Style="{DynamicResource SetLbl}"/>
                                     <ui:ToggleSwitch x:Name="SetCheckUpdates" Grid.Column="1" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <ui:Button Content="{DynamicResource S.set.checkupdatesnow}" Appearance="Secondary" Click="CheckUpdatesNow_Click"/>
-                                <TextBlock x:Name="UpdateCheckStatus" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource TextSec}"/>
+                            <Border Style="{DynamicResource SetRow}" BorderThickness="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="UpdateCheckStatus" Style="{DynamicResource SetLbl}" Foreground="{DynamicResource TextSec}" Text="{DynamicResource S.update.uptodate}"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <!-- Widoczny tylko, gdy dostępna nowsza wersja (ustawiane razem z UpdateBtn na pasku). -->
+                                        <ui:Button x:Name="AboutUpdateInstall" Visibility="Collapsed" Appearance="Info" Click="Update_Click"/>
+                                        <ui:Button Content="{DynamicResource S.about.whatsnew}" Appearance="Secondary" Click="AboutWhatsNew_Click" Margin="8,0,0,0"/>
+                                        <ui:Button Content="{DynamicResource S.set.checkupdatesnow}" Appearance="Secondary" Click="CheckUpdatesNow_Click" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="{DynamicResource S.set.sec.about}" Style="{DynamicResource SetSec}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <ui:Button Content="{DynamicResource S.about.repo}" Appearance="Secondary" Click="AboutRepo_Click"/>
+                                <ui:Button Content="{DynamicResource S.set.openfolder}" Appearance="Secondary" Click="OpenDataFolder_Click" Margin="8,0,0,0"/>
                             </StackPanel>
+                            <TextBlock x:Name="AboutDataPath" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
+                                       FontFamily="{DynamicResource Mono}" TextWrapping="Wrap" Margin="0,12,0,0"/>
                         </StackPanel>
                     </Border>
 
