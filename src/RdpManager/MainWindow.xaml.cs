@@ -56,13 +56,12 @@ namespace RdpManager
         private readonly List<TabGroup> _tabGroups = new List<TabGroup>();
         private readonly MainViewModel _vm = new MainViewModel();
 
-        private AppSettings _settings = new AppSettings();
+        // internal: czytany też przez serwisy wyniesione z tej klasy (Services/UpdateService — PR 1 refaktoru).
+        internal AppSettings _settings = new AppSettings();
 
         // Sprawdzanie osiągalności serwerów w tle (TCP na porcie RDP) -> kropki statusu.
         private DispatcherTimer _reachTimer;
         private bool _reachBusy;
-        private DispatcherTimer _updateTimer;   // cykliczne sprawdzanie aktualizacji (co 6 h)
-        private bool _updateChecking;           // trwa sprawdzanie — blokuje nakładające się żądania (timer + przycisk)
 
         // Stabilne, odrębne kolory awatarów dla dowolnych (także własnych) grup.
         private readonly Dictionary<string, LinearGradientBrush> _avatarCache = new Dictionary<string, LinearGradientBrush>();
@@ -106,8 +105,9 @@ namespace RdpManager
         // Skrót do lokalizowanego tekstu (dla UI budowanego w kodzie: menu, komunikaty).
         private static string L(string key) => LocalizationManager.S(key);
 
-        /// <summary>Skrót do pędzla z zasobów motywu; null gdy brak (te same semantyki co dotychczasowy rzut).</summary>
-        private Brush Res(string key) => TryFindResource(key) as Brush;
+        /// <summary>Skrót do pędzla z zasobów motywu; null gdy brak (te same semantyki co dotychczasowy rzut).
+        /// internal: używany też przez serwisy wyniesione z tej klasy (Services/UpdateService).</summary>
+        internal Brush Res(string key) => TryFindResource(key) as Brush;
 
         // Otwarte, samodzielne okna sesji (model wielookienny).
         private readonly System.Collections.Generic.List<SessionWindow> _sessionWindows = new System.Collections.Generic.List<SessionWindow>();
@@ -119,8 +119,7 @@ namespace RdpManager
         private DispatcherTimer _focusPeekDelay;   // opóźnienie przytrzymania (jak pasek pełnoekranowy)
         private bool _focusPeeking;                // panel boczny chwilowo wysunięty w trybie skupienia
         private bool? _focusOverride;              // ręczne wł/wył skupienia (null = wg ustawienia); reset po un-maximize
-        private Core.UpdateCheck.ReleaseInfo _update;      // dostępna nowsza wersja (z URL assetu .exe); null gdy brak
-        private bool _updating;                            // trwa auto-aktualizacja — pomiń potwierdzenie zamknięcia
+        private Services.UpdateService _update;   // aktualizacje + karta „O aplikacji" (PR 1 refaktoru), tworzony w Window_Loaded
         private RECT _fsMonRect;   // prostokąt monitora w pikselach fizycznych (do wykrycia górnej krawędzi)
 
         public MainWindow()
@@ -134,8 +133,9 @@ namespace RdpManager
             _settings = SettingsStore.ConsumeUpdateSnapshot(_settings);   // po aktualizacji: przywróć stan sprzed update (migawka)
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
             _probeTimeoutMs = Math.Clamp(_settings.ProbeTimeoutSeconds, 1, 60) * 1000;
-            _prevRunVersion = _settings.LastRunVersion ?? "";           // zapamiętaj wersję sprzed tego startu
-            var curVer = CurrentVersion().ToString();
+            // Serwis aktualizacji dostaje wersję sprzed tego startu, ZANIM niżej nadpiszemy LastRunVersion.
+            _update = new Services.UpdateService(this, _settings.LastRunVersion ?? "");
+            var curVer = Services.UpdateService.CurrentVersion().ToString();
             if (_settings.LastRunVersion != curVer) { _settings.LastRunVersion = curVer; SettingsStore.Save(_settings); }
             _credProfiles = CredentialProfileRepository.Load();
             _vm.UseRecentIds(_settings.RecentIds);   // współdziel listę „ostatnich" z ustawieniami
@@ -201,11 +201,7 @@ namespace RdpManager
                 if (dragged != null) EnterSplit(dragged);
             };
 
-            CheckForUpdatesAsync();
-            // Cyklicznie w tle (co 6 h), nie tylko przy starcie — długo działające okno też złapie nowe wydanie.
-            _updateTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher) { Interval = TimeSpan.FromHours(6) };
-            _updateTimer.Tick += (s, a) => CheckForUpdatesAsync();
-            if (_settings.CheckUpdates) _updateTimer.Start();
+            _update.Start();   // sprawdzenie aktualizacji przy starcie + cykliczny timer (co 6 h)
             // Po wyrenderowaniu okna (modal przywracania potrzebuje widocznego właściciela).
             Dispatcher.BeginInvoke(new Action(StartupConnect), DispatcherPriority.Loaded);
         }
@@ -290,252 +286,15 @@ namespace RdpManager
             SettingsStore.Save(_settings);
         }
 
-        // ---------- Aktualizacje ----------
+        // ---------- Aktualizacje (logika w Services/UpdateService — PR 1 refaktoru) ----------
+        // Tu zostają wyłącznie 1-linijkowe shimy dla handlerów podpiętych w MainWindow.xaml
+        // (zero edycji XAML — patrz docs/REFACTOR-MAINWINDOW.md).
 
-        // Ciche sprawdzenie GitHub releases/latest; nowsza wersja → przycisk w panelu bocznym.
-        // Bez sieci / rate limitu / złego JSON-a — po prostu nic się nie pokazuje.
-        private string _prevRunVersion = "";   // wersja z poprzedniego startu (do wykrycia „właśnie zaktualizowano")
+        private void CheckUpdatesNow_Click(object sender, RoutedEventArgs e) => _update?.CheckUpdatesNow_Click(sender, e);
 
-        private static Version CurrentVersion()
-        {
-            var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            return new Version(v.Major, v.Minor, Math.Max(v.Build, 0));
-        }
+        private void Update_Click(object sender, RoutedEventArgs e) => _update?.Update_Click(sender, e);
 
-        // Automatyczne sprawdzenie (start aplikacji + cykliczny timer). Bramkowane ustawieniem, bez UI błędów.
-        private async void CheckForUpdatesAsync()
-        {
-            if (!_settings.CheckUpdates || _updateChecking) return;   // bez nakładających się sprawdzeń
-            _updateChecking = true;
-            try
-            {
-                var info = await FetchLatestReleaseAsync();
-                if (info == null) return;
-                var current = CurrentVersion();
-                if (Core.UpdateCheck.IsNewer(info.Version, current))
-                {
-                    _update = info;
-                    UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
-                    UpdateBtn.Visibility = Visibility.Visible;
-                    ShowAboutUpdateAvailable(info.Version, info.ExeSize);
-                }
-                else if (Core.UpdateCheck.ParseTag(_prevRunVersion) is Version prev && prev < current
-                         && !string.IsNullOrWhiteSpace(info.Notes))
-                {
-                    // Wersja wzrosła od ostatniego startu → właśnie zaktualizowano: pokaż „co nowego" (raz).
-                    new ReleaseNotesWindow(string.Format(L("S.update.whatsnew"), current),
-                        current, info.Notes, info.HtmlUrl, confirm: false) { Owner = this }.ShowDialog();
-                }
-            }
-            catch { /* offline / proxy / rate limit — sprawdzimy przy kolejnym cyklu */ }
-            finally { _updateChecking = false; }
-        }
-
-        // Pobiera najnowsze wydanie z GitHuba (bez UI/bramek). Rzuca przy błędzie sieci; null gdy brak/parsowanie.
-        private async Task<Core.UpdateCheck.ReleaseInfo> FetchLatestReleaseAsync()
-        {
-            using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) })
-            {
-                http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
-                string json = await http.GetStringAsync(
-                    "https://api.github.com/repos/FilipB97/Waypoint/releases/latest");
-                return Core.UpdateCheck.ParseRelease(json);
-            }
-        }
-
-        // Ręczne sprawdzenie z Ustawień — bez bramki CheckUpdates, z informacją zwrotną w etykiecie statusu.
-        private async void CheckUpdatesNow_Click(object sender, RoutedEventArgs e)
-        {
-            if (_updateChecking) return;
-            _updateChecking = true;
-            if (AboutUpdateTitle != null) AboutUpdateTitle.Text = L("S.update.checking");   // transient stan w karcie
-            try
-            {
-                var info = await FetchLatestReleaseAsync();
-                var current = CurrentVersion();
-                if (info == null)   // pobrano, ale nie dało się odczytać wydania → to NIE „aktualne", tylko błąd
-                {
-                    SetAboutUpToDate(L("S.update.checkfailed"), error: true);
-                }
-                else if (Core.UpdateCheck.IsNewer(info.Version, current))
-                {
-                    _update = info;
-                    UpdateBtn.Content = string.Format(L("S.update.available"), info.Version);
-                    UpdateBtn.Visibility = Visibility.Visible;
-                    ShowAboutUpdateAvailable(info.Version, info.ExeSize);
-                }
-                else
-                {
-                    SetAboutUpToDate(L("S.update.uptodate"));
-                }
-            }
-            catch
-            {
-                SetAboutUpToDate(L("S.update.checkfailed"), error: true);
-            }
-            finally { _updateChecking = false; }
-        }
-
-        private async void Update_Click(object sender, RoutedEventArgs e)
-        {
-            // Brak assetu .exe w release → tak jak dawniej: otwórz stronę wydania w przeglądarce.
-            if (_update == null || string.IsNullOrEmpty(_update.ExeUrl))
-            {
-                OpenReleasePage();
-                return;
-            }
-
-            // Pokaż changelog i potwierdzenie PRZED aktualizacją (zamiast zwykłego MessageBox).
-            var notesDlg = new ReleaseNotesWindow(string.Format(L("S.update.newtitle"), _update.Version),
-                _update.Version, _update.Notes, _update.HtmlUrl, confirm: true) { Owner = this };
-            if (notesDlg.ShowDialog() != true) return;
-
-            string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
-                "Waypoint-update-" + _update.Version + ".exe");
-            string label = UpdateBtn.Content as string;
-            UpdateBtn.IsEnabled = false;
-            try
-            {
-                await DownloadFileAsync(_update.ExeUrl, temp, _update.ExeSize);
-                if (!IsValidExe(temp, _update.ExeSize)) throw new Exception("plik pobrany niepoprawnie");
-            }
-            catch (Exception ex)
-            {
-                UpdateBtn.IsEnabled = true;
-                UpdateBtn.Content = label;
-                // Pobranie w apce padło (np. 504 z proxy/CDN dla dużego pliku) — zaproponuj pobranie w
-                // przeglądarce (radzi sobie z dużymi plikami / wznawianiem lepiej niż nasz strumień).
-                var res = MessageBox.Show(L("S.update.faildl") + "\n" + ex.Message + "\n\n" + L("S.update.openbrowserq"),
-                    L("S.update.title"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                if (res == MessageBoxResult.Yes) OpenReleasePage();
-                return;
-            }
-
-            // Weryfikacja wydawcy (Authenticode „publisher pinning"): pobrany plik musi być podpisany
-            // tym samym certyfikatem, co bieżąca aplikacja. Odrzucamy podmieniony/niepodpisany plik.
-            var verdict = Core.CodeSign.VerifyPublisher(temp, Environment.ProcessPath);
-            if (!Core.CodeSign.IsAcceptable(verdict))
-            {
-                try { System.IO.File.Delete(temp); } catch { }
-                UpdateBtn.IsEnabled = true;
-                UpdateBtn.Content = label;
-                MessageBox.Show(L("S.update.badsig"), L("S.update.title"),
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Migawka ustawień PRZED podmianą exe (z pamięci — źródło prawdy); po restarcie na nową wersję
-            // ConsumeUpdateSnapshot (w Window_Loaded) przywróci je, nawet jeśli settings.json ucierpi w trakcie.
-            SettingsStore.SnapshotForUpdate(_settings);
-
-            // Uruchom pobrany exe jako „installer": poczeka aż ten proces zniknie, podmieni plik docelowy i wystartuje go.
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(temp)
-                {
-                    UseShellExecute = false,
-                    Arguments = "--apply-update \"" + Environment.ProcessPath + "\" "
-                                + System.Diagnostics.Process.GetCurrentProcess().Id
-                });
-            }
-            catch (Exception ex)
-            {
-                UpdateBtn.IsEnabled = true;
-                UpdateBtn.Content = label;
-                MessageBox.Show(L("S.update.faildl") + "\n" + ex.Message, L("S.update.title"),
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            _updating = true;   // Window_Closing pominie potwierdzenie i zapisze otwarte sesje do przywrócenia
-            Close();
-        }
-
-        private void OpenReleasePage()
-        {
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                    _update?.HtmlUrl ?? "https://github.com/FilipB97/Waypoint/releases/latest") { UseShellExecute = true });
-            }
-            catch { /* brak przeglądarki — ignoruj */ }
-        }
-
-        // Pobiera plik z ponawianiem przy błędach przejściowych (504/502/503/timeout — częste dla dużego
-        // assetu przez firmowy proxy/CDN GitHuba). Po wyczerpaniu prób rzuca ostatni wyjątek (wołający
-        // proponuje pobranie w przeglądarce).
-        private async System.Threading.Tasks.Task DownloadFileAsync(string url, string dest, long knownSize)
-        {
-            const int attempts = 3;
-            for (int attempt = 1; ; attempt++)
-            {
-                try { await DownloadOnceAsync(url, dest, knownSize); return; }
-                catch (Exception ex) when (attempt < attempts && IsTransientDownloadError(ex))
-                {
-                    UpdateBtn.Content = string.Format(L("S.update.retrying"), attempt, attempts);
-                    await System.Threading.Tasks.Task.Delay(1500 * attempt);
-                }
-            }
-        }
-
-        // Błąd przejściowy = timeout albo 408/429/5xx (brama/proxy) lub błąd sieci bez kodu — warto ponowić.
-        private static bool IsTransientDownloadError(Exception ex)
-        {
-            if (ex is TaskCanceledException || ex is OperationCanceledException) return true;   // timeout HttpClient
-            if (ex is System.IO.IOException) return true;
-            if (ex is System.Net.Http.HttpRequestException hre)
-            {
-                if (hre.StatusCode == null) return true;
-                int c = (int)hre.StatusCode.Value;
-                return c == 408 || c == 429 || c == 500 || c == 502 || c == 503 || c == 504;
-            }
-            return false;
-        }
-
-        // Pobiera plik strumieniowo z paskiem % na przycisku aktualizacji (kontynuacje async wracają na wątek UI).
-        private async System.Threading.Tasks.Task DownloadOnceAsync(string url, string dest, long knownSize)
-        {
-            using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(5) })
-            {
-                http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
-                using (var resp = await http.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead))
-                {
-                    resp.EnsureSuccessStatusCode();
-                    long total = resp.Content.Headers.ContentLength ?? knownSize;
-                    using (var src = await resp.Content.ReadAsStreamAsync())
-                    using (var fs = new System.IO.FileStream(dest, System.IO.FileMode.Create,
-                                        System.IO.FileAccess.Write, System.IO.FileShare.None))
-                    {
-                        var buf = new byte[81920];
-                        long done = 0; int read, lastPct = -1;
-                        while ((read = await src.ReadAsync(buf, 0, buf.Length)) > 0)
-                        {
-                            await fs.WriteAsync(buf, 0, read);
-                            done += read;
-                            if (total > 0)
-                            {
-                                int pct = (int)(done * 100 / total);
-                                if (pct != lastPct) { lastPct = pct; UpdateBtn.Content = string.Format(L("S.update.downloading"), pct); }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Zabezpieczenie przed podmianą na uszkodzony/częściowy plik: sensowny rozmiar + nagłówek PE „MZ".
-        private static bool IsValidExe(string path, long expectedSize)
-        {
-            try
-            {
-                var fi = new System.IO.FileInfo(path);
-                if (!fi.Exists || fi.Length < 1_000_000) return false;
-                if (expectedSize > 0 && fi.Length != expectedSize) return false;
-                using (var fs = System.IO.File.OpenRead(path))
-                    return fs.ReadByte() == 'M' && fs.ReadByte() == 'Z';
-            }
-            catch { return false; }
-        }
+        private void AboutWhatsNew_Click(object sender, RoutedEventArgs e) => _update?.AboutWhatsNew_Click(sender, e);
 
         // ---------- Nawigacja (rail) ----------
 
@@ -1111,163 +870,18 @@ namespace RdpManager
             }
         }
 
-        // Karta aktualizacji w „O aplikacji": stan „dostępna" (tytuł + rozmiar + akcent + przycisk instalacji).
-        private void ShowAboutUpdateAvailable(object version, long sizeBytes)
-        {
-            if (AboutUpdateCard == null) return;
-            AboutUpdateIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.ArrowDownload24;
-            AboutUpdateIcon.Foreground = Res("Accent");
-            AboutUpdateTitle.Text = string.Format(L("S.about.updateavailable"), version);
-            AboutUpdateSub.Text = string.Format(L("S.about.updateready"), (sizeBytes / 1048576.0).ToString("0.0") + " MB");
-            AboutUpdateSub.Visibility = sizeBytes > 0 ? Visibility.Visible : Visibility.Collapsed;
-            AboutUpdateInstall.Visibility = Visibility.Visible;
-            AboutUpdateCard.BorderBrush = Res("Accent");
-            AboutUpdateCard.Background = Res("AccentSoft");
-        }
-
-        // Karta aktualizacji: stan „masz najnowszą" (albo błąd sprawdzania) — bez przycisku instalacji.
-        private void SetAboutUpToDate(string title, bool error = false)
-        {
-            if (AboutUpdateCard == null) return;
-            AboutUpdateIcon.Symbol = error ? Wpf.Ui.Controls.SymbolRegular.Warning24 : Wpf.Ui.Controls.SymbolRegular.CheckmarkCircle24;
-            AboutUpdateIcon.Foreground = error ? Res("Danger") : Res("TextSec");
-            AboutUpdateTitle.Text = title;
-            AboutUpdateSub.Visibility = Visibility.Collapsed;
-            AboutUpdateInstall.Visibility = Visibility.Collapsed;
-            AboutUpdateCard.BorderBrush = Res("Border");
-            AboutUpdateCard.Background = Res("Panel");
-        }
-
+        // Karta aktualizacji + historia zmian w „O aplikacji" — logika w Services/UpdateService (PR 1 refaktoru);
+        // tu zostają tylko linki repo/licencja/zgłoszenia i wspólny OpenUrl.
         private static readonly string RepoUrl = "https://github.com/FilipB97/Waypoint";
         private void AboutRepo_Click(object sender, RoutedEventArgs e) => OpenUrl(RepoUrl);
         private void AboutLicense_Click(object sender, RoutedEventArgs e) => OpenUrl(RepoUrl + "/blob/master/LICENSE");
         private void AboutReportIssue_Click(object sender, RoutedEventArgs e) => OpenUrl(RepoUrl + "/issues/new");
 
-        // Historia zmian (Compass §4.11): renderuje kurowaną listę Changelog.Entries do karty w „O aplikacji".
-        // Historia zmian z wydań GitHub (jeśli pobrana), inaczej kurowany fallback z Changelog.cs.
-        private System.Collections.Generic.List<ChangelogEntry> _changelog;
-        private bool _changelogLoading;
-
-        // Pobiera wydania z GitHuba i buduje historię zmian z realnych notatek (raz na sesję; przy błędzie
-        // zostaje fallback z Changelog.cs). Wołane przy wejściu w Ustawienia.
-        private async void LoadChangelogAsync()
-        {
-            if (_changelog != null || _changelogLoading) return;
-            _changelogLoading = true;
-            try
-            {
-                string json;
-                using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) })
-                {
-                    http.DefaultRequestHeaders.UserAgent.ParseAdd("Waypoint");
-                    json = await http.GetStringAsync("https://api.github.com/repos/FilipB97/Waypoint/releases?per_page=10");
-                }
-                var releases = Core.UpdateCheck.ParseReleaseList(json);
-                var entries = new System.Collections.Generic.List<ChangelogEntry>();
-                foreach (var r in releases)
-                {
-                    var items = Changelog.ParseNotes(r.Notes);
-                    if (items.Count == 0) continue;   // pomiń wydania bez punktowanych notatek
-                    entries.Add(new ChangelogEntry { Version = r.Version, Date = r.Date, Latest = entries.Count == 0, Items = items });
-                }
-                if (entries.Count > 0) { _changelog = entries; BuildChangelog(); }
-            }
-            catch { /* offline / rate limit — zostaje fallback */ }
-            finally { _changelogLoading = false; }
-        }
-
-        private void BuildChangelog()
-        {
-            ChangelogList.Children.Clear();
-            var culture = new System.Globalization.CultureInfo(_settings != null && _settings.Language == "en" ? "en-US" : "pl-PL");
-            var source = _changelog != null && _changelog.Count > 0 ? _changelog : (System.Collections.Generic.IReadOnlyList<ChangelogEntry>)Changelog.Entries;
-            bool first = true;
-            foreach (var entry in source)
-            {
-                if (!first)
-                    ChangelogList.Children.Add(new Border { Height = 1, Background = Res("Border"), Margin = new Thickness(0, 12, 0, 12) });
-                first = false;
-
-                var grid = new Grid { Margin = new Thickness(0, 6, 0, 6) };
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(96) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-                // Lewa kolumna: wersja (+ badge NOWA) + data
-                var left = new StackPanel();
-                var verRow = new StackPanel { Orientation = Orientation.Horizontal };
-                verRow.Children.Add(new TextBlock
-                {
-                    Text = entry.Version, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold,
-                    FontFamily = (FontFamily)TryFindResource("Mono"), FontSize = (double)TryFindResource("FontBody"), VerticalAlignment = VerticalAlignment.Center
-                });
-                if (entry.Latest)
-                    verRow.Children.Add(MakePill(L("S.chg.latest"), Res("Accent")));
-                left.Children.Add(verRow);
-                string dateText = System.DateTime.TryParse(entry.Date, out var dt) ? dt.ToString("d MMM yyyy", culture) : entry.Date;
-                left.Children.Add(new TextBlock { Text = dateText, Foreground = Res("TextTer"),
-                    FontFamily = (FontFamily)TryFindResource("Mono"), FontSize = (double)TryFindResource("FontCaption"), Margin = new Thickness(0, 3, 0, 0) });
-                Grid.SetColumn(left, 0);
-                grid.Children.Add(left);
-
-                // Prawa kolumna: pozycje z etykietą rodzaju
-                var items = new StackPanel();
-                foreach (var it in entry.Items)
-                {
-                    var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 5) };
-                    row.Children.Add(MakePill(ChangeKindLabel(it.Kind), ChangeKindBrush(it.Kind), leadingMargin: false));
-                    row.Children.Add(new TextBlock
-                    {
-                        Text = it.Text, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"),
-                        TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
-                    });
-                    items.Children.Add(row);
-                }
-                Grid.SetColumn(items, 1);
-                grid.Children.Add(items);
-                ChangelogList.Children.Add(grid);
-            }
-        }
-
-        private string ChangeKindLabel(ChangeKind k)
-            => k == ChangeKind.New ? L("S.chg.new") : k == ChangeKind.Change ? L("S.chg.change") : L("S.chg.fix");
-        // Kolory badge'y jak w mockupie: NOWE=zielony, ZMIANA=jaśniejszy niebieski (AccentBright), POPRAWKA=bursztyn.
-        private Brush ChangeKindBrush(ChangeKind k)
-            => k == ChangeKind.New ? Res("Online") : k == ChangeKind.Change ? Res("AccentBright") : Res("Idle");
-
-        // Mała pigułka (badge) — kolorowe tło z alfą + tekst w kolorze; do etykiet rodzaju zmiany / „NOWA".
-        private FrameworkElement MakePill(string text, Brush color, bool leadingMargin = true)
-        {
-            var c = (color as SolidColorBrush)?.Color ?? System.Windows.Media.Colors.Gray;
-            return new Border
-            {
-                CornerRadius = new CornerRadius(5),   // .clk/.cltag mockupu: radius 5, tło ~14–16% koloru
-                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x26, c.R, c.G, c.B)),
-                Padding = new Thickness(6, 2, 6, 2),
-                Margin = leadingMargin ? new Thickness(8, 0, 0, 0) : new Thickness(0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = text, Foreground = color, FontSize = (double)TryFindResource("FontMicro") + 1.5, FontWeight = FontWeights.Bold }
-            };
-        }
-
-        private static void OpenUrl(string url)
+        // internal: używany też przez Services/UpdateService („Co nowego" bez sieci → strona wydań).
+        internal static void OpenUrl(string url)
         {
             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); }
             catch { /* brak przeglądarki — ignoruj */ }
-        }
-
-        // „Co nowego": pobierz najnowsze wydanie i pokaż jego changelog; przy braku sieci — otwórz stronę wydań.
-        private async void AboutWhatsNew_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var info = await FetchLatestReleaseAsync();
-                if (info != null && !string.IsNullOrWhiteSpace(info.Notes))
-                    new ReleaseNotesWindow(string.Format(L("S.update.newtitle"), info.Version),
-                        info.Version, info.Notes, info.HtmlUrl, confirm: false) { Owner = this }.ShowDialog();
-                else
-                    OpenUrl("https://github.com/FilipB97/Waypoint/releases");
-            }
-            catch { OpenUrl("https://github.com/FilipB97/Waypoint/releases"); }
         }
 
         // ---------- Zoom interfejsu (Ctrl + kółko / Ctrl +/- / Ctrl 0) ----------
@@ -1421,7 +1035,7 @@ namespace RdpManager
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (!_updating && _settings.ConfirmCloseConnected &&
+            if (!(_update?.IsUpdating ?? false) && _settings.ConfirmCloseConnected &&
                 (_sessions.Any(s => s.Connected) || _sessionWindows.Any(w => w.IsConnected)) &&
                 MessageBox.Show(L("S.msg.closeapp"), L("S.msg.closeapp.title"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -1495,10 +1109,7 @@ namespace RdpManager
             string verStr = ver.Major + "." + ver.Minor + "." + Math.Max(ver.Build, 0);
             AboutVersion.Text = string.Format(L("S.about.installedver"), verStr);
             AboutDataPath.Text = L("S.msg.about.datafolder") + " " + SettingsStore.Dir;
-            if (_update == null) SetAboutUpToDate(L("S.update.uptodate"));   // stan domyślny karty aktualizacji
-            else ShowAboutUpdateAvailable(_update.Version, _update.ExeSize);  // gdy sprawdzenie w tle już coś znalazło
-            BuildChangelog();       // od razu fallback z Changelog.cs
-            LoadChangelogAsync();   // w tle podmień na realne wydania z GitHuba
+            _update?.RefreshAboutCard();   // karta aktualizacji + historia zmian (fallback od razu, GitHub w tle)
             SettingsStatus.Text = "";
             _loadingSettings = false;
         }
@@ -1788,7 +1399,7 @@ namespace RdpManager
             }
 
             // Cykliczne sprawdzanie aktualizacji wg tego samego przełącznika co start.
-            if (_updateTimer != null) { if (_settings.CheckUpdates) _updateTimer.Start(); else _updateTimer.Stop(); }
+            _update?.ApplyCheckUpdatesSetting();
 
             ThemeManager.Apply(_settings.Theme, _settings.AccentColor, _settings.ThemeVariantDark, _settings.ThemeVariantLight);
             LocalizationManager.Apply(_settings.Language);
