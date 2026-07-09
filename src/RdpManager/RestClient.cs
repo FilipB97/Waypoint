@@ -152,14 +152,23 @@ namespace RdpManager
                 // Dla form-urlencoded podstawiamy i kodujemy każdą wartość osobno (jak parametry zapytania) —
                 // inaczej sekret zawierający +,/,= rozjechałby się. Tabela pól (edytor) ma pierwszeństwo nad
                 // starszym surowym tekstem (kompatybilność z żądaniami zapisanymi przed edytorem). Inne typy:
-                // podstaw i wyślij treść tak jak jest.
-                string content = !isForm ? Subst(req.Body, vars)
+                // podstaw i wyślij treść tak jak jest — ale znormalizuj końce linii do LF: WPF TextBox wymusza
+                // CRLF, co po cichu psuło body liczone bajt po bajcie (podpisy/HMAC, formaty wrażliwe na \n).
+                string content = !isForm ? NormalizeNewlines(Subst(req.Body, vars))
                                 : hasFields ? BuildFormBodyFromFields(req.FormFields, vars)
                                 : BuildFormBody(req.Body, vars);
                 msg.Content = new StringContent(content, Encoding.UTF8);
                 if (!string.IsNullOrWhiteSpace(contentType))
                 {
-                    try { msg.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(Subst(contentType, vars)); } catch { /* zła wartość → zostaje domyślny */ }
+                    try
+                    {
+                        var mt = MediaTypeHeaderValue.Parse(Subst(contentType, vars));
+                        // Wysyłamy bajty UTF-8; gdy użytkownik nie podał charsetu, dopisz go dla surowego body,
+                        // inaczej serwer domyślający się latin-1 przekłamie znaki spoza ASCII (objaw „zmienione znaki").
+                        if (!isForm && string.IsNullOrEmpty(mt.CharSet)) mt.CharSet = "utf-8";
+                        msg.Content.Headers.ContentType = mt;
+                    }
+                    catch { /* zła wartość → zostaje domyślny */ }
                 }
             }
 
@@ -172,6 +181,8 @@ namespace RdpManager
             }
 
             // Uwierzytelnianie z zakładki Auth nadpisuje ewentualny ręczny nagłówek Authorization.
+            // Kontrakt: Build oczekuje TYPU JUŻ ROZWIĄZANEGO (0=brak, 1=Bearer, 2=Basic). Dziedziczenie
+            // (3=Inherit) musi rozwiązać wołający (RestConsole.ResolveEffectiveAuth) — tu 3 = brak nagłówka.
             string secret = Subst(authSecret, vars);
             if (req.AuthType == 1 && !string.IsNullOrEmpty(secret))
                 msg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
@@ -220,6 +231,10 @@ namespace RdpManager
             return string.Join("&", parts);
         }
 
+        // Normalizuje końce linii do LF. Publiczne dla testów.
+        public static string NormalizeNewlines(string s)
+            => string.IsNullOrEmpty(s) ? (s ?? "") : s.Replace("\r\n", "\n").Replace("\r", "\n");
+
         // Podstawia {{klucz}} wartościami zmiennych (nieznane {{x}} zostają bez zmian). Publiczne dla testów.
         public static string Subst(string s, IReadOnlyDictionary<string, string> vars)
         {
@@ -229,7 +244,12 @@ namespace RdpManager
         }
 
         /// <summary>Buduje docelowy URI: podstawia {{zmienne}}, dokleja włączone parametry zapytania
-        /// i uzupełnia schemat (https) gdy brak. Publiczne dla testów.</summary>
+        /// i uzupełnia schemat (https) gdy brak. Publiczne dla testów.
+        /// Parametry z TABELI są kodowane (EscapeDataString) — komórka trzyma wartość ODKODOWANĄ, kodujemy
+        /// raz. Ścieżka/query wpisane wprost w polu URL idą DOSŁOWNIE (odpowiedzialność użytkownika):
+        /// DangerousDisablePathAndQueryCanonicalization wyłącza kanonikalizację System.Uri, która inaczej
+        /// dekodowała %7E→~, zwijała /../, przekłamywała znaki spoza ASCII i ucinała wszystko po # jako
+        /// fragment — stąd zgłoszone „zmienione znaki w żądaniu".</summary>
         public static Uri BuildRequestUri(RestRequest req, IReadOnlyDictionary<string, string> vars = null)
         {
             string url = Subst((req.Url ?? "").Trim(), vars);
@@ -242,7 +262,7 @@ namespace RdpManager
             if (qp.Count > 0)
                 url += (url.Contains("?") ? "&" : "?") + string.Join("&", qp);
 
-            return new Uri(url, UriKind.Absolute);
+            return new Uri(url, new UriCreationOptions { DangerousDisablePathAndQueryCanonicalization = true });
         }
     }
 }

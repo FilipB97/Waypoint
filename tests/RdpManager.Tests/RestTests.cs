@@ -60,6 +60,32 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void BuildUri_PreservesPercentEncodingInPath_NoDecoding()
+        {
+            // Bez wyłączonej kanonikalizacji System.Uri dekodowało %7E→~ i %2F→/ — psując podpisane URL-e.
+            var u = RestClient.BuildRequestUri(new RestRequest { Url = "https://x.test/a%7Eb%2Fc" });
+            Assert.Contains("%7E", u.AbsoluteUri);
+            Assert.Contains("%2F", u.AbsoluteUri);
+            Assert.DoesNotContain("~", u.AbsoluteUri);
+        }
+
+        [Fact]
+        public void BuildUri_PreservesDotSegmentsAndPlusLiterally()
+        {
+            // /../ nie jest zwijane, a + w query zostaje + (nie zamieniane) — dosłownie to, co wpisał użytkownik.
+            var u = RestClient.BuildRequestUri(new RestRequest { Url = "https://x.test/a/../b?q=1+2" });
+            Assert.Equal("https://x.test/a/../b?q=1+2", u.AbsoluteUri);
+        }
+
+        [Fact]
+        public void NormalizeNewlines_ConvertsCrlfAndLoneCrToLf()
+        {
+            Assert.Equal("a\nb\nc", RestClient.NormalizeNewlines("a\r\nb\rc"));
+            Assert.Equal("", RestClient.NormalizeNewlines(null));
+            Assert.Equal("{\n  \"x\": 1\n}", RestClient.NormalizeNewlines("{\r\n  \"x\": 1\r\n}"));
+        }
+
+        [Fact]
         public void BuildFormBody_SubstitutesThenEncodesValues()
         {
             var vars = new Dictionary<string, string> { ["u"] = "bob", ["sec"] = "a+b/c=" };
