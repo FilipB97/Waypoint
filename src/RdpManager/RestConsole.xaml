@@ -51,6 +51,8 @@
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="ToolTip" Value=" "/>
             <EventSetter Event="ToolTipOpening" Handler="ValuePreview_ToolTipOpening"/>
+            <!-- Kolor zmiennych: {{znane}} → niebieski, {{brakujące}} → czerwony (live przy pisaniu). -->
+            <EventSetter Event="TextChanged" Handler="VarCell_TextChanged"/>
         </Style>
 
         <!-- Wiersz klucz/wartość: przełącznik + klucz + wartość + usuń. Szerokości kolumn zsynchronizowane z nagłówkiem (KvHeader). -->
@@ -305,7 +307,7 @@
                 </ComboBox>
                 <ui:TextBox x:Name="UrlBox" Grid.Column="1" Margin="8,0" PlaceholderText="{DynamicResource S.rest.urlph}"
                             VerticalContentAlignment="Center" FontSize="{StaticResource FontBody}"
-                            ToolTip=" " ToolTipOpening="ValuePreview_ToolTipOpening"/>
+                            ToolTip=" " ToolTipOpening="ValuePreview_ToolTipOpening" TextChanged="VarCell_TextChanged"/>
                 <ui:Button x:Name="SendBtn" Grid.Column="2" Appearance="Primary" Content="{DynamicResource S.rest.send}"
                            MinWidth="104" Click="Send_Click">
                     <ui:Button.Icon><ui:SymbolIcon Symbol="Send24"/></ui:Button.Icon>
@@ -459,10 +461,15 @@
                             </ComboBox>
                         </StackPanel>
 
-                        <!-- Bearer -->
+                        <!-- Bearer: TextBox (nie PasswordBox) — jak w Postmanie token jest widoczny, dzięki czemu
+                             można wpisać {{zmienną}} środowiska (podstawianą przy wysyłce) i widzieć kolor
+                             (niebieski = znaleziona, czerwony = brak) oraz podgląd wartości w tooltipie. -->
                         <StackPanel x:Name="BearerPanel" Visibility="Collapsed">
                             <TextBlock Text="{DynamicResource S.rest.auth.token}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,3"/>
-                            <PasswordBox x:Name="TokenBox" MaxWidth="520" HorizontalAlignment="Left" MinWidth="360"/>
+                            <TextBox x:Name="TokenBox" Style="{StaticResource RestCell}" FontFamily="{DynamicResource Mono}"
+                                     MaxWidth="520" HorizontalAlignment="Left" MinWidth="360"/>
+                            <TextBlock Text="{DynamicResource S.rest.auth.tokenvar}" Foreground="{DynamicResource TextTer}"
+                                       FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                         </StackPanel>
 
                         <!-- Basic -->

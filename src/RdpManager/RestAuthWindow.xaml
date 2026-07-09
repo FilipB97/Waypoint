@@ -51,10 +51,16 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="2">
-                    <!-- Bearer -->
+                    <!-- Bearer: TextBox (jak w konsoli) — token widoczny, można wpisać {{zmienną}} środowiska;
+                         kolor sygnalizuje, czy zmienna istnieje (niebieski) czy nie (czerwony). -->
                     <StackPanel x:Name="BearerPanel" Visibility="Collapsed">
                         <TextBlock Text="{DynamicResource S.rest.auth.token}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,3"/>
-                        <PasswordBox x:Name="TokenBox" MaxWidth="420" HorizontalAlignment="Left" MinWidth="320"/>
+                        <TextBox x:Name="TokenBox" MaxWidth="420" MinWidth="320" HorizontalAlignment="Left"
+                                 FontFamily="{DynamicResource Mono}" TextChanged="Token_TextChanged"
+                                 Background="Transparent" Foreground="{DynamicResource TextPrim}" CaretBrush="{DynamicResource TextPrim}"
+                                 BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="4,4"/>
+                        <TextBlock Text="{DynamicResource S.rest.auth.tokenvar}" Foreground="{DynamicResource TextTer}"
+                                   FontSize="{StaticResource FontSmall}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                     </StackPanel>
 
                     <!-- Basic -->

@@ -570,6 +570,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.auth.bearer">Bearer (token)</sys:String>
     <sys:String x:Key="S.rest.auth.basic">Basic (user/pass)</sys:String>
     <sys:String x:Key="S.rest.auth.token">Token</sys:String>
+    <sys:String x:Key="S.rest.auth.tokenvar">You can use an environment {{variable}} — blue = found, red = missing (substituted at send).</sys:String>
     <sys:String x:Key="S.rest.auth.user">User</sys:String>
     <sys:String x:Key="S.rest.auth.pass">Password</sys:String>
     <sys:String x:Key="S.rest.auth.hint">The secret (token / password) goes to Windows Credential Manager, not to the file.</sys:String>
