@@ -5120,14 +5120,21 @@ namespace RdpManager
             }
         }
 
-        // Przycisk „Importuj…" rozwija menu źródeł (mstsc / .rdp / mRemoteNG / RDCMan).
-        private void ImportMenu_Click(object sender, RoutedEventArgs e)
+        // Import: modal z kartami źródeł (Compass §4.7). Modal zwraca wybór; właściwy import (z oknem
+        // wyboru pliku) uruchamiamy tutaj, żeby dialog należał do MainWindow.
+        private void OpenImport_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button b && b.ContextMenu != null)
+            var w = new ImportWindow { Owner = this };
+            if (w.ShowDialog() != true) return;
+            switch (w.Selected)
             {
-                b.ContextMenu.PlacementTarget = b;
-                b.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-                b.ContextMenu.IsOpen = true;
+                case "mstsc": ImportMstsc_Click(this, null); break;
+                case "rdp": ImportRdp_Click(this, null); break;
+                case "mrng": ImportMrng_Click(this, null); break;
+                case "rdcman": ImportRdg_Click(this, null); break;
+                case "rdm": ImportRdm_Click(this, null); break;
+                case "filezilla": ImportFileZilla_Click(this, null); break;
+                case "postman": ImportPostman_Click(this, null); break;
             }
         }
 
