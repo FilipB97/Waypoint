@@ -53,6 +53,13 @@
     <sys:String x:Key="S.set.sec.updates">AKTUALIZACJE</sys:String>
     <sys:String x:Key="S.set.sec.about">O PROGRAMIE</sys:String>
     <sys:String x:Key="S.set.sec.changelog">HISTORIA ZMIAN</sys:String>
+    <sys:String x:Key="S.set.sec.rdpdefaults">DOMYŚLNE RDP</sys:String>
+    <sys:String x:Key="S.set.sec.network">SIEĆ</sys:String>
+    <sys:String x:Key="S.set.sec.profiles">PROFILE POŚWIADCZEŃ</sys:String>
+    <sys:String x:Key="S.set.redirclip">Przekieruj schowek</sys:String>
+    <sys:String x:Key="S.set.redirdrives">Przekieruj dyski i drukarki</sys:String>
+    <sys:String x:Key="S.set.timeout">Limit czasu połączenia (s)</sys:String>
+    <sys:String x:Key="S.set.timeout.sub">Sekundy do przerwania próby (sonda osiągalności)</sys:String>
     <sys:String x:Key="S.set.about.sub">Wersja, aktualizacje i historia zmian.</sys:String>
     <sys:String x:Key="S.about.whatsnew">Co nowego</sys:String>
     <sys:String x:Key="S.about.installedver">Zainstalowana wersja {0} · .NET 8 · Windows</sys:String>
