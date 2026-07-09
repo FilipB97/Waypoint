@@ -93,6 +93,27 @@ namespace RdpManager.Tests
             Assert.False(RdpUtils.MatchesFilter(s, "staging"));
         }
 
+        [Fact]
+        public void MatchesProtocol_NullMeansAll_ElseExactMatch()
+        {
+            var ssh = new ServerInfo { Protocol = RemoteProtocol.Ssh };
+            Assert.True(RdpUtils.MatchesProtocol(ssh, null));                    // „Wszystkie" = bez filtra
+            Assert.True(RdpUtils.MatchesProtocol(ssh, RemoteProtocol.Ssh));      // dopasowanie
+            Assert.False(RdpUtils.MatchesProtocol(ssh, RemoteProtocol.Rdp));     // inny protokół
+            Assert.False(RdpUtils.MatchesProtocol(null, RemoteProtocol.Ssh));    // null serwer nie pasuje
+            Assert.False(RdpUtils.MatchesProtocol(null, null));
+        }
+
+        [Theory]
+        [InlineData(-1, "")]        // brak pomiaru = pusty tekst
+        [InlineData(0, "<1 ms")]    // sub-milisekunda
+        [InlineData(1, "1 ms")]
+        [InlineData(238, "238 ms")]
+        public void FormatLatency_FormatsOrHides(int ms, string expected)
+        {
+            Assert.Equal(expected, RdpUtils.FormatLatency(ms));
+        }
+
         [Theory]
         [InlineData("16", 16)]
         [InlineData("24", 24)]

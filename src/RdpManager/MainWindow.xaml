@@ -175,28 +175,33 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <ui:TextBox x:Name="SearchBox" Grid.Row="0" Margin="12" PlaceholderText="{DynamicResource S.search}"
+                    <ui:TextBox x:Name="SearchBox" Grid.Row="0" Margin="12,12,12,8" PlaceholderText="{DynamicResource S.search}"
                                 TextChanged="SearchBox_TextChanged">
                         <ui:TextBox.Icon>
                             <ui:SymbolIcon Symbol="Search24"/>
                         </ui:TextBox.Icon>
                     </ui:TextBox>
 
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8,0">
+                    <!-- Chipy filtra protokołów (Compass §4.2) — budowane w kodzie z protokołów obecnych na liście;
+                         ukryte, gdy jest tylko jeden protokół (nie ma czego filtrować). -->
+                    <WrapPanel x:Name="ProtoFilterBar" Grid.Row="1" Orientation="Horizontal" Margin="12,0,8,4" Visibility="Collapsed"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="8,0">
                         <AdornerDecorator>
                             <StackPanel x:Name="ServerTree"/>
                         </AdornerDecorator>
                     </ScrollViewer>
 
-                    <TextBlock x:Name="TreeEmptyHint" Grid.Row="1" Visibility="Collapsed" Text=""
+                    <TextBlock x:Name="TreeEmptyHint" Grid.Row="2" Visibility="Collapsed" Text=""
                                Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" TextAlignment="Center"
                                VerticalAlignment="Top" HorizontalAlignment="Center" Margin="20,32,20,0"/>
 
-                    <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10">
+                    <Border Grid.Row="3" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="10">
                         <StackPanel>
                             <!-- Nieblokujący sygnał samonaprawy konfiguracji (przywrócenie z kopii / kwarantanna
                                  uszkodzonego pliku). Pokazywany raz na starcie, gdy HealthNotices coś zebrało;
@@ -519,6 +524,7 @@
                                 <ComboBoxItem Content="{DynamicResource S.liststyle.default}" Tag="Default"/>
                                 <ComboBoxItem Content="{DynamicResource S.liststyle.minimal}" Tag="Minimal"/>
                             </ComboBox>
+                            <CheckBox x:Name="SetShowLatency" Content="{DynamicResource S.set.showlatency}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,0"/>
                             <TextBlock Text="{DynamicResource S.set.border}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,4"/>
                             <ComboBox x:Name="SetBorder" Width="160" HorizontalAlignment="Left" SelectionChanged="InterfaceSetting_Changed">
                                 <ComboBoxItem Content="{DynamicResource S.border.none}" Tag=""/>

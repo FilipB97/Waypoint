@@ -91,6 +91,16 @@ namespace RdpManager.Core
             return false;
         }
 
+        /// <summary>Czy serwer pasuje do filtra protokołu z paska chipów. <paramref name="proto"/> == null
+        /// oznacza „Wszystkie" (bez filtrowania). Komponuje się z <see cref="MatchesFilter"/> (AND).</summary>
+        public static bool MatchesProtocol(ServerInfo s, RemoteProtocol? proto)
+            => s != null && (proto == null || s.Protocol == proto.Value);
+
+        /// <summary>Formatuje zmierzone opóźnienie sondy TCP do etykiety wiersza. Ujemne = brak pomiaru
+        /// (pusty tekst); 0 ms pokazujemy jako „&lt;1 ms". Nie dla protokołów bez sondy (Serial/WWW/REST).</summary>
+        public static string FormatLatency(int ms)
+            => ms < 0 ? "" : ms == 0 ? "<1 ms" : ms + " ms";
+
         /// <summary>
         /// Parsuje głębię kolorów z tekstu ComboBoxa do jednej z dozwolonych wartości (16/24/32);
         /// przy nieznanej wartości zwraca fallback. Źródło: MainWindow.ParseColorDepth.
