@@ -23,6 +23,21 @@
     <SolidColorBrush x:Key="GdStaging"  Color="#D98F2E"/>
     <SolidColorBrush x:Key="GdClient"   Color="#1F8B94"/>
 
+    <!-- Kolory etykiet protokołów (Compass §2) — warianty przyciemnione dla kontrastu na jasnym tle. -->
+    <SolidColorBrush x:Key="ProtoRdp"    Color="#2F6BE0"/>
+    <SolidColorBrush x:Key="ProtoSsh"    Color="#1FA871"/>
+    <SolidColorBrush x:Key="ProtoSftp"   Color="#C9852B"/>
+    <SolidColorBrush x:Key="ProtoRest"   Color="#1F97A0"/>
+    <SolidColorBrush x:Key="ProtoWeb"    Color="#6A5FE0"/>
+    <SolidColorBrush x:Key="ProtoTelnet" Color="#5A5D66"/>
+
+    <!-- Kolory metod REST (Compass §2) — warianty przyciemnione dla kontrastu na jasnym tle. -->
+    <SolidColorBrush x:Key="MethodGet"    Color="#1FA871"/>
+    <SolidColorBrush x:Key="MethodPost"   Color="#2F6BE0"/>
+    <SolidColorBrush x:Key="MethodPut"    Color="#C9852B"/>
+    <SolidColorBrush x:Key="MethodDelete" Color="#D23A34"/>
+    <SolidColorBrush x:Key="MethodPatch"  Color="#6A5FE0"/>
+
     <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
 
     <LinearGradientBrush x:Key="AvProd" StartPoint="0,0" EndPoint="1,1">
