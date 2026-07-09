@@ -241,7 +241,8 @@
             </Border>
 
             <!-- SIDEBAR -->
-            <Border x:Name="Sidebar" Grid.Column="1" Width="228" Background="{DynamicResource Panel}"
+            <!-- Tło paska bocznego = RailBg (jak rail i pasek kart) — spójne z chromem, nie odstaje jak jasny Panel. -->
+            <Border x:Name="Sidebar" Grid.Column="1" Width="228" Background="{DynamicResource RailBg}"
                     BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -602,11 +603,11 @@
 
                 <!-- Prawa kolumna: treść wybranej kategorii (lub wyniki wyszukiwania) -->
                 <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel x:Name="SettingsCards" Margin="12,24,28,24" MaxWidth="1100" HorizontalAlignment="Stretch">
+                    <StackPanel x:Name="SettingsCards" Margin="12,24,40,24" MaxWidth="1400" HorizontalAlignment="Stretch">
 
                     <!-- Interfejs -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <StackPanel HorizontalAlignment="Stretch">
                             <TextBlock Text="{DynamicResource S.set.iface}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.iface.sub}" Style="{DynamicResource SetPageSub}"/>
 
@@ -729,7 +730,7 @@
 
                     <!-- Połączenie -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <StackPanel HorizontalAlignment="Stretch">
                             <TextBlock Text="{DynamicResource S.set.conn}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.conn.sub}" Style="{DynamicResource SetPageSub}"/>
 
@@ -763,7 +764,7 @@
 
                     <!-- Zachowanie -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <StackPanel HorizontalAlignment="Stretch">
                             <TextBlock Text="{DynamicResource S.set.behavior}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.behavior.sub}" Style="{DynamicResource SetPageSub}"/>
 
@@ -835,7 +836,7 @@
 
                     <!-- Połącz na starcie -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <StackPanel HorizontalAlignment="Stretch">
                             <TextBlock Text="{DynamicResource S.set.autoconnect}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.autoconnect.hint}" Style="{DynamicResource SetPageSub}"/>
                             <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="10,6">
@@ -848,7 +849,7 @@
 
                     <!-- Profile poświadczeń -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <StackPanel HorizontalAlignment="Stretch">
                             <TextBlock Text="{DynamicResource S.set.profiles}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.profiles.hint}" Style="{DynamicResource SetPageSub}"/>
                             <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="10,6">
@@ -862,7 +863,7 @@
 
                     <!-- Dane -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <StackPanel HorizontalAlignment="Stretch">
                             <TextBlock Text="{DynamicResource S.set.data}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.data.sub}" Style="{DynamicResource SetPageSub}"/>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
@@ -881,7 +882,7 @@
 
                     <!-- O aplikacji (Compass §4.6/§4.11): treść dawnego okna „O aplikacji" + aktualizacje + changelog -->
                     <Border Padding="0">
-                        <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <StackPanel HorizontalAlignment="Stretch">
                             <TextBlock Text="{DynamicResource S.nav.about}" Style="{DynamicResource SetPageHead}"/>
                             <TextBlock Text="{DynamicResource S.set.about.sub}" Style="{DynamicResource SetPageSub}"/>
 
