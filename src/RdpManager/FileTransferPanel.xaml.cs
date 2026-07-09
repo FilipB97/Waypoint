@@ -660,13 +660,39 @@ namespace RdpManager
             }
         }
 
-        // ---------- Przeciąganie wiersza (dual-pane: między panelami) ----------
+        // ---------- Przeciąganie wiersza (dual-pane: między panelami) + zaznaczanie prostokątem (rubber-band) ----------
 
         private System.Windows.Point _dragStart;
-        private void List_PreviewDown(object sender, System.Windows.Input.MouseButtonEventArgs e) => _dragStart = e.GetPosition(null);
+        private bool _downOnRow;                        // klik zaczęty na wierszu → ewentualne przeciąganie plików
+        private bool _marquee;                          // trwa zaznaczanie prostokątem (klik na pustym)
+        private System.Windows.Point _marqueeStart;     // początek prostokąta względem FileList
+        private bool _marqueeAdditive;                  // Ctrl → dodawaj do istniejącego zaznaczenia
+        private System.Collections.Generic.HashSet<object> _marqueeInitial;
+
+        private void List_PreviewDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            _dragStart = e.GetPosition(null);
+            _downOnRow = FindRow(e.OriginalSource as DependencyObject) != null;
+            if (_downOnRow) return;   // na wierszu → normalne zaznaczanie/przeciąganie WPF
+
+            // Pusty obszar → zacznij zaznaczanie prostokątem.
+            _marquee = true;
+            _marqueeStart = e.GetPosition(FileList);
+            _marqueeAdditive = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0;
+            _marqueeInitial = _marqueeAdditive
+                ? new System.Collections.Generic.HashSet<object>(FileList.SelectedItems.Cast<object>())
+                : new System.Collections.Generic.HashSet<object>();
+            if (!_marqueeAdditive) FileList.SelectedItems.Clear();
+            FileList.CaptureMouse();
+        }
+
         private void List_PreviewMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
             if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+
+            if (_marquee) { UpdateMarquee(e.GetPosition(FileList)); e.Handled = true; return; }
+
+            if (!_downOnRow) return;   // przeciąganie plików tylko gdy zaczęto na wierszu
             var sel = GetSelection();
             if (sel.Count == 0) return;
             var pos = e.GetPosition(null);
@@ -674,6 +700,44 @@ namespace RdpManager
                 Math.Abs(pos.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
             try { DragDrop.DoDragDrop(FileList, new FileDragData { Source = this, Items = sel }, DragDropEffects.Copy); }
             catch { }
+        }
+
+        private void List_PreviewUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (!_marquee) return;
+            _marquee = false;
+            FileList.ReleaseMouseCapture();
+            MarqueeRect.Visibility = Visibility.Collapsed;
+        }
+
+        // Aktualizuje prostokąt i zaznacza wiersze, które w niego wpadają (tylko widoczne — lista jest wirtualizowana).
+        private void UpdateMarquee(System.Windows.Point cur)
+        {
+            double x = Math.Min(_marqueeStart.X, cur.X), y = Math.Min(_marqueeStart.Y, cur.Y);
+            double w = Math.Abs(cur.X - _marqueeStart.X), h = Math.Abs(cur.Y - _marqueeStart.Y);
+            if (w < 3 && h < 3) { MarqueeRect.Visibility = Visibility.Collapsed; return; }
+
+            MarqueeRect.Visibility = Visibility.Visible;
+            Canvas.SetLeft(MarqueeRect, x); Canvas.SetTop(MarqueeRect, y);
+            MarqueeRect.Width = w; MarqueeRect.Height = h;
+
+            var rect = new Rect(x, y, w, h);
+            for (int i = 0; i < FileList.Items.Count; i++)
+            {
+                if (!(FileList.ItemContainerGenerator.ContainerFromIndex(i) is ListViewItem c) || !c.IsVisible) continue;
+                Rect b;
+                try { b = c.TransformToAncestor(FileList).TransformBounds(new Rect(0, 0, c.ActualWidth, c.ActualHeight)); }
+                catch { continue; }
+                bool inside = rect.IntersectsWith(b);
+                c.IsSelected = inside || (_marqueeAdditive && _marqueeInitial.Contains(FileList.Items[i]));
+            }
+        }
+
+        // Znajduje ListViewItem w górę drzewa wizualnego od miejsca kliknięcia (null = pusty obszar listy).
+        private static ListViewItem FindRow(DependencyObject src)
+        {
+            while (src != null && !(src is ListViewItem)) src = System.Windows.Media.VisualTreeHelper.GetParent(src);
+            return src as ListViewItem;
         }
 
         // ---------- Drag&drop z Eksploratora (upload) + między panelami ----------
