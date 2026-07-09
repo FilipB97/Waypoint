@@ -402,8 +402,11 @@ namespace RdpManager
             {
                 UpdateBtn.IsEnabled = true;
                 UpdateBtn.Content = label;
-                MessageBox.Show(L("S.update.faildl") + "\n" + ex.Message, L("S.update.title"),
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                // Pobranie w apce padło (np. 504 z proxy/CDN dla dużego pliku) — zaproponuj pobranie w
+                // przeglądarce (radzi sobie z dużymi plikami / wznawianiem lepiej niż nasz strumień).
+                var res = MessageBox.Show(L("S.update.faildl") + "\n" + ex.Message + "\n\n" + L("S.update.openbrowserq"),
+                    L("S.update.title"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (res == MessageBoxResult.Yes) OpenReleasePage();
                 return;
             }
 
@@ -457,8 +460,39 @@ namespace RdpManager
             catch { /* brak przeglądarki — ignoruj */ }
         }
 
-        // Pobiera plik strumieniowo z paskiem % na przycisku aktualizacji (kontynuacje async wracają na wątek UI).
+        // Pobiera plik z ponawianiem przy błędach przejściowych (504/502/503/timeout — częste dla dużego
+        // assetu przez firmowy proxy/CDN GitHuba). Po wyczerpaniu prób rzuca ostatni wyjątek (wołający
+        // proponuje pobranie w przeglądarce).
         private async System.Threading.Tasks.Task DownloadFileAsync(string url, string dest, long knownSize)
+        {
+            const int attempts = 3;
+            for (int attempt = 1; ; attempt++)
+            {
+                try { await DownloadOnceAsync(url, dest, knownSize); return; }
+                catch (Exception ex) when (attempt < attempts && IsTransientDownloadError(ex))
+                {
+                    UpdateBtn.Content = string.Format(L("S.update.retrying"), attempt, attempts);
+                    await System.Threading.Tasks.Task.Delay(1500 * attempt);
+                }
+            }
+        }
+
+        // Błąd przejściowy = timeout albo 408/429/5xx (brama/proxy) lub błąd sieci bez kodu — warto ponowić.
+        private static bool IsTransientDownloadError(Exception ex)
+        {
+            if (ex is TaskCanceledException || ex is OperationCanceledException) return true;   // timeout HttpClient
+            if (ex is System.IO.IOException) return true;
+            if (ex is System.Net.Http.HttpRequestException hre)
+            {
+                if (hre.StatusCode == null) return true;
+                int c = (int)hre.StatusCode.Value;
+                return c == 408 || c == 429 || c == 500 || c == 502 || c == 503 || c == 504;
+            }
+            return false;
+        }
+
+        // Pobiera plik strumieniowo z paskiem % na przycisku aktualizacji (kontynuacje async wracają na wątek UI).
+        private async System.Threading.Tasks.Task DownloadOnceAsync(string url, string dest, long knownSize)
         {
             using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(5) })
             {
@@ -939,8 +973,9 @@ namespace RdpManager
 
         private string ChangeKindLabel(ChangeKind k)
             => k == ChangeKind.New ? L("S.chg.new") : k == ChangeKind.Change ? L("S.chg.change") : L("S.chg.fix");
+        // Kolory badge'y jak w mockupie: NOWE=zielony, ZMIANA=jaśniejszy niebieski (AccentBright), POPRAWKA=bursztyn.
         private Brush ChangeKindBrush(ChangeKind k)
-            => k == ChangeKind.New ? Res("Online") : k == ChangeKind.Change ? Res("Accent") : Res("Idle");
+            => k == ChangeKind.New ? Res("Online") : k == ChangeKind.Change ? Res("AccentBright") : Res("Idle");
 
         // Mała pigułka (badge) — kolorowe tło z alfą + tekst w kolorze; do etykiet rodzaju zmiany / „NOWA".
         private FrameworkElement MakePill(string text, Brush color, bool leadingMargin = true)
@@ -948,12 +983,12 @@ namespace RdpManager
             var c = (color as SolidColorBrush)?.Color ?? System.Windows.Media.Colors.Gray;
             return new Border
             {
-                CornerRadius = new CornerRadius(4),
-                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x28, c.R, c.G, c.B)),
-                Padding = new Thickness(6, 1, 6, 1),
+                CornerRadius = new CornerRadius(5),   // .clk/.cltag mockupu: radius 5, tło ~14–16% koloru
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x26, c.R, c.G, c.B)),
+                Padding = new Thickness(6, 2, 6, 2),
                 Margin = leadingMargin ? new Thickness(8, 0, 0, 0) : new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = text, Foreground = color, FontSize = (double)TryFindResource("FontMicro") + 1.5, FontWeight = FontWeights.SemiBold }
+                Child = new TextBlock { Text = text, Foreground = color, FontSize = (double)TryFindResource("FontMicro") + 1.5, FontWeight = FontWeights.Bold }
             };
         }
 

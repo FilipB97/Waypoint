@@ -37,8 +37,27 @@ namespace RdpManager.Tests
             var items = Changelog.ParseNotes(body);
             Assert.Equal("Świetna rzecz", items[0].Text);
             Assert.Equal(ChangeKind.New, items[0].Kind);
-            Assert.Equal("literówka", items[1].Text);
+            Assert.Equal("Literówka", items[1].Text);          // pierwsza litera na wielką
             Assert.Equal(ChangeKind.Fix, items[1].Kind);
+        }
+
+        [Fact]
+        public void ParseNotes_StripsScopedCommitPrefix()
+        {
+            var body = "- feat(dashboard): wykresy pulpitu\n- fix(rest)!: podwójne kodowanie";
+            var items = Changelog.ParseNotes(body);
+            Assert.Equal("Wykresy pulpitu", items[0].Text);    // „feat(dashboard):" ścięte + kapitalizacja
+            Assert.Equal(ChangeKind.New, items[0].Kind);
+            Assert.Equal("Podwójne kodowanie", items[1].Text); // „fix(rest)!:" ścięte
+            Assert.Equal(ChangeKind.Fix, items[1].Kind);
+        }
+
+        [Fact]
+        public void ParseNotes_KeepsProseColon_NotACommitPrefix()
+        {
+            // „Uwaga:" zaczyna się wielką literą → to nie prefiks commita, nie tnij.
+            var items = Changelog.ParseNotes("- Uwaga: ważna zmiana");
+            Assert.Equal("Uwaga: ważna zmiana", items[0].Text);
         }
 
         [Fact]

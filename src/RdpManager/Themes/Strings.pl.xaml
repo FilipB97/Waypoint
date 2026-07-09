@@ -124,6 +124,8 @@
     <sys:String x:Key="S.update.willrestart">Otwarte połączenia zostaną zamknięte; Waypoint uruchomi się ponownie i zaproponuje przywrócenie sesji.</sys:String>
     <sys:String x:Key="S.update.downloading">Pobieranie… {0}%</sys:String>
     <sys:String x:Key="S.update.faildl">Nie udało się pobrać aktualizacji.</sys:String>
+    <sys:String x:Key="S.update.retrying">Ponawiam… ({0}/{1})</sys:String>
+    <sys:String x:Key="S.update.openbrowserq">Otworzyć stronę pobierania w przeglądarce?</sys:String>
     <sys:String x:Key="S.update.badsig">Pobrana aktualizacja nie ma prawidłowego podpisu wydawcy (nie zgadza się z bieżącą wersją). Instalacja została przerwana — pobierz nową wersję ręcznie ze strony wydań.</sys:String>
     <sys:String x:Key="S.set.traymin">Minimalizuj do zasobnika systemowego</sys:String>
     <sys:String x:Key="S.set.hotkey">Globalny skrót szybkiego połączenia (Ctrl+Alt+Q)</sys:String>
