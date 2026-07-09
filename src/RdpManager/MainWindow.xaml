@@ -565,6 +565,9 @@
                                 <ComboBoxItem Content="{DynamicResource S.border.cobalt}" Tag="#2657D6"/>
                                 <ComboBoxItem Content="{DynamicResource S.border.system}" Tag="System"/>
                             </ComboBox>
+                            <TextBlock Text="{DynamicResource S.set.accent}" Foreground="{DynamicResource TextSec}" Margin="0,16,0,6"/>
+                            <!-- Próbnik akcentu (Compass §4.7): budowany w kodzie (BuildAccentSwatches). -->
+                            <WrapPanel x:Name="AccentSwatches" Orientation="Horizontal"/>
                         </StackPanel>
                     </Border>
 

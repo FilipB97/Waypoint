@@ -55,6 +55,12 @@
     <sys:String x:Key="S.border.none">Brak</sys:String>
     <sys:String x:Key="S.border.cobalt">Kobalt</sys:String>
     <sys:String x:Key="S.border.system">Systemowa</sys:String>
+    <sys:String x:Key="S.set.accent">Kolor akcentu</sys:String>
+    <sys:String x:Key="S.accent.default">Domyślny</sys:String>
+    <sys:String x:Key="S.accent.violet">Fiolet</sys:String>
+    <sys:String x:Key="S.accent.green">Zielony</sys:String>
+    <sys:String x:Key="S.accent.amber">Bursztyn</sys:String>
+    <sys:String x:Key="S.accent.rose">Róż</sys:String>
     <sys:String x:Key="S.set.conn">Połączenie</sys:String>
     <sys:String x:Key="S.set.port">Domyślny port RDP</sys:String>
     <sys:String x:Key="S.set.colordepth">Domyślna głębia kolorów (bit)</sys:String>

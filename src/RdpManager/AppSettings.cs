@@ -100,6 +100,10 @@ namespace RdpManager
         /// Domyślnie wyłączone — dane z sondowania osiągalności w tle.</summary>
         public bool ShowLatency { get; set; }
 
+        /// <summary>Własny kolor akcentu („#RRGGBB"); pusty = domyślny Compass (per motyw). Compass §4.7 —
+        /// nadpisuje rodzinę kluczy Accent* i akcent kontrolek WPF-UI (ThemeManager).</summary>
+        public string AccentColor { get; set; } = "";
+
         /// <summary>Zachowuje pola zapisane przez NOWSZĄ wersję aplikacji, których ta (starsza) wersja
         /// jeszcze nie zna: [JsonExtensionData] wczytuje nieznane właściwości tutaj i zapisuje je z powrotem.
         /// Dzięki temu uruchomienie starszego builda nie kasuje ustawień dodanych przez nowszy
