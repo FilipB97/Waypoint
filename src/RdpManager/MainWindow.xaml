@@ -576,13 +576,48 @@
                              Background="Transparent" BorderThickness="0"
                              ItemContainerStyle="{StaticResource SettingsNavItem}"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListBoxItem Content="{DynamicResource S.set.iface}"/>
-                        <ListBoxItem Content="{DynamicResource S.set.conn}"/>
-                        <ListBoxItem Content="{DynamicResource S.set.behavior}"/>
-                        <ListBoxItem Content="{DynamicResource S.set.autoconnect}"/>
-                        <ListBoxItem Content="{DynamicResource S.set.profiles}"/>
-                        <ListBoxItem Content="{DynamicResource S.set.data}"/>
-                        <ListBoxItem Content="{DynamicResource S.nav.about}"/>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Options24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <TextBlock Text="{DynamicResource S.set.iface}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="PlugConnected24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <TextBlock Text="{DynamicResource S.set.conn}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="WrenchScrewdriver24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <TextBlock Text="{DynamicResource S.set.behavior}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Flash24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <TextBlock Text="{DynamicResource S.set.autoconnect}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Person24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <TextBlock Text="{DynamicResource S.set.profiles}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Database24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <TextBlock Text="{DynamicResource S.set.data}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Info24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <TextBlock Text="{DynamicResource S.nav.about}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
                     </ListBox>
                 </StackPanel>
 
