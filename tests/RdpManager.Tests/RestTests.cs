@@ -211,6 +211,23 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void EmptyVarsInRequest_FlagsKnownButBlank_SkipsFilledAndUnknown()
+        {
+            // Scenariusz z realnego 500: import env Postmana czyści zmienne „secret" → {{token}} istnieje,
+            // ale podstawia pustkę → Bearer po cichu bez nagłówka Authorization. Pole koloruje się na
+            // niebiesko („znaleziona"), więc bez tego audytu pułapki nie widać.
+            var req = new RestRequest { Method = "GET", Url = "{{base}}/api", AuthType = 1 };
+            var vars = new Dictionary<string, string> { ["base"] = "https://x", ["token"] = "" };
+            Assert.Equal(new[] { "token" }, RestClient.EmptyVarsInRequest(req, "{{token}}", vars));
+
+            vars["token"] = "abc";   // uzupełniona → koniec ostrzeżenia
+            Assert.Empty(RestClient.EmptyVarsInRequest(req, "{{token}}", vars));
+
+            // Nieznana zmienna to sprawa MissingVars, nie tego audytu.
+            Assert.Empty(RestClient.EmptyVarsInRequest(req, "{{niema}}", vars));
+        }
+
+        [Fact]
         public void AddDefaultHeaders_AddsAcceptAndUserAgentWhenMissing()
         {
             using var m = new HttpRequestMessage(HttpMethod.Get, "https://x/y");

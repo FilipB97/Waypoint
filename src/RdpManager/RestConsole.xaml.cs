@@ -532,14 +532,22 @@ namespace RdpManager
             try
             {
                 // Liczone TERAZ (po pre-skrypcie, na tym samym Vars() co wysyłka) — pre-skrypt mógł
-                // zmienne dopiero ustawić. Nieznane {{x}} idą na drut dosłownie → ostrzeżenie w „Wysłane".
-                var missingVars = RestClient.MissingVarsInRequest(eff, eff.AuthSecret, Vars());
+                // zmienne dopiero ustawić. Nieznane {{x}} idą na drut dosłownie, a ZNANE-ale-PUSTE
+                // podstawiają pustkę (typowo token po imporcie env Postmana, który czyści „secret")
+                // → oba ostrzeżenia w „Wysłane".
+                var sendVars = Vars();
+                var missingVars = RestClient.MissingVarsInRequest(eff, eff.AuthSecret, sendVars);
+                var emptyVars = RestClient.EmptyVarsInRequest(eff, eff.AuthSecret, sendVars);
+                // Bearer z sekretem pustym PO podstawieniu = nagłówek Authorization po cichu pominięty
+                // (tak zachowuje się RestClient.Build) — to musi być powiedziane wprost, inaczej „w
+                // Postmanie działa, tu nie" jest nie do zdiagnozowania (realny przypadek: 500 u klienta).
+                bool authGap = eff.AuthType == 1 && string.IsNullOrEmpty(RestClient.Subst(eff.AuthSecret ?? "", sendVars));
 
-                var resp = await RestClient.SendAsync(eff, eff.AuthSecret, Vars(), cts.Token);
+                var resp = await RestClient.SendAsync(eff, eff.AuthSecret, sendVars, cts.Token);
                 if (cts.Token.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk (finally i tak nie odblokuje)
 
                 RenderResponse(resp);
-                RenderSent(resp, missingVars);
+                RenderSent(resp, missingVars, emptyVars, authGap);
                 var post = RestScript.Run(_req.TestScript, eff, resp, GetScriptVar, SetScriptVar, UnsetScriptVar);
                 ShowScriptOutput(pre, post);
                 if (!post.Ok || post.Tests.Any(t => !t.Passed)) ResponseTabs.SelectedIndex = ScriptTabIndex;
@@ -630,14 +638,15 @@ namespace RdpManager
         // Zakładka „Wysłane": migawka finalnego żądania z klienta (nagłówki dogenerowane przy wysyłce +
         // body po podstawieniu/zakodowaniu). Sekretów nie maskujemy — to lokalna diagnostyka (jak konsola
         // Postmana); bez pełnego Authorization nie da się porównać 1:1 z żądaniem, które działa.
-        private void RenderSent(RestResponse r, List<string> missingVars)
+        private void RenderSent(RestResponse r, List<string> missingVars, List<string> emptyVars, bool authGap)
         {
             var sb = new System.Text.StringBuilder();
+            if (authGap) sb.AppendLine(L("S.rest.sent.noauth"));
             if (missingVars != null && missingVars.Count > 0)
-            {
                 sb.AppendLine(string.Format(L("S.rest.sent.warnvars"), string.Join(", ", missingVars)));
-                sb.AppendLine();
-            }
+            if (emptyVars != null && emptyVars.Count > 0)
+                sb.AppendLine(string.Format(L("S.rest.sent.warnempty"), string.Join(", ", emptyVars)));
+            if (sb.Length > 0) sb.AppendLine();
             if (r.SentHeaders == null)
             {
                 // Build się nie powiódł (np. niepoprawny URL) — nic nie wyszło; pokaż chociaż błąd.
