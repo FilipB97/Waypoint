@@ -26,7 +26,7 @@ jobs:
 
       # Cache pakietów NuGet (klucz po hashu plików .csproj) — szybszy restore.
       - name: Cache NuGet
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
