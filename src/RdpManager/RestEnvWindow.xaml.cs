@@ -41,7 +41,13 @@ namespace RdpManager
             _vars = new ObservableCollection<RestVariable>(_current?.Variables ?? new List<RestVariable>());
             VarsList.ItemsSource = _vars;
             VarsList.IsEnabled = _current != null;
+            UpdateVarsHeader();
         }
+
+        // „Zmienne — Prod": nagłówek prawej kolumny mówi, KTÓRE środowisko się edytuje (bez tego przy
+        // kilku środowiskach łatwo edytować zmienne nie tego, o które chodziło).
+        private void UpdateVarsHeader()
+            => VarsHeader.Text = _current == null ? L("S.rest.env.vars") : L("S.rest.env.vars") + " — " + _current.Name;
 
         // Zapisuje edytowane zmienne do bieżącego środowiska (obiekty współdzielone — edycje pól już w nich są;
         // to utrwala dodania/usunięcia wierszy).
@@ -65,6 +71,7 @@ namespace RdpManager
             if (dlg.ShowDialog() != true || dlg.Value.Trim().Length == 0) return;
             env.Name = dlg.Value.Trim();
             EnvList.Items.Refresh();
+            UpdateVarsHeader();   // zmiana nazwy nie zmienia zaznaczenia — nagłówek „Zmienne — X" trzeba odświeżyć ręcznie
         }
 
         private void DeleteEnv_Click(object sender, RoutedEventArgs e)
