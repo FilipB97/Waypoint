@@ -25,11 +25,18 @@ namespace RdpManager
     {
         private const int MinDim = RdpUtils.MinDim;
 
+        // Debounce zdarzeń rozmiaru vs. odstęp ponowień po nieudanym UpdateSessionDisplaySettings
+        // (wywołany za wcześnie po zalogowaniu rzuca COMException — patrz OnDebounceTick).
+        private static readonly TimeSpan DebounceDelay = TimeSpan.FromMilliseconds(250);
+        private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(1);
+        private const int MaxApplyRetries = 4;
+
         private readonly Session _session;
         private readonly WindowsFormsHost _host;
         private readonly DispatcherTimer _debounce;
 
         private int _lastW = -1, _lastH = -1;
+        private int _retries;
         private bool _disposed;
 
         public RdpDynamicResolution(Session session, WindowsFormsHost host)
@@ -39,7 +46,7 @@ namespace RdpManager
 
             _debounce = new DispatcherTimer(DispatcherPriority.Normal, _host.Dispatcher)
             {
-                Interval = TimeSpan.FromMilliseconds(250)
+                Interval = DebounceDelay
             };
             _debounce.Tick += OnDebounceTick;
 
@@ -110,6 +117,8 @@ namespace RdpManager
         {
             if (_disposed) return;
             _debounce.Stop();   // koalescencja serii zdarzeń (drag okna, wejście w pełny ekran)
+            _retries = 0;                       // nowe zdarzenie rozmiaru = nowy cykl ponowień
+            _debounce.Interval = DebounceDelay; // przywróć krótki debounce po ewentualnej serii ponowień
             _debounce.Start();
         }
 
@@ -140,11 +149,23 @@ namespace RdpManager
                 rdp.UpdateSessionDisplaySettings((uint)w, (uint)h, 0u, 0u, 0u, 100u, 100u);
                 TrySetSmartSizing(rdp, _fit);   // natywny (ostry); w „dopasuj do okna" SmartSizing dobija resztę
                 _lastW = w; _lastH = h;
+                _retries = 0;
             }
             catch (COMException)
             {
-                // Stary host / brak kanału Display-Update / złe wymiary — degradacja: rozciągnij (rozmyte, ale wypełnia).
+                // Stary host / brak kanału Display-Update / ZA WCZEŚNIE po zalogowaniu — degradacja:
+                // rozciągnij (SmartSizing), żeby obraz od razu wypełniał kontrolkę. Ale nie zostawiamy
+                // tego na stałe: tuż po OnLoginComplete (ApplyInitial, typowo autostart) wywołanie potrafi
+                // rzucić E_FAIL, bo kanał Display-Update jeszcze nie wstał — a kolejna próba przychodziła
+                // dopiero z ręcznym resize (stąd „szare pasy letterboxu aż do maksymalizacji okna").
+                // Ponawiamy więc z odstępem do limitu; sukces przywraca ostry render bez SmartSizingu.
                 TrySetSmartSizing(rdp, true);
+                if (_retries < MaxApplyRetries)
+                {
+                    _retries++;
+                    _debounce.Interval = RetryDelay;
+                    _debounce.Start();
+                }
             }
             catch (InvalidComObjectException)
             {
