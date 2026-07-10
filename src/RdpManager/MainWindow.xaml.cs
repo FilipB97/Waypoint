@@ -31,7 +31,7 @@ namespace RdpManager
         // Podział ekranu (split-screen): dwie sesje RDP obok siebie. null/null = brak podziału.
         // _active wskazuje panel z fokusem (podświetlenie karty / toolbar).
         internal Session _paneLeft, _paneRight;
-        private Session _splitDropSession;   // sesja przeciągana nad strefę upuszczenia podziału (fallback dla Drop)
+        internal Session _splitDropSession;   // sesja przeciągana nad strefę upuszczenia podziału (fallback dla Drop)
 
         // Drzewo serwerów (render + drag&drop + multiselect + menu) — logika w Controllers/ServerTreeController (PR 3).
         // Wiersze/kropki/opóźnienia/filtr protokołów żyją TAM; Reachability aktualizuje je przez _tree.SetRowStatus.
@@ -51,7 +51,7 @@ namespace RdpManager
         internal Controllers.ServerTreeController _tree;
 
         // Pasek kart + grupy (build/wire/rebuild/grupy/drag&drop) — logika w Controllers/TabStripController (PR 4).
-        private Controllers.TabStripController _tabs;
+        internal Controllers.TabStripController _tabs;
 
         // Stabilne, odrębne kolory awatarów dla dowolnych (także własnych) grup.
         private readonly Dictionary<string, LinearGradientBrush> _avatarCache = new Dictionary<string, LinearGradientBrush>();
@@ -65,8 +65,12 @@ namespace RdpManager
         // Pełny ekran + tryb skupienia (maszyny stanu) — logika w Controllers/FullscreenController (PR 5).
         // _isFullscreen ZOSTAJE tu (flaga czytana w wielu miejscach: IsImmersive, zasobnik, skróty, status sesji);
         // kontroler czyta/pisze ją przez _owner._isFullscreen.
-        private Controllers.FullscreenController _fs;
+        internal Controllers.FullscreenController _fs;
         internal bool _isFullscreen;
+
+        // Cykl życia sesji 8 protokołów (fabryka/łączenie/rozłączanie/kanwa/toolbar/split/tear-off/status)
+        // — logika w Controllers/SessionManager (PR 6). Współdzielony rdzeń (_sessions/_active/panele) ZOSTAJE tu.
+        private Controllers.SessionManager _sm;
 
         // Współdzielone profile poświadczeń (login/domena + hasło w Credential Manager), wskazywane przez serwery.
         private List<CredentialProfile> _credProfiles = new List<CredentialProfile>();
@@ -79,7 +83,7 @@ namespace RdpManager
         internal Brush Res(string key) => TryFindResource(key) as Brush;
 
         // Otwarte, samodzielne okna sesji (model wielookienny).
-        private readonly System.Collections.Generic.List<SessionWindow> _sessionWindows = new System.Collections.Generic.List<SessionWindow>();
+        internal readonly System.Collections.Generic.List<SessionWindow> _sessionWindows = new System.Collections.Generic.List<SessionWindow>();
 
         private Services.UpdateService _update;   // aktualizacje + karta „O aplikacji" (PR 1 refaktoru), tworzony w Window_Loaded
 
@@ -96,6 +100,7 @@ namespace RdpManager
             _tree = new Controllers.ServerTreeController(this);   // drzewo serwerów (PR 3); przed _reach — SetRowStatus
             _tabs = new Controllers.TabStripController(this);   // pasek kart + grupy (PR 4)
             _fs = new Controllers.FullscreenController(this);   // pełny ekran + tryb skupienia (PR 5)
+            _sm = new Controllers.SessionManager(this);   // cykl życia sesji 8 protokołów (PR 6)
             _reach = new Services.ReachabilityService(this);   // sonda osiągalności (limit czasu ustawia w Start()/ApplySettings)
             // Serwis aktualizacji dostaje wersję sprzed tego startu, ZANIM niżej nadpiszemy LastRunVersion.
             _update = new Services.UpdateService(this, _settings.LastRunVersion ?? "");
@@ -213,7 +218,7 @@ namespace RdpManager
 
         // Zapisz aktualnie otwarte karty (tylko zapisane serwery — nie Quick Connect) do przywrócenia na starcie.
         // Wołane przy każdym otwarciu/zamknięciu karty, więc lista przetrwa też ubicie procesu, nie tylko czyste zamknięcie.
-        private void PersistOpenSessions()
+        internal void PersistOpenSessions()
         {
             _settings.LastOpenServerIds = _sessions
                 .Select(s => s.Server.Id)
@@ -234,7 +239,7 @@ namespace RdpManager
 
         // ---------- Nawigacja (rail) ----------
 
-        private string _currentView = "Dashboard";
+        internal string _currentView = "Dashboard";
         internal bool _sidebarCollapsed;   // ręczne zwinięcie panelu bocznego (klik w aktywną ikonę nawigacji)
 
         private void Nav_Click(object sender, RoutedEventArgs e)
@@ -248,7 +253,7 @@ namespace RdpManager
         // dlatego stan nie może się rozjechać (dawniej _restMode zostawał włączony po przejściu na inny widok,
         // a klik „Połączenia" cicho wracał do listy serwerów). Treść REST to karty-konsole w kontenerze sesji,
         // więc widok „Rest" pokazuje ten sam SessionsView co „Połączenia" — różni je wyłącznie sidebar.
-        private void ShowView(string view)
+        internal void ShowView(string view)
         {
             bool wasRest = _currentView == "Rest";
             _currentView = view;
@@ -1447,7 +1452,7 @@ namespace RdpManager
 
         // ---------- Ostatnie / Pulpit ----------
 
-        private void RecordRecent(ServerInfo server)
+        internal void RecordRecent(ServerInfo server)
         {
             if (string.IsNullOrEmpty(server?.Id)) return;
             _vm.RecordRecent(server.Id);
@@ -1877,388 +1882,13 @@ namespace RdpManager
         // z modułu REST; SearchBox_TextChanged to handler podpięty w XAML.
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => _tree.RenderTree(SearchBox.Text);
         private void RenderTree(string filter = null) => _tree.RenderTree(filter);
-        private void UpdateActiveRows() => _tree.UpdateActiveRows();
+        internal void UpdateActiveRows() => _tree.UpdateActiveRows();
         private ContextMenu BuildServerContextMenu(ServerInfo server) => _tree.BuildServerContextMenu(server);
 
         // ---------- Otwieranie / przełączanie sesji ----------
 
         // Klik „otwórz serwer" (drzewo / ostatnie / pulpit / szybkie połączenie): karta w managerze
         // albo od razu osobne okno — zależnie od ustawienia OpenInNewWindowByDefault.
-        internal void LaunchServer(ServerInfo server, bool autoConnect, bool forceNew = false)
-        {
-            // Terminale zawsze jako karta — osobne okno sesji (SessionWindow) jest RDP-owe.
-            if (_settings.OpenInNewWindowByDefault && server.Protocol == RemoteProtocol.Rdp) OpenInNewWindow(server);
-            else OpenServer(server, autoConnect, forceNew);
-        }
-
-        // Wpis WWW: nie ma sesji — otwieramy panel webowy w domyślnej przeglądarce. Tylko http/https,
-        // zob. Core.UrlValidation.
-        private void OpenUrl(ServerInfo server)
-        {
-            string raw = (server.Host ?? "").Trim();
-            if (raw.Length == 0) return;
-            if (!Core.UrlValidation.TryNormalizeWebUrl(raw, out var uri))
-            {
-                SetStatus(string.Format(L("S.st.badurl"), raw), StatusKind.Error);
-                return;
-            }
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
-                RecordRecent(server);
-            }
-            catch (Exception ex) { SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error); }
-        }
-
-        internal void OpenServer(ServerInfo server, bool autoConnect = false, bool forceNew = false)
-        {
-            if (server.Protocol == RemoteProtocol.Http) { OpenUrl(server); return; }
-
-            // Kontrolka (RDP/konsola) musi powstać przy widocznym kontenerze sesji. Widoki „Sessions" i „Rest"
-            // dzielą ten sam SessionContainer, więc gdy już jesteśmy w którymś z nich — nie przełączaj (inaczej
-            // otwarcie żądania REST wyrzucałoby z modułu REST na listę serwerów). Z innych widoków → sesje.
-            if (_currentView != "Sessions" && _currentView != "Rest") ShowView("Sessions");
-            if (!forceNew)
-            {
-                var existing = _sessions.Find(x => x.Server == server);
-                if (existing != null)
-                {
-                    Activate(existing);
-                    if (autoConnect && !existing.Connected) BeginConnect(existing);
-                    return;
-                }
-            }
-
-            Session session;
-            if (server.Protocol == RemoteProtocol.Telnet)
-            {
-                var term = new TelnetTerminalControl();
-                SessionContainer.Children.Add(term);
-                session = new Session(server, term);
-                WireTermEvents(session);
-            }
-            else if (server.Protocol == RemoteProtocol.Serial)
-            {
-                var term = new SerialTerminalControl();
-                SessionContainer.Children.Add(term);
-                session = new Session(server, term);
-                WireTermEvents(session);
-            }
-            else if (server.Protocol == RemoteProtocol.Ssh)
-            {
-                // SSH: terminal (WebView2 + xterm.js) zamiast kontrolki RDP; reszta cyklu życia wspólna.
-                var term = new SshTerminalControl();
-                term.TrustHostKey = AskTrustHostKey;              // TOFU klucza hosta (dialog na wątku UI)
-                term.RequestKeyPassphrase = AskKeyPassphrase;     // zaszyfrowany klucz → prompt o passphrase
-                SessionContainer.Children.Add(term);
-                session = new Session(server, term);
-                WireTermEvents(session);
-            }
-            else if (server.Protocol == RemoteProtocol.Sftp)
-            {
-                // SFTP jako osobny protokół: panel plików = widok sesji; łączy się leniwie (jak terminal).
-                var conn = new SshConnectionFactory
-                {
-                    TrustHostKey = AskTrustHostKey,
-                    RequestKeyPassphrase = AskKeyPassphrase
-                };
-                var panel = new DualFilePanel(() => conn.NewFs());
-                SessionContainer.Children.Add(panel);
-                session = new Session(server, panel, conn);
-                WireFilesEvents(session);
-            }
-            else if (server.Protocol == RemoteProtocol.Ftp)
-            {
-                // FTP/FTPS jako osobny protokół: ten sam panel plików (IRemoteFs), konektor FluentFTP.
-                var conn = new FtpConnector { TrustCertificate = AskTrustFtpsCert };   // TOFU certyfikatu (dialog na wątku UI)
-                var panel = new DualFilePanel(() => conn.NewFs());
-                SessionContainer.Children.Add(panel);
-                session = new Session(server, panel, conn);
-                WireFilesEvents(session);
-            }
-            else if (server.Protocol == RemoteProtocol.Rest)
-            {
-                // REST: konsola HTTP jako widok sesji. Narzędzie bez cyklu łączenia — gotowe od razu.
-                var console = new RestConsole(server);
-                // Konsola utrwaliła zmianę kolekcji (nazwa/metoda/struktura) → moduł w railu przebudowuje drzewo.
-                console.CollectionChanged += () => { if (_restMode) BuildRestModule(); };
-                SessionContainer.Children.Add(console);
-                session = new Session(server, console);
-                session.Connected = true;
-                RecordRecent(server);
-            }
-            else if (server.Protocol == RemoteProtocol.Vnc)
-            {
-                // VNC (RemoteViewing) — kontrolka WinForms w hoście WPF, jak RDP. Zdarzenia wiążemy przy połączeniu.
-                var vnc = new RemoteViewing.Windows.Forms.VncControl
-                {
-                    AllowInput = true,
-                    Dock = System.Windows.Forms.DockStyle.Fill,
-                    AllowRemoteCursor = true
-                };
-                var host = new WindowsFormsHost { Child = vnc };
-                SessionContainer.Children.Add(host);
-                host.UpdateLayout();
-                session = new Session(server, vnc, host);
-            }
-            else
-            {
-                var rdp = new AxMsRdpClient11NotSafeForScripting();
-                var host = new WindowsFormsHost();
-
-                ((ISupportInitialize)rdp).BeginInit();
-                rdp.Dock = System.Windows.Forms.DockStyle.Fill;
-                host.Child = rdp;
-                ((ISupportInitialize)rdp).EndInit();
-
-                SessionContainer.Children.Add(host);
-                host.UpdateLayout();
-                try { ((System.Windows.Forms.Control)rdp).CreateControl(); } catch { }  // wymuś utworzenie kontrolki ActiveX
-
-                session = new Session(server, rdp, host);
-                session.Resizer = new RdpDynamicResolution(session, host);
-                WireEvents(session);
-                // W podziale: klik w panel (RDP przejmuje fokus klawiatury) czyni go aktywnym — karta i toolbar podążają.
-                var focusTarget = session;
-                host.GotKeyboardFocus += (s, e) => OnPaneFocused(focusTarget);
-            }
-            if (EffSavedPw(server) && CredentialStore.TryRead(EffCredTarget(server), out var savedPw))
-                session.Password = savedPw;
-
-            _sessions.Add(session);
-            session.TabButton = _tabs.BuildTab(session);
-            if (_tabs.GroupOf(session) != null) RebuildTabStrip();   // serwer w grupie → renderuj w jej kontenerze
-            else { TabStrip.Children.Add(session.TabButton); RefreshTabTitles(); }
-            if (session.IsRest) SetTabStatus(session, ServerStatus.Online);   // narzędzie: gotowe od razu
-
-            Activate(session);
-            if (autoConnect) BeginConnect(session);
-            PersistOpenSessions();
-        }
-
-        private bool CanAuto(Session s)
-        {
-            switch (s.Server.Protocol)
-            {
-                case RemoteProtocol.Telnet:
-                case RemoteProtocol.Serial:
-                    return true;   // logowanie (jeśli jest) dzieje się w terminalu
-                case RemoteProtocol.Ssh:
-                case RemoteProtocol.Sftp:
-                    return !string.IsNullOrWhiteSpace(EffUser(s.Server))
-                           && (!string.IsNullOrEmpty(s.Password) || !string.IsNullOrWhiteSpace(s.Server.PrivateKeyPath));
-                case RemoteProtocol.Ftp:
-                    return s.Server.FtpAnonymous
-                           || (!string.IsNullOrWhiteSpace(EffUser(s.Server)) && !string.IsNullOrEmpty(s.Password));
-                default:
-                    return s.Server.UseWindowsAccount || !string.IsNullOrEmpty(s.Password);
-            }
-        }
-
-        internal void Activate(Session session)
-        {
-            _fs.HideFocusPeek();   // aktywacja sesji (np. klik z wysuniętego panelu) chowa peek (i przenosi panel z powrotem)
-            _active = session;
-            // W podziale: aktywacja karty NIEbędącej panelem kończy podział (pokaż tę sesję pojedynczo).
-            // Klik w kartę panelu tylko przenosi fokus (podział zostaje).
-            if ((_paneLeft != null || _paneRight != null) && session != _paneLeft && session != _paneRight)
-            { _paneLeft = null; _paneRight = null; }
-            // Zwinięta grupa pokazuje aktywną kartę — po zmianie aktywnej trzeba przebudować pasek.
-            if (_tabs.HasCollapsedGroups) RebuildTabStrip();
-            RefreshTabStyles();
-            UpdateActiveRows();
-            LoadToolbar(session);
-            UpdateToolbarEnabled();
-            UpdateToolbarMode();
-            UpdateCanvas();
-            SetStatus(session.Status, session.StatusKind);
-            FsName.Text = session.Server.Name + " · " + session.Server.Host;
-            UpdateImmersive();
-        }
-
-        // ---------- Podział ekranu (split-screen) ----------
-
-        /// <summary>Wchodzi w podział: sesja `right` w prawym panelu, aktywna (lub pierwsza inna) RDP w lewym.
-        /// Tylko RDP; wymaga dwóch różnych sesji RDP.</summary>
-        internal void EnterSplit(Session right)
-        {
-            if (right == null || right.Server.Protocol != RemoteProtocol.Rdp) return;
-            Session left = (_active != null && _active != right && _active.Server.Protocol == RemoteProtocol.Rdp)
-                ? _active
-                : _sessions.FirstOrDefault(s => s != right && s.Server.Protocol == RemoteProtocol.Rdp);
-            if (left == null) return;   // potrzebne dwie sesje RDP
-            _paneLeft = left;
-            _paneRight = right;
-            Activate(right);            // fokus na nowy panel; Activate odświeży pasek/toolbar/status + UpdateCanvas (podział)
-        }
-
-        /// <summary>Kończy podział — pozostaje pojedynczy widok aktywnej sesji.</summary>
-        internal void ExitSplit()
-        {
-            if (_paneLeft == null && _paneRight == null) return;
-            _paneLeft = null;
-            _paneRight = null;
-            UpdateCanvas();
-        }
-
-        /// <summary>Klik w panel podziału (RDP przejął fokus klawiatury) → uczyń go aktywnym: podświetlenie
-        /// karty i toolbar podążają za panelem, w którym pracujesz.</summary>
-        private void OnPaneFocused(Session s)
-        {
-            if (_paneLeft == null && _paneRight == null) return;   // działa tylko w podziale
-            if ((s != _paneLeft && s != _paneRight) || _active == s) return;
-            _active = s;
-            RefreshTabStyles();
-            LoadToolbar(s);
-            UpdateToolbarEnabled();
-            SetStatus(s.Status, s.StatusKind);
-        }
-
-        /// <summary>Pokazuje strefę upuszczenia podziału na czas przeciągania karty (tylko RDP, ≥2 sesje RDP,
-        /// bez aktywnego podziału, gdy jest gdzie ją położyć). Zwraca true, jeśli pokazano.</summary>
-        internal bool ShowSplitDropZone(Session dragged)
-        {
-            if (dragged == null || dragged.Server.Protocol != RemoteProtocol.Rdp) return false;
-            if (_paneLeft != null || _paneRight != null) return false;                 // już podzielone
-            if (_sessions.Count(x => x.Server.Protocol == RemoteProtocol.Rdp) < 2) return false;
-            if (SessionContainer.ActualWidth < 100 || SessionContainer.ActualHeight < 100) return false;
-            SplitDropBorder.Width = SessionContainer.ActualWidth;    // dopasuj do obszaru sesji (host renderuje 1:1)
-            SplitDropBorder.Height = SessionContainer.ActualHeight;
-            _splitDropSession = dragged;
-            SplitDropZone.IsOpen = true;
-            return true;
-        }
-
-        internal void HideSplitDropZone()
-        {
-            SplitDropZone.IsOpen = false;
-            _splitDropSession = null;
-        }
-
-        /// <summary>
-        /// Steruje kanwą: aktywna kontrolka RDP widoczna tylko gdy połączona; w przeciwnym razie
-        /// nakładka (spinner „Łączenie…" albo „Rozłączono" + przycisk ponownego połączenia).
-        /// </summary>
-        private void UpdateCanvas()
-        {
-            bool has = _active != null;
-            EmptyState.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
-            if (!has) BuildEmptyRecent();   // odśwież chipy „ostatnie" przy każdym powrocie do pustego stanu
-
-            // Tryb podziału: dwie sesje RDP widoczne naraz (lewy panel = kol.0, prawy = kol.2, splitter w kol.1).
-            if (_paneLeft != null && _paneRight != null)
-            {
-                foreach (var s in _sessions)
-                {
-                    bool pane = s == _paneLeft || s == _paneRight;
-                    if (pane) Grid.SetColumn(s.View, s == _paneRight ? 2 : 0);
-                    if (s.Resizer != null) s.Resizer.FitToWindow = pane;   // panele skalują pulpit do swojej połówki (zawsze się mieści)
-                    s.View.Visibility = (pane && s.Connected) ? Visibility.Visible : Visibility.Collapsed;
-                }
-                if (PaneColRight.Width.GridUnitType != GridUnitType.Star)   // wejście w podział = 50/50; drag splittera zachowany
-                    PaneColRight.Width = new GridLength(1, GridUnitType.Star);
-                PaneSplitter.Visibility = Visibility.Visible;
-                SessionOverlay.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            // Bez podziału: pojedynczy widok w kol.0 (przywróć pełną szerokość po ewentualnym dragu splittera).
-            PaneColLeft.Width = new GridLength(1, GridUnitType.Star);
-            PaneColRight.Width = new GridLength(0);
-            PaneSplitter.Visibility = Visibility.Collapsed;
-
-            // Terminale (SSH/Telnet/Serial): widoczne od razu — statusy łączenia piszą do siebie.
-            foreach (var s in _sessions)
-            {
-                Grid.SetColumn(s.View, 0);
-                if (s.Resizer != null) s.Resizer.FitToWindow = false;   // pojedynczy widok = natywna, ostra rozdzielczość
-                s.View.Visibility = (s == _active && (s.Connected || s.IsTerm || s.IsFiles)) ? Visibility.Visible : Visibility.Collapsed;
-            }
-
-            if (!has)
-            {
-                SessionOverlay.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            // Nakładka nie dla terminali (HWND by ją zakrył) ani plików (panel ma własny pasek statusu).
-            if (_active.Connected || _active.IsTerm || _active.IsFiles)
-            {
-                SessionOverlay.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            SessionOverlay.Visibility = Visibility.Visible;
-            bool connecting = _active.StatusKind == StatusKind.Connecting;
-            OverlaySpinner.Visibility = connecting ? Visibility.Visible : Visibility.Collapsed;
-            OverlayReconnect.Visibility = connecting ? Visibility.Collapsed : Visibility.Visible;
-            OverlayReconnect.Content = L("S.reconnect");
-            OverlayTitle.Text = connecting
-                ? string.Format(L("S.st.connecting"), _active.Server.Host)
-                : (_active.StatusKind == StatusKind.Error ? L("S.st.disconnectedShort") : L("S.st.ready"));
-            OverlayMsg.Text = connecting ? "" : _active.Status;
-        }
-
-        private void OverlayAction_Click(object sender, RoutedEventArgs e)
-        {
-            // Nie przez Connect_Click: pasek z hasłem bywa ukryty (tryb skupienia) — działaj na modelu
-            // sesji i dopytaj dialogiem, gdy brakuje poświadczeń.
-            if (_active == null) return;
-            if (CanAuto(_active)) ConnectSession(_active);
-            else PromptAndConnect(_active, null);
-        }
-
-        private void LoadToolbar(Session s)
-        {
-            CfAvatar.Background = AvatarBrush(s.Server);
-            CfAvatarText.Text = ServerInitials(s.Server);
-            CfName.Text = s.Server.Name;
-            CfHost.Text = s.Server.Host + ":" + s.Server.Port;
-            // Konto Windows tylko dla RDP; Telnet/Serial nie mają pól poświadczeń w ogóle.
-            WinAuthCheck.Visibility = s.Server.Protocol == RemoteProtocol.Rdp ? Visibility.Visible : Visibility.Collapsed;
-            WinAuthCheck.IsChecked = s.Server.UseWindowsAccount;
-            PassBox.Password = s.Password ?? "";
-            UpdatePassVisibility();
-        }
-
-        /// <summary>Wysyła jedną komendę (z Enterem) do wszystkich połączonych sesji SSH naraz.</summary>
-        internal void BroadcastToSsh()
-        {
-            var targets = _sessions.Where(s => s.IsSsh && s.Connected).ToList();
-            if (targets.Count == 0)
-            {
-                MessageBox.Show(L("S.bc.none"), L("S.m.broadcast"), MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var dlg = new InputDialog(L("S.m.broadcast"), string.Format(L("S.bc.prompt"), targets.Count), "") { Owner = this };
-            if (dlg.ShowDialog() != true) return;
-            string cmd = dlg.Value;
-            if (string.IsNullOrEmpty(cmd)) return;
-
-            int sent = 0;
-            foreach (var s in targets)
-            {
-                try { s.Ssh.SendText(cmd + "\n"); sent++; } catch { /* sesja właśnie padła — pomiń */ }
-            }
-            SetStatus(string.Format(L("S.bc.sent"), sent), StatusKind.Ok);
-        }
-
-        internal void CloseOtherSessions(Session keep)
-        {
-            var others = _sessions.Where(s => s != keep).ToList();
-            int connected = others.Count(s => s.Connected);
-            // Jedno zbiorcze potwierdzenie zamiast dialogu per sesja.
-            if (connected > 0 && _settings.ConfirmCloseConnected &&
-                MessageBox.Show(string.Format(L("S.msg.closeothers"), connected),
-                    L("S.m.closeothers"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return;
-            foreach (var s in others) CloseSession(s);
-        }
-
-        /// <summary>Otwiera drugą, niezależną sesję do tego samego serwera (osobna zakładka).</summary>
-        internal void DuplicateSession(Session s) => OpenServer(s.Server, autoConnect: true, forceNew: true);
-
         /// <summary>Adres do wyświetlenia — z prefiksem protokołu, żeby odróżnić na pierwszy rzut oka.</summary>
         internal static string DisplayHost(ServerInfo s)
         {
@@ -2276,608 +1906,51 @@ namespace RdpManager
 
         // ---------- Pasek zakładek: delegacje do TabStripController (PR 4) ----------
         // Wołane z wielu miejsc cyklu życia sesji/motywu — cienki shim zamiast edycji każdego wywołania.
-        private void RebuildTabStrip() => _tabs.RebuildTabStrip();
-        private void RefreshTabStyles() => _tabs.RefreshTabStyles();
-        private void RefreshTabTitles() => _tabs.RefreshTabTitles();
-        private void SetTabStatus(Session s, ServerStatus status) => _tabs.SetTabStatus(s, status);
+        internal void RebuildTabStrip() => _tabs.RebuildTabStrip();
+        internal void RefreshTabStyles() => _tabs.RefreshTabStyles();
+        internal void RefreshTabTitles() => _tabs.RefreshTabTitles();
+        internal void SetTabStatus(Session s, ServerStatus status) => _tabs.SetTabStatus(s, status);
 
-        internal void RequestCloseSession(Session session)
-        {
-            if (session.Connected && _settings.ConfirmCloseConnected &&
-                MessageBox.Show(string.Format(L("S.msg.closesession"), session.Server.Name), L("S.msg.closesession.title"),
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return;
-            CloseSession(session);
-        }
+        // ---------- Cykl życia sesji: delegacje do SessionManager (PR 6) ----------
+        // Handlery XAML + metody wołane z innych kontrolerów/miejsc — cienki shim zamiast edycji każdego wołania.
+        private void OverlayAction_Click(object sender, RoutedEventArgs e) => _sm.OverlayAction_Click(sender, e);
+        private void Connect_Click(object sender, RoutedEventArgs e) => _sm.Connect_Click(sender, e);
+        private void PassBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) => _sm.PassBox_KeyDown(sender, e);
+        private void Files_Click(object sender, RoutedEventArgs e) => _sm.Files_Click(sender, e);
+        private void Disconnect_Click(object sender, RoutedEventArgs e) => _sm.Disconnect_Click(sender, e);
+        private void SendCtrlAltDel_Click(object sender, RoutedEventArgs e) => _sm.SendCtrlAltDel_Click(sender, e);
+        private void WinAuth_Changed(object sender, RoutedEventArgs e) => _sm.WinAuth_Changed(sender, e);
+        internal void OpenServer(ServerInfo server, bool autoConnect = false, bool forceNew = false) => _sm.OpenServer(server, autoConnect, forceNew);
+        internal void LaunchServer(ServerInfo server, bool autoConnect, bool forceNew = false) => _sm.LaunchServer(server, autoConnect, forceNew);
+        internal void OpenInNewWindow(ServerInfo server, string password = null) => _sm.OpenInNewWindow(server, password);
+        internal void Activate(Session session) => _sm.Activate(session);
+        internal void RequestCloseSession(Session session) => _sm.RequestCloseSession(session);
+        internal void CloseOtherSessions(Session keep) => _sm.CloseOtherSessions(keep);
+        internal void DuplicateSession(Session s) => _sm.DuplicateSession(s);
+        internal void BroadcastToSsh() => _sm.BroadcastToSsh();
+        internal void SendCtrlAltDel(Session s) => _sm.SendCtrlAltDel(s);
+        internal void TearOffToWindow(Session s) => _sm.TearOffToWindow(s);
+        internal void EnterSplit(Session right) => _sm.EnterSplit(right);
+        internal void ExitSplit() => _sm.ExitSplit();
+        internal bool ShowSplitDropZone(Session dragged) => _sm.ShowSplitDropZone(dragged);
+        internal void HideSplitDropZone() => _sm.HideSplitDropZone();
+        internal void PromptAndConnect(Session s, string reason) => _sm.PromptAndConnect(s, reason);
+        internal void SetStatus(string text, StatusKind kind = StatusKind.Info) => _sm.SetStatus(text, kind);
+        private void BeginConnect(Session s) => _sm.BeginConnect(s);
+        private void CloseSession(Session session) => _sm.CloseSession(session);
+        private void LoadToolbar(Session s) => _sm.LoadToolbar(s);
+        private void UpdateToolbarMode() => _sm.UpdateToolbarMode();
+        private void UpdateToolbarEnabled() => _sm.UpdateToolbarEnabled();
 
-        private void CloseSession(Session session)
-        {
-            if (session.IsTerm)
-            {
-                try { session.Term.DisposeTerminal(); } catch { }
-                SessionContainer.Children.Remove(session.Term);
-            }
-            else if (session.IsVnc)
-            {
-                // Wyzeruj Client PRZED Close/Dispose — zakolejkowany OnVncEnded (Closed z wątku
-                // roboczego) zobaczy null i stanie się no-opem, zamiast dotykać zniszczonej kontrolki.
-                var vc = session.Vnc.Client;
-                session.Vnc.Client = null;
-                try { vc?.Close(); } catch { }
-                SessionContainer.Children.Remove(session.Host);
-                try { session.Host.Dispose(); } catch { }
-            }
-            else if (session.IsFiles)
-            {
-                try { session.Files.DisposePanel(); } catch { }
-                SessionContainer.Children.Remove(session.Files);
-            }
-            else if (session.IsRest)
-            {
-                try { session.Rest.DisposeConsole(); } catch { }
-                SessionContainer.Children.Remove(session.Rest);
-            }
-            else
-            {
-                try { session.Rdp.Disconnect(); } catch { /* nie połączona */ }
-                session.Resizer?.Dispose();
-
-                SessionContainer.Children.Remove(session.Host);
-                try { session.Host.Dispose(); } catch { }   // zwalnia hosta i kontrolkę ActiveX (HWND)
-            }
-            _tabs.OnSessionClosed(session);   // odłącz kartę od paska/grupy + wyczyść wpisy elementów karty
-            _sessions.Remove(session);
-            RebuildTabStrip();               // przebuduj pasek (kontenery grup + tytuły)
-            PersistOpenSessions();
-
-            // Zamknięcie panelu podziału → zakończ podział i pokaż drugi panel pojedynczo.
-            Session survivingPane = session == _paneLeft ? _paneRight : (session == _paneRight ? _paneLeft : null);
-            if (survivingPane != null)
-            {
-                _paneLeft = null; _paneRight = null;
-                if (_sessions.Contains(survivingPane)) { _active = null; Activate(survivingPane); return; }
-            }
-
-            if (_active == session)
-            {
-                _active = null;
-                if (_sessions.Count > 0) Activate(_sessions[_sessions.Count - 1]);
-                else
-                {
-                    UpdateActiveRows();
-                    UpdateToolbarEnabled();
-                    UpdateToolbarMode();
-                    UpdateCanvas();
-                    SetStatus("—", StatusKind.Info);
-                }
-            }
-            UpdateImmersive();
-        }
-
-        // ---------- Połączenie ----------
-
-        private void Connect_Click(object sender, RoutedEventArgs e)
-        {
-            if (_active == null) return;
-            var s = _active;
-            s.Server.UseWindowsAccount = WinAuthCheck.IsChecked == true;
-            if (!s.Server.UseWindowsAccount) s.Password = PassBox.Password;
-            ConnectSession(s);
-        }
-
-        /// <summary>Łączy sesję; gdy brak poświadczeń (i nie konto Windows) — pyta o nie promptem.</summary>
-        private void BeginConnect(Session s)
-        {
-            if (s.IsRest) return;   // REST: narzędzie bez cyklu łączenia (wysyłka per żądanie w konsoli)
-            if (CanAuto(s)) ConnectSession(s);
-            else PromptAndConnect(s, null);
-        }
-
-        /// <summary>Pokazuje prompt poświadczeń i po zatwierdzeniu łączy (np. „Połącz jako…" lub po błędzie logowania).</summary>
-        internal void PromptAndConnect(Session s, string reason)
-        {
-            var dlg = new CredentialPromptWindow(s.Server, s.Password, reason) { Owner = this };
-            if (dlg.ShowDialog() != true) return;
-
-            s.Server.UseWindowsAccount = false;
-            // Jawne „Połącz jako…" (reason != null) = porzuć profil i użyj wpisanych poświadczeń. Prompt-fallback
-            // przy braku hasła (reason == null) profil ZOSTAWIA — łączymy loginem z profilu + wpisanym hasłem.
-            if (reason != null) s.Server.CredentialProfileId = "";
-            s.Server.Username = dlg.EnteredUser;
-            s.Server.Domain = dlg.EnteredDomain;
-            s.Password = dlg.EnteredPassword;
-            if (dlg.SavePassword)
-            {
-                s.Server.SavePassword = true;
-                SaveCredential(s.Server, dlg.EnteredPassword);
-            }
-            else
-            {
-                // Odznaczenie „zapisz" ma być honorowane: usuń też ewentualny stary wpis z sejfu.
-                s.Server.SavePassword = false;
-                CredentialStore.Delete(s.Server.CredTarget);
-            }
-            PersistServers();
-            if (s == _active) LoadToolbar(s);
-            ConnectSession(s);
-        }
-
-        private void PassBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter && ConnectBtn.IsEnabled) Connect_Click(sender, e);
-        }
-
-        /// <summary>Łączy sesję na podstawie jej modelu (bez odczytu z formularza) — używane też z flyoutu.</summary>
-        private void ConnectSession(Session s)
-        {
-            if (s.IsRest) return;   // REST: brak łączenia; wysyłka odbywa się w konsoli
-            if (s.IsTerm) { ConnectTerm(s); return; }
-            if (s.IsVnc) { ConnectVnc(s); return; }
-            if (s.IsFiles) { ConnectFiles(s); return; }
-
-            try { s.Rdp.Disconnect(); } catch { /* nie połączona */ }
-            s.LoggedIn = false;
-
-            try
-            {
-                RdpConnect.Apply(s.Rdp, s.Server, _settings, EffUser(s.Server), EffDomain(s.Server), s.Password);
-
-                // RemoteApp: program/alias zamiast pełnego pulpitu (ustawiane PRZED Connect).
-                try
-                {
-                    var rp = s.Rdp.RemoteProgram2;
-                    bool useApp = !string.IsNullOrWhiteSpace(s.Server.RemoteAppProgram);
-                    rp.RemoteProgramMode = useApp;
-                    if (useApp)
-                    {
-                        rp.RemoteApplicationName = string.IsNullOrWhiteSpace(s.Server.Name)
-                            ? s.Server.RemoteAppProgram.Trim() : s.Server.Name.Trim();
-                        rp.RemoteApplicationProgram = s.Server.RemoteAppProgram.Trim();
-                        rp.RemoteApplicationArgs = s.Server.RemoteAppArgs ?? "";
-                    }
-                }
-                catch { /* starsza kontrolka bez RemoteProgram2 — łączymy jako pełny pulpit */ }
-
-                s.Rdp.Connect();
-                SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
-            }
-            catch (Exception ex)
-            {
-                SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
-            }
-        }
-
-        /// <summary>Jednorazowe (per instalacja) ostrzeżenie o braku szyfrowania: Telnet / klasyczne VNC.</summary>
-        private void WarnUnencrypted(RemoteProtocol proto)
-        {
-            bool already = proto == RemoteProtocol.Telnet ? _settings.TelnetWarned
-                         : proto == RemoteProtocol.Vnc ? _settings.VncWarned
-                         : proto == RemoteProtocol.Ftp ? _settings.FtpWarned : true;
-            if (already) return;
-
-            if (proto == RemoteProtocol.Telnet) _settings.TelnetWarned = true;
-            else if (proto == RemoteProtocol.Vnc) _settings.VncWarned = true;
-            else _settings.FtpWarned = true;
-            SettingsStore.Save(_settings);
-
-            string k = proto == RemoteProtocol.Telnet ? "telnet" : proto == RemoteProtocol.Vnc ? "vnc" : "ftp";
-            MessageBox.Show(L("S.warn." + k), L("S.warn." + k + ".title"), MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-
-        // ---------- VNC (RemoteViewing) ----------
-
-        /// <summary>Łączy sesję VNC: nowy VncClient, zdarzenia na wątek UI, handshake w tle (blokuje).</summary>
-        private void ConnectVnc(Session s)
-        {
-            WarnUnencrypted(RemoteProtocol.Vnc);
-            try
-            {
-                var client = new RemoteViewing.Vnc.VncClient();
-                client.Connected += (o, e) => Dispatcher.BeginInvoke(new Action(() => { if (ReferenceEquals(s.Vnc?.Client, client)) OnVncConnected(s); }));
-                client.ConnectionFailed += (o, e) => Dispatcher.BeginInvoke(new Action(() => OnVncEnded(s, client)));
-                client.Closed += (o, e) => Dispatcher.BeginInvoke(new Action(() => OnVncEnded(s, client)));
-                s.Vnc.Client = client;
-                s.LoggedIn = false;
-
-                char[] pw = (s.Password ?? "").ToCharArray();
-                var opts = new RemoteViewing.Vnc.VncClientConnectOptions { ShareDesktop = true, Password = pw };
-                opts.PasswordRequiredCallback = c => pw;   // gdy serwer poprosi — to samo hasło (puste => auth padnie)
-
-                SetTabStatus(s, ServerStatus.Idle);
-                SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
-                if (s == _active) UpdateCanvas();
-
-                string host = s.Server.Host;
-                int port = s.Server.Port > 0 ? s.Server.Port : 5900;
-                System.Threading.Tasks.Task.Run(() =>
-                {
-                    try { client.Connect(host, port, opts); }
-                    catch (Exception ex)
-                    {
-                        Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
-                            OnVncEnded(s, client);
-                        }));
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
-            }
-        }
-
-        private void OnVncConnected(Session s)
-        {
-            s.Connected = true;
-            s.LoggedIn = true;
-            RecordRecent(s.Server);
-            ConnectionLog.Append("CONNECTED", s.Server);
-            SetTabStatus(s, ServerStatus.Online);
-            SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
-            if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); try { s.Vnc.Focus(); } catch { } }
-        }
-
-        // Failed i Closed mogą przyjść oba — strażnik po tożsamości klienta wykonuje obsługę raz.
-        private void OnVncEnded(Session s, RemoteViewing.Vnc.VncClient client)
-        {
-            if (s.Vnc == null || !ReferenceEquals(s.Vnc.Client, client)) return;
-            s.Vnc.Client = null;
-            bool was = s.Connected;
-            s.Connected = false;
-            SetTabStatus(s, ServerStatus.Offline);
-            ConnectionLog.Append(was ? "DISCONNECTED" : "FAILED", s.Server);
-            if (!s.Server.SavePassword) s.Password = "";
-            if (was) SetSessionStatus(s, string.Format(L("S.st.disconnected"), "VNC"), StatusKind.Error);
-            else if (s.StatusKind != StatusKind.Error) SetSessionStatus(s, L("S.st.disconnectedShort"), StatusKind.Error);
-            if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-        }
-
-        // Panel plików SFTP przy aktywnej sesji SSH (przycisk folderu na pasku stanu).
-        private void Files_Click(object sender, RoutedEventArgs e)
-        {
-            if (_active?.IsSsh == true) _active.Ssh.ToggleFiles();
-        }
-
-        private void Disconnect_Click(object sender, RoutedEventArgs e)
-        {
-            if (_active == null) return;
-            if (_active.IsRest) return;   // REST: brak połączenia do zerwania
-            if (_active.IsTerm) { _active.Term.Disconnect(); return; }
-            if (_active.IsVnc) { try { _active.Vnc.Client?.Close(); } catch { } return; }
-            try { _active.Rdp.Disconnect(); } catch (Exception ex) { SetSessionStatus(_active, string.Format(L("S.st.disconnecting"), ex.Message), StatusKind.Error); }
-        }
-
-        private void SendCtrlAltDel_Click(object sender, RoutedEventArgs e) => SendCtrlAltDel(_active);
-
-        // Wysyła zdalne Ctrl+Alt+Del. OCX RDP nie ma na to scriptowalnej metody, więc — jak w mstsc — dajemy
-        // klientowi Ctrl+Alt+End, który z fokusem na kontrolce tłumaczy je na zdalną sekwencję SAS.
-        internal void SendCtrlAltDel(Session s)
-        {
-            if (s == null || s.Server.Protocol != RemoteProtocol.Rdp || !s.Connected) return;
-            if (s != _active && s != _paneLeft && s != _paneRight) Activate(s);   // sesja musi być widoczna
-            // Fokus MUSI trafić na kontrolkę OCX, nie na przycisk WPF — inaczej globalny keybd_event poszedłby
-            // w próżnię. WindowsFormsHost.Focus() + WinForms Focus() nie zawsze przenoszą fokus za granicę hosta.
-            try { s.Host?.Focus(); s.Rdp.Focus(); } catch { }
-            // Po przetworzeniu fokusu (Input) wstrzykujemy Ctrl↓ Alt↓ End↓ End↑ Alt↑ Ctrl↑.
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                // keybd_event jest globalny — wyślij TYLKO gdy nasze okno jest na pierwszym planie, inaczej
-                // klawisze trafiłyby do aplikacji, na którą użytkownik zdążył przełączyć (iniekcja jest odroczona).
-                if (GetForegroundWindow() != new WindowInteropHelper(this).Handle) return;
-                // Natywne SetFocus na uchwyt OCX tuż przed iniekcją — najpewniejszy sposób, by klawisze
-                // trafiły do sesji RDP (nasze okno jest na pierwszym planie, więc SetFocus na dziecko działa).
-                try { SetFocus(s.Rdp.Handle); } catch { }
-                // End = klawisz ROZSZERZONY; bez KEYEVENTF_EXTENDEDKEY bywa mylony z numpad-1 (zależnie od NumLock),
-                // przez co OCX nie rozpoznaje Ctrl+Alt+End jako zdalnego SAS.
-                keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
-                keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
-                keybd_event(VK_END, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
-                keybd_event(VK_END, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, UIntPtr.Zero);
-                keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-                keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-            }), System.Windows.Threading.DispatcherPriority.Input);
-        }
-
-        // ---------- SSH ----------
-
-        /// <summary>Łączy sesję terminalową (SSH/Telnet/Serial): inicjalizuje xterm i transport w tle.</summary>
-        private async void ConnectTerm(Session s)
-        {
-            // SSH wymaga loginu (nie ma odpowiednika konta Windows) — dopytaj, jeśli brak.
-            if (s.IsSsh && string.IsNullOrWhiteSpace(EffUser(s.Server))) { PromptAndConnect(s, null); return; }
-            if (s.Server.Protocol == RemoteProtocol.Telnet) WarnUnencrypted(RemoteProtocol.Telnet);
-            try
-            {
-                SetTabStatus(s, ServerStatus.Idle);
-                SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
-                if (s == _active) UpdateCanvas();
-
-                var (cols, rows) = await s.Term.InitAsync();
-                string target = s.IsSsh
-                    ? EffUser(s.Server) + "@" + s.Server.Host + ":" + s.Server.Port
-                    : s.Server.Host + (s.Server.Protocol == RemoteProtocol.Serial ? " @" + s.Server.Port : ":" + s.Server.Port);
-                s.Term.WriteLocal("\x1b[90m" + string.Format(L("S.st.connecting"), target) + "\x1b[0m\r\n");
-
-                switch (s.Server.Protocol)
-                {
-                    case RemoteProtocol.Telnet:
-                        await ((TelnetTerminalControl)s.Term).ConnectAsync(s.Server.Host, s.Server.Port);
-                        break;
-                    case RemoteProtocol.Serial:
-                        await ((SerialTerminalControl)s.Term).ConnectAsync(s.Server.Host, s.Server.Port);
-                        break;
-                    default:
-                        await s.Ssh.ConnectAsync(ConnectIdentity(s.Server), s.Password, cols, rows);
-                        break;
-                }
-            }
-            catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException)
-            {
-                SetTabStatus(s, ServerStatus.Offline);
-                SetSessionStatus(s, L("S.ssh.nowebview"), StatusKind.Error);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            }
-            catch (Renci.SshNet.Common.SshAuthenticationException ex)
-            {
-                SetTabStatus(s, ServerStatus.Offline);
-                s.Term.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
-                SetSessionStatus(s, ex.Message + "  " + L("S.st.hint.creds"), StatusKind.Error);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            }
-            catch (Exception ex)
-            {
-                SetTabStatus(s, ServerStatus.Offline);
-                s.Term.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
-                SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            }
-        }
-
-        /// <summary>Zdarzenia terminala (SSH/Telnet/Serial) → stan sesji/karty (marshalowane na wątek UI).</summary>
-        private void WireTermEvents(Session s)
-        {
-            s.Term.Connected += () => Dispatcher.BeginInvoke(new Action(() =>
-            {
-                s.Connected = true;
-                RecordRecent(s.Server);
-                ConnectionLog.Append("CONNECTED", s.Server);
-                SetTabStatus(s, ServerStatus.Online);
-                SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); s.Term.FocusTerminal(); }
-            }));
-            if (s.Ssh != null)
-                s.Ssh.TunnelStatus += (spec, ok, err) => Dispatcher.BeginInvoke(new Action(() =>
-                    s.Term.WriteLocal(ok
-                        ? "\x1b[92m" + string.Format(L("S.ssh.tunnel.up"), spec) + "\x1b[0m\r\n"
-                        : "\x1b[91m" + string.Format(L("S.ssh.tunnel.fail"), spec, err) + "\x1b[0m\r\n")));
-            s.Term.Disconnected += reason => Dispatcher.BeginInvoke(new Action(() =>
-            {
-                bool was = s.Connected;
-                s.Connected = false;
-                SetTabStatus(s, ServerStatus.Offline);
-                ConnectionLog.Append(was ? "DISCONNECTED" : "FAILED", s.Server);
-                if (!s.Server.SavePassword) s.Password = "";   // jak przy RDP: hasło nie zostaje w pamięci
-
-                string msg = string.Format(L("S.st.disconnected"),
-                    string.IsNullOrWhiteSpace(reason) ? s.Server.Protocol.ToString().ToLowerInvariant() : reason);
-                s.Term.WriteLocal("\r\n\x1b[91m" + msg + "\x1b[0m\r\n");
-                SetSessionStatus(s, msg, StatusKind.Error);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            }));
-        }
-
-        // Wspólne prompty klucza hosta (TOFU) i passphrase — używane przez sesje SSH i SFTP.
-        private bool AskTrustHostKey(string hostPort, string fp, bool changed) => (bool)Dispatcher.Invoke(new Func<bool>(() =>
-            MessageBox.Show(this,
-                string.Format(L(changed ? "S.ssh.hostkey.changed" : "S.ssh.hostkey.new"), hostPort, fp),
-                L("S.ssh.hostkey.title"), MessageBoxButton.YesNo,
-                changed ? MessageBoxImage.Warning : MessageBoxImage.Question,
-                changed ? MessageBoxResult.No : MessageBoxResult.Yes) == MessageBoxResult.Yes));
-
-        private string AskKeyPassphrase(string path) => (string)Dispatcher.Invoke(new Func<string>(() =>
-        {
-            var dlg = new InputDialog(L("S.ssh.keypass.title"),
-                string.Format(L("S.ssh.keypass.label"), System.IO.Path.GetFileName(path)),
-                "", masked: true) { Owner = this };
-            return dlg.ShowDialog() == true ? dlg.Value : null;
-        }));
-
-        // TOFU certyfikatu FTPS — ten sam wzorzec co AskTrustHostKey (SSH), inny magazyn (FtpsCertPinning).
-        private bool AskTrustFtpsCert(string hostPort, string fp, bool changed) => (bool)Dispatcher.Invoke(new Func<bool>(() =>
-            MessageBox.Show(this,
-                string.Format(L(changed ? "S.ftps.cert.changed" : "S.ftps.cert.new"), hostPort, fp),
-                L("S.ftps.cert.title"), MessageBoxButton.YesNo,
-                changed ? MessageBoxImage.Warning : MessageBoxImage.Question,
-                changed ? MessageBoxResult.No : MessageBoxResult.Yes) == MessageBoxResult.Yes));
-
-        // SFTP jako osobny protokół: panel łączy się leniwie; identyczność (login z profilu) + hasło ustawiamy tutaj.
-        private void ConnectFiles(Session s)
-        {
-            bool anon = s.Server.Protocol == RemoteProtocol.Ftp && s.Server.FtpAnonymous;
-            if (!anon && string.IsNullOrWhiteSpace(EffUser(s.Server))) { PromptAndConnect(s, null); return; }
-            if (s.Server.Protocol == RemoteProtocol.Ftp && s.Server.FtpEncryption == 2) WarnUnencrypted(RemoteProtocol.Ftp);
-            SetTabStatus(s, ServerStatus.Idle);
-            SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
-            if (s == _active) UpdateCanvas();
-            s.FilesConn.SetIdentity(ConnectIdentity(s.Server), s.Password);
-            s.Files.RefreshAsync();   // łączy leniwie; Connected/Failed aktualizują kartę i status
-        }
-
-        /// <summary>Zdarzenia panelu plików (SFTP/FTP) → stan sesji/karty (marshalowane na wątek UI).</summary>
-        private void WireFilesEvents(Session s)
-        {
-            s.Files.Connected += () => Dispatcher.BeginInvoke(new Action(() =>
-            {
-                s.Connected = true;
-                RecordRecent(s.Server);
-                ConnectionLog.Append("CONNECTED", s.Server);
-                SetTabStatus(s, ServerStatus.Online);
-                SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            }));
-            s.Files.Failed += reason => Dispatcher.BeginInvoke(new Action(() =>
-            {
-                bool was = s.Connected;
-                s.Connected = false;
-                SetTabStatus(s, ServerStatus.Offline);
-                ConnectionLog.Append(was ? "DISCONNECTED" : "FAILED", s.Server);
-                if (!s.Server.SavePassword) s.Password = "";   // hasło nie zostaje w pamięci (jak przy RDP/SSH)
-                SetSessionStatus(s, string.Format(L("S.st.disconnected"),
-                    string.IsNullOrWhiteSpace(reason) ? "sftp" : reason), StatusKind.Error);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            }));
-        }
-
-        private void WireEvents(Session s)
-        {
-            s.Rdp.OnConnecting += (o, a) =>
-            {
-                SetSessionStatus(s, L("S.st.connectingShort"), StatusKind.Connecting);
-                SetTabStatus(s, ServerStatus.Idle);
-                if (s == _active) UpdateCanvas();
-            };
-            s.Rdp.OnConnected += (o, a) =>
-            {
-                s.Connected = true;
-                RecordRecent(s.Server);
-                ConnectionLog.Append("CONNECTED", s.Server);
-                SetTabStatus(s, ServerStatus.Online);
-                SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            };
-            s.Rdp.OnLoginComplete += (o, a) =>
-            {
-                s.LoggedIn = true;
-                s.Resizer?.ApplyInitial();
-                // Odśwież kanwę także dla panelu podziału (nie tylko aktywnej sesji), by po zalogowaniu stał się widoczny.
-                if (s == _active || s == _paneLeft || s == _paneRight) { UpdateToolbarMode(); UpdateCanvas(); try { s.Rdp.Focus(); } catch { } }
-            };
-            s.Rdp.OnDisconnected += (o, a) =>
-            {
-                bool wasLoggedIn = s.LoggedIn;
-                s.Connected = false;
-                s.LoggedIn = false;
-                SetTabStatus(s, ServerStatus.Offline);
-
-                ConnectionLog.Append(wasLoggedIn ? "DISCONNECTED" : "FAILED", s.Server);
-
-                // Bezpieczeństwo: nie trzymaj hasła w pamięci po rozłączeniu, jeśli nie jest
-                // zapisane w Credential Managerze. Ponowne połączenie wymaga wpisania go na nowo.
-                if (!s.Server.SavePassword) s.Password = "";
-
-                string msg = string.Format(L("S.st.disconnected"), DescribeDisconnect(s.Rdp, a.discReason));
-                if (!wasLoggedIn)
-                {
-                    msg += "  " + (s.Server.UseWindowsAccount
-                        ? L("S.st.hint.winauth")
-                        : L("S.st.hint.creds"));
-                }
-                SetSessionStatus(s, msg, StatusKind.Error);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            };
-            s.Rdp.OnFatalError += (o, a) =>
-            {
-                s.Connected = false;
-                SetTabStatus(s, ServerStatus.Offline);
-                SetSessionStatus(s, string.Format(L("S.st.fatal"), a.errorCode), StatusKind.Error);
-                if (s == _active) { UpdateToolbarMode(); UpdateCanvas(); }
-            };
-            // Fullscreen kontrolki (ścieżka multimon) — tylko komunikaty statusu.
-            s.Rdp.OnEnterFullScreenMode += (o, a) =>
-                SetSessionStatus(s, L("S.st.multimon"), StatusKind.Info);
-            s.Rdp.OnLeaveFullScreenMode += (o, a) =>
-                SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
-        }
 
         // ---------- Konto Windows ----------
 
-        private void WinAuth_Changed(object sender, RoutedEventArgs e) => UpdatePassVisibility();
-
-        private bool ActiveHasNoCreds()
-            => _active != null && (_active.Server.Protocol == RemoteProtocol.Telnet
-                                   || _active.Server.Protocol == RemoteProtocol.Serial);
-
-        private void UpdatePassVisibility()
-        {
-            CfPassGroup.Visibility = (ActiveHasNoCreds() || WinAuthCheck.IsChecked == true)
-                ? Visibility.Collapsed : Visibility.Visible;
-        }
-
-        // ---------- Pasek sesji: dwa stany ----------
-
-        private void UpdateToolbarMode()
-        {
-            // W pełnym ekranie widocznością paska/zakładek steruje Enter/ExitFullscreen — nie dotykamy jej tutaj.
-            if (!_isFullscreen)
-            {
-                bool has = _active != null;
-                bool conn = has && _active.Connected;
-                bool immersive = IsImmersive();
-                // Pasek połączenia (z hasłem) tylko PRZED połączeniem; po połączeniu — brak paska (więcej miejsca),
-                // a akcje sesji przenoszą się na prawy koniec paska kart (SessionActions). W skupieniu: FocusControls.
-                SessionToolbar.Visibility = (has && !immersive && !conn) ? Visibility.Visible : Visibility.Collapsed;
-                SessionActions.Visibility = (conn && !immersive) ? Visibility.Visible : Visibility.Collapsed;
-                TabStripHost.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
-            }
-            if (_active == null) return;
-
-            FilesBtn.Visibility = _active.IsSsh ? Visibility.Visible : Visibility.Collapsed;   // SFTP tylko dla SSH
-            CadBtn.Visibility = _active.Server.Protocol == RemoteProtocol.Rdp ? Visibility.Visible : Visibility.Collapsed;   // Ctrl+Alt+Del tylko dla RDP
-        }
-
-        private void UpdateToolbarEnabled()
-        {
-            bool has = _active != null;
-            WinAuthCheck.IsEnabled = has;
-            PassBox.IsEnabled = has;
-            ConnectBtn.IsEnabled = has;
-        }
 
         // ---------- Pełny ekran ----------
 
         // Otwiera serwer w OSOBNYM oknie sesji (model jak mstsc — kontrolka żyje w tym oknie na stałe).
         // Domyślne otwieranie idzie do zakładki w oknie głównym; to jest opcja na drugi monitor.
         // password != null → przenosimy hasło z zakładki przy „wyciąganiu" (bez ponownego pytania).
-        internal void OpenInNewWindow(ServerInfo server, string password = null)
-        {
-            if (server == null) return;
-            RecordRecent(server);
-            string pw = password ?? "";
-            if (string.IsNullOrEmpty(pw) && EffSavedPw(server)) CredentialStore.TryRead(EffCredTarget(server), out pw);
-            var win = new SessionWindow(server, _settings, pw, EffUser(server), EffDomain(server), PersistServers, DockSessionFromWindow);
-            _sessionWindows.Add(win);
-            win.Closed += (s, e) => _sessionWindows.Remove(win);
-            win.Show();
-            win.Activate();
-        }
-
-        /// <summary>„Wyciąga" zakładkę do osobnego okna: zamyka kartę i otwiera okno sesji tego serwera
-        /// (RDP łączy ponownie — wraca do tej samej sesji po stronie serwera). Przenosi hasło z pamięci.</summary>
-        internal void TearOffToWindow(Session s)
-        {
-            if (s == null) return;
-            var server = s.Server;
-            var pw = s.Password;
-            CloseSession(s);
-            OpenInNewWindow(server, pw);
-        }
-
-        /// <summary>„Dokuje" okno sesji z powrotem jako kartę w managerze (callback wołany z SessionWindow):
-        /// otwiera nową kartę tego serwera i łączy (reconnect wznawia sesję serwera). Hasło przeniesione z okna.</summary>
-        private void DockSessionFromWindow(ServerInfo server, string password)
-        {
-            OpenServer(server, autoConnect: false, forceNew: true);
-            if (_active != null && _active.Server == server)
-            {
-                _active.Password = password;
-                ConnectSession(_active);
-            }
-            if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
-            Activate();   // Window.Activate — wysuń manager na wierzch
-        }
-
         private void Fullscreen_Click(object sender, RoutedEventArgs e) => _fs.ToggleFullscreen();
 
         internal const int MONITOR_DEFAULTTONEAREST = 0x2;
@@ -2905,13 +1978,13 @@ namespace RdpManager
         internal static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
-        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-        private const byte VK_CONTROL = 0x11, VK_MENU = 0x12, VK_END = 0x23;
-        private const uint KEYEVENTF_KEYUP = 0x0002;
-        private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
+        internal static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+        internal const byte VK_CONTROL = 0x11, VK_MENU = 0x12, VK_END = 0x23;
+        internal const uint KEYEVENTF_KEYUP = 0x0002;
+        internal const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
 
         [DllImport("user32.dll")]
-        private static extern IntPtr SetFocus(IntPtr hWnd);
+        internal static extern IntPtr SetFocus(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -3341,7 +2414,7 @@ namespace RdpManager
             e.Handled = true;
         }
 
-        private void BuildEmptyRecent()
+        internal void BuildEmptyRecent()
         {
             EmptyRecentChips.Children.Clear();
             var recent = _vm.RecentServers().Take(6).ToList();
@@ -3919,7 +2992,7 @@ namespace RdpManager
 
         internal void PersistServers() => ServerRepository.Save(_vm.Servers.ToList());
 
-        private void SaveCredential(ServerInfo server, string password)
+        internal void SaveCredential(ServerInfo server, string password)
         {
             if (server.SavePassword && !string.IsNullOrEmpty(password))
             {
@@ -3972,13 +3045,13 @@ namespace RdpManager
 
         internal string EffUser(ServerInfo s)       { var p = ProfileFor(s); return p != null ? p.Username : s.Username; }
         internal string EffDomain(ServerInfo s)     { var p = ProfileFor(s); return p != null ? p.Domain   : s.Domain; }
-        private string EffCredTarget(ServerInfo s) { var p = ProfileFor(s); return p != null ? p.CredTarget : s.CredTarget; }
-        private bool   EffSavedPw(ServerInfo s)    { var p = ProfileFor(s); return p != null || s.SavePassword; }
+        internal string EffCredTarget(ServerInfo s) { var p = ProfileFor(s); return p != null ? p.CredTarget : s.CredTarget; }
+        internal bool   EffSavedPw(ServerInfo s)    { var p = ProfileFor(s); return p != null || s.SavePassword; }
 
         // Tożsamość do łączenia: kontrolka SSH czyta server.Username WEWNĘTRZNIE (auth + SFTP), więc gdy jest
         // profil, podajemy płytką kopię serwera z podmienionym loginem/domeną (transient) — bez ruszania kodu
         // uwierzytelniania w SshTerminalControl. Dla RDP ustawiamy UserName/Domain wprost (EffUser/EffDomain).
-        private ServerInfo ConnectIdentity(ServerInfo s)
+        internal ServerInfo ConnectIdentity(ServerInfo s)
         {
             var p = ProfileFor(s);
             if (p == null) return s;
@@ -4061,42 +3134,5 @@ namespace RdpManager
 
         internal void DiagnoseServer(ServerInfo server) => _reach?.DiagnoseServer(server);
 
-        private static string DescribeDisconnect(AxMsRdpClient11NotSafeForScripting rdp, int reason)
-        {
-            uint ext = 0;
-            try { ext = (uint)rdp.ExtendedDisconnectReason; } catch { }
-            string d = null;
-            try { d = rdp.GetErrorDescription((uint)reason, ext); } catch { }
-            return RdpUtils.FormatDisconnectReason(d, reason, ext);
-        }
-
-        private void SetSessionStatus(Session s, string text, StatusKind kind = StatusKind.Info)
-        {
-            s.Status = text;
-            s.StatusKind = kind;
-            if (s == _active) SetStatus(text, kind);
-        }
-
-        // internal: wołany też przez Services/ReachabilityService (status WOL/diagnozy).
-        internal void SetStatus(string text, StatusKind kind = StatusKind.Info)
-        {
-            StatusText.Text = text;
-            StatusText.ToolTip = (string.IsNullOrEmpty(text) || text == "—") ? null : text;
-            var b = KindBrush(kind);
-            StatusText.Foreground = b;
-            CfStatusDot.Fill = b;
-            CfStatusDot.Visibility = kind == StatusKind.Info ? Visibility.Collapsed : Visibility.Visible;
-        }
-
-        private Brush KindBrush(StatusKind kind)
-        {
-            switch (kind)
-            {
-                case StatusKind.Connecting: return Res("Idle");
-                case StatusKind.Ok: return Res("Online");
-                case StatusKind.Error: return Res("Danger");
-                default: return Res("TextSec");
-            }
-        }
     }
 }

@@ -162,10 +162,9 @@ namespace RdpManager
             _rdp.OnConnecting += (o, a) => SetStatus(L("S.st.connectingShort"), StatusKind.Connecting, false);
             _rdp.OnConnected += (o, a) =>
             {
-                _session.Connected = true;
+                _session.MarkConnected();   // Connected = true + wpis „CONNECTED" (dedup B3/B4 — wspólne z SessionManager)
                 SetStatus(L("S.st.connected"), StatusKind.Ok, false);
                 HideOverlay();
-                ConnectionLog.Append("CONNECTED", _server);
             };
             _rdp.OnLoginComplete += (o, a) => { _loggedIn = true; _resizer?.ApplyInitial(); try { _rdp.Focus(); } catch { } };
             _rdp.OnDisconnected += (o, a) =>
