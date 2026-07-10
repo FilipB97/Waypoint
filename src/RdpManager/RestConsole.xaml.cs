@@ -501,7 +501,7 @@ namespace RdpManager
 
         // ---------- Wysyłka ----------
 
-        private const int ScriptTabIndex = 2;   // Body, Nagłówki, Skrypt
+        private const int ScriptTabIndex = 2;   // Body, Nagłówki, Skrypt, Wysłane, Historia
 
         private async void Send_Click(object sender, RoutedEventArgs e)
         {
@@ -531,10 +531,15 @@ namespace RdpManager
 
             try
             {
+                // Liczone TERAZ (po pre-skrypcie, na tym samym Vars() co wysyłka) — pre-skrypt mógł
+                // zmienne dopiero ustawić. Nieznane {{x}} idą na drut dosłownie → ostrzeżenie w „Wysłane".
+                var missingVars = RestClient.MissingVarsInRequest(eff, eff.AuthSecret, Vars());
+
                 var resp = await RestClient.SendAsync(eff, eff.AuthSecret, Vars(), cts.Token);
                 if (cts.Token.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk (finally i tak nie odblokuje)
 
                 RenderResponse(resp);
+                RenderSent(resp, missingVars);
                 var post = RestScript.Run(_req.TestScript, eff, resp, GetScriptVar, SetScriptVar, UnsetScriptVar);
                 ShowScriptOutput(pre, post);
                 if (!post.Ok || post.Tests.Any(t => !t.Passed)) ResponseTabs.SelectedIndex = ScriptTabIndex;
@@ -619,6 +624,36 @@ namespace RdpManager
             ResponseHeaders.ItemsSource = null;
             SetResponseBody(L("S.rest.resp.empty"), allowColor: false);
             ScriptOutput.Text = "";
+            SentBox.Text = L("S.rest.sent.empty");
+        }
+
+        // Zakładka „Wysłane": migawka finalnego żądania z klienta (nagłówki dogenerowane przy wysyłce +
+        // body po podstawieniu/zakodowaniu). Sekretów nie maskujemy — to lokalna diagnostyka (jak konsola
+        // Postmana); bez pełnego Authorization nie da się porównać 1:1 z żądaniem, które działa.
+        private void RenderSent(RestResponse r, List<string> missingVars)
+        {
+            var sb = new System.Text.StringBuilder();
+            if (missingVars != null && missingVars.Count > 0)
+            {
+                sb.AppendLine(string.Format(L("S.rest.sent.warnvars"), string.Join(", ", missingVars)));
+                sb.AppendLine();
+            }
+            if (r.SentHeaders == null)
+            {
+                // Build się nie powiódł (np. niepoprawny URL) — nic nie wyszło; pokaż chociaż błąd.
+                sb.Append(r.Error ?? "");
+                SentBox.Text = sb.ToString();
+                return;
+            }
+            sb.AppendLine(r.SentMethod + " " + r.SentUrl);
+            sb.AppendLine();
+            foreach (var h in r.SentHeaders) sb.AppendLine(h.Key + ": " + h.Value);
+            if (!string.IsNullOrEmpty(r.SentBody))
+            {
+                sb.AppendLine();
+                sb.AppendLine(r.SentBody);
+            }
+            SentBox.Text = sb.ToString();
         }
 
         private string FormatBody()

@@ -26,6 +26,16 @@ namespace RdpManager
         public string ContentType = "";
         public List<KeyValuePair<string, string>> Headers = new List<KeyValuePair<string, string>>();
         public string Error = "";
+
+        /// <summary>Migawka tego, co FAKTYCZNIE wyszło na drut (finalny URL i body po podstawieniu
+        /// {{zmiennych}}, nagłówki razem z dogenerowanymi przy wysyłce) — odpowiednik konsoli Postmana,
+        /// do diagnozy „w Postmanie działa, tu 401". Wypełniana też przy błędzie transportu (widać, co
+        /// by wyszło); null w <see cref="SentHeaders"/> = Build się nie powiódł (np. zły URL).
+        /// Tylko w pamięci — nie trafia do historii/JSON (Authorization zawiera sekret).</summary>
+        public string SentMethod = "";
+        public string SentUrl = "";
+        public string SentBody = "";
+        public List<KeyValuePair<string, string>> SentHeaders;
     }
 
     /// <summary>
@@ -50,56 +60,91 @@ namespace RdpManager
         public static async Task<RestResponse> SendAsync(RestRequest req, string authSecret, IReadOnlyDictionary<string, string> vars, CancellationToken ct)
         {
             var sw = Stopwatch.StartNew();
+
+            // Migawka „Wysłane" zbierana PRZED wysyłką i doklejana do KAŻDEGO wyniku (także błędu
+            // transportu) — bez niej nie da się porównać żądania 1:1 z działającym (konsola Postmana).
+            string sentMethod = "", sentUrl = "", sentBody = "";
+            List<KeyValuePair<string, string>> sentHeaders = null;
+            RestResponse WithSent(RestResponse r)
+            {
+                r.SentMethod = sentMethod; r.SentUrl = sentUrl; r.SentBody = sentBody; r.SentHeaders = sentHeaders;
+                return r;
+            }
+
             try
             {
-                using (var msg = Build(req, authSecret, vars))
-                // ResponseHeadersRead (nie ResponseContentRead): sprawdzamy Content-Length ZANIM zaczniemy
-                // czytać ciało — deklarowany-zbyt-duży rozmiar odrzucamy bez pobierania ani bajta.
-                using (var resp = await Http.SendAsync(msg, HttpCompletionOption.ResponseHeadersRead, ct))
+                using (var msg = Build(req, authSecret, vars, out sentBody))
                 {
-                    long? declared = resp.Content.Headers.ContentLength;
-                    if (declared.HasValue && declared.Value > MaxResponseBytes)
+                    sentMethod = msg.Method.Method;
+                    sentUrl = msg.RequestUri.OriginalString;
+                    sentHeaders = SnapshotHeaders(msg);
+
+                    // ResponseHeadersRead (nie ResponseContentRead): sprawdzamy Content-Length ZANIM zaczniemy
+                    // czytać ciało — deklarowany-zbyt-duży rozmiar odrzucamy bez pobierania ani bajta.
+                    using (var resp = await Http.SendAsync(msg, HttpCompletionOption.ResponseHeadersRead, ct))
                     {
+                        long? declared = resp.Content.Headers.ContentLength;
+                        if (declared.HasValue && declared.Value > MaxResponseBytes)
+                        {
+                            sw.Stop();
+                            return WithSent(TooLargeResponse(sw.ElapsedMilliseconds, declared));
+                        }
+
+                        byte[] bytes;
+                        using (var stream = await resp.Content.ReadAsStreamAsync(ct))
+                            bytes = await ReadBoundedAsync(stream, MaxResponseBytes, ct);
                         sw.Stop();
-                        return TooLargeResponse(sw.ElapsedMilliseconds, declared);
+
+                        // Content-Length brakujący/kłamliwy (chunked, proxy) — limit egzekwowany też PODCZAS czytania.
+                        if (bytes == null) return WithSent(TooLargeResponse(sw.ElapsedMilliseconds, null));
+
+                        string body = Encoding.UTF8.GetString(bytes);
+                        var headers = new List<KeyValuePair<string, string>>();
+                        foreach (var h in resp.Headers) headers.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
+                        foreach (var h in resp.Content.Headers) headers.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
+
+                        return WithSent(new RestResponse
+                        {
+                            Ok = true,
+                            Status = (int)resp.StatusCode,
+                            ReasonPhrase = resp.ReasonPhrase ?? "",
+                            ElapsedMs = sw.ElapsedMilliseconds,
+                            Size = bytes.LongLength,
+                            Body = body,
+                            ContentType = resp.Content.Headers.ContentType?.ToString() ?? "",
+                            Headers = headers
+                        });
                     }
-
-                    byte[] bytes;
-                    using (var stream = await resp.Content.ReadAsStreamAsync(ct))
-                        bytes = await ReadBoundedAsync(stream, MaxResponseBytes, ct);
-                    sw.Stop();
-
-                    // Content-Length brakujący/kłamliwy (chunked, proxy) — limit egzekwowany też PODCZAS czytania.
-                    if (bytes == null) return TooLargeResponse(sw.ElapsedMilliseconds, null);
-
-                    string body = Encoding.UTF8.GetString(bytes);
-                    var headers = new List<KeyValuePair<string, string>>();
-                    foreach (var h in resp.Headers) headers.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
-                    foreach (var h in resp.Content.Headers) headers.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
-
-                    return new RestResponse
-                    {
-                        Ok = true,
-                        Status = (int)resp.StatusCode,
-                        ReasonPhrase = resp.ReasonPhrase ?? "",
-                        ElapsedMs = sw.ElapsedMilliseconds,
-                        Size = bytes.LongLength,
-                        Body = body,
-                        ContentType = resp.Content.Headers.ContentType?.ToString() ?? "",
-                        Headers = headers
-                    };
                 }
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
                 sw.Stop();
-                return new RestResponse { Ok = false, ElapsedMs = sw.ElapsedMilliseconds, Error = "Timeout" };
+                return WithSent(new RestResponse { Ok = false, ElapsedMs = sw.ElapsedMilliseconds, Error = "Timeout" });
             }
             catch (Exception ex)
             {
                 sw.Stop();
-                return new RestResponse { Ok = false, ElapsedMs = sw.ElapsedMilliseconds, Error = (ex.InnerException ?? ex).Message };
+                return WithSent(new RestResponse { Ok = false, ElapsedMs = sw.ElapsedMilliseconds, Error = (ex.InnerException ?? ex).Message });
             }
+        }
+
+        /// <summary>Zrzut nagłówków, które wyjdą na drut: nagłówki żądania + treści. Odczyt ContentLength
+        /// WYMUSZA jego policzenie (przed wysyłką nie występuje jeszcze w enumeracji), a Host — który
+        /// HttpClient dokłada dopiero przy wysyłce — jest uzupełniany z URI, gdy nie ustawiono go jawnie.
+        /// Publiczne dla testów.</summary>
+        public static List<KeyValuePair<string, string>> SnapshotHeaders(HttpRequestMessage msg)
+        {
+            var list = new List<KeyValuePair<string, string>>();
+            if (msg.Headers.Host == null && msg.RequestUri != null && msg.RequestUri.IsAbsoluteUri)
+                list.Add(new KeyValuePair<string, string>("Host", msg.RequestUri.Host));
+            foreach (var h in msg.Headers) list.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
+            if (msg.Content != null)
+            {
+                _ = msg.Content.Headers.ContentLength;   // getter liczy długość i zapisuje ją jako nagłówek
+                foreach (var h in msg.Content.Headers) list.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
+            }
+            return list;
         }
 
         private static RestResponse TooLargeResponse(long elapsedMs, long? declaredBytes) => new RestResponse
@@ -131,8 +176,12 @@ namespace RdpManager
             }
         }
 
-        private static HttpRequestMessage Build(RestRequest req, string authSecret, IReadOnlyDictionary<string, string> vars)
+        /// <summary>Buduje gotowe do wysyłki <see cref="HttpRequestMessage"/>. <paramref name="sentBody"/> =
+        /// finalna treść po podstawieniu zmiennych i zakodowaniu (pusta, gdy żądanie nie niesie body) —
+        /// do migawki „Wysłane". Publiczne dla testów.</summary>
+        public static HttpRequestMessage Build(RestRequest req, string authSecret, IReadOnlyDictionary<string, string> vars, out string sentBody)
         {
+            sentBody = "";
             var msg = new HttpRequestMessage(new HttpMethod((req.Method ?? "GET").Trim().ToUpperInvariant()), BuildRequestUri(req, vars));
 
             // Content-Type z nagłówków ma pierwszeństwo nad polem body.
@@ -157,6 +206,7 @@ namespace RdpManager
                 string content = !isForm ? NormalizeNewlines(Subst(req.Body, vars))
                                 : hasFields ? BuildFormBodyFromFields(req.FormFields, vars)
                                 : BuildFormBody(req.Body, vars);
+                sentBody = content;
                 msg.Content = new StringContent(content, Encoding.UTF8);
                 if (!string.IsNullOrWhiteSpace(contentType))
                 {
@@ -260,6 +310,43 @@ namespace RdpManager
 
         /// <summary>Czy tekst zawiera jakąkolwiek zmienną {{x}}? (sygnalizacja w UI)</summary>
         public static bool HasVars(string s) => !string.IsNullOrEmpty(s) && VarRx.IsMatch(s);
+
+        /// <summary>Nieznane {{zmienne}} w CAŁYM żądaniu (URL, parametry, nagłówki, treść/pola formularza,
+        /// auth) względem słownika — takie idą na drut DOSŁOWNIE jako {{x}}, co zwykle kończy się 401/400
+        /// (np. literalny {{client_secret}} w body tokenowym przy złym aktywnym środowisku). Skanuje to samo
+        /// body, które wyśle <see cref="Build"/> (tabela pól vs surowy tekst; GET/HEAD bez body).
+        /// Publiczne dla testów; UI pokazuje ostrzeżenie w zakładce „Wysłane".</summary>
+        public static List<string> MissingVarsInRequest(RestRequest req, string authSecret, IReadOnlyDictionary<string, string> vars)
+        {
+            var missing = new List<string>();
+            void Add(string s)
+            {
+                foreach (var k in MissingVars(s, vars))
+                    if (!missing.Contains(k)) missing.Add(k);
+            }
+
+            Add(req.Url);
+            foreach (var p in req.QueryParams) if (p.Enabled) { Add(p.Key); Add(p.Value); }
+            foreach (var h in req.Headers) if (h.Enabled) { Add(h.Key); Add(h.Value); }
+
+            // Lustrzane odbicie decyzji Build: które body faktycznie poleci.
+            string m = (req.Method ?? "GET").Trim().ToUpperInvariant();
+            if (m != "GET" && m != "HEAD")
+            {
+                string contentType = req.Headers
+                    .Where(h => h.Enabled && string.Equals(h.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                    .Select(h => h.Value).FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(contentType)) contentType = req.BodyContentType;
+                bool isForm = IsFormUrlEncoded(contentType);
+                bool hasFields = isForm && req.FormFields.Any(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key));
+                if (hasFields) { foreach (var f in req.FormFields) if (f.Enabled) { Add(f.Key); Add(f.Value); } }
+                else Add(req.Body);
+            }
+
+            Add(req.AuthUsername);
+            Add(authSecret);
+            return missing;
+        }
 
         /// <summary>Nazwy zmiennych {{x}} z tekstu, których NIE ma w słowniku (null słownik = wszystkie
         /// nieznane). Pusta lista = wszystko znane albo brak zmiennych. Publiczne dla testów i UI.</summary>

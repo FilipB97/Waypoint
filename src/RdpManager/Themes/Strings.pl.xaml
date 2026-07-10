@@ -591,6 +591,9 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.resp.body">Treść</sys:String>
     <sys:String x:Key="S.rest.resp.headers">Nagłówki</sys:String>
     <sys:String x:Key="S.rest.resp.empty">Wyślij żądanie, aby zobaczyć odpowiedź.</sys:String>
+    <sys:String x:Key="S.rest.resp.sent">Wysłane</sys:String>
+    <sys:String x:Key="S.rest.sent.empty">Wyślij żądanie, aby zobaczyć, co dokładnie poszło do serwera: finalny URL, wszystkie nagłówki (także dogenerowane przy wysyłce) i treść po podstawieniu zmiennych.</sys:String>
+    <sys:String x:Key="S.rest.sent.warnvars">⚠ Nieznane zmienne — wysłane dosłownie, bez podstawienia: {0}. Sprawdź aktywne środowisko.</sys:String>
     <sys:String x:Key="S.rest.sending">Wysyłanie…</sys:String>
     <sys:String x:Key="S.rest.saved">Zapisano żądanie</sys:String>
     <sys:String x:Key="S.rest.needurl">Podaj adres URL.</sys:String>
