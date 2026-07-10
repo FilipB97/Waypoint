@@ -127,8 +127,7 @@ namespace RdpManager
             ShowHealthNotices();   // nieblokujący sygnał, jeśli przy ładowaniu zadziałała samonaprawa/kwarantanna
 
             InitTray();
-            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndHook);
-            ApplyHotkey();
+            ApplyHotkey();   // hook WndProc instalujemy już w OnSourceInitialized (patrz niżej) — przed pierwszą klatką
             // Podświetlanie ikon paska kart w trybie skupienia (patrz StartTabStripRepaintPulse): przy ruchu
             // myszy nad paskiem wymuszamy przerysowanie, bo WPF sam go w tym trybie nie maluje.
             TabStripHost.MouseMove += (_, __) => _fs.StartTabStripRepaintPulse();
@@ -352,6 +351,16 @@ namespace RdpManager
             UnregisterHotKey(hwnd, HotkeyId);
             if (_settings.QuickConnectHotkey)
                 RegisterHotKey(hwnd, HotkeyId, MOD_CONTROL | MOD_ALT, (uint)'Q');
+        }
+
+        // Hook WndProc + obwódkę zakładamy tu (hwnd już istnieje, okno JESZCZE niepokazane), a nie w Loaded —
+        // dzięki temu wybrana obwódka („brak"/kolor) obowiązuje od PIERWSZEJ klatki i nie widać błysku akcentu
+        // (kobalt), którym WPF-UI/DWM maluje krawędź, zanim Loaded zdążyłby ją nadpisać.
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndHook);
+            WindowBorder.Apply(this);
         }
 
         private IntPtr WndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

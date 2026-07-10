@@ -62,17 +62,28 @@ namespace RdpManager
         {
             if (window == null) return;
             Apply(window);
-            // WPF-UI przemalowuje krawędź na akcent PO aktywacji — m.in. gdy zamknie się okno potomne
-            // (np. „O aplikacji") i główne okno wraca na wierzch. Sam Apply w handlerze aktywacji bywa ZA
-            // wcześnie (repaint WPF-UI leci później), więc dobijamy jeszcze raz deferred (ApplicationIdle).
-            window.Activated += (_, __) =>
-            {
-                Apply(window);
-                window.Dispatcher.BeginInvoke(new Action(() => Apply(window)),
-                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-            };
+            // WM_NCACTIVATE: Windows/WPF-UI przemalowują krawędź (non-client) przy (de)aktywacji — m.in. gdy
+            // zamknie się okno potomne (np. „O aplikacji") i główne wraca na wierzch. Hookujemy tę wiadomość i
+            // przywracamy wybraną obwódkę SYNCHRONICZNIE, w tym samym cyklu repaint (bez odroczenia = bez błysku
+            // kobaltu). Hook jest statyczny (bez domknięcia per-okno) i zwalnia się z HwndSource okna — brak wycieku.
+            HwndSource.FromHwnd(new WindowInteropHelper(window).Handle)?.AddHook(BorderHook);
+            // Dobij raz po pełnym wyrenderowaniu (WPF-UI kończy malować krawędź po Loaded) — asekuracja pierwszej klatki.
             window.Dispatcher.BeginInvoke(new Action(() => Apply(window)),
                 System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+
+        private const int WM_NCACTIVATE = 0x0086;
+
+        // Przy każdym WM_NCACTIVATE ponownie nakłada bieżącą specyfikację obwódki — zanim klatka trafi na ekran.
+        private static IntPtr BorderHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_NCACTIVATE && hwnd != IntPtr.Zero)
+            {
+                uint val = SpecToColorRef(_spec);
+                try { DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref val, sizeof(uint)); }
+                catch { /* starszy DWM bez atrybutu — bez znaczenia */ }
+            }
+            return IntPtr.Zero;
         }
 
         // "" → brak; "System"/"default" → systemowy akcent; "#RRGGBB" → COLORREF (0x00BBGGRR); błędny → brak.
