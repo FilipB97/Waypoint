@@ -1,0 +1,28 @@
+# Automatyczne PR-y z aktualizacjami zależności.
+# Dokumentacja: https://docs.github.com/code-security/dependabot/dependabot-version-updates
+version: 2
+updates:
+  # Paczki NuGet aplikacji (PackageReference w RdpManager.csproj).
+  - package-ecosystem: nuget
+    directory: "/src/RdpManager"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    # Prefiks zgodny z conventional commits — release notes budują się z treści commitów.
+    commit-message:
+      prefix: deps
+
+  # Wersje akcji używanych w workflowach (.github/workflows/*).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: ci

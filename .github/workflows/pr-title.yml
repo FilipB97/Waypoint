@@ -1,0 +1,32 @@
+name: Lint PR title
+
+# Tytuł PR musi być w formacie conventional commit (feat/fix/ci…), bo release notes
+# budują się wprost z treści commitów — spójny format = czytelny, przewidywalny changelog.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sprawdź tytuł PR
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "Tytuł PR: $TITLE"
+          # typ(zakres opcjonalny)!: opis  — np. "feat(rest): ..." / "fix: ..." / "ci!: ..."
+          pattern='^(feat|fix|ci|docs|refactor|ux|perf|test|chore|build|style|deps|revert)(\([a-z0-9,_/.-]+\))?!?: .+'
+          if ! printf '%s' "$TITLE" | grep -qE "$pattern"; then
+            echo "::error::Tytuł PR musi mieć format conventional commit, np. 'feat(rest): opis' lub 'fix: opis'."
+            echo "Dozwolone typy: feat, fix, ci, docs, refactor, ux, perf, test, chore, build, style, deps, revert"
+            exit 1
+          fi
+          echo "Tytuł OK."
