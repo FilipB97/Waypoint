@@ -63,6 +63,7 @@ namespace RdpManager
 
                 engine.Execute(Prelude);
                 engine.Execute(script);
+                engine.Execute(TestsEpilogue);   // stare API: tests['nazwa']=bool → wyniki testów
             }
             catch (Exception ex) { o.Ok = false; o.Error = (ex.InnerException ?? ex).Message; }
             return o;
@@ -103,9 +104,21 @@ var postman = {
   clearEnvironmentVariable: function(k){ __unset(k); },
   setGlobalVariable:        function(k,v){ __set(k,v); },
   getGlobalVariable:        function(k){ return __get(k); },
-  clearGlobalVariable:      function(k){ __unset(k); }
+  clearGlobalVariable:      function(k){ __unset(k); },
+  getResponseHeader:        function(n){ return __header(n); }
 };
+// Stare globalne zmienne sandboxa Postmana (sprzed pm.*): responseBody/responseCode/tests. Bez nich
+// pospolite skrypty tokenowe (JSON.parse(responseBody) + postman.setEnvironmentVariable) wywalały się na
+// niezdefiniowanym responseBody, więc token nigdy się nie zapisywał (w pre-request: puste/0).
+var responseBody = __text();
+var responseCode = { code: __code, name: '', detail: '' };
+var tests = {};
 var console = { log: function(){ var s=''; for(var i=0;i<arguments.length;i++){ var x=arguments[i]; s+=(i?' ':'')+(typeof x==='object'?JSON.stringify(x):x); } __log(s); } };
+";
+
+        // Po skrypcie: przenieś wpisy starego obiektu `tests` (tests['nazwa'] = warunek) do wyników testów.
+        private const string TestsEpilogue = @"
+for (var __k in tests) { if (Object.prototype.hasOwnProperty.call(tests, __k)) __test(__k, !!tests[__k], ''); }
 ";
     }
 }

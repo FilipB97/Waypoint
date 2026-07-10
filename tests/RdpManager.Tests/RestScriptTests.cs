@@ -102,5 +102,61 @@ namespace RdpManager.Tests
             Assert.True(o.Ok);
             Assert.True(o.IsEmpty);
         }
+
+        // Dokładny idiom kopiowany z Postmana (sprzed pm.*) — bez globalnego responseBody skrypt tokenowy
+        // wywalał się i token nigdy się nie zapisywał („Get Token nie działa po imporcie").
+        [Fact]
+        public void LegacyResponseBodyGlobal_ParsesAndSetsTokens()
+        {
+            var (get, set, unset, store) = Store();
+            var resp = new RestResponse { Ok = true, Status = 200, Body = "{\"access_token\":\"AAA\",\"refresh_token\":\"BBB\"}" };
+            var o = RestScript.Run(
+                "var jsonData = JSON.parse(responseBody);" +
+                "postman.setEnvironmentVariable('token', jsonData.access_token);" +
+                "postman.setEnvironmentVariable('refresh_token', jsonData.refresh_token);",
+                null, resp, get, set, unset);
+            Assert.True(o.Ok, o.Error);
+            Assert.Equal("AAA", store["token"]);
+            Assert.Equal("BBB", store["refresh_token"]);
+        }
+
+        [Fact]
+        public void LegacyResponseCodeGlobal_ExposesStatus()
+        {
+            var (get, set, unset, _) = Store();
+            var o = RestScript.Run(
+                "pm.test('status', function(){ pm.expect(responseCode.code).to.equal(201); });",
+                null, new RestResponse { Ok = true, Status = 201 }, get, set, unset);
+            Assert.True(o.Ok, o.Error);
+            Assert.True(o.Tests.Single().Passed, o.Tests.Single().Error);
+        }
+
+        // Stary obiekt tests['nazwa'] = warunek → wyniki testów (epilog przenosi je do o.Tests).
+        [Fact]
+        public void LegacyTestsObject_RecordsPassAndFail()
+        {
+            var (get, set, unset, _) = Store();
+            var o = RestScript.Run(
+                "tests['is ok'] = responseCode.code === 200;" +
+                "tests['has body'] = responseBody.length > 0;" +
+                "tests['bad'] = responseCode.code === 500;",
+                null, new RestResponse { Ok = true, Status = 200, Body = "{}" }, get, set, unset);
+            Assert.True(o.Ok, o.Error);
+            Assert.True(o.Tests.Single(t => t.Name == "is ok").Passed);
+            Assert.True(o.Tests.Single(t => t.Name == "has body").Passed);
+            Assert.False(o.Tests.Single(t => t.Name == "bad").Passed);
+        }
+
+        [Fact]
+        public void LegacyGetResponseHeader_ReadsHeader()
+        {
+            var (get, set, unset, _) = Store();
+            var resp = new RestResponse { Ok = true, Status = 200, Headers = new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("X-Api", "v2") } };
+            var o = RestScript.Run(
+                "pm.test('hdr', function(){ pm.expect(postman.getResponseHeader('X-Api')).to.equal('v2'); });",
+                null, resp, get, set, unset);
+            Assert.True(o.Ok, o.Error);
+            Assert.True(o.Tests.Single().Passed, o.Tests.Single().Error);
+        }
     }
 }
