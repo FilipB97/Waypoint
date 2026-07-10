@@ -88,10 +88,7 @@ namespace RdpManager.Services
                 {
                     kv.Key.Status = kv.Value.status;
                     kv.Key.LatencyMs = kv.Value.rttMs;
-                    if (_owner._serverStatusDot.TryGetValue(kv.Key, out var dot))
-                        dot.Fill = _owner.StatusBrush(kv.Value.status);
-                    if (_owner._serverLatency.TryGetValue(kv.Key, out var lat))
-                        lat.Text = RdpUtils.FormatLatency(kv.Value.rttMs);
+                    _owner._tree.SetRowStatus(kv.Key, kv.Value.status, kv.Value.rttMs);   // szew (PR 3): kropka + opóźnienie wiersza
                 }
                 // Zapamiętaj średnie opóźnienie osiągalnych hostów z tego cyklu — do wykresu na pulpicie.
                 var reachable = results.Where(kv => kv.Value.rttMs >= 0).Select(kv => (double)kv.Value.rttMs).ToList();
