@@ -304,24 +304,41 @@ namespace RdpManager
         private void Nav_Click(object sender, RoutedEventArgs e)
         {
             if (!(sender is Button b) || !(b.Tag is string v)) return;
-            // „Połączenia" to dom listy serwerów — wyjście z modułu REST (moduł opuszcza się TYLKO tędy;
-            // ponowny klik REST go nie zamyka).
-            if (v == "Sessions" && _restMode) { SetRestMode(false); ShowView(v); return; }
             if (v == _currentView) { _sidebarCollapsed = !_sidebarCollapsed; UpdateImmersive(); }   // ta sama ikona → zwiń/rozwiń panel
             else ShowView(v);
         }
 
+        // „Rest" to PEŁNOPRAWNY widok (jak Pulpit/Ostatnie/Ustawienia), a nie osobna flaga obok _currentView —
+        // dlatego stan nie może się rozjechać (dawniej _restMode zostawał włączony po przejściu na inny widok,
+        // a klik „Połączenia" cicho wracał do listy serwerów). Treść REST to karty-konsole w kontenerze sesji,
+        // więc widok „Rest" pokazuje ten sam SessionsView co „Połączenia" — różni je wyłącznie sidebar.
         private void ShowView(string view)
         {
+            bool wasRest = _currentView == "Rest";
             _currentView = view;
-            SessionsView.Visibility = view == "Sessions" ? Visibility.Visible : Visibility.Collapsed;
+            bool rest = view == "Rest";
+            _restMode = rest;
+
+            // REST i „Połączenia" dzielą kontener sesji (konsole = karty sesji); reszta widoków ma własne panele.
+            SessionsView.Visibility = (view == "Sessions" || rest) ? Visibility.Visible : Visibility.Collapsed;
             DashboardView.Visibility = view == "Dashboard" ? Visibility.Visible : Visibility.Collapsed;
             RecentView.Visibility = view == "Recent" ? Visibility.Visible : Visibility.Collapsed;
             SettingsView.Visibility = view == "Settings" ? Visibility.Visible : Visibility.Collapsed;
 
+            // Sidebar przełączamy TYLKO przy wejściu/wyjściu z REST (drzewo serwerów jest trwałe między widokami).
+            if (rest != wasRest)
+            {
+                SearchBox.Visibility = rest ? Visibility.Collapsed : Visibility.Visible;
+                ServerScroll.Visibility = rest ? Visibility.Collapsed : Visibility.Visible;
+                RestModule.Visibility = rest ? Visibility.Visible : Visibility.Collapsed;
+                if (rest) { ProtoFilterBar.Visibility = Visibility.Collapsed; TreeEmptyHint.Visibility = Visibility.Collapsed; BuildRestModule(); }
+                else RenderTree(SearchBox.Text);   // przywróć drzewo serwerów + chipy + hint
+            }
+
             SetNav(NavDashboard, IcoDashboard, view == "Dashboard");
-            SetNav(NavSessions, IcoSessions, view == "Sessions" && !_restMode);   // w module REST świeci REST, nie Połączenia
+            SetNav(NavSessions, IcoSessions, view == "Sessions");
             SetNav(NavRecent, IcoRecent, view == "Recent");
+            SetNav(NavRest, IcoRest, rest);
             SetNav(NavSettings, IcoSettings, view == "Settings");
 
             if (view == "Dashboard") BuildDashboard();
@@ -603,26 +620,13 @@ namespace RdpManager
 
         private bool _restMode;
 
-        // REST to PEŁNOPRAWNY moduł: klik wchodzi (i przełącza główny widok na sesje — tam żyją konsole);
-        // ponowny klik zwija/rozwija panel boczny (konwencja pozostałych ikon raila), NIE wychodzi z modułu.
-        // Wyjście = klik „Połączenia" (Nav_Click).
+        // REST to PEŁNOPRAWNY, oddzielny widok: klik wchodzi w moduł (sidebar = kolekcje, treść = karty-konsole);
+        // ponowny klik zwija/rozwija panel boczny (konwencja pozostałych ikon raila). Wyjście = dowolna inna
+        // ikona raila (zwykłe przełączenie widoku przez ShowView — bez cichego powrotu do listy serwerów).
         private void NavRest_Click(object sender, RoutedEventArgs e)
         {
-            if (_restMode) { _sidebarCollapsed = !_sidebarCollapsed; UpdateImmersive(); return; }
-            SetRestMode(true);
-            if (_currentView != "Sessions") ShowView("Sessions");
-        }
-
-        // Przełącza sidebar: drzewo serwerów <-> drzewo kolekcji REST. Zawartość (sesje) niezależna.
-        private void SetRestMode(bool on)
-        {
-            _restMode = on;
-            SearchBox.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
-            ServerScroll.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
-            RestModule.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-            SetNav(NavRest, IcoRest, on);
-            if (on) { ProtoFilterBar.Visibility = Visibility.Collapsed; TreeEmptyHint.Visibility = Visibility.Collapsed; BuildRestModule(); }
-            else RenderTree(SearchBox.Text);   // przywróć drzewo serwerów + chipy + hint
+            if (_currentView == "Rest") { _sidebarCollapsed = !_sidebarCollapsed; UpdateImmersive(); }
+            else ShowView("Rest");
         }
 
         // Rozwinięte węzły modułu (Id wpisu-kolekcji / Id folderu). Sesyjne; domyślnie wszystko ZWINIĘTE —
@@ -5049,9 +5053,9 @@ namespace RdpManager
                 SaveCredential(server, dlg.EnteredPassword);
                 RenderTree(SearchBox.Text);
                 CheckReachabilityAsync();
-                // Wpis REST nie pokazuje się na liście serwerów — przełącz na moduł REST, żeby było
+                // Wpis REST nie pokazuje się na liście serwerów — przełącz na widok REST, żeby było
                 // widać, gdzie trafił (inaczej „dodałem i zniknęło").
-                if (server.Protocol == RemoteProtocol.Rest) SetRestMode(true);
+                if (server.Protocol == RemoteProtocol.Rest) ShowView("Rest");
             }
         }
 
