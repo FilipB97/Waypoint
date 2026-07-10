@@ -2752,7 +2752,10 @@ namespace RdpManager
         {
             if (server.Protocol == RemoteProtocol.Http) { OpenUrl(server); return; }
 
-            ShowView("Sessions");   // kontrolka RDP musi powstać przy widocznym widoku sesji
+            // Kontrolka (RDP/konsola) musi powstać przy widocznym kontenerze sesji. Widoki „Sessions" i „Rest"
+            // dzielą ten sam SessionContainer, więc gdy już jesteśmy w którymś z nich — nie przełączaj (inaczej
+            // otwarcie żądania REST wyrzucałoby z modułu REST na listę serwerów). Z innych widoków → sesje.
+            if (_currentView != "Sessions" && _currentView != "Rest") ShowView("Sessions");
             if (!forceNew)
             {
                 var existing = _sessions.Find(x => x.Server == server);
