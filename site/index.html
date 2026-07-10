@@ -33,7 +33,7 @@
   "description": "A modern multi-protocol connection manager for Windows — tabbed RDP, SSH, VNC, Telnet and serial sessions, an SFTP/FTP file manager and a built-in REST/API client.",
   "url": "https://filipb97.github.io/Waypoint/",
   "downloadUrl": "https://github.com/FilipB97/Waypoint/releases/latest",
-  "softwareVersion": "1.5",
+  "softwareVersion": "1.8",
   "license": "https://github.com/FilipB97/Waypoint/blob/master/LICENSE",
   "author": { "@type": "Person", "name": "Filip Benklewski" },
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -42,333 +42,474 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect x='4' y='4' width='88' height='88' rx='22' fill='%232657D6'/%3E%3Cg transform='translate(7.68,7.68) scale(0.84)'%3E%3Crect x='12' y='16' width='72' height='50' rx='9' fill='none' stroke='%23EEF1F4' stroke-width='5'/%3E%3Cpath d='M40 78h16M48 66v12' stroke='%23EEF1F4' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M48 27c-7.2 0-13 5.7-13 12.8 0 8.9 13 18.2 13 18.2s13-9.3 13-18.2C61 32.7 55.2 27 48 27Z' fill='%23EEF1F4'/%3E%3Ccircle cx='48' cy='39.5' r='4.4' fill='%232657D6'/%3E%3C/g%3E%3C/svg%3E">
 <style>
   :root{
-    --bg:#0f1014; --panel:#1b1c22; --panel2:#212228;
-    --border:rgba(255,255,255,.09); --border2:rgba(255,255,255,.15);
-    --text:#f1f2f4; --text2:#9da0a8; --text3:#6c6f78;
-    --accent:#2657d6; --accent2:#3a6be8; --online:#3ddc97; --radius:14px;
+    --bg:#080b14; --bg2:#0b1020; --panel:rgba(255,255,255,.035); --panel2:rgba(255,255,255,.055);
+    --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.16);
+    --tx:#eef0f6; --tx2:#9ca0ae; --tx3:#5f6472;
+    --acc:#2657d6; --acc2:#4c86ff; --violet:#7c6cfb; --teal:#36c4cf; --amber:#ffb454;
+    --on:#3ddc97; --idle:#ffb454; --off:#5b5d66;
+    --rdp:#7ba6ff; --ssh:#4bd6a0; --sftp:#f0b45f; --rest:#48c6cf; --web:#9c93ff;
+    --sans:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    --mono:ui-monospace,"Cascadia Code",Consolas,monospace;
+    --radius:14px;
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
-    line-height:1.6; -webkit-font-smoothing:antialiased;
-    background-image:radial-gradient(920px 520px at 80% -10%, rgba(38,87,214,.14), transparent 60%),
-                     radial-gradient(720px 520px at 6% 2%, rgba(124,108,251,.10), transparent 55%);
-    background-attachment:fixed;
+    margin:0;background:var(--bg);color:var(--tx);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(1100px 620px at 78% -12%,rgba(38,87,214,.22),transparent 58%),
+      radial-gradient(760px 560px at 2% 12%,rgba(124,108,251,.14),transparent 55%),
+      radial-gradient(700px 700px at 60% 108%,rgba(54,196,207,.08),transparent 55%);
+    background-attachment:fixed;overflow-x:hidden;
   }
   a{color:inherit;text-decoration:none}
-  /* only horizontal padding here — vertical rhythm comes from section/hero/footer
-     (a `padding:0 24px` shorthand would override their vertical padding via specificity) */
-  .wrap{max-width:1080px;margin:0 auto;padding-left:24px;padding-right:24px}
-  .btn{display:inline-flex;align-items:center;gap:9px;border-radius:10px;padding:12px 22px;
-    font-weight:600;font-size:15px;border:1px solid var(--border2);cursor:pointer;transition:.18s;white-space:nowrap}
-  .btn.primary{background:linear-gradient(135deg,var(--accent),#3a6be8);color:#EEF1F4;border-color:transparent;
-    box-shadow:0 8px 26px -8px rgba(38,87,214,.55)}
-  .btn.primary:hover{transform:translateY(-1px);box-shadow:0 12px 32px -8px rgba(38,87,214,.7)}
-  .btn.ghost{background:rgba(255,255,255,.04);color:var(--text)}
-  .btn.ghost:hover{background:rgba(255,255,255,.09);border-color:var(--border2)}
-  .btn.star{background:rgba(255,255,255,.04);color:var(--text);gap:7px}
-  .btn.star:hover{background:rgba(255,255,255,.09);border-color:var(--border2)}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 26px}
+  h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.03em;text-wrap:balance}
+  code{font-family:var(--mono);font-size:.88em;background:rgba(255,255,255,.08);padding:1px 6px;border-radius:5px;color:var(--tx)}
+  .eye{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--acc2)}
+  .eye::before{content:"";width:22px;height:1px;background:linear-gradient(90deg,transparent,var(--acc2))}
+  .eye.c{justify-content:center}.eye.c::before{display:none}
+
+  .btn{display:inline-flex;align-items:center;gap:9px;font-size:14.5px;font-weight:600;padding:13px 24px;border-radius:12px;
+    border:1px solid var(--line2);cursor:pointer;transition:.2s;white-space:nowrap}
+  .btn.pri{background:linear-gradient(135deg,#3a6be8,#2657d6);border-color:transparent;color:#fff;box-shadow:0 14px 34px -12px rgba(38,87,214,.7)}
+  .btn.pri:hover{transform:translateY(-2px);box-shadow:0 20px 44px -12px rgba(38,87,214,.85)}
+  .btn.gh{background:var(--panel)}
+  .btn.gh:hover{background:var(--panel2);transform:translateY(-2px)}
   .btn.star svg{fill:#ffd166}
-  .starcount{opacity:.65;font-variant-numeric:tabular-nums}
-  .dlcount{margin-top:14px;font-size:14px;opacity:.62;font-variant-numeric:tabular-nums}
-  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}
-  .chip{font-size:12.5px;font-weight:600;color:var(--text2);background:rgba(255,255,255,.045);
-    border:1px solid var(--border);border-radius:999px;padding:5px 13px}
-  .chip b{color:var(--accent2);font-weight:700}
+  .starcount{opacity:.7;font-variant-numeric:tabular-nums}
 
   /* nav */
-  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
-    background:rgba(15,16,20,.72);border-bottom:1px solid var(--border)}
-  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px;gap:18px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
-  .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#3a6be8);
-    display:grid;place-items:center;box-shadow:0 4px 14px -4px rgba(38,87,214,.6)}
-  .logo svg{width:15px;height:15px}
-  .nav-links{display:flex;align-items:center;gap:24px;font-size:14.5px;color:var(--text2)}
-  .nav-links a.link:hover{color:var(--text)}
-  .nav-links .btn{padding:8px 16px;font-size:14px}
-  .lang{display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden}
-  .lang button{background:transparent;color:var(--text3);border:0;padding:6px 11px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
-  .lang button.active{background:rgba(38,87,214,.16);color:var(--accent2)}
-  @media(max-width:860px){.nav-links a.link{display:none}}
+  nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);background:rgba(8,11,20,.6);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:66px;gap:16px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:17px}
+  .mark{width:30px;height:30px;flex:none;filter:drop-shadow(0 4px 12px rgba(38,87,214,.5))}
+  .nlinks{display:flex;align-items:center;gap:24px;font-size:14.5px;color:var(--tx2)}
+  .nlinks a.link:hover{color:var(--tx)}
+  .nlinks .btn{padding:9px 16px;font-size:14px}
+  .lang{display:inline-flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden}
+  .lang button{background:transparent;color:var(--tx3);border:0;padding:7px 11px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
+  .lang button.active{background:rgba(76,134,255,.18);color:var(--acc2)}
+  @media(max-width:900px){.nlinks a.link{display:none}}
 
   /* hero */
-  .hero{padding-top:92px;padding-bottom:60px;display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
-  .pill{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--accent2);
-    background:rgba(38,87,214,.1);border:1px solid rgba(38,87,214,.28);border-radius:999px;padding:6px 14px;font-weight:600}
-  h1{font-size:clamp(38px,5.4vw,60px);line-height:1.05;margin:20px 0 0;letter-spacing:-1px;font-weight:800}
-  h1 .grad{background:linear-gradient(120deg,var(--accent),#8f7cff);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .lead{color:var(--text2);font-size:18px;margin:22px 0 0;max-width:520px}
-  .cta{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap}
-  .meta{margin-top:24px;font-size:13px;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .meta b{color:var(--text2);font-weight:600}
-  .sep{width:3px;height:3px;border-radius:50%;background:var(--text3);display:inline-block}
-  @media(max-width:860px){.hero{grid-template-columns:1fr;gap:40px;padding-top:64px;padding-bottom:44px}.mock{order:-1}}
+  .hero{text-align:center;padding:74px 0 20px;position:relative}
+  .badge{display:inline-flex;align-items:center;gap:9px;font-size:13px;color:var(--acc2);background:rgba(38,87,214,.1);
+    border:1px solid rgba(76,134,255,.28);border-radius:999px;padding:7px 16px;font-weight:600}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--on);box-shadow:0 0 0 4px rgba(61,220,151,.18)}
+  h1{font-size:clamp(40px,6.4vw,74px);line-height:1.02;margin:24px auto 0;max-width:15ch}
+  h1 .grad{background:linear-gradient(115deg,#6e9eff,#a996ff 58%,#4bd6cf);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{color:var(--tx2);font-size:19px;margin:22px auto 0;max-width:60ch}
+  .lead b{color:var(--tx);font-weight:600}
+  .hcta{display:flex;gap:14px;justify-content:center;margin-top:32px;flex-wrap:wrap}
+  .dlcount{margin-top:16px;font-size:13.5px;color:var(--tx3);font-variant-numeric:tabular-nums}
+  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+  .chip{font-size:12.5px;font-weight:600;color:var(--tx2);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+  .chip b{color:var(--acc2)}
+  .meta{margin-top:22px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:13px;color:var(--tx3);align-items:center}
+  .meta b{color:var(--tx2);font-weight:500}
+  .meta .sep{width:3px;height:3px;border-radius:50%;background:var(--tx3);display:inline-block}
 
-  .mock{filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))}
-  .mock svg{width:100%;height:auto;border-radius:12px;display:block}
+  .stage-wrap{margin:52px auto 0;max-width:1000px;position:relative;perspective:1800px}
+  .glow{position:absolute;inset:-8% 6% auto;height:70%;background:radial-gradient(60% 100% at 50% 0,rgba(38,87,214,.5),transparent 70%);filter:blur(46px);z-index:0}
+  .float{position:relative;z-index:1;transform:rotateX(9deg);transform-origin:50% 0;animation:rise 1.1s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes rise{from{opacity:0;transform:rotateX(16deg) translateY(40px)}to{opacity:1;transform:rotateX(9deg) translateY(0)}}
+
+  /* ===== app window ===== */
+  .win{border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#141826,#0d1120);border:1px solid var(--line2);
+    box-shadow:0 60px 120px -40px #000,0 0 0 1px rgba(0,0,0,.5)}
+  .wtitle{height:42px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.025)}
+  .wtitle .t{font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
+  .wdots{margin-left:auto;display:flex;gap:8px}.wdots i{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.14)}
+  .wbody{display:flex;height:360px}
+  .rail{width:54px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 0;background:rgba(0,0,0,.22)}
+  .ri{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--tx3)}
+  .ri svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
+  .ri.on{background:rgba(76,134,255,.16);color:var(--acc2);box-shadow:inset 0 0 0 1px rgba(76,134,255,.4)}
+  .ri.sp{flex:1;background:none;box-shadow:none}
+  .tree{width:228px;flex:none;border-right:1px solid var(--line);padding:13px 11px;background:rgba(255,255,255,.014)}
+  .srch{height:30px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.28);display:flex;align-items:center;padding:0 10px;color:var(--tx3);font-size:12px;font-family:var(--mono)}
+  .grp{margin-top:14px}
+  .gh{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px}
+  .av{width:16px;height:16px;border-radius:5px;flex:none}
+  .av.prod{background:linear-gradient(135deg,#7c6cfb,#4f3fd1)}.av.stg{background:linear-gradient(135deg,#ffb454,#d98f2e)}.av.cli{background:linear-gradient(135deg,#36c4cf,#1f8b94)}
+  .row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--tx2)}
+  .row .st{width:7px;height:7px;border-radius:50%;flex:none}
+  .row .pc{margin-left:auto;font-family:var(--mono);font-size:10px}
+  .row.sel{background:rgba(76,134,255,.14);color:var(--tx);box-shadow:inset 2px 0 0 var(--acc2)}
+  .stage{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  .tabs{height:38px;display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;overflow:hidden}
+  .tab{display:flex;align-items:center;gap:8px;padding:0 14px;font-size:12.5px;color:var(--tx3);border-bottom:2px solid transparent}
+  .tab .st{width:6px;height:6px;border-radius:50%}
+  .tab.on{color:var(--tx);border-bottom-color:var(--acc2)}
+  .screen{flex:1;background:#080a10;padding:16px 18px;font-family:var(--mono);font-size:13px;line-height:1.9;overflow:hidden}
+  .screen .ok{color:var(--on)}.screen .p{color:var(--acc2)}.screen .a{color:var(--sftp)}.screen .m{color:var(--tx3)}
+  .tcaret{display:inline-block;width:7px;height:15px;background:var(--on);translate:0 2px;animation:bl 1.05s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:34px 0}
+  .stat{text-align:center;border-left:1px solid var(--line)}
+  .stat:first-child{border-left:0}
+  .stat .n{font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;background:linear-gradient(120deg,#eef0f6,#9cb6ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .l{font-size:12.5px;color:var(--tx2);margin-top:4px}
+  @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr);gap:24px 16px}.stat:nth-child(3){border-left:0}}
 
   /* sections */
-  section{padding:64px 0;scroll-margin-top:80px}
-  .eyebrow{color:var(--accent2);font-weight:700;font-size:13px;letter-spacing:1.6px;text-transform:uppercase}
-  h2{font-size:clamp(26px,3.4vw,34px);margin:12px 0 0;letter-spacing:-.5px;font-weight:800}
-  .sub{color:var(--text2);margin-top:12px;max-width:640px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:18px;margin-top:40px}
-  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
-    border-radius:var(--radius);padding:26px 24px;transition:.2s}
-  .card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 18px 40px -22px rgba(0,0,0,.8)}
-  .ico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;margin-bottom:16px;
-    background:rgba(38,87,214,.12);border:1px solid rgba(38,87,214,.22)}
-  .ico svg{width:21px;height:21px;stroke:var(--accent2);fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .card h3{margin:0 0 8px;font-size:16.5px}
-  .card p{margin:0;color:var(--text2);font-size:14.5px}
-  code{background:rgba(255,255,255,.07);padding:1px 6px;border-radius:5px;color:var(--text2);font-size:.88em;
-    font-family:"Cascadia Code",Consolas,monospace}
+  section{padding:78px 0;scroll-margin-top:80px}
+  .shead{max-width:660px}
+  .shead.center{margin:0 auto;text-align:center}
+  h2{font-size:clamp(28px,4vw,40px);margin-top:14px}
+  .ssub{color:var(--tx2);font-size:17px;margin-top:14px;max-width:64ch}
+  .shead.center .ssub{margin-left:auto;margin-right:auto}
+
+  /* flagship alternating rows */
+  .frow{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-top:56px}
+  .frow:first-of-type{margin-top:44px}
+  .frow.rev .txt{order:2}
+  .frow h3{font-size:26px;letter-spacing:-.02em}
+  .frow .fk{color:var(--acc2);font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase}
+  .frow p{color:var(--tx2);font-size:15.5px;margin:14px 0 0}
+  .flist{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
+  .flist li{display:flex;gap:11px;color:var(--tx2);font-size:14.5px}
+  .flist li::before{content:"→";color:var(--acc2);font-weight:800;flex:none}
+  .flist b{color:var(--tx)}
+  @media(max-width:840px){.frow{grid-template-columns:1fr;gap:26px}.frow.rev .txt{order:0}}
+
+  /* mini visuals */
+  .viz{border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#111524,#0c101c);box-shadow:0 40px 80px -44px #000}
+  .vhead{height:34px;display:flex;align-items:center;gap:7px;padding:0 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--tx3)}
+  .vhead i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.12)}
+  .panes{display:grid;grid-template-columns:1fr 1fr;font-family:var(--mono);font-size:12px}
+  .pane{padding:12px 13px}.pane+.pane{border-left:1px solid var(--line)}
+  .pane .ph{color:var(--tx3);font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px}
+  .fitem{display:flex;align-items:center;gap:9px;padding:5px 0;color:var(--tx2)}
+  .fitem .fi{width:13px;height:13px;border-radius:3px;background:rgba(76,134,255,.3);flex:none}
+  .fitem .fi.f{background:rgba(240,180,95,.35)}
+  .prog{margin:11px 13px 14px;height:6px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+  .prog i{display:block;height:100%;width:64%;background:linear-gradient(90deg,var(--acc2),var(--teal));border-radius:4px}
+  .pl{font-family:var(--mono);font-size:11px;color:var(--tx3);padding:0 13px 12px}
+  .req{padding:13px 15px;font-family:var(--mono);font-size:12.5px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .vb{font-weight:700;font-size:10.5px;padding:3px 8px;border-radius:6px;letter-spacing:.5px;color:#4bd6a0;background:rgba(75,214,160,.14)}
+  .req .u{color:var(--tx2)}
+  .res{padding:13px 15px;font-family:var(--mono);font-size:12.5px;line-height:1.8}
+  .res .k{color:var(--acc2)}.res .s{color:var(--ssh)}.res .nn{color:var(--sftp)}.res .m{color:var(--tx3)}
+  .badge2{display:inline-block;font-size:10.5px;color:var(--on);background:rgba(61,220,151,.14);border-radius:5px;padding:2px 7px;margin-left:auto}
+
+  /* bento */
+  .bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-top:44px}
+  .cell{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:.2s}
+  .cell:hover{border-color:var(--line2);transform:translateY(-3px);background:var(--panel2)}
+  .cell .ico{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;margin-bottom:15px;background:rgba(76,134,255,.12);border:1px solid rgba(76,134,255,.24)}
+  .cell .ico svg{width:20px;height:20px;stroke:var(--acc2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .cell h3{font-size:16px;margin:0 0 7px}
+  .cell p{margin:0;color:var(--tx2);font-size:14px}
+  .c2{grid-column:span 2}.c3{grid-column:span 3}
+  @media(max-width:900px){.bento{grid-template-columns:repeat(2,1fr)}.c2,.c3{grid-column:span 2}}
+  @media(max-width:560px){.bento{grid-template-columns:1fr}.c2,.c3{grid-column:span 1}}
 
   /* protocol tabs */
-  .proto-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
-  .proto-tab{font:inherit;font-size:14px;font-weight:600;color:var(--text2);background:rgba(255,255,255,.045);
-    border:1px solid var(--border);border-radius:999px;padding:8px 17px;cursor:pointer;transition:.15s}
-  .proto-tab:hover{color:var(--text);border-color:var(--border2)}
-  .proto-tab.active{color:#EEF1F4;background:linear-gradient(135deg,var(--accent),#3a6be8);border-color:transparent}
-  .proto-body{margin-top:20px;background:linear-gradient(180deg,var(--panel),var(--panel2));
-    border:1px solid var(--border);border-radius:var(--radius);padding:28px 26px}
-  .proto-panel{display:none} .proto-panel.active{display:block}
-  .proto-panel .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.6px;color:var(--accent2);
-    background:rgba(38,87,214,.12);border:1px solid rgba(38,87,214,.22);border-radius:7px;padding:3px 10px;margin-bottom:12px}
-  .proto-panel h3{margin:0 0 8px;font-size:18px}
-  .proto-panel p{margin:0;color:var(--text2);font-size:15px;max-width:700px}
+  .ptabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
+  .ptab{font:inherit;font-size:14px;font-weight:600;color:var(--tx2);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 18px;cursor:pointer;transition:.15s}
+  .ptab:hover{color:var(--tx);border-color:var(--line2)}
+  .ptab.on{color:#fff;background:linear-gradient(135deg,#3a6be8,#2657d6);border-color:transparent}
+  .pbody{margin-top:20px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:28px 26px;min-height:150px}
+  .ppanel{display:none}.ppanel.on{display:block}
+  .ppanel .ptag{display:inline-block;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.6px;color:var(--acc2);background:rgba(76,134,255,.12);border:1px solid rgba(76,134,255,.24);border-radius:7px;padding:3px 10px;margin-bottom:12px}
+  .ppanel h3{font-size:19px;margin:0 0 8px}.ppanel p{margin:0;color:var(--tx2);font-size:15px;max-width:70ch}
 
-  .band{background:linear-gradient(180deg,rgba(124,108,251,.09),rgba(38,87,214,.06));
-    border:1px solid var(--border);border-radius:18px;padding:38px 40px;display:flex;gap:32px;
-    align-items:center;flex-wrap:wrap;justify-content:space-between}
-  .band .txt{max-width:640px}
-  .band h2{font-size:24px}
-  .band p{margin:12px 0 0;color:var(--text2)}
-  .band b{color:var(--text)}
-
-  /* rest spotlight */
-  .rest-list{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:11px}
-  .rest-list li{display:flex;gap:11px;color:var(--text2);font-size:14.5px;align-items:flex-start}
-  .rest-list li::before{content:"\2192";color:var(--accent2);font-weight:800;flex:none;line-height:1.6}
-  .rest-list b{color:var(--text)}
-
-  .dl{text-align:center;background:linear-gradient(180deg,var(--panel),#191a20);border:1px solid var(--border);
-    border-radius:20px;padding:64px 28px}
-  .dl h2{margin-top:12px}
-  .dl .sub{margin:14px auto 0}
-  .dl .cta{justify-content:center;margin-top:30px}
-  .note{margin-top:26px;font-size:13px;color:var(--text3);max-width:580px;margin-left:auto;margin-right:auto;line-height:1.7}
-
-  footer{border-top:1px solid var(--border);padding:34px 0;margin-top:52px;color:var(--text3);font-size:13.5px;
-    display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
-  footer a{color:var(--text2)} footer a:hover{color:var(--text)}
-
-  /* a11y: skip link + focus ring */
-  .skip{position:absolute;left:-9999px;top:0;z-index:50;background:var(--accent);color:#fff;
-    padding:10px 16px;border-radius:8px;font-weight:600}
-  .skip:focus{left:12px;top:12px}
-  :focus-visible{outline:2px solid var(--accent2);outline-offset:2px;border-radius:4px}
-
-  /* quick start */
-  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:40px}
-  .step{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
-    border-radius:var(--radius);padding:24px}
-  .step .n{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-weight:800;
-    color:var(--accent2);background:rgba(38,87,214,.12);border:1px solid rgba(38,87,214,.22);margin-bottom:14px}
-  .step h3{margin:0 0 6px;font-size:16px} .step p{margin:0;color:var(--text2);font-size:14.5px}
-
-  /* comparison table */
-  .cmp-wrap{margin-top:40px;overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+  /* comparison */
+  .cmp-wrap{margin-top:40px;overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
   table.cmp{width:100%;border-collapse:collapse;font-size:14.5px;min-width:560px}
-  table.cmp th,table.cmp td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--border)}
-  table.cmp thead th{color:var(--text2);font-weight:700;background:rgba(255,255,255,.03)}
+  table.cmp th,table.cmp td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--line)}
+  table.cmp thead th{color:var(--tx2);font-weight:700;background:rgba(255,255,255,.03);font-size:13px}
   table.cmp thead th:first-child{background:transparent}
-  table.cmp th[scope=row]{color:var(--text);font-weight:600}
-  table.cmp td.wp{color:var(--text);font-weight:700;background:rgba(38,87,214,.06)}
-  table.cmp thead th.wp{color:var(--accent2);background:rgba(38,87,214,.1)}
-  table.cmp .yes{color:var(--online);font-weight:700} table.cmp .no{color:var(--text3)}
+  table.cmp thead th.wp{color:var(--acc2);background:rgba(38,87,214,.12)}
+  table.cmp th[scope=row]{color:var(--tx);font-weight:600}
+  table.cmp td{text-align:center}table.cmp th[scope=row]{text-align:left}
+  table.cmp td.wp{color:var(--tx);font-weight:700;background:rgba(38,87,214,.07)}
+  table.cmp .yes{color:var(--on);font-weight:800}table.cmp .no{color:var(--tx3)}
   table.cmp tbody tr:last-child td,table.cmp tbody tr:last-child th{border-bottom:0}
 
+  /* quick start */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;position:relative}
+  .step .n{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,#3a6be8,#2657d6);margin-bottom:14px}
+  .step h3{margin:0 0 6px;font-size:16px}.step p{margin:0;color:var(--tx2);font-size:14px}
+  @media(max-width:720px){.steps{grid-template-columns:1fr}}
+
+  /* band (security) */
+  .band{background:linear-gradient(180deg,rgba(124,108,251,.1),rgba(38,87,214,.06));border:1px solid var(--line);border-radius:18px;
+    padding:40px;display:flex;gap:32px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+  .band .txt{max-width:680px}.band h2{font-size:26px;margin-top:10px}.band p{margin:14px 0 0;color:var(--tx2)}.band b{color:var(--tx)}
+
   /* faq */
-  .faq{margin-top:36px;display:grid;gap:12px}
-  .faq details{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
-    border-radius:12px;padding:2px 20px}
-  .faq summary{cursor:pointer;padding:16px 0;font-weight:600;list-style:none;display:flex;
-    justify-content:space-between;align-items:center;gap:12px}
+  .faq{margin-top:40px;display:grid;gap:12px;max-width:820px}
+  .faq details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:2px 20px}
+  .faq details[open]{border-color:var(--line2)}
+  .faq summary{cursor:pointer;padding:17px 0;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
   .faq summary::-webkit-details-marker{display:none}
-  .faq summary::after{content:"+";color:var(--accent2);font-weight:800;font-size:20px}
+  .faq summary::after{content:"+";color:var(--acc2);font-weight:800;font-size:20px;transition:.2s}
   .faq details[open] summary::after{content:"\2212"}
-  .faq p{margin:0 0 18px;color:var(--text2);font-size:14.5px}
+  .faq p{margin:0 0 18px;color:var(--tx2);font-size:14.5px}
 
   /* roadmap */
-  .road{margin-top:36px;display:grid;gap:12px;max-width:720px}
-  .road .r{display:flex;gap:14px;align-items:flex-start;background:linear-gradient(180deg,var(--panel),var(--panel2));
-    border:1px solid var(--border);border-radius:12px;padding:16px 20px}
-  .road .r .dot{width:9px;height:9px;border-radius:50%;background:var(--accent2);margin-top:7px;flex:none}
-  .road .r p{margin:0;color:var(--text2);font-size:14.5px} .road .r b{color:var(--text)}
+  .road{margin-top:40px;display:grid;gap:12px;max-width:760px}
+  .road .r{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+  .road .r .dot{width:9px;height:9px;border-radius:50%;background:var(--acc2);margin-top:7px;flex:none;box-shadow:0 0 0 4px rgba(76,134,255,.14)}
+  .road .r p{margin:0;color:var(--tx2);font-size:14.5px}.road .r b{color:var(--tx)}
+
+  /* download */
+  .dl{text-align:center;border:1px solid var(--line2);border-radius:22px;padding:66px 26px;
+    background:radial-gradient(700px 320px at 50% -10%,rgba(38,87,214,.22),transparent 62%),linear-gradient(180deg,var(--panel),transparent)}
+  .dl .hcta{margin-top:30px}
+  .note{margin-top:22px;font-size:13px;color:var(--tx3);max-width:60ch;margin-left:auto;margin-right:auto;line-height:1.7}
+
+  footer{border-top:1px solid var(--line);padding:34px 0;margin-top:20px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:var(--tx3);font-size:13.5px}
+  footer a{color:var(--tx2)}footer a:hover{color:var(--tx)}
+
+  @media(max-width:560px){
+    .nav-in{gap:10px}
+    .nlinks{gap:12px}
+    .nlinks .btn{padding:8px 13px}
+    .btn.star{display:none}
+    .stage-wrap{width:100%}
+    .win,.float{max-width:100%}
+    .tree{width:150px}.rail{width:46px}.wbody{height:320px}
+    .band{padding:28px 22px}
+  }
+
+  .skip{position:absolute;left:-9999px;top:0;z-index:60;background:var(--acc);color:#fff;padding:10px 16px;border-radius:8px;font-weight:600}
+  .skip:focus{left:12px;top:12px}
+  :focus-visible{outline:2px solid var(--acc2);outline-offset:3px;border-radius:6px}
+
+  .reveal{opacity:0;transform:translateY(20px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important}.reveal{opacity:1;transform:none}.float{transform:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
 <a href="#features" class="skip" data-i18n="skip">Skip to content</a>
 
-<nav>
-  <div class="wrap nav-in">
-    <div class="brand">
-      <span class="logo"><svg viewBox="0 0 96 96"><defs><mask id="lg"><rect width="96" height="96" fill="white"/><circle cx="48" cy="39.5" r="4.4" fill="black"/></mask></defs><g mask="url(#lg)"><rect x="12" y="16" width="72" height="50" rx="9" fill="none" stroke="#EEF1F4" stroke-width="5"/><path d="M40 78h16M48 66v12" stroke="#EEF1F4" stroke-width="5" stroke-linecap="round"/><path d="M48 27c-7.2 0-13 5.7-13 12.8 0 8.9 13 18.2 13 18.2s13-9.3 13-18.2C61 32.7 55.2 27 48 27Z" fill="#EEF1F4"/></g></svg></span>
-      Waypoint
-    </div>
-    <div class="nav-links">
-      <a class="link" href="#features" data-i18n="nav.features">Features</a>
-      <a class="link" href="#protocols" data-i18n="nav.protocols">Protocols</a>
-      <a class="link" href="#security" data-i18n="nav.security">Security</a>
-      <a class="link" href="#faq" data-i18n="nav.faq">FAQ</a>
-      <a class="btn star" href="https://github.com/FilipB97/Waypoint" title="Star on GitHub">
-        <svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        <span data-i18n="nav.star">Star</span><span id="starCount" class="starcount"></span>
-      </a>
-      <span class="lang" role="group" aria-label="Language"><button data-lang-btn="en" aria-label="English">EN</button><button data-lang-btn="pl" aria-label="Polski">PL</button></span>
-      <a class="btn primary" href="https://github.com/FilipB97/Waypoint/releases/latest" data-i18n="nav.download">Download</a>
-    </div>
+<nav><div class="wrap nav-in">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="6" width="84" height="84" rx="20" fill="#2657d6"/><g transform="translate(7.7,7.7) scale(0.84)"><mask id="mk"><rect width="96" height="96" fill="#fff"/><circle cx="48" cy="39.5" r="4.4" fill="#000"/></mask><g mask="url(#mk)"><rect x="12" y="16" width="72" height="50" rx="9" fill="none" stroke="#eef1f4" stroke-width="5"/><path d="M40 78h16M48 66v12" stroke="#eef1f4" stroke-width="5" stroke-linecap="round"/><path d="M48 27c-7.2 0-13 5.7-13 12.8 0 8.9 13 18.2 13 18.2s13-9.3 13-18.2C61 32.7 55.2 27 48 27Z" fill="#eef1f4"/></g></g></svg>
+    Waypoint
   </div>
-</nav>
+  <div class="nlinks">
+    <a class="link" href="#features" data-i18n="nav.features">Features</a>
+    <a class="link" href="#protocols" data-i18n="nav.protocols">Protocols</a>
+    <a class="link" href="#security" data-i18n="nav.security">Security</a>
+    <a class="link" href="#faq" data-i18n="nav.faq">FAQ</a>
+    <a class="btn star gh" href="https://github.com/FilipB97/Waypoint" title="Star on GitHub">
+      <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <span data-i18n="nav.star">Star</span><span id="starCount" class="starcount"></span>
+    </a>
+    <span class="lang" role="group" aria-label="Language"><button data-lang-btn="en" aria-label="English">EN</button><button data-lang-btn="pl" aria-label="Polski">PL</button></span>
+    <a class="btn pri" href="https://github.com/FilipB97/Waypoint/releases/latest" data-i18n="nav.download">Download</a>
+  </div>
+</div></nav>
 
 <header class="wrap hero">
-  <div>
-    <span class="pill" data-i18n="hero.badge">● Open source · MIT</span>
-    <h1 data-i18n-html="hero.title">Every remote connection,<br><span class="grad">one modern app.</span></h1>
-    <p class="lead" data-i18n-html="hero.lead">
-      <b style="color:var(--text)">Waypoint</b> is a modern connection manager for Windows —
-      <b style="color:var(--text)">RDP, SSH, VNC, Telnet &amp; serial</b>, an SFTP/FTP file manager and a
-      built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.
-    </p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/FilipB97/Waypoint/releases/latest">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#EEF1F4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
-        <span data-i18n="hero.dl">Download for Windows</span>
-      </a>
-      <a class="btn ghost" href="https://github.com/FilipB97/Waypoint" data-i18n="hero.gh">View on GitHub</a>
-    </div>
-    <div class="dlcount" id="dlCount" hidden></div>
-    <div class="chips">
-      <span class="chip"><b>RDP</b></span><span class="chip"><b>SSH</b></span>
-      <span class="chip"><b>VNC</b></span><span class="chip">Telnet</span>
-      <span class="chip">Serial</span><span class="chip">SFTP</span>
-      <span class="chip">FTP</span><span class="chip"><b>REST</b></span>
-    </div>
-    <div class="meta">
-      <b data-i18n="meta.os">Windows 10/11</b><span class="sep"></span>
-      <b data-i18n="meta.file">single .exe</b><span class="sep"></span>
-      <b data-i18n="meta.net">no .NET install</b><span class="sep"></span>
-      <b data-i18n="meta.free">free · open source</b>
-    </div>
+  <span class="badge"><span class="dot"></span> <span data-i18n="hero.badge2">Open source · MIT · Windows</span></span>
+  <h1 data-i18n-html="hero.title">Every remote connection,<br><span class="grad">one modern app.</span></h1>
+  <p class="lead" data-i18n-html="hero.lead"><b>Waypoint</b> is a modern connection manager for Windows — RDP, SSH, VNC, Telnet &amp; serial, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.</p>
+  <div class="hcta">
+    <a class="btn pri" href="https://github.com/FilipB97/Waypoint/releases/latest">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+      <span data-i18n="hero.dl">Download for Windows</span>
+    </a>
+    <a class="btn gh" href="https://github.com/FilipB97/Waypoint" data-i18n="hero.gh">View on GitHub</a>
+  </div>
+  <div class="dlcount" id="dlCount" hidden></div>
+  <div class="chips">
+    <span class="chip"><b>RDP</b></span><span class="chip"><b>SSH</b></span><span class="chip"><b>VNC</b></span>
+    <span class="chip">Telnet</span><span class="chip">Serial</span><span class="chip">SFTP</span><span class="chip">FTP</span><span class="chip"><b>REST</b></span>
+  </div>
+  <div class="meta">
+    <b data-i18n="meta.os">Windows 10/11</b><span class="sep"></span>
+    <b data-i18n="meta.file">single .exe</b><span class="sep"></span>
+    <b data-i18n="meta.net">no .NET install</b><span class="sep"></span>
+    <b data-i18n="meta.free">free · open source</b>
   </div>
 
-  <div class="mock">
-    <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Waypoint interface preview">
-      <defs>
-        <linearGradient id="win" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1a1b22"/><stop offset="1" stop-color="#121319"/></linearGradient>
-        <linearGradient id="desk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#12325a"/><stop offset="1" stop-color="#0a1c34"/></linearGradient>
-        <linearGradient id="av1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cfb"/><stop offset="1" stop-color="#4f3fd1"/></linearGradient>
-        <linearGradient id="av2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#36c4cf"/><stop offset="1" stop-color="#1f8b94"/></linearGradient>
-        <linearGradient id="av3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fb6c9c"/><stop offset="1" stop-color="#d13f6e"/></linearGradient>
-      </defs>
-      <rect x="1" y="1" width="558" height="378" rx="12" fill="url(#win)" stroke="rgba(255,255,255,.10)"/>
-      <circle cx="24" cy="22" r="4.5" fill="#2657d6"/>
-      <rect x="36" y="18" width="70" height="8" rx="4" fill="rgba(255,255,255,.55)"/>
-      <rect x="500" y="17" width="42" height="10" rx="3" fill="rgba(255,255,255,.06)"/>
-      <rect x="12" y="44" width="40" height="324" rx="8" fill="rgba(255,255,255,.03)"/>
-      <rect x="24" y="60" width="16" height="16" rx="4" fill="rgba(38,87,214,.9)"/>
-      <rect x="24" y="86" width="16" height="16" rx="4" fill="rgba(255,255,255,.16)"/>
-      <rect x="24" y="112" width="16" height="16" rx="4" fill="rgba(255,255,255,.16)"/>
-      <rect x="60" y="48" width="150" height="26" rx="7" fill="rgba(255,255,255,.05)"/>
-      <rect x="60" y="86" width="150" height="34" rx="7" fill="rgba(38,87,214,.14)"/>
-      <rect x="60" y="86" width="3" height="34" rx="1.5" fill="#2657d6"/>
-      <rect x="70" y="95" width="16" height="16" rx="5" fill="url(#av1)"/>
-      <rect x="94" y="96" width="66" height="6" rx="3" fill="rgba(255,255,255,.7)"/>
-      <rect x="94" y="106" width="44" height="5" rx="2.5" fill="rgba(255,255,255,.28)"/>
-      <circle cx="200" cy="103" r="3.5" fill="#3ddc97"/>
-      <rect x="70" y="129" width="16" height="16" rx="5" fill="url(#av2)"/>
-      <rect x="94" y="130" width="72" height="6" rx="3" fill="rgba(255,255,255,.55)"/>
-      <rect x="94" y="140" width="40" height="5" rx="2.5" fill="rgba(255,255,255,.22)"/>
-      <circle cx="200" cy="137" r="3.5" fill="#3ddc97"/>
-      <rect x="70" y="163" width="16" height="16" rx="5" fill="url(#av3)"/>
-      <rect x="94" y="164" width="60" height="6" rx="3" fill="rgba(255,255,255,.55)"/>
-      <rect x="94" y="174" width="48" height="5" rx="2.5" fill="rgba(255,255,255,.22)"/>
-      <circle cx="200" cy="171" r="3.5" fill="#6c6f78"/>
-      <rect x="222" y="46" width="120" height="26" rx="7" fill="rgba(255,255,255,.06)"/>
-      <rect x="232" y="55" width="9" height="9" rx="3" fill="url(#av1)"/>
-      <rect x="247" y="57" width="56" height="5" rx="2.5" fill="rgba(255,255,255,.7)"/>
-      <circle cx="315" cy="59" r="3" fill="#3ddc97"/>
-      <rect x="222" y="80" width="326" height="288" rx="9" fill="url(#desk)"/>
-      <rect x="242" y="100" width="20" height="16" rx="2.5" fill="rgba(255,255,255,.85)"/>
-      <rect x="240" y="122" width="24" height="5" rx="2.5" fill="rgba(255,255,255,.35)"/>
-      <rect x="242" y="150" width="20" height="16" rx="2.5" fill="rgba(255,214,102,.9)"/>
-      <rect x="240" y="172" width="24" height="5" rx="2.5" fill="rgba(255,255,255,.35)"/>
-      <rect x="222" y="350" width="326" height="18" fill="rgba(0,0,0,.35)"/>
-      <rect x="230" y="356" width="10" height="7" rx="1.5" fill="#2657d6"/>
-      <rect x="332" y="92" width="150" height="26" rx="9" fill="rgba(33,34,38,.95)" stroke="rgba(255,255,255,.14)"/>
-      <circle cx="346" cy="105" r="3" fill="#3ddc97"/>
-      <rect x="356" y="102" width="60" height="6" rx="3" fill="rgba(255,255,255,.6)"/>
-      <rect x="428" y="99" width="46" height="12" rx="4" fill="rgba(38,87,214,.85)"/>
-    </svg>
+  <div class="stage-wrap">
+    <div class="glow"></div>
+    <div class="float">
+      <div class="win" role="img" aria-label="Waypoint app with an SSH session, connection tree and tabs">
+        <div class="wtitle">
+          <svg class="mark" style="width:17px;height:17px;filter:none" viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="6" width="84" height="84" rx="20" fill="#2657d6"/><g transform="translate(7.7,7.7) scale(0.84)"><mask id="mk2"><rect width="96" height="96" fill="#fff"/><circle cx="48" cy="39.5" r="4.4" fill="#000"/></mask><g mask="url(#mk2)"><rect x="12" y="16" width="72" height="50" rx="9" fill="none" stroke="#eef1f4" stroke-width="5"/><path d="M40 78h16M48 66v12" stroke="#eef1f4" stroke-width="5" stroke-linecap="round"/><path d="M48 27c-7.2 0-13 5.7-13 12.8 0 8.9 13 18.2 13 18.2s13-9.3 13-18.2C61 32.7 55.2 27 48 27Z" fill="#eef1f4"/></g></g></svg>
+          <span class="t">Waypoint — Production / app-02</span>
+          <span class="wdots"><i></i><i></i><i></i></span>
+        </div>
+        <div class="wbody">
+          <div class="rail">
+            <div class="ri on" title="Connections"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg></div>
+            <div class="ri" title="Files"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v9H3z"/></svg></div>
+            <div class="ri" title="REST"><svg viewBox="0 0 24 24"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg></div>
+            <div class="ri sp"></div>
+            <div class="ri" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3"/></svg></div>
+          </div>
+          <div class="tree">
+            <div class="srch">⌕ search connections</div>
+            <div class="grp"><div class="gh"><span class="av prod"></span>Production</div>
+              <div class="row sel"><span class="st" style="background:var(--on)"></span>app-02.corp<span class="pc" style="color:var(--ssh)">SSH</span></div>
+              <div class="row"><span class="st" style="background:var(--on)"></span>dc-01.corp<span class="pc" style="color:var(--rdp)">RDP</span></div></div>
+            <div class="grp"><div class="gh"><span class="av stg"></span>Staging</div>
+              <div class="row"><span class="st" style="background:var(--idle)"></span>web-01.stg<span class="pc" style="color:var(--rdp)">RDP</span></div></div>
+            <div class="grp"><div class="gh"><span class="av cli"></span>Client VPN</div>
+              <div class="row"><span class="st" style="background:var(--on)"></span>rpi-4.local<span class="pc" style="color:var(--rest)">VNC</span></div></div>
+          </div>
+          <div class="stage">
+            <div class="tabs">
+              <div class="tab on"><span class="st" style="background:var(--ssh)"></span>app-02 · SSH</div>
+              <div class="tab"><span class="st" style="background:var(--rdp)"></span>dc-01 · RDP</div>
+              <div class="tab"><span class="st" style="background:var(--rest)"></span>GET /users</div>
+            </div>
+            <div class="screen">
+              <div><span class="p">app-02:~$</span> <span id="typed"></span><span class="tcaret"></span></div>
+              <div class="l2" style="opacity:0"><span class="ok">✓</span> <span class="m">host key verified — ED25519 SHA256:Xk9…q2A</span></div>
+              <div class="l2" style="opacity:0"><span class="ok">✓</span> <span class="m">tunnel</span> <span class="a">:5432</span> <span class="m">→ db-internal:5432</span></div>
+              <div class="l2" style="opacity:0"><span class="ok">●</span> <span style="color:var(--tx)">api.service</span> <span class="m">— active (running)</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </header>
 
+<div class="wrap stats">
+  <div class="stat"><div class="n">8</div><div class="l" data-i18n="stat.k1">protocols, one tree</div></div>
+  <div class="stat"><div class="n">1</div><div class="l" data-i18n="stat.k2">portable .exe</div></div>
+  <div class="stat"><div class="n">0</div><div class="l" data-i18n="stat.k3">secrets in app files</div></div>
+  <div class="stat"><div class="n">100%</div><div class="l" data-i18n="stat.k4">free &amp; open source</div></div>
+</div>
+
 <section id="features" class="wrap">
-  <span class="eyebrow" data-i18n="feat.eyebrow">Features</span>
-  <h2 data-i18n="feat.h2">One window for the whole toolbox</h2>
-  <p class="sub" data-i18n-html="feat.sub">RDP on Microsoft's official control (<code>mstscax</code>), SSH / Telnet / serial on an embedded <code>xterm.js</code> terminal, VNC, an SFTP/FTP file manager and a REST client — all in one Fluent / Mica app.</p>
-  <div class="grid">
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg></div>
+  <div class="shead center reveal">
+    <span class="eye c" data-i18n="fl.eyebrow">The toolbox</span>
+    <h2 data-i18n="fl.h2">Four apps' worth of work, one window</h2>
+    <p class="ssub" data-i18n="fl.sub">The flagship trio — a real terminal, a file manager and an API client — living right next to your servers.</p>
+  </div>
+
+  <div class="frow">
+    <div class="txt reveal">
+      <span class="fk" data-i18n="fl.t.k">Terminal</span>
+      <h3 data-i18n="fl.t.h">A real terminal, not an afterthought</h3>
+      <p data-i18n="fl.t.p">SSH, Telnet and serial run on an embedded xterm.js — the same terminal you already trust, wired into your connection tree.</p>
+      <ul class="flist">
+        <li data-i18n-html="fl.t.b1"><b>Key &amp; password auth</b> with host-key verification on first use</li>
+        <li data-i18n-html="fl.t.b2"><b>Port-forward tunnels</b> and an SFTP panel on the same link</li>
+        <li data-i18n-html="fl.t.b3"><b>Copy-on-select</b>, search and full colour</li>
+      </ul>
+    </div>
+    <div class="viz reveal">
+      <div class="vhead"><i></i><i></i><i></i> &nbsp;app-02 — ssh</div>
+      <div class="screen" style="background:#080a10">
+        <div><span class="p">app-02:~$</span> <span style="color:var(--tx)">ssh -L 5432 db-internal</span></div>
+        <div><span class="ok">✓</span> <span class="m">tunnel forwarding :5432</span></div>
+        <div><span class="p">app-02:~$</span> <span style="color:var(--tx)">systemctl status api</span></div>
+        <div><span class="ok">●</span> <span style="color:var(--tx)">api.service</span> <span class="m">active (running)</span></div>
+        <div><span class="p">app-02:~$</span> <span class="tcaret"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frow rev">
+    <div class="txt reveal">
+      <span class="fk" data-i18n="fl.f.k">Files</span>
+      <h3 data-i18n="fl.f.h">Move files without a second app</h3>
+      <p data-i18n="fl.f.p">A dual-pane SFTP / FTP / FTPS manager — local and remote side by side, whole folders transferred recursively with progress.</p>
+      <ul class="flist">
+        <li data-i18n-html="fl.f.b1"><b>SFTP over SSH</b>, plain FTP and secure FTPS</li>
+        <li data-i18n-html="fl.f.b2"><b>Recursive</b> folder upload &amp; download</li>
+        <li data-i18n-html="fl.f.b3"><b>FileZilla import</b> to bring your sites across</li>
+      </ul>
+    </div>
+    <div class="viz reveal">
+      <div class="vhead"><i></i><i></i><i></i> &nbsp;transfer — app-02</div>
+      <div class="panes">
+        <div class="pane"><div class="ph" data-i18n="viz.local">Local</div>
+          <div class="fitem"><span class="fi"></span>project/</div>
+          <div class="fitem"><span class="fi f"></span>deploy.sh</div>
+          <div class="fitem"><span class="fi f"></span>.env.prod</div>
+        </div>
+        <div class="pane"><div class="ph">app-02:/srv</div>
+          <div class="fitem"><span class="fi"></span>www/</div>
+          <div class="fitem"><span class="fi f"></span>nginx.conf</div>
+          <div class="fitem"><span class="fi f"></span>app.service</div>
+        </div>
+      </div>
+      <div class="prog"><i></i></div>
+      <div class="pl" data-i18n="viz.upl">↑ uploading project/ — 64% · 12 files</div>
+    </div>
+  </div>
+
+  <div class="frow">
+    <div class="txt reveal">
+      <span class="fk" data-i18n="fl.r.k">REST / API</span>
+      <h3 data-i18n="fl.r.h">A Postman-style client, built in</h3>
+      <p data-i18n-html="fl.r.p">Collections, environments with <code>{{variables}}</code>, request history, Postman import and JavaScript scripts — secrets kept in Windows Credential Manager.</p>
+      <ul class="flist">
+        <li data-i18n-html="fl.r.b1"><b>Environments</b> for URL, headers, body &amp; auth</li>
+        <li data-i18n-html="fl.r.b2"><b>Pre-request &amp; test scripts</b> with a <code>pm.*</code> API</li>
+        <li data-i18n-html="fl.r.b3"><b>One-click Postman import</b></li>
+      </ul>
+    </div>
+    <div class="viz reveal">
+      <div class="vhead"><i></i><i></i><i></i> &nbsp;rest — {{prod}}</div>
+      <div class="req"><span class="vb">GET</span> <span class="u">{{base}}/v1/users?active=true</span><span class="badge2">200 OK · 84ms</span></div>
+      <div class="res">
+        <div><span class="m">{</span></div>
+        <div>&nbsp;&nbsp;<span class="k">"user"</span>: <span class="s">"filip"</span>,</div>
+        <div>&nbsp;&nbsp;<span class="k">"active"</span>: <span class="nn">true</span>,</div>
+        <div>&nbsp;&nbsp;<span class="k">"roles"</span>: [<span class="s">"admin"</span>]</div>
+        <div><span class="m">}</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="more" class="wrap">
+  <div class="shead reveal">
+    <span class="eye" data-i18n="feat.eyebrow">Features</span>
+    <h2 data-i18n="feat.h2">One window for the whole toolbox</h2>
+    <p class="ssub" data-i18n-html="feat.sub">RDP on Microsoft's official control (<code>mstscax</code>), a collapsible tree, multi-monitor and focus mode — all in one Fluent / Mica app.</p>
+  </div>
+  <div class="bento">
+    <div class="cell c2 reveal">
+      <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg></div>
       <h3 data-i18n="c1t">Tabs and standalone windows</h3>
       <p data-i18n="c1d">Many sessions in one window, or each in its own. Duplicate, reorder and drag tabs; tear one off to another monitor.</p>
     </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M7 9l3 2.5L7 14M12 15h5"/></svg></div>
-      <h3 data-i18n="c2t">Embedded terminal</h3>
-      <p data-i18n="c2d">A real terminal (xterm.js) for SSH, Telnet and serial — password &amp; key auth, host-key verification, copy-on-select and SSH tunnels.</p>
-    </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M3 7h7l2 2h9v9a2 2 0 01-2 2H3z"/><path d="M3 7V5a2 2 0 012-2h4"/></svg></div>
-      <h3 data-i18n="c3t">SFTP &amp; FTP file manager</h3>
-      <p data-i18n="c3d">A dual-pane manager for SFTP, FTP and FTPS — upload, download and move whole folders (recursively) between local and remote.</p>
-    </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg></div>
-      <h3 data-i18n="c4t">Built-in REST/API client</h3>
-      <p data-i18n="c4d">A clean, Postman-style client: collections, environments with {{variables}}, history, Postman import and JavaScript scripts.</p>
-    </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="9" cy="12" r="7"/><path d="M9 5v7l4 2"/><path d="M16 6h6M16 12h6M16 18h6"/></svg></div>
+    <div class="cell c2 reveal">
+      <div class="ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="7"/><path d="M9 5v7l4 2"/><path d="M16 6h6M16 12h6M16 18h6"/></svg></div>
       <h3 data-i18n="c5t">Every protocol, one tree</h3>
       <p data-i18n="c5d">RDP, SSH, VNC, Telnet, serial (COM), SFTP/FTP and web links — grouped, pinnable and searchable together, with a collapsible sidebar.</p>
     </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="4" width="9" height="12" rx="1.5"/><rect x="13" y="7" width="9" height="13" rx="1.5"/></svg></div>
+    <div class="cell c2 reveal">
+      <div class="ico"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="9" height="12" rx="1.5"/><rect x="13" y="7" width="9" height="13" rx="1.5"/></svg></div>
       <h3 data-i18n="c6t">Multi-monitor &amp; focus mode</h3>
       <p data-i18n="c6d">Tear a tab into its own window on another screen. Maximize into a distraction-free view — just tabs and the session.</p>
     </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div>
+    <div class="cell c3 reveal">
+      <div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div>
       <h3 data-i18n="c7t">Secure passwords + profiles</h3>
       <p data-i18n="c7d">Credentials in Windows Credential Manager (DPAPI) — never in app files. Shared credential profiles and a built-in password generator.</p>
     </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div>
+    <div class="cell c3 reveal">
+      <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div>
       <h3 data-i18n="c8t">One-click migration</h3>
       <p data-i18n="c8d">Import from mstsc history, .rdp files, mRemoteNG, RDCMan and FileZilla. Export back to .rdp or a full profile.</p>
     </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10l2 2M5 19l2-2m10-10l2-2"/></svg></div>
+    <div class="cell c3 reveal">
+      <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10l2 2M5 19l2-2m10-10l2-2"/></svg></div>
       <h3 data-i18n="c9t">Redirections &amp; RD Gateway</h3>
       <p data-i18n="c9d">Clipboard, drives, printers, audio, admin session, Wake-on-LAN and RD Gateway — configurable per server.</p>
     </div>
-    <div class="card">
-      <div class="ico"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="11.5" r="2.5"/><circle cx="16.5" cy="15" r="2.5"/><path d="M3 20h18"/></svg></div>
+    <div class="cell c3 reveal">
+      <div class="ico"><svg viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="11.5" r="2.5"/><circle cx="16.5" cy="15" r="2.5"/><path d="M3 20h18"/></svg></div>
       <h3 data-i18n="c10t">Themes, languages &amp; tray</h3>
       <p data-i18n="c10d">Dark / light / system theme, English &amp; Polish, system-tray with a global quick-connect hotkey.</p>
     </div>
@@ -376,163 +517,118 @@
 </section>
 
 <section id="protocols" class="wrap">
-  <span class="eyebrow" data-i18n="proto.eyebrow">Protocols</span>
-  <h2 data-i18n="proto.h2">Everything you connect to</h2>
-  <p class="sub" data-i18n="proto.sub">Eight protocols, one tree and one set of habits. Pick a tab to see how each works.</p>
-  <div class="proto-tabs" role="tablist">
-    <button class="proto-tab active" data-proto-tab="rdp" role="tab">RDP</button>
-    <button class="proto-tab" data-proto-tab="ssh" role="tab">SSH</button>
-    <button class="proto-tab" data-proto-tab="vnc" role="tab">VNC</button>
-    <button class="proto-tab" data-proto-tab="telnet" role="tab">Telnet</button>
-    <button class="proto-tab" data-proto-tab="serial" role="tab">Serial</button>
-    <button class="proto-tab" data-proto-tab="sftp" role="tab">SFTP</button>
-    <button class="proto-tab" data-proto-tab="ftp" role="tab">FTP</button>
-    <button class="proto-tab" data-proto-tab="rest" role="tab">REST</button>
+  <div class="shead reveal">
+    <span class="eye" data-i18n="proto.eyebrow">Protocols</span>
+    <h2 data-i18n="proto.h2">Everything you connect to</h2>
+    <p class="ssub" data-i18n="proto.sub">Eight protocols, one tree and one set of habits. Pick a tab to see how each works.</p>
   </div>
-  <div class="proto-body">
-    <div class="proto-panel active" data-proto="rdp">
-      <span class="tag">RDP</span>
-      <h3 data-i18n="proto.rdp.t">Remote Desktop</h3>
-      <p data-i18n="proto.rdp.d">Full Windows Remote Desktop on Microsoft's official ActiveX control. Dynamic resolution that follows the window, clipboard / drive / printer / audio redirection, RD Gateway and multi-monitor.</p>
-    </div>
-    <div class="proto-panel" data-proto="ssh">
-      <span class="tag">SSH</span>
-      <h3 data-i18n="proto.ssh.t">SSH terminal</h3>
-      <p data-i18n="proto.ssh.d">A real xterm.js terminal with password and private-key auth (with passphrase), host-key verification on first use, port-forwarding tunnels and an SFTP file panel on the same connection.</p>
-    </div>
-    <div class="proto-panel" data-proto="vnc">
-      <span class="tag">VNC</span>
-      <h3 data-i18n="proto.vnc.t">VNC</h3>
-      <p data-i18n="proto.vnc.d">Connect to any VNC server — Windows, Linux or a Raspberry Pi — right in a tab, next to your RDP and SSH sessions.</p>
-    </div>
-    <div class="proto-panel" data-proto="telnet">
-      <span class="tag">TELNET</span>
-      <h3 data-i18n="proto.telnet.t">Telnet</h3>
-      <p data-i18n="proto.telnet.d">Classic Telnet as a terminal session — handy for switches, routers and legacy devices that still speak it.</p>
-    </div>
-    <div class="proto-panel" data-proto="serial">
-      <span class="tag">SERIAL</span>
-      <h3 data-i18n="proto.serial.t">Serial console</h3>
-      <p data-i18n="proto.serial.d">A serial (COM) console with configurable baud rate — reach the console port of network gear and embedded boards from the same app.</p>
-    </div>
-    <div class="proto-panel" data-proto="sftp">
-      <span class="tag">SFTP</span>
-      <h3 data-i18n="proto.sftp.t">SFTP files</h3>
-      <p data-i18n="proto.sftp.d">A dual-pane file manager over SSH: browse local and remote side by side, upload and download files and whole folders recursively, with progress.</p>
-    </div>
-    <div class="proto-panel" data-proto="ftp">
-      <span class="tag">FTP / FTPS</span>
-      <h3 data-i18n="proto.ftp.t">FTP &amp; FTPS</h3>
-      <p data-i18n="proto.ftp.d">The same dual-pane manager for plain FTP and secure FTPS — a lightweight replacement for a separate FTP client, with FileZilla site import.</p>
-    </div>
-    <div class="proto-panel" data-proto="rest">
-      <span class="tag">REST</span>
-      <h3 data-i18n="proto.rest.t">REST / API client</h3>
-      <p data-i18n="proto.rest.d">A Postman-style HTTP client built in: collections and folders, environments with {{variables}}, request history, Postman import and JavaScript scripts. See the section below.</p>
-    </div>
+  <div class="ptabs reveal" role="tablist">
+    <button class="ptab on" data-ptab="rdp" role="tab">RDP</button>
+    <button class="ptab" data-ptab="ssh" role="tab">SSH</button>
+    <button class="ptab" data-ptab="vnc" role="tab">VNC</button>
+    <button class="ptab" data-ptab="telnet" role="tab">Telnet</button>
+    <button class="ptab" data-ptab="serial" role="tab">Serial</button>
+    <button class="ptab" data-ptab="sftp" role="tab">SFTP</button>
+    <button class="ptab" data-ptab="ftp" role="tab">FTP</button>
+    <button class="ptab" data-ptab="rest" role="tab">REST</button>
   </div>
-</section>
-
-<section id="rest" class="wrap">
-  <div class="band">
-    <div class="txt">
-      <span class="eyebrow" data-i18n="rest.eyebrow">API client</span>
-      <h2 data-i18n="rest.h2">A Postman-style API client, built in</h2>
-      <p data-i18n-html="rest.p">Test and organize HTTP APIs without leaving Waypoint — a cleaner, lighter take on Postman that lives next to your servers.</p>
-      <ul class="rest-list">
-        <li data-i18n-html="rest.b1"><b>Collections &amp; environments</b> — folders of requests and named environments with <code>{{variables}}</code> for URL, headers, body and auth.</li>
-        <li data-i18n-html="rest.b2"><b>Import from Postman</b> — bring your collections and environments across in one click.</li>
-        <li data-i18n-html="rest.b3"><b>JavaScript scripts</b> — pre-request and test scripts with a <code>pm.*</code> API: grab a token, save it to a variable and reuse it in the next request.</li>
-        <li data-i18n-html="rest.b4"><b>Secure by default</b> — Bearer and Basic secrets go to Windows Credential Manager, never into the collection file.</li>
-      </ul>
-    </div>
+  <div class="pbody reveal">
+    <div class="ppanel on" data-proto="rdp"><span class="ptag">RDP</span><h3 data-i18n="proto.rdp.t">Remote Desktop</h3><p data-i18n="proto.rdp.d">Full Windows Remote Desktop on Microsoft's official ActiveX control. Dynamic resolution that follows the window, clipboard / drive / printer / audio redirection, RD Gateway and multi-monitor.</p></div>
+    <div class="ppanel" data-proto="ssh"><span class="ptag">SSH</span><h3 data-i18n="proto.ssh.t">SSH terminal</h3><p data-i18n="proto.ssh.d">A real xterm.js terminal with password and private-key auth (with passphrase), host-key verification on first use, port-forwarding tunnels and an SFTP file panel on the same connection.</p></div>
+    <div class="ppanel" data-proto="vnc"><span class="ptag">VNC</span><h3 data-i18n="proto.vnc.t">VNC</h3><p data-i18n="proto.vnc.d">Connect to any VNC server — Windows, Linux or a Raspberry Pi — right in a tab, next to your RDP and SSH sessions.</p></div>
+    <div class="ppanel" data-proto="telnet"><span class="ptag">TELNET</span><h3 data-i18n="proto.telnet.t">Telnet</h3><p data-i18n="proto.telnet.d">Classic Telnet as a terminal session — handy for switches, routers and legacy devices that still speak it.</p></div>
+    <div class="ppanel" data-proto="serial"><span class="ptag">SERIAL</span><h3 data-i18n="proto.serial.t">Serial console</h3><p data-i18n="proto.serial.d">A serial (COM) console with configurable baud rate — reach the console port of network gear and embedded boards from the same app.</p></div>
+    <div class="ppanel" data-proto="sftp"><span class="ptag">SFTP</span><h3 data-i18n="proto.sftp.t">SFTP files</h3><p data-i18n="proto.sftp.d">A dual-pane file manager over SSH: browse local and remote side by side, upload and download files and whole folders recursively, with progress.</p></div>
+    <div class="ppanel" data-proto="ftp"><span class="ptag">FTP / FTPS</span><h3 data-i18n="proto.ftp.t">FTP &amp; FTPS</h3><p data-i18n="proto.ftp.d">The same dual-pane manager for plain FTP and secure FTPS — a lightweight replacement for a separate FTP client, with FileZilla site import.</p></div>
+    <div class="ppanel" data-proto="rest"><span class="ptag">REST</span><h3 data-i18n="proto.rest.t">REST / API client</h3><p data-i18n="proto.rest.d">A Postman-style HTTP client built in: collections and folders, environments with {{variables}}, request history, Postman import and JavaScript scripts.</p></div>
   </div>
 </section>
 
 <section id="compare" class="wrap">
-  <span class="eyebrow" data-i18n="cmp.eyebrow">Why Waypoint</span>
-  <h2 data-i18n="cmp.h2">One app instead of four</h2>
-  <p class="sub" data-i18n="cmp.sub">What you'd normally split across mstsc, PuTTY, an FTP client and Postman — in one modern window.</p>
-  <div class="cmp-wrap">
-    <table class="cmp">
-      <thead>
-        <tr><th></th><th class="wp" scope="col">Waypoint</th><th scope="col">mstsc</th><th scope="col">PuTTY</th><th scope="col">mRemoteNG</th></tr>
-      </thead>
-      <tbody>
-        <tr><th scope="row" data-i18n="cmp.r1">RDP + SSH in one app</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
-        <tr><th scope="row" data-i18n="cmp.r2">VNC, Telnet &amp; serial</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-        <tr><th scope="row" data-i18n="cmp.r3">SFTP / FTP file manager</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
-        <tr><th scope="row" data-i18n="cmp.r4">Built-in REST / API client</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
-        <tr><th scope="row" data-i18n="cmp.r5">Tabbed sessions + groups</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
-        <tr><th scope="row" data-i18n="cmp.r6">Modern Fluent / Mica UI</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
-        <tr><th scope="row" data-i18n="cmp.r7">Shared credential profiles</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
-        <tr><th scope="row" data-i18n="cmp.r8">Free &amp; open source</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-      </tbody>
-    </table>
+  <div class="shead reveal">
+    <span class="eye" data-i18n="cmp.eyebrow">Why Waypoint</span>
+    <h2 data-i18n="cmp.h2">One app instead of four</h2>
+    <p class="ssub" data-i18n="cmp.sub">What you'd normally split across mstsc, PuTTY, an FTP client and Postman — in one modern window.</p>
   </div>
+  <div class="cmp-wrap reveal"><table class="cmp">
+    <thead><tr><th></th><th class="wp" scope="col">Waypoint</th><th scope="col">mstsc</th><th scope="col">PuTTY</th><th scope="col">mRemoteNG</th></tr></thead>
+    <tbody>
+      <tr><th scope="row" data-i18n="cmp.r1">RDP + SSH in one app</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><th scope="row" data-i18n="cmp.r2">VNC, Telnet &amp; serial</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><th scope="row" data-i18n="cmp.r3">SFTP / FTP file manager</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
+      <tr><th scope="row" data-i18n="cmp.r4">Built-in REST / API client</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
+      <tr><th scope="row" data-i18n="cmp.r5">Tabbed sessions + groups</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><th scope="row" data-i18n="cmp.r6">Modern Fluent / Mica UI</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
+      <tr><th scope="row" data-i18n="cmp.r7">Shared credential profiles</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><th scope="row" data-i18n="cmp.r8">Free &amp; open source</th><td class="wp"><span class="yes">✓</span></td><td><span class="no">—</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+    </tbody>
+  </table></div>
 </section>
 
-<section class="wrap">
-  <span class="eyebrow" data-i18n="qs.eyebrow">Quick start</span>
-  <h2 data-i18n="qs.h2">Up and running in a minute</h2>
+<section id="start" class="wrap">
+  <div class="shead reveal">
+    <span class="eye" data-i18n="qs.eyebrow">Quick start</span>
+    <h2 data-i18n="qs.h2">Up and running in a minute</h2>
+  </div>
   <div class="steps">
-    <div class="step"><div class="n">1</div><h3 data-i18n="qs.s1t">Download &amp; run</h3><p data-i18n="qs.s1d">One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.</p></div>
-    <div class="step"><div class="n">2</div><h3 data-i18n="qs.s2t">Add a connection</h3><p data-i18n="qs.s2d">Add one by hand or import from mstsc, .rdp, mRemoteNG, RDCMan or FileZilla; pick a protocol and save credentials.</p></div>
-    <div class="step"><div class="n">3</div><h3 data-i18n="qs.s3t">Connect</h3><p data-i18n="qs.s3d">Double-click to open a tab. Group, pin, tag and search your connections as they grow.</p></div>
+    <div class="step reveal"><div class="n">1</div><h3 data-i18n="qs.s1t">Download &amp; run</h3><p data-i18n="qs.s1d">One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.</p></div>
+    <div class="step reveal"><div class="n">2</div><h3 data-i18n="qs.s2t">Add a connection</h3><p data-i18n="qs.s2d">Add one by hand or import from mstsc, .rdp, mRemoteNG, RDCMan or FileZilla; pick a protocol and save credentials.</p></div>
+    <div class="step reveal"><div class="n">3</div><h3 data-i18n="qs.s3t">Connect</h3><p data-i18n="qs.s3d">Double-click to open a tab. Group, pin, tag and search your connections as they grow.</p></div>
   </div>
 </section>
 
 <section id="security" class="wrap">
-  <div class="band">
+  <div class="band reveal">
     <div class="txt">
-      <span class="eyebrow" data-i18n="sec.eyebrow">Security</span>
+      <span class="eye" data-i18n="sec.eyebrow">Security</span>
       <h2 data-i18n="sec.h2">Your passwords stay with you</h2>
       <p data-i18n-html="sec.p">Waypoint never writes secrets to its own files. Passwords and API tokens go to <b>Windows Credential Manager</b> (DPAPI, tied to your account) — the same vault mstsc uses. RDP server-identity verification is on by default, and <b>SSH host keys are checked on first use</b> (fingerprint prompt, with a warning if a known key ever changes).</p>
     </div>
-    <a class="btn ghost" href="https://github.com/FilipB97/Waypoint/blob/master/SECURITY.md" data-i18n="sec.link">Security model →</a>
+    <a class="btn gh" href="https://github.com/FilipB97/Waypoint/blob/master/SECURITY.md" data-i18n="sec.link">Security model →</a>
   </div>
 </section>
 
 <section id="faq" class="wrap">
-  <span class="eyebrow" data-i18n="faq.eyebrow">FAQ</span>
-  <h2 data-i18n="faq.h2">Questions &amp; answers</h2>
+  <div class="shead reveal">
+    <span class="eye" data-i18n="faq.eyebrow">FAQ</span>
+    <h2 data-i18n="faq.h2">Questions &amp; answers</h2>
+  </div>
   <div class="faq">
-    <details><summary data-i18n="faq.q1">How is it different from mRemoteNG or PuTTY?</summary><p data-i18n="faq.a1">Waypoint puts RDP (Microsoft's official control), a real SSH terminal, VNC, an SFTP/FTP file manager and a REST client in one modern, actively-developed app — with tabs, credential profiles and a clean Fluent UI — instead of an aging manager or a terminal-only client.</p></details>
-    <details><summary data-i18n="faq.q2">Which protocols are supported?</summary><p data-i18n="faq.a2">RDP, SSH, VNC, Telnet and serial (COM) sessions, an SFTP/FTP/FTPS file manager, web-panel links and a built-in REST/API client — all grouped in one tree.</p></details>
-    <details><summary data-i18n="faq.q3">Does it really include a REST/API client?</summary><p data-i18n="faq.a3">Yes — a Postman-style client with collections, environments and {{variables}}, request history, Postman import, Bearer/Basic auth and JavaScript pre-request/test scripts. A lighter alternative to a separate API tool.</p></details>
-    <details><summary data-i18n="faq.q4">Does it support SSH keys?</summary><p data-i18n="faq.a4">Yes — password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.</p></details>
-    <details><summary data-i18n="faq.q5">Do I need to install anything?</summary><p data-i18n="faq.a5">No — a single .exe, no .NET install. The embedded terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.</p></details>
-    <details><summary data-i18n="faq.q6">Where are my passwords stored?</summary><p data-i18n="faq.a6">In Windows Credential Manager (DPAPI, tied to your account) — never in the app's own files. The same vault mstsc uses.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q1">How is it different from mRemoteNG or PuTTY?</summary><p data-i18n="faq.a1">Waypoint puts RDP (Microsoft's official control), a real SSH terminal, VNC, an SFTP/FTP file manager and a REST client in one modern, actively-developed app — with tabs, credential profiles and a clean Fluent UI — instead of an aging manager or a terminal-only client.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q2">Which protocols are supported?</summary><p data-i18n="faq.a2">RDP, SSH, VNC, Telnet and serial (COM) sessions, an SFTP/FTP/FTPS file manager, web-panel links and a built-in REST/API client — all grouped in one tree.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q3">Does it really include a REST/API client?</summary><p data-i18n="faq.a3">Yes — a Postman-style client with collections, environments and {{variables}}, request history, Postman import, Bearer/Basic auth and JavaScript pre-request/test scripts. A lighter alternative to a separate API tool.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q4">Does it support SSH keys?</summary><p data-i18n="faq.a4">Yes — password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q5">Do I need to install anything?</summary><p data-i18n="faq.a5">No — a single .exe, no .NET install. The embedded terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q6">Where are my passwords stored?</summary><p data-i18n="faq.a6">In Windows Credential Manager (DPAPI, tied to your account) — never in the app's own files. The same vault mstsc uses.</p></details>
   </div>
 </section>
 
-<section class="wrap">
-  <div class="dl">
-    <span class="eyebrow" data-i18n="dl.eyebrow">Download</span>
-    <h2 data-i18n="dl.h2">Get started with Waypoint</h2>
-    <p class="sub" data-i18n="dl.sub">One file. Run it and go — no installer, no .NET to install.</p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/FilipB97/Waypoint/releases/latest">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#EEF1F4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+<section id="download" class="wrap">
+  <div class="dl reveal">
+    <span class="eye c" data-i18n="dl.eyebrow">Download</span>
+    <h2 style="margin-top:12px" data-i18n="dl.h2">Get started with Waypoint</h2>
+    <p class="ssub" data-i18n="dl.sub" style="margin-left:auto;margin-right:auto">One file. Run it and go — no installer, no .NET to install.</p>
+    <div class="hcta">
+      <a class="btn pri" href="https://github.com/FilipB97/Waypoint/releases/latest">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
         <span data-i18n="dl.dl">Download for Windows (x64)</span>
       </a>
-      <a class="btn ghost" href="https://github.com/FilipB97/Waypoint" data-i18n="dl.source">Source code</a>
+      <a class="btn gh" href="https://github.com/FilipB97/Waypoint" data-i18n="dl.source">Source code</a>
     </div>
-    <p class="note" data-i18n-html="dl.note">
-      Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen
-      may show a warning — click <code>More info → Run anyway</code>.
-    </p>
+    <p class="note" data-i18n-html="dl.note">Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.</p>
   </div>
 </section>
 
-<section class="wrap">
-  <span class="eyebrow" data-i18n="road.eyebrow">Roadmap</span>
-  <h2 data-i18n="road.h2">What's next</h2>
+<section id="roadmap" class="wrap">
+  <div class="shead reveal">
+    <span class="eye" data-i18n="road.eyebrow">Roadmap</span>
+    <h2 data-i18n="road.h2">What's next</h2>
+  </div>
   <div class="road">
-    <div class="r"><span class="dot"></span><p data-i18n-html="road.i1"><b>Code signing</b> — remove the SmartScreen warning on first launch.</p></div>
-    <div class="r"><span class="dot"></span><p data-i18n-html="road.i2"><b>Split-screen sessions</b> — two connections side by side in one tab.</p></div>
-    <div class="r"><span class="dot"></span><p data-i18n-html="road.i3"><b>Screen capture &amp; recording</b> — screenshots and transcripts of a session.</p></div>
-    <div class="r"><span class="dot"></span><p data-i18n-html="road.i4"><b>ARM64 build</b> — native for Windows on ARM.</p></div>
+    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i1"><b>Code signing</b> — remove the SmartScreen warning on first launch.</p></div>
+    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i2"><b>Split-screen sessions</b> — two connections side by side in one tab.</p></div>
+    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i3"><b>Screen capture &amp; recording</b> — screenshots and transcripts of a session.</p></div>
+    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i4"><b>ARM64 build</b> — native for Windows on ARM.</p></div>
   </div>
 </section>
 
@@ -545,18 +641,24 @@
 (function(){
   var I18N = {
     en: {
-      "nav.features":"Features","nav.protocols":"Protocols","nav.security":"Security","nav.download":"Download","nav.star":"Star","stat.downloads":"downloads",
-      "hero.badge":"● Open source · MIT",
+      "nav.features":"Features","nav.protocols":"Protocols","nav.security":"Security","nav.download":"Download","nav.star":"Star","nav.faq":"FAQ","stat.downloads":"downloads",
+      "hero.badge2":"Open source · MIT · Windows",
       "hero.title":"Every remote connection,<br><span class=\"grad\">one modern app.</span>",
-      "hero.lead":"<b style=\"color:var(--text)\">Waypoint</b> is a modern connection manager for Windows — <b style=\"color:var(--text)\">RDP, SSH, VNC, Telnet & serial</b>, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.",
+      "hero.lead":"<b>Waypoint</b> is a modern connection manager for Windows — RDP, SSH, VNC, Telnet &amp; serial, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.",
       "hero.dl":"Download for Windows","hero.gh":"View on GitHub",
       "meta.os":"Windows 10/11","meta.file":"single .exe","meta.net":"no .NET install","meta.free":"free · open source",
+      "stat.k1":"protocols, one tree","stat.k2":"portable .exe","stat.k3":"secrets in app files","stat.k4":"free &amp; open source",
+      "fl.eyebrow":"The toolbox","fl.h2":"Four apps' worth of work, one window","fl.sub":"The flagship trio — a real terminal, a file manager and an API client — living right next to your servers.",
+      "fl.t.k":"Terminal","fl.t.h":"A real terminal, not an afterthought","fl.t.p":"SSH, Telnet and serial run on an embedded xterm.js — the same terminal you already trust, wired into your connection tree.",
+      "fl.t.b1":"<b>Key &amp; password auth</b> with host-key verification on first use","fl.t.b2":"<b>Port-forward tunnels</b> and an SFTP panel on the same link","fl.t.b3":"<b>Copy-on-select</b>, search and full colour",
+      "fl.f.k":"Files","fl.f.h":"Move files without a second app","fl.f.p":"A dual-pane SFTP / FTP / FTPS manager — local and remote side by side, whole folders transferred recursively with progress.",
+      "fl.f.b1":"<b>SFTP over SSH</b>, plain FTP and secure FTPS","fl.f.b2":"<b>Recursive</b> folder upload &amp; download","fl.f.b3":"<b>FileZilla import</b> to bring your sites across",
+      "fl.r.k":"REST / API","fl.r.h":"A Postman-style client, built in","fl.r.p":"Collections, environments with <code>{{variables}}</code>, request history, Postman import and JavaScript scripts — secrets kept in Windows Credential Manager.",
+      "fl.r.b1":"<b>Environments</b> for URL, headers, body &amp; auth","fl.r.b2":"<b>Pre-request &amp; test scripts</b> with a <code>pm.*</code> API","fl.r.b3":"<b>One-click Postman import</b>",
+      "viz.local":"Local","viz.upl":"↑ uploading project/ — 64% · 12 files",
       "feat.eyebrow":"Features","feat.h2":"One window for the whole toolbox",
-      "feat.sub":"RDP on Microsoft's official control (<code>mstscax</code>), SSH / Telnet / serial on an embedded <code>xterm.js</code> terminal, VNC, an SFTP/FTP file manager and a REST client — all in one Fluent / Mica app.",
+      "feat.sub":"RDP on Microsoft's official control (<code>mstscax</code>), a collapsible tree, multi-monitor and focus mode — all in one Fluent / Mica app.",
       "c1t":"Tabs and standalone windows","c1d":"Many sessions in one window, or each in its own. Duplicate, reorder and drag tabs; tear one off to another monitor.",
-      "c2t":"Embedded terminal","c2d":"A real terminal (xterm.js) for SSH, Telnet and serial — password & key auth, host-key verification, copy-on-select and SSH tunnels.",
-      "c3t":"SFTP & FTP file manager","c3d":"A dual-pane manager for SFTP, FTP and FTPS — upload, download and move whole folders (recursively) between local and remote.",
-      "c4t":"Built-in REST/API client","c4d":"A clean, Postman-style client: collections, environments with {{variables}}, history, Postman import and JavaScript scripts.",
       "c5t":"Every protocol, one tree","c5d":"RDP, SSH, VNC, Telnet, serial (COM), SFTP/FTP and web links — grouped, pinnable and searchable together, with a collapsible sidebar.",
       "c6t":"Multi-monitor & focus mode","c6d":"Tear a tab into its own window on another screen. Maximize into a distraction-free view — just tabs and the session.",
       "c7t":"Secure passwords + profiles","c7d":"Credentials in Windows Credential Manager (DPAPI) — never in app files. Shared credential profiles and a built-in password generator.",
@@ -571,22 +673,7 @@
       "proto.serial.t":"Serial console","proto.serial.d":"A serial (COM) console with configurable baud rate — reach the console port of network gear and embedded boards from the same app.",
       "proto.sftp.t":"SFTP files","proto.sftp.d":"A dual-pane file manager over SSH: browse local and remote side by side, upload and download files and whole folders recursively, with progress.",
       "proto.ftp.t":"FTP & FTPS","proto.ftp.d":"The same dual-pane manager for plain FTP and secure FTPS — a lightweight replacement for a separate FTP client, with FileZilla site import.",
-      "proto.rest.t":"REST / API client","proto.rest.d":"A Postman-style HTTP client built in: collections and folders, environments with {{variables}}, request history, Postman import and JavaScript scripts. See the section below.",
-      "rest.eyebrow":"API client","rest.h2":"A Postman-style API client, built in",
-      "rest.p":"Test and organize HTTP APIs without leaving Waypoint — a cleaner, lighter take on Postman that lives next to your servers.",
-      "rest.b1":"<b>Collections & environments</b> — folders of requests and named environments with <code>{{variables}}</code> for URL, headers, body and auth.",
-      "rest.b2":"<b>Import from Postman</b> — bring your collections and environments across in one click.",
-      "rest.b3":"<b>JavaScript scripts</b> — pre-request and test scripts with a <code>pm.*</code> API: grab a token, save it to a variable and reuse it in the next request.",
-      "rest.b4":"<b>Secure by default</b> — Bearer and Basic secrets go to Windows Credential Manager, never into the collection file.",
-      "sec.eyebrow":"Security","sec.h2":"Your passwords stay with you",
-      "sec.p":"Waypoint never writes secrets to its own files. Passwords and API tokens go to <b>Windows Credential Manager</b> (DPAPI, tied to your account) — the same vault mstsc uses. RDP server-identity verification is on by default, and <b>SSH host keys are checked on first use</b> (fingerprint prompt, with a warning if a known key ever changes).",
-      "sec.link":"Security model →",
-      "dl.eyebrow":"Download","dl.h2":"Get started with Waypoint","dl.sub":"One file. Run it and go — no installer, no .NET to install.",
-      "dl.dl":"Download for Windows (x64)","dl.source":"Source code",
-      "dl.note":"Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.",
-      "foot.left":"Waypoint · MIT © 2026 Filip Benklewski",
-      "foot.right":"Built with WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>",
-      "skip":"Skip to content","nav.faq":"FAQ",
+      "proto.rest.t":"REST / API client","proto.rest.d":"A Postman-style HTTP client built in: collections and folders, environments with {{variables}}, request history, Postman import and JavaScript scripts.",
       "cmp.eyebrow":"Why Waypoint","cmp.h2":"One app instead of four",
       "cmp.sub":"What you'd normally split across mstsc, PuTTY, an FTP client and Postman — in one modern window.",
       "cmp.r1":"RDP + SSH in one app","cmp.r2":"VNC, Telnet & serial","cmp.r3":"SFTP / FTP file manager","cmp.r4":"Built-in REST / API client","cmp.r5":"Tabbed sessions + groups","cmp.r6":"Modern Fluent / Mica UI","cmp.r7":"Shared credential profiles","cmp.r8":"Free & open source",
@@ -594,6 +681,9 @@
       "qs.s1t":"Download & run","qs.s1d":"One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.",
       "qs.s2t":"Add a connection","qs.s2d":"Add one by hand or import from mstsc, .rdp, mRemoteNG, RDCMan or FileZilla; pick a protocol and save credentials.",
       "qs.s3t":"Connect","qs.s3d":"Double-click to open a tab. Group, pin, tag and search your connections as they grow.",
+      "sec.eyebrow":"Security","sec.h2":"Your passwords stay with you",
+      "sec.p":"Waypoint never writes secrets to its own files. Passwords and API tokens go to <b>Windows Credential Manager</b> (DPAPI, tied to your account) — the same vault mstsc uses. RDP server-identity verification is on by default, and <b>SSH host keys are checked on first use</b> (fingerprint prompt, with a warning if a known key ever changes).",
+      "sec.link":"Security model →",
       "faq.eyebrow":"FAQ","faq.h2":"Questions & answers",
       "faq.q1":"How is it different from mRemoteNG or PuTTY?","faq.a1":"Waypoint puts RDP (Microsoft's official control), a real SSH terminal, VNC, an SFTP/FTP file manager and a REST client in one modern, actively-developed app — with tabs, credential profiles and a clean Fluent UI — instead of an aging manager or a terminal-only client.",
       "faq.q2":"Which protocols are supported?","faq.a2":"RDP, SSH, VNC, Telnet and serial (COM) sessions, an SFTP/FTP/FTPS file manager, web-panel links and a built-in REST/API client — all grouped in one tree.",
@@ -601,25 +691,37 @@
       "faq.q4":"Does it support SSH keys?","faq.a4":"Yes — password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.",
       "faq.q5":"Do I need to install anything?","faq.a5":"No — a single .exe, no .NET install. The embedded terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.",
       "faq.q6":"Where are my passwords stored?","faq.a6":"In Windows Credential Manager (DPAPI, tied to your account) — never in the app's own files. The same vault mstsc uses.",
+      "dl.eyebrow":"Download","dl.h2":"Get started with Waypoint","dl.sub":"One file. Run it and go — no installer, no .NET to install.",
+      "dl.dl":"Download for Windows (x64)","dl.source":"Source code",
+      "dl.note":"Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.",
       "road.eyebrow":"Roadmap","road.h2":"What's next",
       "road.i1":"<b>Code signing</b> — remove the SmartScreen warning on first launch.",
       "road.i2":"<b>Split-screen sessions</b> — two connections side by side in one tab.",
       "road.i3":"<b>Screen capture & recording</b> — screenshots and transcripts of a session.",
-      "road.i4":"<b>ARM64 build</b> — native for Windows on ARM."
+      "road.i4":"<b>ARM64 build</b> — native for Windows on ARM.",
+      "foot.left":"Waypoint · MIT © 2026 Filip Benklewski",
+      "foot.right":"Built with WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>",
+      "skip":"Skip to content"
     },
     pl: {
-      "nav.features":"Funkcje","nav.protocols":"Protokoły","nav.security":"Bezpieczeństwo","nav.download":"Pobierz","nav.star":"Star","stat.downloads":"pobrań",
-      "hero.badge":"● Open source · MIT",
+      "nav.features":"Funkcje","nav.protocols":"Protokoły","nav.security":"Bezpieczeństwo","nav.download":"Pobierz","nav.star":"Star","nav.faq":"FAQ","stat.downloads":"pobrań",
+      "hero.badge2":"Open source · MIT · Windows",
       "hero.title":"Każde zdalne połączenie<br><span class=\"grad\">w jednej aplikacji.</span>",
-      "hero.lead":"<b style=\"color:var(--text)\">Waypoint</b> to nowoczesny menedżer połączeń dla Windows — <b style=\"color:var(--text)\">RDP, SSH, VNC, Telnet i port szeregowy</b>, menedżer plików SFTP/FTP oraz wbudowany klient REST/API. Jedna aplikacja zamiast mstsc, PuTTY, WinSCP i Postmana.",
+      "hero.lead":"<b>Waypoint</b> to nowoczesny menedżer połączeń dla Windows — RDP, SSH, VNC, Telnet i port szeregowy, menedżer plików SFTP/FTP oraz wbudowany klient REST/API. Jedna aplikacja zamiast mstsc, PuTTY, WinSCP i Postmana.",
       "hero.dl":"Pobierz na Windows","hero.gh":"Zobacz na GitHub",
       "meta.os":"Windows 10/11","meta.file":"jeden plik .exe","meta.net":"bez instalacji .NET","meta.free":"za darmo · open source",
+      "stat.k1":"protokołów, jedno drzewo","stat.k2":"przenośny plik .exe","stat.k3":"sekretów w plikach aplikacji","stat.k4":"za darmo i open source",
+      "fl.eyebrow":"Zestaw narzędzi","fl.h2":"Praca czterech aplikacji w jednym oknie","fl.sub":"Flagowa trójka — prawdziwy terminal, menedżer plików i klient API — tuż obok Twoich serwerów.",
+      "fl.t.k":"Terminal","fl.t.h":"Prawdziwy terminal, nie proteza","fl.t.p":"SSH, Telnet i port szeregowy działają na wbudowanym xterm.js — tym samym terminalu, któremu ufasz, wpiętym w drzewo połączeń.",
+      "fl.t.b1":"<b>Logowanie kluczem i hasłem</b> z weryfikacją klucza hosta przy pierwszym połączeniu","fl.t.b2":"<b>Tunele (port-forward)</b> i panel SFTP na tym samym połączeniu","fl.t.b3":"<b>Kopiowanie zaznaczeniem</b>, wyszukiwanie i pełny kolor",
+      "fl.f.k":"Pliki","fl.f.h":"Przenoś pliki bez drugiej aplikacji","fl.f.p":"Dwupanelowy menedżer SFTP / FTP / FTPS — lokalne i zdalne obok siebie, całe foldery przenoszone rekurencyjnie z paskiem postępu.",
+      "fl.f.b1":"<b>SFTP przez SSH</b>, zwykły FTP i bezpieczny FTPS","fl.f.b2":"<b>Rekurencyjna</b> wysyłka i pobieranie folderów","fl.f.b3":"<b>Import z FileZilli</b> — przenieś swoje sity",
+      "fl.r.k":"REST / API","fl.r.h":"Klient w stylu Postmana, wbudowany","fl.r.p":"Kolekcje, środowiska ze zmiennymi <code>{{variables}}</code>, historia żądań, import z Postmana i skrypty JavaScript — sekrety w Menedżerze poświadczeń Windows.",
+      "fl.r.b1":"<b>Środowiska</b> dla URL, nagłówków, treści i uwierzytelniania","fl.r.b2":"<b>Skrypty przed żądaniem i testowe</b> z API <code>pm.*</code>","fl.r.b3":"<b>Import z Postmana jednym kliknięciem</b>",
+      "viz.local":"Lokalne","viz.upl":"↑ wysyłanie project/ — 64% · 12 plików",
       "feat.eyebrow":"Funkcje","feat.h2":"Jedno okno na cały zestaw narzędzi",
-      "feat.sub":"RDP na oficjalnej kontrolce Microsoftu (<code>mstscax</code>), SSH / Telnet / szeregowy na wbudowanym terminalu <code>xterm.js</code>, VNC, menedżer plików SFTP/FTP i klient REST — wszystko w jednej aplikacji Fluent / Mica.",
+      "feat.sub":"RDP na oficjalnej kontrolce Microsoftu (<code>mstscax</code>), zwijane drzewo, multi-monitor i tryb skupienia — wszystko w jednej aplikacji Fluent / Mica.",
       "c1t":"Karty i osobne okna","c1d":"Wiele sesji w jednym oknie albo każda w swoim. Duplikuj, zmieniaj kolejność i przeciągaj karty; wyciągnij jedną na inny monitor.",
-      "c2t":"Wbudowany terminal","c2d":"Prawdziwy terminal (xterm.js) dla SSH, Telnetu i portu szeregowego — logowanie hasłem i kluczem, weryfikacja klucza hosta, kopiowanie zaznaczeniem i tunele SSH.",
-      "c3t":"Menedżer plików SFTP i FTP","c3d":"Dwupanelowy menedżer dla SFTP, FTP i FTPS — wysyłaj, pobieraj i przenoś całe foldery (rekurencyjnie) między dyskiem lokalnym a zdalnym.",
-      "c4t":"Wbudowany klient REST/API","c4d":"Czysty klient w stylu Postmana: kolekcje, środowiska ze zmiennymi {{variables}}, historia, import z Postmana i skrypty JavaScript.",
       "c5t":"Każdy protokół w jednym drzewie","c5d":"RDP, SSH, VNC, Telnet, port szeregowy (COM), SFTP/FTP i linki web — grupowane, przypinane i przeszukiwane razem, ze zwijanym panelem bocznym.",
       "c6t":"Multi-monitor i tryb skupienia","c6d":"Wyciągnij kartę do osobnego okna na drugim ekranie. Zmaksymalizuj do widoku bez rozpraszaczy — same karty i sesja.",
       "c7t":"Bezpieczne hasła + profile","c7d":"Poświadczenia w Menedżerze poświadczeń Windows (DPAPI) — nigdy w plikach aplikacji. Współdzielone profile poświadczeń i wbudowany generator haseł.",
@@ -634,22 +736,7 @@
       "proto.serial.t":"Konsola szeregowa","proto.serial.d":"Konsola szeregowa (COM) z konfigurowalną prędkością (baud) — dostęp do portu konsolowego sprzętu sieciowego i płytek wbudowanych z tej samej aplikacji.",
       "proto.sftp.t":"Pliki SFTP","proto.sftp.d":"Dwupanelowy menedżer plików przez SSH: przeglądaj lokalne i zdalne obok siebie, wysyłaj i pobieraj pliki oraz całe foldery rekurencyjnie, z paskiem postępu.",
       "proto.ftp.t":"FTP i FTPS","proto.ftp.d":"Ten sam dwupanelowy menedżer dla zwykłego FTP i bezpiecznego FTPS — lekki zamiennik osobnego klienta FTP, z importem sitów FileZilli.",
-      "proto.rest.t":"Klient REST / API","proto.rest.d":"Wbudowany klient HTTP w stylu Postmana: kolekcje i foldery, środowiska ze zmiennymi {{variables}}, historia żądań, import z Postmana i skrypty JavaScript. Zobacz sekcję poniżej.",
-      "rest.eyebrow":"Klient API","rest.h2":"Klient API w stylu Postmana, wbudowany",
-      "rest.p":"Testuj i porządkuj API HTTP bez wychodzenia z Waypointa — czystsze, lżejsze podejście do Postmana, tuż obok Twoich serwerów.",
-      "rest.b1":"<b>Kolekcje i środowiska</b> — foldery żądań i nazwane środowiska ze zmiennymi <code>{{variables}}</code> w URL, nagłówkach, treści i uwierzytelnianiu.",
-      "rest.b2":"<b>Import z Postmana</b> — przenieś swoje kolekcje i środowiska jednym kliknięciem.",
-      "rest.b3":"<b>Skrypty JavaScript</b> — skrypty przed żądaniem i testowe z API <code>pm.*</code>: pobierz token, zapisz do zmiennej i użyj w kolejnym żądaniu.",
-      "rest.b4":"<b>Bezpiecznie domyślnie</b> — sekrety Bearer i Basic trafiają do Menedżera poświadczeń Windows, nigdy do pliku kolekcji.",
-      "sec.eyebrow":"Bezpieczeństwo","sec.h2":"Twoje hasła zostają u Ciebie",
-      "sec.p":"Waypoint nie zapisuje sekretów w swoich plikach. Hasła i tokeny API trafiają do <b>Menedżera poświadczeń Windows</b> (DPAPI, powiązany z Twoim kontem) — tego samego sejfu, którego używa mstsc. Weryfikacja tożsamości serwera RDP jest domyślnie włączona, a <b>klucze hosta SSH są sprawdzane przy pierwszym połączeniu</b> (odcisk do potwierdzenia, z ostrzeżeniem, gdy znany klucz się zmieni).",
-      "sec.link":"Model bezpieczeństwa →",
-      "dl.eyebrow":"Pobierz","dl.h2":"Zacznij z Waypoint","dl.sub":"Jeden plik. Odpalasz i działa — bez instalatora, bez instalowania .NET.",
-      "dl.dl":"Pobierz na Windows (x64)","dl.source":"Kod źródłowy",
-      "dl.note":"Wymagania: Windows 10/11 (x64). Plik nie jest jeszcze podpisany cyfrowo, więc przy pierwszym uruchomieniu SmartScreen może pokazać ostrzeżenie — kliknij <code>Więcej informacji → Uruchom mimo to</code>.",
-      "foot.left":"Waypoint · MIT © 2026 Filip Benklewski",
-      "foot.right":"Zbudowane w WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>",
-      "skip":"Przejdź do treści","nav.faq":"FAQ",
+      "proto.rest.t":"Klient REST / API","proto.rest.d":"Wbudowany klient HTTP w stylu Postmana: kolekcje i foldery, środowiska ze zmiennymi {{variables}}, historia żądań, import z Postmana i skrypty JavaScript.",
       "cmp.eyebrow":"Dlaczego Waypoint","cmp.h2":"Jedna aplikacja zamiast czterech",
       "cmp.sub":"To, co zwykle rozdzielasz między mstsc, PuTTY, klienta FTP i Postmana — w jednym nowoczesnym oknie.",
       "cmp.r1":"RDP + SSH w jednej aplikacji","cmp.r2":"VNC, Telnet i port szeregowy","cmp.r3":"Menedżer plików SFTP / FTP","cmp.r4":"Wbudowany klient REST / API","cmp.r5":"Sesje w kartach + grupy","cmp.r6":"Nowoczesny UI Fluent / Mica","cmp.r7":"Współdzielone profile poświadczeń","cmp.r8":"Za darmo i open source",
@@ -657,6 +744,9 @@
       "qs.s1t":"Pobierz i uruchom","qs.s1d":"Jeden plik .exe — bez instalatora, bez instalowania .NET. Gdy pojawi się SmartScreen: Więcej informacji → Uruchom mimo to.",
       "qs.s2t":"Dodaj połączenie","qs.s2d":"Dodaj ręcznie lub zaimportuj z mstsc, .rdp, mRemoteNG, RDCMan albo FileZilli; wybierz protokół i zapisz poświadczenia.",
       "qs.s3t":"Połącz","qs.s3d":"Kliknij dwukrotnie, aby otworzyć kartę. Grupuj, przypinaj, taguj i wyszukuj połączenia, gdy ich przybywa.",
+      "sec.eyebrow":"Bezpieczeństwo","sec.h2":"Twoje hasła zostają u Ciebie",
+      "sec.p":"Waypoint nie zapisuje sekretów w swoich plikach. Hasła i tokeny API trafiają do <b>Menedżera poświadczeń Windows</b> (DPAPI, powiązany z Twoim kontem) — tego samego sejfu, którego używa mstsc. Weryfikacja tożsamości serwera RDP jest domyślnie włączona, a <b>klucze hosta SSH są sprawdzane przy pierwszym połączeniu</b> (odcisk do potwierdzenia, z ostrzeżeniem, gdy znany klucz się zmieni).",
+      "sec.link":"Model bezpieczeństwa →",
       "faq.eyebrow":"FAQ","faq.h2":"Pytania i odpowiedzi",
       "faq.q1":"Czym różni się od mRemoteNG lub PuTTY?","faq.a1":"Waypoint łączy RDP (oficjalna kontrolka Microsoftu), prawdziwy terminal SSH, VNC, menedżer plików SFTP/FTP i klient REST w jednej nowoczesnej, aktywnie rozwijanej aplikacji — z kartami, profilami poświadczeń i czystym UI Fluent — zamiast starzejącego się menedżera czy klienta tylko-terminalowego.",
       "faq.q2":"Jakie protokoły są obsługiwane?","faq.a2":"RDP, SSH, VNC, Telnet i port szeregowy (COM), menedżer plików SFTP/FTP/FTPS, linki do paneli web oraz wbudowany klient REST/API — wszystko zgrupowane w jednym drzewie.",
@@ -664,74 +754,65 @@
       "faq.q4":"Czy obsługuje klucze SSH?","faq.a4":"Tak — logowanie hasłem i kluczem prywatnym (z hasłem do klucza), weryfikacja klucza hosta przy pierwszym połączeniu oraz lokalne tunele (port-forwarding).",
       "faq.q5":"Czy muszę coś instalować?","faq.a5":"Nie — jeden plik .exe, bez instalowania .NET. Wbudowany terminal używa środowiska WebView2, obecnego już w aktualnym Windows 10/11.",
       "faq.q6":"Gdzie są przechowywane moje hasła?","faq.a6":"W Menedżerze poświadczeń Windows (DPAPI, powiązany z Twoim kontem) — nigdy w plikach aplikacji. Ten sam sejf, którego używa mstsc.",
+      "dl.eyebrow":"Pobierz","dl.h2":"Zacznij z Waypoint","dl.sub":"Jeden plik. Odpalasz i działa — bez instalatora, bez instalowania .NET.",
+      "dl.dl":"Pobierz na Windows (x64)","dl.source":"Kod źródłowy",
+      "dl.note":"Wymagania: Windows 10/11 (x64). Plik nie jest jeszcze podpisany cyfrowo, więc przy pierwszym uruchomieniu SmartScreen może pokazać ostrzeżenie — kliknij <code>Więcej informacji → Uruchom mimo to</code>.",
       "road.eyebrow":"Plan rozwoju","road.h2":"Co dalej",
       "road.i1":"<b>Podpis cyfrowy</b> — usunięcie ostrzeżenia SmartScreen przy pierwszym uruchomieniu.",
       "road.i2":"<b>Sesje na podzielonym ekranie</b> — dwa połączenia obok siebie w jednej karcie.",
       "road.i3":"<b>Zrzut i nagrywanie ekranu</b> — screenshoty i transkrypty sesji.",
-      "road.i4":"<b>Wersja ARM64</b> — natywnie dla Windows on ARM."
+      "road.i4":"<b>Wersja ARM64</b> — natywnie dla Windows on ARM.",
+      "foot.left":"Waypoint · MIT © 2026 Filip Benklewski",
+      "foot.right":"Zbudowane w WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>",
+      "skip":"Przejdź do treści"
     }
   };
+
+  var cur='en', stats={stars:null,downloads:null};
   function apply(lang){
-    var dict = I18N[lang] || I18N.en;
-    cur = lang;
-    document.documentElement.lang = lang;
-    document.querySelectorAll('[data-i18n]').forEach(function(el){
-      var v = dict[el.getAttribute('data-i18n')]; if(v!=null) el.textContent = v;
-    });
-    document.querySelectorAll('[data-i18n-html]').forEach(function(el){
-      var v = dict[el.getAttribute('data-i18n-html')]; if(v!=null) el.innerHTML = v;
-    });
-    document.querySelectorAll('[data-lang-btn]').forEach(function(b){
-      b.classList.toggle('active', b.getAttribute('data-lang-btn')===lang);
-    });
-    try{ localStorage.setItem('wp-lang', lang); }catch(e){}
+    var dict=I18N[lang]||I18N.en; cur=lang; document.documentElement.lang=lang;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){var v=dict[el.getAttribute('data-i18n')]; if(v!=null) el.textContent=v;});
+    document.querySelectorAll('[data-i18n-html]').forEach(function(el){var v=dict[el.getAttribute('data-i18n-html')]; if(v!=null) el.innerHTML=v;});
+    document.querySelectorAll('[data-lang-btn]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-lang-btn')===lang);});
+    try{localStorage.setItem('wp-lang',lang);}catch(e){}
     renderCounts();
   }
 
-  // Zakładki protokołów — przełączają panel; treść jest w DOM (nie znika dla SEO ani i18n).
-  function showProto(key){
-    document.querySelectorAll('[data-proto-tab]').forEach(function(b){
-      b.classList.toggle('active', b.getAttribute('data-proto-tab')===key);
+  document.querySelectorAll('[data-ptab]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var k=b.getAttribute('data-ptab');
+      document.querySelectorAll('[data-ptab]').forEach(function(x){x.classList.toggle('on',x===b);});
+      document.querySelectorAll('.ppanel').forEach(function(p){p.classList.toggle('on',p.getAttribute('data-proto')===k);});
     });
-    document.querySelectorAll('.proto-panel').forEach(function(p){
-      p.classList.toggle('active', p.getAttribute('data-proto')===key);
-    });
-  }
-  document.querySelectorAll('[data-proto-tab]').forEach(function(b){
-    b.addEventListener('click', function(){ showProto(b.getAttribute('data-proto-tab')); });
   });
 
-  // Liczniki z GitHuba (gwiazdki + suma pobrań assetów). Bez klucza API: 60 req/h/IP wystarcza.
-  var cur = 'en', stats = { stars: null, downloads: null };
   function renderCounts(){
-    var dict = I18N[cur] || I18N.en;
-    var sc = document.getElementById('starCount');
-    if (sc) sc.textContent = stats.stars != null ? ' · ' + stats.stars : '';
-    var dc = document.getElementById('dlCount');
-    if (dc){
-      if (stats.downloads != null){
-        dc.textContent = '↓ ' + stats.downloads.toLocaleString() + ' ' + (dict['stat.downloads'] || 'downloads');
-        dc.hidden = false;
-      } else { dc.hidden = true; }
-    }
+    var dict=I18N[cur]||I18N.en;
+    var sc=document.getElementById('starCount'); if(sc) sc.textContent=stats.stars!=null?' · '+stats.stars:'';
+    var dc=document.getElementById('dlCount');
+    if(dc){ if(stats.downloads!=null){ dc.textContent='↓ '+stats.downloads.toLocaleString()+' '+(dict['stat.downloads']||'downloads'); dc.hidden=false; } else dc.hidden=true; }
   }
   function fetchStats(){
-    fetch('https://api.github.com/repos/FilipB97/Waypoint')
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){ if (j && typeof j.stargazers_count === 'number'){ stats.stars = j.stargazers_count; renderCounts(); } })
-      .catch(function(){});
-    fetch('https://api.github.com/repos/FilipB97/Waypoint/releases')
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(a){ if (Array.isArray(a)){ var t = 0; a.forEach(function(rel){ (rel.assets||[]).forEach(function(as){ t += as.download_count || 0; }); }); stats.downloads = t; renderCounts(); } })
-      .catch(function(){});
+    fetch('https://api.github.com/repos/FilipB97/Waypoint').then(function(r){return r.ok?r.json():null;})
+      .then(function(j){if(j&&typeof j.stargazers_count==='number'){stats.stars=j.stargazers_count;renderCounts();}}).catch(function(){});
+    fetch('https://api.github.com/repos/FilipB97/Waypoint/releases').then(function(r){return r.ok?r.json():null;})
+      .then(function(a){if(Array.isArray(a)){var t=0;a.forEach(function(rel){(rel.assets||[]).forEach(function(as){t+=as.download_count||0;});});stats.downloads=t;renderCounts();}}).catch(function(){});
   }
-  var saved=null; try{ saved = localStorage.getItem('wp-lang'); }catch(e){}
-  var lang = saved || (((navigator.language||'en').toLowerCase().indexOf('pl')===0) ? 'pl' : 'en');
-  document.querySelectorAll('[data-lang-btn]').forEach(function(b){
-    b.addEventListener('click', function(){ apply(b.getAttribute('data-lang-btn')); });
-  });
-  apply(lang);
-  fetchStats();
+
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var el=document.getElementById('typed'), cmd='waypoint connect prod/app-02 --ssh', lines=document.querySelectorAll('.float .l2');
+  if(el){
+    if(reduce){ el.textContent=cmd; lines.forEach(function(l){l.style.opacity=1;}); }
+    else{ var i=0;(function t(){ if(i<=cmd.length){el.textContent=cmd.slice(0,i);i++;setTimeout(t,42);}
+      else{ lines.forEach(function(l,x){ setTimeout(function(){ l.style.transition='opacity .4s'; l.style.opacity=1; },260+x*380); }); } })(); }
+  }
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(function(n){io.observe(n);});
+
+  var saved=null; try{saved=localStorage.getItem('wp-lang');}catch(e){}
+  var lang=saved||(((navigator.language||'en').toLowerCase().indexOf('pl')===0)?'pl':'en');
+  document.querySelectorAll('[data-lang-btn]').forEach(function(b){b.addEventListener('click',function(){apply(b.getAttribute('data-lang-btn'));});});
+  apply(lang); fetchStats();
 })();
 </script>
 </body>
