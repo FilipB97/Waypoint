@@ -93,10 +93,12 @@ namespace RdpManager
                 bool changed;
                 lock (KnownHosts.Sync)
                 {
-                    var store = KnownHosts.Load(SettingsStore.Dir);
+                    var store = KnownHosts.Load(SettingsStore.Dir, out bool unreadable);
                     var status = KnownHosts.Check(store, _hostKeyHost, _hostKeyPort, fp);
                     if (status == KnownHosts.Status.Match) { e.CanTrust = true; return; }
-                    changed = status == KnownHosts.Status.Mismatch;
+                    // Uszkodzony magazyn → fail-closed: traktuj jak ZMIANĘ klucza (ostrzeżenie, domyślnie
+                    // odrzuć), zamiast cichego „nowy host?" — po uszkodzeniu każdy host wygląda jak nieznany.
+                    changed = status == KnownHosts.Status.Mismatch || unreadable;
                 }
 
                 var ask = TrustHostKey;

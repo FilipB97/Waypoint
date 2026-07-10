@@ -35,8 +35,14 @@ namespace RdpManager.Core
             return string.Equals(known, fingerprint, StringComparison.OrdinalIgnoreCase) ? Status.Match : Status.Mismatch;
         }
 
-        public static Dictionary<string, string> Load(string dir)
+        public static Dictionary<string, string> Load(string dir) => Load(dir, out _);
+
+        /// <summary>Jak <see cref="Load(string)"/>, ale ustawia <paramref name="storeUnreadable"/>=true, gdy plik
+        /// ISTNIEJE, lecz nie dało się go odczytać/sparsować (uszkodzony). Wołający MUSI wtedy działać
+        /// fail-closed (potraktować certyfikat jak ZMIANĘ), a nie wracać do TOFU „nowy serwer".</summary>
+        public static Dictionary<string, string> Load(string dir, out bool storeUnreadable)
         {
+            storeUnreadable = false;
             var path = Path.Combine(dir, "ftps_certs.json");
             try
             {
@@ -46,8 +52,9 @@ namespace RdpManager.Core
             }
             catch
             {
-                // Uszkodzony plik: odłóż na bok (.corrupt) i zgłoś — zamiast po cichu skasować CAŁE zaufanie
-                // certyfikatów (każdy serwer wyglądałby jak nowy przy następnym połączeniu).
+                // Uszkodzony plik: odłóż na bok (.corrupt), zgłoś i zasygnalizuj wołającemu, żeby nie wracał
+                // po cichu do TOFU (zmieniony certyfikat po uszkodzeniu magazynu wyglądałby jak „nowy serwer").
+                storeUnreadable = true;
                 AtomicFile.PreserveCorrupt(path);
                 HealthNotices.Add(HealthNoticeKind.FileQuarantined, Path.GetFileName(path));
             }

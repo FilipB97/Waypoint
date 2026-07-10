@@ -81,7 +81,7 @@ namespace RdpManager
 
                     // ResponseHeadersRead (nie ResponseContentRead): sprawdzamy Content-Length ZANIM zaczniemy
                     // czytać ciało — deklarowany-zbyt-duży rozmiar odrzucamy bez pobierania ani bajta.
-                    using (var resp = await Http.SendAsync(msg, HttpCompletionOption.ResponseHeadersRead, ct))
+                    using (var resp = await Http.SendAsync(msg, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false))
                     {
                         long? declared = resp.Content.Headers.ContentLength;
                         if (declared.HasValue && declared.Value > MaxResponseBytes)
@@ -91,14 +91,14 @@ namespace RdpManager
                         }
 
                         byte[] bytes;
-                        using (var stream = await resp.Content.ReadAsStreamAsync(ct))
-                            bytes = await ReadBoundedAsync(stream, MaxResponseBytes, ct);
+                        using (var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false))
+                            bytes = await ReadBoundedAsync(stream, MaxResponseBytes, ct).ConfigureAwait(false);
                         sw.Stop();
 
                         // Content-Length brakujący/kłamliwy (chunked, proxy) — limit egzekwowany też PODCZAS czytania.
                         if (bytes == null) return WithSent(TooLargeResponse(sw.ElapsedMilliseconds, null));
 
-                        string body = Encoding.UTF8.GetString(bytes);
+                        string body = DecodeBody(bytes, resp.Content.Headers.ContentType?.CharSet);
                         var headers = new List<KeyValuePair<string, string>>();
                         foreach (var h in resp.Headers) headers.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
                         foreach (var h in resp.Content.Headers) headers.Add(new KeyValuePair<string, string>(h.Key, string.Join(", ", h.Value)));
@@ -158,6 +158,16 @@ namespace RdpManager
 
         private static string FormatMb(long bytes) => (bytes / 1048576.0).ToString("0.#") + " MB";
 
+        // Dekoduje ciało odpowiedzi wg charset z Content-Type (np. iso-8859-1); brak/nieznany → UTF-8.
+        // Nieznane code-page (np. windows-1250 bez zarejestrowanego providera) łapiemy → fallback UTF-8.
+        private static string DecodeBody(byte[] bytes, string charset)
+        {
+            if (!string.IsNullOrWhiteSpace(charset))
+                try { return Encoding.GetEncoding(charset.Trim().Trim('"')).GetString(bytes); }
+                catch { /* nieznany charset → UTF-8 */ }
+            return Encoding.UTF8.GetString(bytes);
+        }
+
         /// <summary>Czyta strumień do bufora w pamięci, przerywając (null) jeśli przekroczy <paramref name="maxBytes"/>
         /// — bez tego bufor rósłby bez ograniczeń dla odpowiedzi bez znanego/wiarygodnego Content-Length
         /// (chunked, proxy kłamiący o rozmiarze). Publiczne dla testów.</summary>
@@ -167,7 +177,7 @@ namespace RdpManager
             {
                 byte[] chunk = new byte[81920];
                 int read;
-                while ((read = await stream.ReadAsync(chunk, 0, chunk.Length, ct)) > 0)
+                while ((read = await stream.ReadAsync(chunk, 0, chunk.Length, ct).ConfigureAwait(false)) > 0)
                 {
                     buffer.Write(chunk, 0, read);
                     if (buffer.Length > maxBytes) return null;

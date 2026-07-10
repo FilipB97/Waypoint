@@ -17,7 +17,16 @@ namespace RdpManager.Core
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
             string tmp = path + ".tmp";
-            File.WriteAllText(tmp, contents, new UTF8Encoding(false));
+            // Flush(true) wymusza zrzut bajtów tmp na dysk PRZED atomowym rename — bez tego rename jest
+            // atomowy (stary plik nietknięty), ale zawartość tmp może jeszcze nie być trwała i utrata
+            // zasilania tuż po Move mogłaby zostawić pod `path` plik zerowy/uszkodzony.
+            using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var sw = new StreamWriter(fs, new UTF8Encoding(false)))
+            {
+                sw.Write(contents);
+                sw.Flush();
+                fs.Flush(true);
+            }
             File.Move(tmp, path, overwrite: true);
         }
 

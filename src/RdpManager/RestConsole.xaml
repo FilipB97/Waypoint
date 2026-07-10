@@ -422,7 +422,7 @@
                             <RichTextBox x:Name="ResponseBody" BorderThickness="0" Background="Transparent" IsReadOnly="True"
                                          Foreground="{DynamicResource TextPrim}"
                                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                         FontFamily="Consolas" FontSize="{StaticResource FontBody}" Padding="8"/>
+                                         FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontBody}" Padding="8"/>
                         </Border>
                     </TabItem>
                     <TabItem Header="{DynamicResource S.rest.resp.headers}">
@@ -436,9 +436,9 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding Key}" Foreground="{DynamicResource TextSec}"
-                                                       FontFamily="Consolas" FontSize="{StaticResource FontBody}" Margin="0,0,12,0" TextWrapping="Wrap"/>
+                                                       FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontBody}" Margin="0,0,12,0" TextWrapping="Wrap"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="{DynamicResource TextPrim}"
-                                                       FontFamily="Consolas" FontSize="{StaticResource FontBody}" TextWrapping="Wrap"/>
+                                                       FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

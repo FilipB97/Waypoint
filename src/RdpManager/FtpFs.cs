@@ -61,10 +61,11 @@ namespace RdpManager
                 bool changed;
                 lock (Core.FtpsCertPinning.Sync)
                 {
-                    var store = Core.FtpsCertPinning.Load(SettingsStore.Dir);
+                    var store = Core.FtpsCertPinning.Load(SettingsStore.Dir, out bool unreadable);
                     var status = Core.FtpsCertPinning.Check(store, _server.Host, port, fp);
                     if (status == Core.FtpsCertPinning.Status.Match) { e.Accept = true; return; }
-                    changed = status == Core.FtpsCertPinning.Status.Mismatch;
+                    // Uszkodzony magazyn → fail-closed: traktuj jak ZMIANĘ certyfikatu (ostrzeżenie, domyślnie odrzuć).
+                    changed = status == Core.FtpsCertPinning.Status.Mismatch || unreadable;
                 }
 
                 var ask = TrustCertificate;
