@@ -116,7 +116,7 @@
   @keyframes rise{from{opacity:0;transform:rotateX(16deg) translateY(40px)}to{opacity:1;transform:rotateX(9deg) translateY(0)}}
 
   /* ===== app window ===== */
-  .win{border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#141826,#0d1120);border:1px solid var(--line2);
+  .win{border-radius:16px;overflow:hidden;text-align:left;background:linear-gradient(180deg,#141826,#0d1120);border:1px solid var(--line2);
     box-shadow:0 60px 120px -40px #000,0 0 0 1px rgba(0,0,0,.5)}
   .wtitle{height:42px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.025)}
   .wtitle .t{font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
@@ -146,6 +146,23 @@
   .screen .ok{color:var(--on)}.screen .p{color:var(--acc2)}.screen .a{color:var(--sftp)}.screen .m{color:var(--tx3)}
   .tcaret{display:inline-block;width:7px;height:15px;background:var(--on);translate:0 2px;animation:bl 1.05s steps(1) infinite}
   @keyframes bl{50%{opacity:0}}
+  /* hero demo — auto-cycling scenes: SSH terminal → RDP desktop → REST */
+  #heroScreen{position:relative;padding:0}
+  .scene{position:absolute;inset:0;opacity:0;transition:opacity .5s ease;overflow:hidden}
+  .scene.on{opacity:1}
+  .scene[data-scene="ssh"]{padding:16px 18px}
+  .rdpdesk{position:absolute;inset:0;background:linear-gradient(135deg,#12325a,#0a1c34)}
+  .rdpwin{position:absolute;border-radius:7px;background:rgba(18,22,32,.94);border:1px solid rgba(255,255,255,.14);box-shadow:0 22px 44px -22px #000;overflow:hidden}
+  .rdpwin .tb{height:24px;background:rgba(255,255,255,.07);display:flex;align-items:center;gap:6px;padding:0 9px;font-size:10.5px;color:var(--tx2);font-family:var(--sans)}
+  .rdpwin .tb i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);flex:none}
+  .rdpwin .bd{padding:10px 11px;display:grid;gap:7px}
+  .rdpwin .ln{height:6px;border-radius:3px;background:rgba(255,255,255,.16)}
+  .rdptask{position:absolute;left:0;right:0;bottom:0;height:30px;background:rgba(0,0,0,.5);display:flex;align-items:center;gap:8px;padding:0 10px}
+  .rdptask .start{width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,#3a6be8,#2657d6);flex:none}
+  .rdptask .ti{width:22px;height:15px;border-radius:4px;background:rgba(255,255,255,.13);flex:none}
+  .rdptask .clk{margin-left:auto;font-size:10.5px;color:var(--tx2);font-family:var(--mono)}
+  .relinfo{margin-top:14px;font-size:12.5px;color:var(--tx2);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .relinfo b{color:var(--tx);font-weight:600}
 
   /* stats */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:34px 0}
@@ -285,7 +302,7 @@
 
   .reveal{opacity:0;transform:translateY(20px)}
   .reveal.in{opacity:1;transform:none;transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
-  @media(prefers-reduced-motion:reduce){*{animation:none!important}.reveal{opacity:1;transform:none}.float{transform:none}html{scroll-behavior:auto}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important}.reveal{opacity:1;transform:none}.float{transform:none}.scene{transition:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -321,6 +338,7 @@
     </a>
     <a class="btn gh" href="https://github.com/FilipB97/Waypoint" data-i18n="hero.gh">View on GitHub</a>
   </div>
+  <div class="relinfo" id="relInfo" hidden></div>
   <div class="dlcount" id="dlCount" hidden></div>
   <div class="chips">
     <span class="chip"><b>RDP</b></span><span class="chip"><b>SSH</b></span><span class="chip"><b>VNC</b></span>
@@ -362,15 +380,34 @@
           </div>
           <div class="stage">
             <div class="tabs">
-              <div class="tab on"><span class="st" style="background:var(--ssh)"></span>app-02 · SSH</div>
-              <div class="tab"><span class="st" style="background:var(--rdp)"></span>dc-01 · RDP</div>
-              <div class="tab"><span class="st" style="background:var(--rest)"></span>GET /users</div>
+              <div class="tab on" data-tabkey="ssh"><span class="st" style="background:var(--ssh)"></span>app-02 · SSH</div>
+              <div class="tab" data-tabkey="rdp"><span class="st" style="background:var(--rdp)"></span>dc-01 · RDP</div>
+              <div class="tab" data-tabkey="rest"><span class="st" style="background:var(--rest)"></span>GET /users</div>
             </div>
-            <div class="screen">
-              <div><span class="p">app-02:~$</span> <span id="typed"></span><span class="tcaret"></span></div>
-              <div class="l2" style="opacity:0"><span class="ok">✓</span> <span class="m">host key verified — ED25519 SHA256:Xk9…q2A</span></div>
-              <div class="l2" style="opacity:0"><span class="ok">✓</span> <span class="m">tunnel</span> <span class="a">:5432</span> <span class="m">→ db-internal:5432</span></div>
-              <div class="l2" style="opacity:0"><span class="ok">●</span> <span style="color:var(--tx)">api.service</span> <span class="m">— active (running)</span></div>
+            <div class="screen" id="heroScreen">
+              <div class="scene on" data-scene="ssh">
+                <div><span class="p">app-02:~$</span> <span id="typed"></span><span class="tcaret"></span></div>
+                <div class="l2" style="opacity:0"><span class="ok">✓</span> <span class="m">host key verified — ED25519 SHA256:Xk9…q2A</span></div>
+                <div class="l2" style="opacity:0"><span class="ok">✓</span> <span class="m">tunnel</span> <span class="a">:5432</span> <span class="m">→ db-internal:5432</span></div>
+                <div class="l2" style="opacity:0"><span class="ok">●</span> <span style="color:var(--tx)">api.service</span> <span class="m">— active (running)</span></div>
+              </div>
+              <div class="scene" data-scene="rdp">
+                <div class="rdpdesk">
+                  <div class="rdpwin" style="left:24px;top:22px;width:52%"><div class="tb"><i></i>Server Manager — dc-01</div><div class="bd"><div class="ln" style="width:82%"></div><div class="ln" style="width:64%"></div><div class="ln" style="width:73%"></div><div class="ln" style="width:48%"></div></div></div>
+                  <div class="rdpwin" style="right:26px;bottom:58px;width:40%"><div class="tb"><i></i>Windows PowerShell</div><div class="bd" style="font-family:var(--mono);font-size:10.5px;color:var(--on)">PS C:\&gt; Restart-Service W3SVC</div></div>
+                  <div class="rdptask"><div class="start"></div><div class="ti"></div><div class="ti"></div><div class="clk">09:42</div></div>
+                </div>
+              </div>
+              <div class="scene" data-scene="rest" style="padding:0">
+                <div class="req"><span class="vb">GET</span> <span class="u">{{base}}/v1/users?active=true</span><span class="badge2">200 OK · 84ms</span></div>
+                <div class="res">
+                  <div><span class="m">{</span></div>
+                  <div>&nbsp;&nbsp;<span class="k">"user"</span>: <span class="s">"filip"</span>,</div>
+                  <div>&nbsp;&nbsp;<span class="k">"active"</span>: <span class="nn">true</span>,</div>
+                  <div>&nbsp;&nbsp;<span class="k">"roles"</span>: [<span class="s">"admin"</span>]</div>
+                  <div><span class="m">}</span></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -571,7 +608,7 @@
     <h2 data-i18n="qs.h2">Up and running in a minute</h2>
   </div>
   <div class="steps">
-    <div class="step reveal"><div class="n">1</div><h3 data-i18n="qs.s1t">Download &amp; run</h3><p data-i18n="qs.s1d">One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.</p></div>
+    <div class="step reveal"><div class="n">1</div><h3 data-i18n="qs.s1t">Download &amp; run</h3><p data-i18n="qs.s1d">One .exe — no installer, no .NET to set up. Just run it.</p></div>
     <div class="step reveal"><div class="n">2</div><h3 data-i18n="qs.s2t">Add a connection</h3><p data-i18n="qs.s2d">Add one by hand or import from mstsc, .rdp, mRemoteNG, RDCMan or FileZilla; pick a protocol and save credentials.</p></div>
     <div class="step reveal"><div class="n">3</div><h3 data-i18n="qs.s3t">Connect</h3><p data-i18n="qs.s3d">Double-click to open a tab. Group, pin, tag and search your connections as they grow.</p></div>
   </div>
@@ -615,7 +652,8 @@
       </a>
       <a class="btn gh" href="https://github.com/FilipB97/Waypoint" data-i18n="dl.source">Source code</a>
     </div>
-    <p class="note" data-i18n-html="dl.note">Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.</p>
+    <div class="relinfo" id="relInfo2" hidden></div>
+    <p class="note" data-i18n-html="dl.note">Windows 10/11 (x64). Not code-signed yet — on first run choose <code>More info → Run anyway</code>.</p>
   </div>
 </section>
 
@@ -647,7 +685,7 @@
       "hero.lead":"<b>Waypoint</b> is a modern connection manager for Windows — RDP, SSH, VNC, Telnet &amp; serial, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.",
       "hero.dl":"Download for Windows","hero.gh":"View on GitHub",
       "meta.os":"Windows 10/11","meta.file":"single .exe","meta.net":"no .NET install","meta.free":"free · open source",
-      "stat.k1":"protocols, one tree","stat.k2":"portable .exe","stat.k3":"secrets in app files","stat.k4":"free &amp; open source",
+      "stat.k1":"protocols, one tree","stat.k2":"portable .exe","stat.k3":"secrets in app files","stat.k4":"free & open source",
       "fl.eyebrow":"The toolbox","fl.h2":"Four apps' worth of work, one window","fl.sub":"The flagship trio — a real terminal, a file manager and an API client — living right next to your servers.",
       "fl.t.k":"Terminal","fl.t.h":"A real terminal, not an afterthought","fl.t.p":"SSH, Telnet and serial run on an embedded xterm.js — the same terminal you already trust, wired into your connection tree.",
       "fl.t.b1":"<b>Key &amp; password auth</b> with host-key verification on first use","fl.t.b2":"<b>Port-forward tunnels</b> and an SFTP panel on the same link","fl.t.b3":"<b>Copy-on-select</b>, search and full colour",
@@ -678,7 +716,7 @@
       "cmp.sub":"What you'd normally split across mstsc, PuTTY, an FTP client and Postman — in one modern window.",
       "cmp.r1":"RDP + SSH in one app","cmp.r2":"VNC, Telnet & serial","cmp.r3":"SFTP / FTP file manager","cmp.r4":"Built-in REST / API client","cmp.r5":"Tabbed sessions + groups","cmp.r6":"Modern Fluent / Mica UI","cmp.r7":"Shared credential profiles","cmp.r8":"Free & open source",
       "qs.eyebrow":"Quick start","qs.h2":"Up and running in a minute",
-      "qs.s1t":"Download & run","qs.s1d":"One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.",
+      "qs.s1t":"Download & run","qs.s1d":"One .exe — no installer, no .NET to set up. Just run it.",
       "qs.s2t":"Add a connection","qs.s2d":"Add one by hand or import from mstsc, .rdp, mRemoteNG, RDCMan or FileZilla; pick a protocol and save credentials.",
       "qs.s3t":"Connect","qs.s3d":"Double-click to open a tab. Group, pin, tag and search your connections as they grow.",
       "sec.eyebrow":"Security","sec.h2":"Your passwords stay with you",
@@ -693,7 +731,7 @@
       "faq.q6":"Where are my passwords stored?","faq.a6":"In Windows Credential Manager (DPAPI, tied to your account) — never in the app's own files. The same vault mstsc uses.",
       "dl.eyebrow":"Download","dl.h2":"Get started with Waypoint","dl.sub":"One file. Run it and go — no installer, no .NET to install.",
       "dl.dl":"Download for Windows (x64)","dl.source":"Source code",
-      "dl.note":"Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.",
+      "dl.note":"Windows 10/11 (x64). Not code-signed yet — on first run choose <code>More info → Run anyway</code>.",
       "road.eyebrow":"Roadmap","road.h2":"What's next",
       "road.i1":"<b>Code signing</b> — remove the SmartScreen warning on first launch.",
       "road.i2":"<b>Split-screen sessions</b> — two connections side by side in one tab.",
@@ -741,7 +779,7 @@
       "cmp.sub":"To, co zwykle rozdzielasz między mstsc, PuTTY, klienta FTP i Postmana — w jednym nowoczesnym oknie.",
       "cmp.r1":"RDP + SSH w jednej aplikacji","cmp.r2":"VNC, Telnet i port szeregowy","cmp.r3":"Menedżer plików SFTP / FTP","cmp.r4":"Wbudowany klient REST / API","cmp.r5":"Sesje w kartach + grupy","cmp.r6":"Nowoczesny UI Fluent / Mica","cmp.r7":"Współdzielone profile poświadczeń","cmp.r8":"Za darmo i open source",
       "qs.eyebrow":"Szybki start","qs.h2":"Gotowe w minutę",
-      "qs.s1t":"Pobierz i uruchom","qs.s1d":"Jeden plik .exe — bez instalatora, bez instalowania .NET. Gdy pojawi się SmartScreen: Więcej informacji → Uruchom mimo to.",
+      "qs.s1t":"Pobierz i uruchom","qs.s1d":"Jeden plik .exe — bez instalatora, bez instalowania .NET. Po prostu uruchom.",
       "qs.s2t":"Dodaj połączenie","qs.s2d":"Dodaj ręcznie lub zaimportuj z mstsc, .rdp, mRemoteNG, RDCMan albo FileZilli; wybierz protokół i zapisz poświadczenia.",
       "qs.s3t":"Połącz","qs.s3d":"Kliknij dwukrotnie, aby otworzyć kartę. Grupuj, przypinaj, taguj i wyszukuj połączenia, gdy ich przybywa.",
       "sec.eyebrow":"Bezpieczeństwo","sec.h2":"Twoje hasła zostają u Ciebie",
@@ -756,7 +794,7 @@
       "faq.q6":"Gdzie są przechowywane moje hasła?","faq.a6":"W Menedżerze poświadczeń Windows (DPAPI, powiązany z Twoim kontem) — nigdy w plikach aplikacji. Ten sam sejf, którego używa mstsc.",
       "dl.eyebrow":"Pobierz","dl.h2":"Zacznij z Waypoint","dl.sub":"Jeden plik. Odpalasz i działa — bez instalatora, bez instalowania .NET.",
       "dl.dl":"Pobierz na Windows (x64)","dl.source":"Kod źródłowy",
-      "dl.note":"Wymagania: Windows 10/11 (x64). Plik nie jest jeszcze podpisany cyfrowo, więc przy pierwszym uruchomieniu SmartScreen może pokazać ostrzeżenie — kliknij <code>Więcej informacji → Uruchom mimo to</code>.",
+      "dl.note":"Windows 10/11 (x64). Jeszcze bez podpisu — przy pierwszym uruchomieniu wybierz <code>Więcej informacji → Uruchom mimo to</code>.",
       "road.eyebrow":"Plan rozwoju","road.h2":"Co dalej",
       "road.i1":"<b>Podpis cyfrowy</b> — usunięcie ostrzeżenia SmartScreen przy pierwszym uruchomieniu.",
       "road.i2":"<b>Sesje na podzielonym ekranie</b> — dwa połączenia obok siebie w jednej karcie.",
@@ -768,7 +806,7 @@
     }
   };
 
-  var cur='en', stats={stars:null,downloads:null};
+  var cur='en', stats={stars:null,downloads:null,version:null,sizeMB:null};
   function apply(lang){
     var dict=I18N[lang]||I18N.en; cur=lang; document.documentElement.lang=lang;
     document.querySelectorAll('[data-i18n]').forEach(function(el){var v=dict[el.getAttribute('data-i18n')]; if(v!=null) el.textContent=v;});
@@ -791,20 +829,43 @@
     var sc=document.getElementById('starCount'); if(sc) sc.textContent=stats.stars!=null?' · '+stats.stars:'';
     var dc=document.getElementById('dlCount');
     if(dc){ if(stats.downloads!=null){ dc.textContent='↓ '+stats.downloads.toLocaleString()+' '+(dict['stat.downloads']||'downloads'); dc.hidden=false; } else dc.hidden=true; }
+    renderRel();
+  }
+  function renderRel(){
+    if(!stats.version) return;
+    var html='<b>'+stats.version+'</b>'+(stats.sizeMB?('  ·  '+stats.sizeMB+' MB'):'')+'  ·  Windows x64';
+    ['relInfo','relInfo2'].forEach(function(id){var e=document.getElementById(id); if(e){e.innerHTML=html;e.hidden=false;}});
   }
   function fetchStats(){
     fetch('https://api.github.com/repos/FilipB97/Waypoint').then(function(r){return r.ok?r.json():null;})
       .then(function(j){if(j&&typeof j.stargazers_count==='number'){stats.stars=j.stargazers_count;renderCounts();}}).catch(function(){});
     fetch('https://api.github.com/repos/FilipB97/Waypoint/releases').then(function(r){return r.ok?r.json():null;})
-      .then(function(a){if(Array.isArray(a)){var t=0;a.forEach(function(rel){(rel.assets||[]).forEach(function(as){t+=as.download_count||0;});});stats.downloads=t;renderCounts();}}).catch(function(){});
+      .then(function(a){if(Array.isArray(a)){
+        var t=0;a.forEach(function(rel){(rel.assets||[]).forEach(function(as){t+=as.download_count||0;});});stats.downloads=t;
+        var rel=a[0];
+        if(rel){ stats.version=rel.tag_name||null; var pick=null,first=null;
+          (rel.assets||[]).forEach(function(as){var n=as.name||'';if(!/\.exe$/i.test(n))return;if(!first)first=as;if(/x64/i.test(n)&&!pick)pick=as;});
+          var ch=pick||first; if(ch&&ch.size)stats.sizeMB=Math.round(ch.size/1048576);
+        }
+        renderCounts();
+      }}).catch(function(){});
   }
 
   var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  var el=document.getElementById('typed'), cmd='waypoint connect prod/app-02 --ssh', lines=document.querySelectorAll('.float .l2');
+  // hero demo: type the SSH command, then auto-cycle SSH → RDP → REST scenes
+  var sceneEls=document.querySelectorAll('#heroScreen .scene');
+  var tabEls=document.querySelectorAll('.stage .tab[data-tabkey]');
+  var order=['ssh','rdp','rest'];
+  function showScene(key){
+    sceneEls.forEach(function(s){s.classList.toggle('on',s.getAttribute('data-scene')===key);});
+    tabEls.forEach(function(t){t.classList.toggle('on',t.getAttribute('data-tabkey')===key);});
+  }
+  var el=document.getElementById('typed'), cmd='waypoint connect prod/app-02 --ssh', lines=document.querySelectorAll('#heroScreen .l2');
   if(el){
     if(reduce){ el.textContent=cmd; lines.forEach(function(l){l.style.opacity=1;}); }
     else{ var i=0;(function t(){ if(i<=cmd.length){el.textContent=cmd.slice(0,i);i++;setTimeout(t,42);}
-      else{ lines.forEach(function(l,x){ setTimeout(function(){ l.style.transition='opacity .4s'; l.style.opacity=1; },260+x*380); }); } })(); }
+      else{ lines.forEach(function(l,x){ setTimeout(function(){ l.style.transition='opacity .4s'; l.style.opacity=1; },200+x*320); });
+        var idx=0; setTimeout(function(){ setInterval(function(){ idx=(idx+1)%order.length; showScene(order[idx]); },3600); },1900); } })(); }
   }
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12});
   document.querySelectorAll('.reveal').forEach(function(n){io.observe(n);});
