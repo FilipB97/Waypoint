@@ -353,9 +353,7 @@
                                        ToolTip="{DynamicResource S.quickConnect.tip}"/>
                             <ui:Button Content="{DynamicResource S.addServer}" HorizontalAlignment="Stretch"
                                        Appearance="Secondary" Margin="0,6,0,0" Click="AddServer_Click"/>
-                            <!-- Import: otwiera modal z kartami źródeł (mstsc/.rdp/mRemoteNG/RDCMan/RDM/FileZilla/Postman). -->
-                            <ui:Button Content="{DynamicResource S.import}" HorizontalAlignment="Stretch"
-                                       Appearance="Secondary" Margin="0,6,0,0" Click="OpenImport_Click"/>
+                            <!-- Import celowo bez przycisku tutaj — rail ma dedykowany NavImport (ten sam OpenImport_Click). -->
                         </StackPanel>
                     </Border>
                 </Grid>
