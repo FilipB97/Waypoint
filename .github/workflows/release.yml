@@ -1,15 +1,28 @@
 name: Release
 
-# Dwa sposoby wydania:
-#  • jednym kliknięciem: Actions → Release → "Run workflow" (wybierz branch, np. master, i podaj wersję)
-#  • albo przez push taga: git tag v1.2.3 && git push origin v1.2.3
+# Trzy sposoby wydania:
+#  • JEDNYM KLIKNIĘCIEM (zalecane): Actions → Release → "Run workflow" → wybierz typ podbicia
+#    (patch / minor / major) i kliknij. Wersja liczona jest automatycznie z ostatniego taga —
+#    nie trzeba nic wpisywać ani sprawdzać, jaka wersja jest teraz.
+#  • z ręczną wersją: w tym samym oknie wpisz dokładną wersję w polu "version" (ma pierwszeństwo).
+#  • przez push taga: git tag v1.2.3 && git push origin v1.2.3
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Wersja bez 'v' (np. 1.0.0)"
+      bump:
+        description: "Co podbić (gdy pole 'version' puste)"
+        type: choice
         required: true
-        default: "1.0.0"
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      version:
+        description: "Wersja bez 'v' (opcjonalnie — nadpisuje 'bump', np. 2.0.0)"
+        type: string
+        required: false
+        default: ""
   push:
     tags: ["v*"]
 
@@ -24,26 +37,76 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # pełna historia + tagi — do wygenerowania listy zmian od poprzedniego wydania
+          fetch-depth: 0   # pełna historia + tagi — do policzenia następnej wersji i listy zmian od poprzedniego wydania
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
+      # Wersja liczona jest z ostatniego taga (git), więc nie trzeba jej znać ani wpisywać.
       # Wartości do env (nie inline ${{ }} w skrypcie) — chroni przed script injection.
       - name: Determine version
         id: ver
         shell: bash
         env:
           EVENT: ${{ github.event_name }}
-          INPUT_VERSION: ${{ github.event.inputs.version }}
+          BUMP: ${{ github.event.inputs.bump }}
+          EXACT: ${{ github.event.inputs.version }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "$EVENT" = "workflow_dispatch" ]; then V="$INPUT_VERSION"; else V="${REF_NAME#v}"; fi
-          if [ -z "$V" ]; then echo "Brak wersji"; exit 1; fi
+          set -euo pipefail
+
+          # Najwyższy istniejący tag vX.Y.Z (pomija np. v1.2.3-rc1). Brak tagów → punkt startu 0.0.0.
+          LATEST_TAG="$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)"
+          LATEST="${LATEST_TAG#v}"
+          [ -z "$LATEST" ] && LATEST="0.0.0"
+
+          if [ "$EVENT" = "push" ]; then
+            # Wyzwolone push-em taga — użyj wersji z taga.
+            V="${REF_NAME#v}"
+          elif [ -n "${EXACT// /}" ]; then
+            # Ręcznie podana dokładna wersja ma pierwszeństwo nad 'bump'.
+            V="${EXACT#v}"
+          else
+            # Policz następną wersję z najnowszego taga wg wybranego typu.
+            IFS='.' read -r MA MI PA <<< "$LATEST"
+            MA=$((10#$MA)); MI=$((10#$MI)); PA=$((10#$PA))   # 10# → wymuś dziesiętnie (bez pułapki ósemkowej)
+            case "$BUMP" in
+              major) MA=$((MA+1)); MI=0; PA=0 ;;
+              minor) MI=$((MI+1)); PA=0 ;;
+              patch) PA=$((PA+1)) ;;
+              *) echo "::error::Nieznany typ podbicia: '$BUMP'"; exit 1 ;;
+            esac
+            V="$MA.$MI.$PA"
+          fi
+
+          # Walidacja formatu semver X.Y.Z.
+          if ! printf '%s' "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Nieprawidłowa wersja: '$V' (oczekiwano X.Y.Z)"; exit 1
+          fi
+
+          # Nie nadpisuj istniejącego wydania — złap kolizję zanim cokolwiek zbudujemy.
+          if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then
+            echo "::error::Tag v$V już istnieje — wybierz inny typ podbicia lub podaj wersję ręcznie."; exit 1
+          fi
+
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "tag=v$V"    >> "$GITHUB_OUTPUT"
+
+          # Podsumowanie widoczne na stronie uruchomienia (Actions → run → Summary).
+          {
+            echo "### Release v$V"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Poprzednia wersja | ${LATEST_TAG:-— (brak tagów)} |"
+            echo "| Nowa wersja | **v$V** |"
+            echo "| Wyzwolenie | ${EVENT} |"
+            if [ "$EVENT" = "workflow_dispatch" ] && [ -z "${EXACT// /}" ]; then
+              echo "| Typ podbicia | ${BUMP} |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Test
         run: dotnet test RdpManager.sln -c Release
