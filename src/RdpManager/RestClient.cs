@@ -319,17 +319,44 @@ namespace RdpManager
         public static List<string> MissingVarsInRequest(RestRequest req, string authSecret, IReadOnlyDictionary<string, string> vars)
         {
             var missing = new List<string>();
-            void Add(string s)
+            WalkRequestStrings(req, authSecret, s =>
             {
                 foreach (var k in MissingVars(s, vars))
                     if (!missing.Contains(k)) missing.Add(k);
-            }
+            });
+            return missing;
+        }
 
-            Add(req.Url);
-            foreach (var p in req.QueryParams) if (p.Enabled) { Add(p.Key); Add(p.Value); }
-            foreach (var h in req.Headers) if (h.Enabled) { Add(h.Key); Add(h.Value); }
+        /// <summary>ZNANE zmienne {{x}} o PUSTEJ wartości użyte w żądaniu — podstawienie „udaje się", ale
+        /// wstawia pustkę. Klasyka po imporcie środowiska Postmana (zmienne typu „secret" są czyszczone)
+        /// albo zanim skrypt tokenowy pierwszy raz zapisze token. Podstępne, bo kolor pola mówi
+        /// „znaleziona" (niebieski), a przy pustym sekrecie Bearer nagłówek Authorization jest po cichu
+        /// pomijany. Publiczne dla testów; UI pokazuje ostrzeżenie w zakładce „Wysłane".</summary>
+        public static List<string> EmptyVarsInRequest(RestRequest req, string authSecret, IReadOnlyDictionary<string, string> vars)
+        {
+            var empty = new List<string>();
+            if (vars == null || vars.Count == 0) return empty;
+            WalkRequestStrings(req, authSecret, s =>
+            {
+                if (string.IsNullOrEmpty(s)) return;
+                foreach (Match m in VarRx.Matches(s))
+                {
+                    string k = m.Groups[1].Value;
+                    if (vars.TryGetValue(k, out var v) && string.IsNullOrEmpty(v) && !empty.Contains(k)) empty.Add(k);
+                }
+            });
+            return empty;
+        }
 
-            // Lustrzane odbicie decyzji Build: które body faktycznie poleci.
+        // Odwiedza wszystkie pola tekstowe żądania, które faktycznie pójdą na drut — lustrzane odbicie
+        // decyzji Build (tylko włączone wiersze; tabela pól vs surowy tekst; GET/HEAD bez body; auth).
+        // Wspólne dla MissingVarsInRequest i EmptyVarsInRequest, żeby oba audyty nie mogły się rozjechać.
+        private static void WalkRequestStrings(RestRequest req, string authSecret, Action<string> visit)
+        {
+            visit(req.Url);
+            foreach (var p in req.QueryParams) if (p.Enabled) { visit(p.Key); visit(p.Value); }
+            foreach (var h in req.Headers) if (h.Enabled) { visit(h.Key); visit(h.Value); }
+
             string m = (req.Method ?? "GET").Trim().ToUpperInvariant();
             if (m != "GET" && m != "HEAD")
             {
@@ -339,13 +366,12 @@ namespace RdpManager
                 if (string.IsNullOrWhiteSpace(contentType)) contentType = req.BodyContentType;
                 bool isForm = IsFormUrlEncoded(contentType);
                 bool hasFields = isForm && req.FormFields.Any(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key));
-                if (hasFields) { foreach (var f in req.FormFields) if (f.Enabled) { Add(f.Key); Add(f.Value); } }
-                else Add(req.Body);
+                if (hasFields) { foreach (var f in req.FormFields) if (f.Enabled) { visit(f.Key); visit(f.Value); } }
+                else visit(req.Body);
             }
 
-            Add(req.AuthUsername);
-            Add(authSecret);
-            return missing;
+            visit(req.AuthUsername);
+            visit(authSecret);
         }
 
         /// <summary>Nazwy zmiennych {{x}} z tekstu, których NIE ma w słowniku (null słownik = wszystkie

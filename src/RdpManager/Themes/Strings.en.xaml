@@ -594,6 +594,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.rest.resp.sent">Sent</sys:String>
     <sys:String x:Key="S.rest.sent.empty">Send a request to see exactly what went to the server: the final URL, all headers (including those generated at send time) and the body after variable substitution.</sys:String>
     <sys:String x:Key="S.rest.sent.warnvars">⚠ Unknown variables — sent literally, without substitution: {0}. Check the active environment.</sys:String>
+    <sys:String x:Key="S.rest.sent.warnempty">⚠ Variables with an EMPTY value — an empty string was substituted: {0}. Importing a Postman environment blanks "secret"-typed variables — fill in the value in the active environment.</sys:String>
+    <sys:String x:Key="S.rest.sent.noauth">⚠ Bearer: the token is empty after substitution — the Authorization header was NOT sent. Fill in the Token field or the variable in the active environment.</sys:String>
     <sys:String x:Key="S.rest.sending">Sending…</sys:String>
     <sys:String x:Key="S.rest.saved">Request saved</sys:String>
     <sys:String x:Key="S.rest.needurl">Enter a URL.</sys:String>
