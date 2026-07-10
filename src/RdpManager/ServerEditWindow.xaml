@@ -6,7 +6,7 @@
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
         MinWidth="520" MinHeight="420"
-        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource CanvasBrush}">
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
 
     <Window.Resources>
         <Style x:Key="SeSub" TargetType="TextBlock">
@@ -22,7 +22,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource CanvasBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>

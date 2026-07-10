@@ -25,7 +25,9 @@
             <ui:TitleBar.Icon><ui:SymbolIcon Symbol="Desktop24" Foreground="{DynamicResource Accent}"/></ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <Border x:Name="Toolbar" Grid.Row="1" Background="{DynamicResource Panel}"
+        <!-- RailBg (nie Panel): pasek leży nad przezroczystym rootem okna, a Panel jest półprzezroczysty,
+             więc przez niego przebijała systemowa Mica (nie motyw). RailBg jest kryjący — jak pasek kart w MainWindow. -->
+        <Border x:Name="Toolbar" Grid.Row="1" Background="{DynamicResource RailBg}"
                 BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="12,8">
             <Grid>
                 <Grid.ColumnDefinitions>
