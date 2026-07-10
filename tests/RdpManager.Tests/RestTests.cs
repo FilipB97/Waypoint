@@ -141,6 +141,76 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void Build_SnapshotShowsDefaultsAuthFormBodyAndContentLength()
+        {
+            // Migawka „Wysłane": po Build widać komplet tego, co wyjdzie — nagłówki dogenerowane
+            // (Accept/User-Agent), Host z URI, Authorization z zakładki Auth, Content-Type i policzony
+            // Content-Length treści oraz body zakodowane PO podstawieniu zmiennych.
+            var req = new RestRequest
+            {
+                Method = "POST",
+                Url = "https://api.example.com/token",
+                BodyContentType = "application/x-www-form-urlencoded",
+                AuthType = 1
+            };
+            req.FormFields.Add(new RestKeyValue { Key = "grant_type", Value = "password" });
+            req.FormFields.Add(new RestKeyValue { Key = "scope", Value = "{{scope}}" });
+            var vars = new Dictionary<string, string> { ["scope"] = "openid email" };
+
+            using var msg = RestClient.Build(req, "sekret", vars, out string sentBody);
+            Assert.Equal("grant_type=password&scope=openid%20email", sentBody);
+
+            var snap = RestClient.SnapshotHeaders(msg);
+            string Val(string k) => snap.FirstOrDefault(h => h.Key == k).Value;
+            Assert.Equal("api.example.com", Val("Host"));
+            Assert.Equal("*/*", Val("Accept"));
+            Assert.StartsWith("Waypoint/", Val("User-Agent"));
+            Assert.Equal("Bearer sekret", Val("Authorization"));
+            Assert.Contains("x-www-form-urlencoded", Val("Content-Type"));
+            Assert.Equal(sentBody.Length.ToString(), Val("Content-Length"));   // body czysto ASCII → bajty == znaki
+        }
+
+        [Fact]
+        public void Build_NoBodyForGet_SentBodyEmpty()
+        {
+            var req = new RestRequest { Method = "GET", Url = "https://api.example.com/x", Body = "{\"a\":1}" };
+            using var msg = RestClient.Build(req, null, null, out string sentBody);
+            Assert.Equal("", sentBody);
+            Assert.Null(msg.Content);
+        }
+
+        [Fact]
+        public void MissingVarsInRequest_ScansUrlParamsHeadersFormAndAuth()
+        {
+            var req = new RestRequest
+            {
+                Method = "POST",
+                Url = "{{base}}/token",
+                BodyContentType = "application/x-www-form-urlencoded",
+                AuthType = 1
+            };
+            req.QueryParams.Add(new RestKeyValue { Key = "v", Value = "{{ver}}" });
+            req.Headers.Add(new RestKeyValue { Key = "X-Api", Value = "{{api}}" });
+            req.FormFields.Add(new RestKeyValue { Key = "client_secret", Value = "{{client_secret}}" });
+            var vars = new Dictionary<string, string> { ["base"] = "https://x" };
+
+            var missing = RestClient.MissingVarsInRequest(req, "{{token}}", vars);
+            Assert.Equal(new[] { "ver", "api", "client_secret", "token" }, missing);
+        }
+
+        [Fact]
+        public void MissingVarsInRequest_EmptyWhenAllKnown_AndGetSkipsBody()
+        {
+            var vars = new Dictionary<string, string> { ["base"] = "https://x" };
+            var ok = new RestRequest { Method = "POST", Url = "{{base}}/y", Body = "stała treść" };
+            Assert.Empty(RestClient.MissingVarsInRequest(ok, "", vars));
+
+            // GET nie niesie body — {{x}} w niewysyłanej treści nie powinno straszyć ostrzeżeniem.
+            var get = new RestRequest { Method = "GET", Url = "{{base}}/y", Body = "{{x}}" };
+            Assert.Empty(RestClient.MissingVarsInRequest(get, "", vars));
+        }
+
+        [Fact]
         public void AddDefaultHeaders_AddsAcceptAndUserAgentWhenMissing()
         {
             using var m = new HttpRequestMessage(HttpMethod.Get, "https://x/y");

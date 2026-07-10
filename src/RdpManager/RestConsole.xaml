@@ -447,6 +447,15 @@
                     </TabItem>
                     <!-- Historia wysłanych żądań — była w lewym panelu (usuniętym z konsolą jednodrzewową),
                          teraz zakładka odpowiedzi. Dwuklik wpisu = nowe żądanie z tą metodą i URL. -->
+                    <!-- Co FAKTYCZNIE poszło na drut: finalny URL po podstawieniu {{zmiennych}}, nagłówki
+                         razem z dogenerowanymi przy wysyłce (Accept/User-Agent/Content-Length/Host…)
+                         i body po zakodowaniu — odpowiednik konsoli Postmana, do diagnozy
+                         „w Postmanie działa, tu nie". Wypełniane też przy błędzie transportu. -->
+                    <TabItem Header="{DynamicResource S.rest.resp.sent}">
+                        <Border BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusSm}" Margin="0,6,0,0">
+                            <TextBox x:Name="SentBox" Style="{StaticResource CodeBox}" IsReadOnly="True"/>
+                        </Border>
+                    </TabItem>
                     <TabItem Header="{DynamicResource S.rest.resp.hist}" ToolTip="{DynamicResource S.rest.hist}">
                         <ListBox x:Name="HistoryList" BorderThickness="0" Background="Transparent" Margin="0,6,0,0"
                                  MouseDoubleClick="History_Activate"
