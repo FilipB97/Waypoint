@@ -41,7 +41,13 @@ namespace RdpManager
 
         private static readonly string[] Methods = { "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS" };
 
+        // Otwarte karty żądań (kolejność = kolejność na pasku); aktywna to _req.Id. Jak w mockupie:
+        // klik żądania w module dokłada/uaktywnia kartę, „×" ją zamyka (min. jedna zostaje).
+        private readonly List<string> _openReqs = new List<string>();
+
         private static string L(string key) => LocalizationManager.S(key);
+
+        private Brush Res(string key) => TryFindResource(key) as Brush;
 
         /// <summary>Utrwalona zmiana struktury/zawartości kolekcji (Put w rest.json) — moduł REST
         /// w railu przebudowuje na tym swoje drzewo (jedyne drzewo kolekcji w aplikacji).</summary>
@@ -60,7 +66,9 @@ namespace RdpManager
             }
             LoadSecrets();
             _req = _coll.Requests[0];
+            _openReqs.Add(_req.Id);
             LoadIntoUi(_req);
+            RebuildReqTabs();
             _envs = EnvironmentStore.Load();   // środowiska globalne (wspólne dla wszystkich kolekcji)
             BuildEnvCombo();
             // Środowiska mogły przybyć PO otwarciu konsoli (import Postmana, inna konsola) — odśwież listę
@@ -80,8 +88,10 @@ namespace RdpManager
             CaptureCurrent();
             var req = new RestRequest { Name = UniqueName(HistName(h)), Method = h.Method, Url = h.Url };
             _coll.Requests.Add(req);
+            _openReqs.Add(req.Id);
             _req = req;
             LoadIntoUi(req);
+            RebuildReqTabs();
             PersistColl();   // nowe żądanie ma się pojawić w module (jedynym drzewie)
         }
 
@@ -205,15 +215,34 @@ namespace RdpManager
         // jedynym źródłem prawdy. Każda mutacja utrwala od razu (PersistColl → Put + CollectionChanged),
         // bo moduł przebudowuje się z pliku rest.json.
 
-        /// <summary>Przełącza warsztat na żądanie o danym Id (klik w module). Edycję bieżącego zachowuje w pamięci.</summary>
-        public void SelectRequestById(string id)
+        /// <summary>Przełącza warsztat na żądanie o danym Id (klik w module) — dokłada/uaktywnia kartę.</summary>
+        public void SelectRequestById(string id) => OpenTab(id);
+
+        // Uaktywnia żądanie po Id: dokłada kartę, jeśli nie otwarta, ładuje do warsztatu i odświeża pasek kart.
+        // Edycję poprzedniego żądania zachowuje w pamięci (CaptureCurrent); ponowny klik aktywnego nie przeładowuje.
+        private void OpenTab(string id)
         {
-            if (string.IsNullOrEmpty(id)) return;
             var req = _coll.Requests.FirstOrDefault(r => r.Id == id);
-            if (req == null || req == _req) return;   // ponowny klik tego samego nie może cofnąć edycji z pól
-            CaptureCurrent();
-            _req = req;
-            LoadIntoUi(req);
+            if (req == null) return;
+            if (!_openReqs.Contains(id)) _openReqs.Add(id);
+            if (req != _req) { CaptureCurrent(); _req = req; LoadIntoUi(req); }
+            RebuildReqTabs();
+        }
+
+        // Zamyka kartę żądania (× na karcie). Ostatniej nie zamyka (warsztat zawsze coś pokazuje).
+        private void CloseTab(string id)
+        {
+            int idx = _openReqs.IndexOf(id);
+            if (idx < 0) return;
+            if (_openReqs.Count == 1) return;   // zostaw min. jedną kartę
+            _openReqs.RemoveAt(idx);
+            if (_req?.Id == id)   // zamknięto aktywną → uaktywnij sąsiednią
+            {
+                string nextId = _openReqs[Math.Min(idx, _openReqs.Count - 1)];
+                var next = _coll.Requests.FirstOrDefault(r => r.Id == nextId);
+                if (next != null) { CaptureCurrent(); _req = next; LoadIntoUi(next); }
+            }
+            RebuildReqTabs();
         }
 
         /// <summary>Nowe żądanie w folderze („" = korzeń kolekcji); warsztat przełącza się na nie.</summary>
@@ -222,8 +251,10 @@ namespace RdpManager
             CaptureCurrent();
             var req = new RestRequest { Name = UniqueName(L("S.rest.newreq")), Url = _coll.BaseUrl, FolderId = folderId ?? "" };
             _coll.Requests.Add(req);
+            _openReqs.Add(req.Id);
             _req = req;
             LoadIntoUi(req);
+            RebuildReqTabs();
             PersistColl();
         }
 
@@ -240,7 +271,7 @@ namespace RdpManager
             var r = _coll.Requests.FirstOrDefault(x => x.Id == id);
             if (r == null || string.IsNullOrWhiteSpace(name)) return;
             r.Name = name.Trim();
-            if (r == _req) ReqTitle.Text = r.Name;
+            RebuildReqTabs();   // etykieta karty (jeśli otwarta) odzwierciedla nową nazwę
             PersistColl();
         }
 
@@ -271,12 +302,21 @@ namespace RdpManager
         }
 
         // Kolekcja nigdy nie zostaje pusta (warsztat zawsze ma co edytować); po skasowaniu aktywnego
-        // żądania warsztat przeskakuje na pierwsze z pozostałych.
+        // żądania (albo gdy nie ma już otwartych kart) warsztat przeskakuje na inne żądanie.
         private void EnsureNonEmptyAndReload(bool removedActive)
         {
             if (_coll.Requests.Count == 0)
                 _coll.Requests.Add(new RestRequest { Name = "Request 1", Url = _coll.BaseUrl });
-            if (removedActive) { _req = _coll.Requests[0]; LoadIntoUi(_req); }
+            // Karty skasowanych żądań usunięto w DeleteRequest; upewnij się, że warsztat ma aktywną, otwartą kartę.
+            if (removedActive || _openReqs.Count == 0)
+            {
+                var next = _openReqs.Select(id => _coll.Requests.FirstOrDefault(r => r.Id == id)).FirstOrDefault(r => r != null)
+                           ?? _coll.Requests[0];
+                if (!_openReqs.Contains(next.Id)) _openReqs.Add(next.Id);
+                _req = next;
+                LoadIntoUi(_req);
+            }
+            RebuildReqTabs();
             PersistColl();
         }
 
@@ -310,6 +350,51 @@ namespace RdpManager
         {
             CredentialStore.Delete(r.AuthCredTarget);
             _coll.Requests.Remove(r);
+            _openReqs.Remove(r.Id);   // zamknij ewentualną kartę usuniętego żądania
+        }
+
+        // ---------- Pasek kart otwartych żądań (mockup §REST: tabs-d) ----------
+
+        private void RebuildReqTabs()
+        {
+            RestReqTabs.Children.Clear();
+            foreach (var id in _openReqs.ToList())
+            {
+                var req = _coll.Requests.FirstOrDefault(r => r.Id == id);
+                if (req == null) { _openReqs.Remove(id); continue; }   // sprzątnij osierocone Id
+                RestReqTabs.Children.Add(BuildReqTab(req, req == _req));
+            }
+        }
+
+        private FrameworkElement BuildReqTab(RestRequest req, bool active)
+        {
+            string method = (req.Method ?? "GET").ToUpperInvariant();
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            sp.Children.Add(new Border
+            {
+                Background = MethodBadgeBg(method), CornerRadius = new CornerRadius(5),
+                Padding = new Thickness(5, 1, 5, 1), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0),
+                Child = new TextBlock { Text = method, Foreground = MethodBrush(method), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.Bold, FontSize = 9 }
+            });
+            sp.Children.Add(new TextBlock { Text = req.Name, Foreground = active ? Res("TextPrim") : Res("TextSec"),
+                VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 150 });
+            var close = new Wpf.Ui.Controls.SymbolIcon
+            {
+                Symbol = Wpf.Ui.Controls.SymbolRegular.Dismiss12, FontSize = 11, Foreground = Res("TextTer"),
+                Margin = new Thickness(8, 0, 0, 0), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center
+            };
+            close.MouseLeftButtonUp += (s, e) => { e.Handled = true; CloseTab(req.Id); };
+            sp.Children.Add(close);
+
+            var bd = new Border
+            {
+                Height = 28, Padding = new Thickness(10, 0, 8, 0), Margin = new Thickness(0, 0, 4, 0),
+                CornerRadius = new CornerRadius(8), Cursor = Cursors.Hand, Child = sp,
+                Background = active ? Res("Panel") : Brushes.Transparent,
+                BorderThickness = new Thickness(1), BorderBrush = active ? Res("Border") : Brushes.Transparent
+            };
+            bd.MouseLeftButtonUp += (s, e) => OpenTab(req.Id);
+            return bd;
         }
 
         private string UniqueName(string baseName)
@@ -344,7 +429,6 @@ namespace RdpManager
         private void LoadIntoUi(RestRequest req)
         {
             _loading = true;
-            ReqTitle.Text = req.Name;   // bez drzewa w konsoli nagłówek mówi, KTÓRE żądanie jest edytowane
             SelectMethod(req.Method);
             UrlBox.Text = req.Url;
             _params = new ObservableCollection<RestKeyValue>(req.QueryParams);
@@ -614,7 +698,12 @@ namespace RdpManager
         // ---------- Metoda / typ treści / auth ----------
 
         private void Method_Changed(object sender, SelectionChangedEventArgs e)
-            => MethodCombo.Foreground = MethodBrush(SelectedMethod());
+        {
+            MethodCombo.Foreground = MethodBrush(SelectedMethod());
+            if (_loading || _req == null) return;
+            _req.Method = SelectedMethod();   // badge metody na karcie ma być aktualny od razu
+            RebuildReqTabs();
+        }
 
         private void Auth_Changed(object sender, SelectionChangedEventArgs e) => UpdateAuthPanels();
 
