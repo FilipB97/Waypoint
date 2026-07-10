@@ -158,7 +158,7 @@ namespace RdpManager
             if (_envVars == null)
             {
                 _envVars = new Dictionary<string, string>();
-                var env = EnvironmentStore.Load().FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
+                var env = EnvironmentStore.Load().FirstOrDefault(x => x.Id == EnvironmentStore.GetActiveId());
                 if (env != null)
                     foreach (var v in env.Variables)
                         if (!string.IsNullOrWhiteSpace(v.Key)) _envVars[v.Key] = v.Value ?? "";

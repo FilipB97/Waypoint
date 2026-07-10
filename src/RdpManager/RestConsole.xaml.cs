@@ -33,11 +33,11 @@ namespace RdpManager
         private string _rawBody;
         // Zmienne ustawione przez skrypt gdy BRAK aktywnego środowiska (sesyjne; z env-em skrypt pisze do env).
         private readonly Dictionary<string, string> _scriptVars = new Dictionary<string, string>();
-        // Środowiska są GLOBALNE (EnvironmentStore) — wspólne dla wszystkich kolekcji. Kolekcja tylko
-        // wskazuje wybrane przez _coll.ActiveEnvironmentId. Trzymane w pamięci na czas życia konsoli.
+        // Środowiska są GLOBALNE (EnvironmentStore) — wspólne dla wszystkich kolekcji; aktywne wybiera chip
+        // w sidebarze (EnvironmentStore.GetActiveId). Trzymane w pamięci na czas życia konsoli, odświeżane
+        // przez RefreshActiveEnv() gdy sidebar zmieni środowisko.
         private List<RestEnvironment> _envs;
         private bool _loading;
-        private bool _envLoading;
 
         private static readonly string[] Methods = { "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS" };
 
@@ -69,11 +69,7 @@ namespace RdpManager
             _openReqs.Add(_req.Id);
             LoadIntoUi(_req);
             RebuildReqTabs();
-            _envs = EnvironmentStore.Load();   // środowiska globalne (wspólne dla wszystkich kolekcji)
-            BuildEnvCombo();
-            // Środowiska mogły przybyć PO otwarciu konsoli (import Postmana, inna konsola) — odśwież listę
-            // przy każdym rozwinięciu (BuildEnvCombo przywraca wybór z _coll.ActiveEnvironmentId).
-            EnvCombo.DropDownOpened += (s, e) => { _envs = EnvironmentStore.Load(); BuildEnvCombo(); };
+            _envs = EnvironmentStore.Load();   // środowiska globalne; aktywne wybiera chip w sidebarze modułu REST
             _history = new ObservableCollection<RestHistoryEntry>(_coll.History);
             HistoryList.ItemsSource = _history;
             UrlBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) Send_Click(s, e); };
@@ -123,41 +119,15 @@ namespace RdpManager
 
         // ---------- Środowiska ({{zmienne}}) ----------
 
-        private void BuildEnvCombo()
+        // Środowisko jest GLOBALNE dla modułu REST (selektor-chip w sidebarze, jak w Postmanie) —
+        // konsola tylko je czyta (EnvironmentStore.GetActiveId). Sidebar po zmianie woła RefreshActiveEnv().
+        public void RefreshActiveEnv()
         {
-            _envLoading = true;
-            EnvCombo.Items.Clear();
-            EnvCombo.Items.Add(new ComboBoxItem { Content = L("S.rest.env.none"), Tag = "" });
-            foreach (var env in _envs)
-                EnvCombo.Items.Add(new ComboBoxItem { Content = env.Name, Tag = env.Id });
-            int sel = 0;
-            for (int i = 1; i < EnvCombo.Items.Count; i++)
-                if ((EnvCombo.Items[i] as ComboBoxItem)?.Tag as string == _coll.ActiveEnvironmentId) { sel = i; break; }
-            EnvCombo.SelectedIndex = sel;
-            _envLoading = false;
-        }
-
-        private void EnvCombo_Changed(object sender, SelectionChangedEventArgs e)
-        {
-            if (_envLoading) return;
-            _coll.ActiveEnvironmentId = (EnvCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
-            RecolorAllVars();   // inne środowisko = inne znane zmienne → przelicz kolory pól
-        }
-
-        private void ManageEnv_Click(object sender, RoutedEventArgs e)
-        {
-            // Edytor operuje na GLOBALNYM store — po zamknięciu przeładuj listę i napraw wybór, gdy aktywne
-            // środowisko zostało usunięte. Wybór (ActiveEnvironmentId) jest per-kolekcja, więc utrwalamy kolekcję.
-            new RestEnvWindow { Owner = Window.GetWindow(this) }.ShowDialog();
             _envs = EnvironmentStore.Load();
-            if (!_envs.Any(x => x.Id == _coll.ActiveEnvironmentId)) _coll.ActiveEnvironmentId = "";
-            BuildEnvCombo();
-            CaptureCurrent();
-            RestStore.Put(_server.Id, _coll);
-            RecolorAllVars();   // zmienne mogły dojść/zniknąć w edytorze
+            RecolorAllVars();   // inne środowisko / zmienione zmienne → przelicz kolory pól {{...}}
         }
 
-        private RestEnvironment ActiveEnv() => _envs?.FirstOrDefault(x => x.Id == _coll.ActiveEnvironmentId);
+        private RestEnvironment ActiveEnv() => _envs?.FirstOrDefault(x => x.Id == EnvironmentStore.GetActiveId());
 
         // Zmienne do podstawiania {{klucz}}: aktywne środowisko + nakładka zmiennych ustawionych przez skrypt.
         private IReadOnlyDictionary<string, string> Vars()
