@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,12 +37,11 @@ namespace RdpManager
         // Jak wiersz odzwierciedla stan „aktywny" — różni się między stylami (Domyślny: obrys+tło,
         // Minimal: pasek koloru→akcent+tło). UpdateActiveRows woła te akcje zamiast znać elementy.
         private readonly Dictionary<ServerInfo, Action<bool>> _serverActivate = new Dictionary<ServerInfo, Action<bool>>();
-        private readonly Dictionary<ServerInfo, Ellipse> _serverStatusDot = new Dictionary<ServerInfo, Ellipse>();
+        // internal: aktualizowane też przez Services/ReachabilityService (PR 2 refaktoru); przejdą do
+        // ServerTreeController w PR 3 (wtedy zastąpi je szew SetRowStatus).
+        internal readonly Dictionary<ServerInfo, Ellipse> _serverStatusDot = new Dictionary<ServerInfo, Ellipse>();
         // Etykieta opóźnienia (ms) w wierszu — aktualizowana na żywo po sondzie osiągalności (gdy włączone).
-        private readonly Dictionary<ServerInfo, TextBlock> _serverLatency = new Dictionary<ServerInfo, TextBlock>();
-        // Próbki średniego opóźnienia (ms) z kolejnych cykli sondowania — źródło wykresu „opóźnienie" na pulpicie.
-        // W pamięci (bez utrwalania), przycinane do ostatnich N; resetują się przy restarcie.
-        private readonly List<double> _latencySamples = new List<double>();
+        internal readonly Dictionary<ServerInfo, TextBlock> _serverLatency = new Dictionary<ServerInfo, TextBlock>();
         // Aktywny filtr protokołu z paska chipów (null = „Wszystkie"). Stan sesyjny — po restarcie zawsze „Wszystkie",
         // żeby użytkownik nie zobaczył „znikniętych" serwerów przez zapamiętany filtr (świadome odstępstwo od §4.2).
         private RemoteProtocol? _protocolFilter;
@@ -54,14 +52,14 @@ namespace RdpManager
         // Grupy kart (stosy jak w Vivaldi). Przynależność po Id serwera (w TabGroup.ServerIds), więc
         // grupy zapisują się do ustawień i wracają po restarcie. Runtime-lista niżej ładowana z _settings.
         private readonly List<TabGroup> _tabGroups = new List<TabGroup>();
-        private readonly MainViewModel _vm = new MainViewModel();
+        // internal: czytany też przez serwisy wyniesione z tej klasy (Services/ReachabilityService — PR 2 refaktoru).
+        internal readonly MainViewModel _vm = new MainViewModel();
 
         // internal: czytany też przez serwisy wyniesione z tej klasy (Services/UpdateService — PR 1 refaktoru).
         internal AppSettings _settings = new AppSettings();
 
-        // Sprawdzanie osiągalności serwerów w tle (TCP na porcie RDP) -> kropki statusu.
-        private DispatcherTimer _reachTimer;
-        private bool _reachBusy;
+        // Osiągalność serwerów w tle (sonda TCP → kropki statusu) — logika w Services/ReachabilityService (PR 2).
+        private Services.ReachabilityService _reach;
 
         // Stabilne, odrębne kolory awatarów dla dowolnych (także własnych) grup.
         private readonly Dictionary<string, LinearGradientBrush> _avatarCache = new Dictionary<string, LinearGradientBrush>();
@@ -132,7 +130,7 @@ namespace RdpManager
             _settings = SettingsStore.Load();
             _settings = SettingsStore.ConsumeUpdateSnapshot(_settings);   // po aktualizacji: przywróć stan sprzed update (migawka)
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
-            _probeTimeoutMs = Math.Clamp(_settings.ProbeTimeoutSeconds, 1, 60) * 1000;
+            _reach = new Services.ReachabilityService(this);   // sonda osiągalności (limit czasu ustawia w Start()/ApplySettings)
             // Serwis aktualizacji dostaje wersję sprzed tego startu, ZANIM niżej nadpiszemy LastRunVersion.
             _update = new Services.UpdateService(this, _settings.LastRunVersion ?? "");
             var curVer = Services.UpdateService.CurrentVersion().ToString();
@@ -174,12 +172,7 @@ namespace RdpManager
             UpdateToolbarEnabled();
             UpdateToolbarMode();
 
-            _reachTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
-            {
-                Interval = TimeSpan.FromSeconds(Math.Clamp(_settings.ReachabilityIntervalSec, 5, 3600))
-            };
-            _reachTimer.Tick += (s, a) => CheckReachabilityAsync();
-            if (_settings.ReachabilityEnabled) { _reachTimer.Start(); CheckReachabilityAsync(); }
+            _reach.Start();   // sonda osiągalności: interwał + limit czasu z ustawień, pierwsza sonda gdy włączone
 
             ShowView("Sessions");
             Core.KnownHosts.Load(SettingsStore.Dir);   // wykryj/oddziel uszkodzony known_hosts.json ZANIM opróżnimy notki
@@ -1386,21 +1379,11 @@ namespace RdpManager
         private void ApplySettings()
         {
             ConnectionLog.Enabled = _settings.ConnectionLogEnabled;
-            _probeTimeoutMs = Math.Clamp(_settings.ProbeTimeoutSeconds, 1, 60) * 1000;
             ApplyUiScale(_settings.UiScale);
             // Clampy także tutaj — ustawienia mogą przyjść z importu profilu (plik zewnętrzny).
             _fsBarDelay.Interval = TimeSpan.FromMilliseconds(Math.Clamp(_settings.FullscreenBarDelayMs, 0, 3000));
             if (_focusPeekDelay != null) _focusPeekDelay.Interval = _fsBarDelay.Interval;
-            _reachTimer.Interval = TimeSpan.FromSeconds(Math.Clamp(_settings.ReachabilityIntervalSec, 5, 3600));
-            if (_settings.ReachabilityEnabled)
-            {
-                if (!_reachTimer.IsEnabled) _reachTimer.Start();
-                CheckReachabilityAsync();
-            }
-            else
-            {
-                _reachTimer.Stop();
-            }
+            _reach?.ApplySettings();   // limit czasu sondy + interwał + wł/wył cyklu wg ustawień
 
             // Cykliczne sprawdzanie aktualizacji wg tego samego przełącznika co start.
             _update?.ApplyCheckUpdatesSetting();
@@ -1705,8 +1688,9 @@ namespace RdpManager
         // rysowane na Canvasie przy każdej zmianie rozmiaru (rozciąga się na szerokość karty jak w mockupie).
         private FrameworkElement MakeLatencyChart()
         {
-            if (_latencySamples.Count < 2) return ChartHint(L("S.dash.nolatency"));
-            var samples = _latencySamples.ToArray();
+            var latencySamples = _reach?.LatencySamples;
+            if (latencySamples == null || latencySamples.Count < 2) return ChartHint(L("S.dash.nolatency"));
+            var samples = latencySamples.ToArray();
             var acc = Col("Accent", Color.FromRgb(0x4C, 0x86, 0xFF));
 
             var area = new Polygon { Fill = new SolidColorBrush(Color.FromArgb(38, acc.R, acc.G, acc.B)) };
@@ -5694,7 +5678,8 @@ namespace RdpManager
             return h;
         }
 
-        private Brush StatusBrush(ServerStatus status)
+        // internal: wołany też przez Services/ReachabilityService (kolor kropki statusu po sondzie).
+        internal Brush StatusBrush(ServerStatus status)
         {
             switch (status)
             {
@@ -5715,125 +5700,15 @@ namespace RdpManager
             }
         }
 
-        // ---------- Osiągalność serwerów (kropki statusu w drzewie) ----------
+        // ---------- Osiągalność serwerów (logika w Services/ReachabilityService — PR 2 refaktoru) ----------
+        // Cienkie shimy: wołane z wielu miejsc (dodanie/edycja/usunięcie serwera, WOL/diagnoza z menu),
+        // więc delegują do serwisu bez zmiany tych wywołań.
 
-        private async void CheckReachabilityAsync()
-        {
-            if (_reachBusy) return;
-            _reachBusy = true;
-            try
-            {
-                var servers = _vm.Servers.ToList();
-                var results = await Task.WhenAll(servers.Select(async srv =>
-                {
-                    // Serial (COM), WWW i REST (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status/opóźnienie.
-                    var r = srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http || srv.Protocol == RemoteProtocol.Rest
-                        ? (srv.Status, srv.LatencyMs) : await ProbeAsync(srv.Host, srv.Port);
-                    return new KeyValuePair<ServerInfo, (ServerStatus status, int rttMs)>(srv, r);
-                }));
+        private void CheckReachabilityAsync() => _reach?.CheckNow();
 
-                foreach (var kv in results)
-                {
-                    kv.Key.Status = kv.Value.status;
-                    kv.Key.LatencyMs = kv.Value.rttMs;
-                    if (_serverStatusDot.TryGetValue(kv.Key, out var dot))
-                        dot.Fill = StatusBrush(kv.Value.status);
-                    if (_serverLatency.TryGetValue(kv.Key, out var lat))
-                        lat.Text = RdpUtils.FormatLatency(kv.Value.rttMs);
-                }
-                // Zapamiętaj średnie opóźnienie osiągalnych hostów z tego cyklu — do wykresu na pulpicie.
-                var reachable = results.Where(kv => kv.Value.rttMs >= 0).Select(kv => (double)kv.Value.rttMs).ToList();
-                if (reachable.Count > 0)
-                {
-                    _latencySamples.Add(reachable.Average());
-                    if (_latencySamples.Count > 48) _latencySamples.RemoveAt(0);
-                }
-                _vm.RaiseCounts();   // odśwież liczniki pulpitu (Osiągalne)
-            }
-            catch
-            {
-                // problemy sieciowe nie mogą wywrócić UI
-            }
-            finally
-            {
-                _reachBusy = false;
-            }
-        }
+        private void WakeServer(ServerInfo server) => _reach?.WakeServer(server);
 
-        // Wake-on-LAN: magic packet broadcastem na podstawie MAC z ustawień serwera.
-        private void WakeServer(ServerInfo server)
-        {
-            if (!Core.WakeOnLan.TryParseMac(server.MacAddress, out var mac))
-            {
-                MessageBox.Show(string.Format(L("S.se.mac.bad"), server.MacAddress),
-                    L("S.m.wol"), MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            try
-            {
-                Core.WakeOnLan.Send(mac);
-                SetStatus(string.Format(L("S.st.wolsent"), server.Name), StatusKind.Ok);
-            }
-            catch (Exception ex)
-            {
-                SetStatus(string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
-            }
-        }
-
-        private async void DiagnoseServer(ServerInfo server)
-        {
-            string host = server.Host;
-            int port = server.Port;
-            if (string.IsNullOrWhiteSpace(host))
-            {
-                MessageBox.Show(L("S.msg.diag.nohost"), L("S.msg.diag.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            SetStatus(string.Format(L("S.st.diagnosing"), host, port), StatusKind.Connecting);
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            var probe = await ProbeAsync(host, port);
-            sw.Stop();
-            bool ok = probe.status == ServerStatus.Online;
-            long elapsed = ok && probe.rttMs >= 0 ? probe.rttMs : sw.ElapsedMilliseconds;
-
-            string msg = RdpUtils.FormatDiagnostics(host, port, ok, elapsed,
-                L("S.diag.open"), L("S.diag.closed"));
-            SetStatus(msg, ok ? StatusKind.Ok : StatusKind.Error);
-            MessageBox.Show(msg, string.Format(L("S.msg.diag.titlefmt"), server.Name ?? host),
-                MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
-        }
-
-        // Limit jednoczesnych sond — setki serwerów naraz zalewałyby pulę wątków/gniazd (A4 z przeglądu).
-        private static readonly SemaphoreSlim ProbeConcurrency = new SemaphoreSlim(32);
-
-        // Zwraca status oraz zmierzone opóźnienie połączenia TCP (ms); rttMs = -1 gdy nieosiągalny/nieznany.
-        // Limit czasu sondy (ms) — z Ustawień → Połączenie (ProbeTimeoutSeconds). Domyślnie 1500 do czasu
-        // wczytania ustawień; aktualizowany w ApplySettings/Window_Loaded.
-        private static int _probeTimeoutMs = 1500;
-
-        private static async Task<(ServerStatus status, int rttMs)> ProbeAsync(string host, int port)
-        {
-            if (string.IsNullOrWhiteSpace(host)) return (ServerStatus.Offline, -1);
-            await ProbeConcurrency.WaitAsync();
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            try
-            {
-                using (var c = new TcpClient())
-                {
-                    // Task.WaitAsync (nie blokujący wątek WaitOne) — Dispose przy timeout/wyjątku ubija
-                    // wciąż-trwające ConnectAsync pod spodem (zamknięcie gniazda przerywa próbę połączenia).
-                    await c.ConnectAsync(host, port).WaitAsync(TimeSpan.FromMilliseconds(_probeTimeoutMs));
-                    sw.Stop();
-                    return c.Connected ? (ServerStatus.Online, (int)sw.ElapsedMilliseconds) : (ServerStatus.Offline, -1);
-                }
-            }
-            catch
-            {
-                return (ServerStatus.Offline, -1);   // timeout (TimeoutException) albo błąd połączenia
-            }
-            finally { ProbeConcurrency.Release(); }
-        }
+        private void DiagnoseServer(ServerInfo server) => _reach?.DiagnoseServer(server);
 
         private static string DescribeDisconnect(AxMsRdpClient11NotSafeForScripting rdp, int reason)
         {
@@ -5851,7 +5726,8 @@ namespace RdpManager
             if (s == _active) SetStatus(text, kind);
         }
 
-        private void SetStatus(string text, StatusKind kind = StatusKind.Info)
+        // internal: wołany też przez Services/ReachabilityService (status WOL/diagnozy).
+        internal void SetStatus(string text, StatusKind kind = StatusKind.Info)
         {
             StatusText.Text = text;
             StatusText.ToolTip = (string.IsNullOrEmpty(text) || text == "—") ? null : text;
