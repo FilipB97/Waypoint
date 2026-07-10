@@ -53,6 +53,11 @@
             <EventSetter Event="ToolTipOpening" Handler="ValuePreview_ToolTipOpening"/>
             <!-- Kolor zmiennych: {{znane}} → niebieski, {{brakujące}} → czerwony (live przy pisaniu). -->
             <EventSetter Event="TextChanged" Handler="VarCell_TextChanged"/>
+            <!-- Koloruj też, gdy komórka się ZAŁADUJE: TabControl realizuje wiersze dopiero przy wejściu
+                 na zakładkę, więc RecolorAllVars (leci raz, na aktywnej zakładce) pomijał Params/Nagłówki/pola
+                 na niewidocznych zakładkach — kolory „znikały i nagle się pojawiały". Loaded odpala też po
+                 zmianie zakładki (treść jest przeładowywana), więc łapie też zmianę środowiska. -->
+            <EventSetter Event="Loaded" Handler="VarCell_Loaded"/>
         </Style>
 
         <!-- Wielolinijkowy edytor kodu (treść żądania / skrypty / wynik). Własny, STANDARDOWY szablon

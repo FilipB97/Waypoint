@@ -467,6 +467,14 @@ namespace RdpManager
             if (sender is TextBox tb) ColorizeVars(tb);
         }
 
+        // Komórka pojawiła się w drzewie (realizacja wiersza / wejście na zakładkę) — pokoloruj od razu.
+        // Bez tego kolory zmiennych zależały od tego, czy zdążył je złapać jednorazowy RecolorAllVars
+        // (który widzi tylko aktywną zakładkę — TabControl nie realizuje wierszy niewidocznych zakładek).
+        private void VarCell_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox tb) ColorizeVars(tb);
+        }
+
         // Pole bez zmiennych wraca do koloru ze stylu (ClearValue); ze zmiennymi — całe pole sygnalizuje
         // stan: wszystkie znane → AccentBright, jakakolwiek nieznana → Danger. Wartość pokazuje tooltip.
         private void ColorizeVars(TextBox tb)
