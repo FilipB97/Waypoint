@@ -145,10 +145,24 @@ namespace RdpManager.Services
             finally { _updateChecking = false; }
         }
 
+        // Dozwolone hosty pobrania aktualizacji: GitHub i jego CDN assetów. Adres bierzemy z JSON-a wydania,
+        // więc przed pobraniem i uruchomieniem pliku wymuszamy https + zaufany host. Przy niepodpisanym
+        // buildzie werdykt CodeSign to CurrentUnsigned („akceptowalny"), więc to jedyna twarda kontrola
+        // POCHODZENIA pliku — bez niej podmieniony adres (np. http:// albo obcy host) zostałby pobrany.
+        internal static bool IsTrustedDownloadUrl(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var u)) return false;
+            if (u.Scheme != Uri.UriSchemeHttps) return false;
+            string h = u.Host.ToLowerInvariant();
+            return h == "github.com" || h.EndsWith(".github.com", StringComparison.Ordinal)
+                || h == "githubusercontent.com" || h.EndsWith(".githubusercontent.com", StringComparison.Ordinal);
+        }
+
         internal async void Update_Click(object sender, RoutedEventArgs e)
         {
-            // Brak assetu .exe w release → tak jak dawniej: otwórz stronę wydania w przeglądarce.
-            if (_update == null || string.IsNullOrEmpty(_update.ExeUrl))
+            // Brak assetu .exe w release, albo adres spoza zaufanych hostów GitHuba → nie pobieramy w apce;
+            // otwórz stronę wydania w przeglądarce (użytkownik pobierze ręcznie z zaufanego źródła).
+            if (_update == null || string.IsNullOrEmpty(_update.ExeUrl) || !IsTrustedDownloadUrl(_update.ExeUrl))
             {
                 OpenReleasePage();
                 return;

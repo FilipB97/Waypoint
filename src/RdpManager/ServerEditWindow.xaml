@@ -255,7 +255,7 @@
         <Border Grid.Row="2" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource DialogButtonRowMargin}">
                 <ui:Button Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="96" IsCancel="True"/>
-                <ui:Button Content="{DynamicResource S.save}" Appearance="Primary" Click="Save_Click" MinWidth="96"/>
+                <ui:Button Content="{DynamicResource S.save}" Appearance="Primary" Click="Save_Click" MinWidth="96" IsDefault="True"/>
             </StackPanel>
         </Border>
     </Grid>

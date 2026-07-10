@@ -22,20 +22,43 @@ namespace RdpManager
         public static Dictionary<string, RestCollection> Load(string dir)
         {
             var path = FilePath(dir);
+            var main = ReadOrNull(path, preserveCorrupt: true);
+
+            // Self-heal jak w EnvironmentStore/CredentialProfileRepository: plik cofnięty z zewnątrz (.bak
+            // NOWSZY niż plik — np. rollback AV) przywracamy tylko, gdy .bak ma NIE MNIEJ kolekcji — nie
+            // wskrzeszamy świadomie usuniętych ani nie nadpisujemy dobrego pliku uboższą kopią. Chroni też
+            // przed utratą, gdy po uszkodzeniu pliku kolejny Save skopiowałby uszkodzony plik na dobry .bak.
+            if (AtomicFile.BackupLooksNewer(path))
+            {
+                var bak = ReadOrNull(path + ".bak", preserveCorrupt: false);
+                if (bak != null && (main == null || bak.Count >= main.Count))
+                {
+                    try { File.Copy(path + ".bak", path, overwrite: true); } catch { /* best-effort */ }
+                    return bak;
+                }
+            }
+            return main ?? new Dictionary<string, RestCollection>();
+        }
+
+        private static Dictionary<string, RestCollection> ReadOrNull(string p, bool preserveCorrupt)
+        {
             try
             {
-                if (File.Exists(path))
+                if (File.Exists(p))
                 {
-                    var data = JsonSerializer.Deserialize<Dictionary<string, RestCollection>>(File.ReadAllText(path));
+                    var data = JsonSerializer.Deserialize<Dictionary<string, RestCollection>>(File.ReadAllText(p));
                     if (data != null) return data;
                 }
             }
             catch
             {
-                AtomicFile.PreserveCorrupt(path);   // realne kolekcje w uszkodzonym pliku — zachowaj kopię
-                HealthNotices.Add(HealthNoticeKind.FileQuarantined, Path.GetFileName(path));
+                if (preserveCorrupt)
+                {
+                    AtomicFile.PreserveCorrupt(p);   // realne kolekcje w uszkodzonym pliku — zachowaj kopię
+                    HealthNotices.Add(HealthNoticeKind.FileQuarantined, Path.GetFileName(p));
+                }
             }
-            return new Dictionary<string, RestCollection>();
+            return null;
         }
 
         public static void Save(Dictionary<string, RestCollection> data) => Save(data, SettingsStore.Dir);

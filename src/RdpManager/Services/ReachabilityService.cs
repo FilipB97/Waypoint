@@ -162,10 +162,11 @@ namespace RdpManager.Services
             try
             {
                 using (var c = new TcpClient())
+                using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(_probeTimeoutMs)))
                 {
-                    // Task.WaitAsync (nie blokujący wątek WaitOne) — Dispose przy timeout/wyjątku ubija
-                    // wciąż-trwające ConnectAsync pod spodem (zamknięcie gniazda przerywa próbę połączenia).
-                    await c.ConnectAsync(host, port).WaitAsync(TimeSpan.FromMilliseconds(_probeTimeoutMs));
+                    // Token anuluje SAMO ConnectAsync przy timeout — nie zostaje porzucone, nieobserwowane
+                    // zadanie łączenia (wcześniej WaitAsync porzucał je, a jego późniejszy wyjątek był nieobserwowany).
+                    await c.ConnectAsync(host, port, cts.Token);
                     sw.Stop();
                     return c.Connected ? (ServerStatus.Online, (int)sw.ElapsedMilliseconds) : (ServerStatus.Offline, -1);
                 }

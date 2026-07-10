@@ -860,18 +860,24 @@ namespace RdpManager
             return new SolidColorBrush(Color.FromArgb(0x26, c.R, c.G, c.B));
         }
 
+        // Kolory JSON z PALETY (per-motyw) — jak MethodBrush. Wcześniej zaszyte odcienie ciemne dawały
+        // bardzo niski kontrast na jasnym tle Panel (podgląd odpowiedzi REST był nieczytelny w jasnym motywie).
         private Brush JsonBrush(RestJsonTok k)
         {
             switch (k)
             {
-                case RestJsonTok.Key: return new SolidColorBrush(Color.FromRgb(0x7B, 0xA6, 0xFF));
-                case RestJsonTok.Str: return new SolidColorBrush(Color.FromRgb(0x4B, 0xD6, 0xA0));
-                case RestJsonTok.Num: return new SolidColorBrush(Color.FromRgb(0xF0, 0xB4, 0x5F));
-                case RestJsonTok.Keyword: return new SolidColorBrush(Color.FromRgb(0xF0, 0xB4, 0x5F));
+                case RestJsonTok.Key: return PaletteBrush("MethodPost", 0x7B, 0xA6, 0xFF);
+                case RestJsonTok.Str: return PaletteBrush("MethodGet", 0x4B, 0xD6, 0xA0);
+                case RestJsonTok.Num: return PaletteBrush("MethodPut", 0xF0, 0xB4, 0x5F);
+                case RestJsonTok.Keyword: return PaletteBrush("MethodPut", 0xF0, 0xB4, 0x5F);
                 case RestJsonTok.Punct: return (Brush)TryFindResource("TextTer") ?? Brushes.Gray;
                 default: return (Brush)TryFindResource("TextPrim") ?? Brushes.White;
             }
         }
+
+        // Pędzel z palety (rozwiązywany per-motyw) z awaryjnym kolorem, gdy zasób nieobecny.
+        private Brush PaletteBrush(string key, byte r, byte g, byte b)
+            => (TryFindResource(key) as Brush) ?? new SolidColorBrush(Color.FromRgb(r, g, b));
 
         // Wstawia treść odpowiedzi do RichTextBox: JSON kolorowany tokenami, reszta jednym kolorem.
         private void SetResponseBody(string text, bool allowColor)

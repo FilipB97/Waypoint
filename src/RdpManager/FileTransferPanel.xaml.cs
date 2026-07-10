@@ -173,7 +173,9 @@ namespace RdpManager
         /// Pyta raz o nadpisanie, jeśli cel już istnieje lokalnie.</summary>
         public async Task<bool> TransferOutToLocalAsync(string remoteFull, string remoteName, bool isDir, string localDir)
         {
-            string dest = SafeCombine(localDir.Replace('/', '\\'), remoteName);
+            string dest;
+            try { dest = SafeCombine(localDir.Replace('/', '\\'), remoteName); }
+            catch (Exception ex) { SetStatus(ex.Message); return false; }   // niebezpieczna nazwa ze zdalnego serwera → status, nie nieobsłużony wyjątek
             if (System.IO.Directory.Exists(dest) || System.IO.File.Exists(dest))
             {
                 if (AskOverwrite(remoteName) != OverwriteChoice.Overwrite) return false;
@@ -186,6 +188,17 @@ namespace RdpManager
 
         // ---------- Rekurencyjny transfer drzew (plik lub katalog); anulowanie + postęp bajtowy ----------
 
+        // Zabezpieczenie przed cyklem dowiązań (symlink/junction): pomijamy lokalne katalogi-reparse-pointy
+        // i ograniczamy głębokość rekurencji (także zdalnie, gdzie dowiązania trudniej wykryć). Bez tego pętla
+        // dowiązań kończyła się StackOverflowException, którego NIE łapie DispatcherUnhandledException (twardy crash).
+        private const int MaxTreeDepth = 100;
+
+        private static bool IsReparsePoint(string path)
+        {
+            try { return (System.IO.File.GetAttributes(path) & System.IO.FileAttributes.ReparsePoint) != 0; }
+            catch { return false; }
+        }
+
         /// <summary>Wysyła lokalny plik/katalog do remoteDir na zdalnym fs (rekurencyjnie, bez śledzenia postępu).
         /// Publiczne dla testów — TransferState jest prywatny, więc pełny wariant zostaje wewnętrzny.</summary>
         public static void UploadTree(IRemoteFs fs, string localPath, string remoteDir, CancellationToken ct)
@@ -193,16 +206,18 @@ namespace RdpManager
 
         // Wysyła lokalny plik/katalog do remoteDir na zdalnym fs; katalogi tworzy, w pliki wchodzi rekurencyjnie.
         // Statyczna i bezstanowa poza jawnymi parametrami — testowalna bez UI (state/ct mogą być null/None).
-        private static void UploadTree(IRemoteFs fs, string localPath, string remoteDir, CancellationToken ct, TransferState state)
+        private static void UploadTree(IRemoteFs fs, string localPath, string remoteDir, CancellationToken ct, TransferState state, int depth = 0)
         {
             ct.ThrowIfCancellationRequested();
+            if (depth > MaxTreeDepth) throw new System.IO.IOException(string.Format(L("S.sftp.toodeep"), MaxTreeDepth));
             string name = System.IO.Path.GetFileName(localPath.TrimEnd('/', '\\'));
             string target = remoteDir.TrimEnd('/') + "/" + name;
             if (System.IO.Directory.Exists(localPath))
             {
+                if (depth > 0 && IsReparsePoint(localPath)) return;   // nie wchodź w dowiązanie — ryzyko cyklu
                 EnsureRemoteDir(fs, target);
-                foreach (var sub in System.IO.Directory.GetDirectories(localPath)) UploadTree(fs, sub, target, ct, state);
-                foreach (var f in System.IO.Directory.GetFiles(localPath)) UploadTree(fs, f, target, ct, state);
+                foreach (var sub in System.IO.Directory.GetDirectories(localPath)) UploadTree(fs, sub, target, ct, state, depth + 1);
+                foreach (var f in System.IO.Directory.GetFiles(localPath)) UploadTree(fs, f, target, ct, state, depth + 1);
             }
             else
             {
@@ -222,14 +237,15 @@ namespace RdpManager
         // remoteName pochodzi z listingu ZDALNEGO serwera — złośliwy/skompromitowany serwer mógłby zwrócić
         // "..\..\", ścieżkę z literą dysku itp., próbując zapisać poza wybranym katalogiem ("zip-slip" /
         // path traversal). SafeCombine odrzuca takie nazwy i wymusza pozostanie wewnątrz localParentDir.
-        private static void DownloadTree(IRemoteFs fs, string remoteFull, string remoteName, bool isDir, string localParentDir, CancellationToken ct, TransferState state)
+        private static void DownloadTree(IRemoteFs fs, string remoteFull, string remoteName, bool isDir, string localParentDir, CancellationToken ct, TransferState state, int depth = 0)
         {
             ct.ThrowIfCancellationRequested();
+            if (depth > MaxTreeDepth) throw new System.IO.IOException(string.Format(L("S.sftp.toodeep"), MaxTreeDepth));
             string dest = SafeCombine(localParentDir, remoteName);
             if (isDir)
             {
                 System.IO.Directory.CreateDirectory(dest);
-                foreach (var e in fs.List(remoteFull)) DownloadTree(fs, e.FullName, e.Name, e.IsDir, dest, ct, state);
+                foreach (var e in fs.List(remoteFull)) DownloadTree(fs, e.FullName, e.Name, e.IsDir, dest, ct, state, depth + 1);
             }
             else
             {
@@ -248,12 +264,13 @@ namespace RdpManager
         }
 
         // Sumuje rozmiar CAŁEGO lokalnego poddrzewa (do paska postępu przy wysyłce) — tanie, bez sieci.
-        private static long LocalTreeSize(string path)
+        private static long LocalTreeSize(string path, int depth = 0)
         {
             if (System.IO.Directory.Exists(path))
             {
+                if (depth > MaxTreeDepth || (depth > 0 && IsReparsePoint(path))) return 0;
                 long sum = 0;
-                foreach (var d in System.IO.Directory.GetDirectories(path)) sum += LocalTreeSize(d);
+                foreach (var d in System.IO.Directory.GetDirectories(path)) sum += LocalTreeSize(d, depth + 1);
                 foreach (var f in System.IO.Directory.GetFiles(path)) { try { sum += new System.IO.FileInfo(f).Length; } catch { } }
                 return sum;
             }
@@ -262,11 +279,12 @@ namespace RdpManager
 
         // Sumuje rozmiar CAŁEGO zdalnego poddrzewa (do paska postępu przy pobieraniu) — dodatkowe listowania,
         // ale ograniczone dokładnie do drzewa, które i tak zaraz pobierzemy.
-        private static long RemoteTreeSize(IRemoteFs fs, string remoteFull, bool isDir, long knownLength)
+        private static long RemoteTreeSize(IRemoteFs fs, string remoteFull, bool isDir, long knownLength, int depth = 0)
         {
             if (!isDir) return knownLength;
+            if (depth > MaxTreeDepth) return 0;
             long sum = 0;
-            foreach (var e in fs.List(remoteFull)) sum += RemoteTreeSize(fs, e.FullName, e.IsDir, e.Length);
+            foreach (var e in fs.List(remoteFull)) sum += RemoteTreeSize(fs, e.FullName, e.IsDir, e.Length, depth + 1);
             return sum;
         }
 
@@ -350,12 +368,15 @@ namespace RdpManager
         private async Task<bool> RunTransferAsync(Func<IRemoteFs, long> computeTotal, Func<string, string> statusFormat,
             Action<IRemoteFs, CancellationToken, TransferState> transfer)
         {
+            // Już trwa operacja/transfer → zignoruj nowe żądanie (nie przerywaj bieżącego). Wcześniej ta metoda
+            // anulowała trwający transfer, a RunAsync i tak zwracał false przez _busy — czyli niszczyła bieżący
+            // transfer i porzucała nowy. Przyciski i tak są odblokowane, więc dubel-klik trafiał w tę ścieżkę.
+            if (_busy) return false;
+
             var state = new TransferState();
             state.OnFileStarted = name => Dispatcher.BeginInvoke(new Action(() => SetStatus(statusFormat(name))));
             state.OnBytesChanged = () => ReportBytesThrottled(state);
 
-            _transferCts?.Cancel();
-            _transferCts?.Dispose();
             var cts = new CancellationTokenSource();
             _transferCts = cts;
             _xferState = state;
@@ -600,7 +621,9 @@ namespace RdpManager
                 var fdlg = new Microsoft.Win32.OpenFolderDialog();
                 if (fdlg.ShowDialog() != true) return;
 
-                string dest = SafeCombine(fdlg.FolderName, r.Name);
+                string dest;
+                try { dest = SafeCombine(fdlg.FolderName, r.Name); }
+                catch (Exception ex) { SetStatus(ex.Message); return; }
                 if (System.IO.Directory.Exists(dest) || System.IO.File.Exists(dest))
                 {
                     var choice = AskOverwrite(r.Name);

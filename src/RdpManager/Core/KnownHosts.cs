@@ -34,8 +34,15 @@ namespace RdpManager.Core
             return string.Equals(known, fingerprint, StringComparison.Ordinal) ? Status.Match : Status.Mismatch;
         }
 
-        public static Dictionary<string, string> Load(string dir)
+        public static Dictionary<string, string> Load(string dir) => Load(dir, out _);
+
+        /// <summary>Jak <see cref="Load(string)"/>, ale ustawia <paramref name="storeUnreadable"/>=true, gdy plik
+        /// ISTNIEJE, lecz nie dało się go odczytać/sparsować (uszkodzony). Wołający MUSI wtedy działać
+        /// fail-closed (potraktować hosta jak ZMIANĘ klucza), a nie wracać do TOFU „nowy host" — inaczej po
+        /// uszkodzeniu magazynu zmieniony klucz (MITM) wyglądałby jak nowy i pytanie nie ostrzegłoby o ataku.</summary>
+        public static Dictionary<string, string> Load(string dir, out bool storeUnreadable)
         {
+            storeUnreadable = false;
             var path = Path.Combine(dir, "known_hosts.json");
             try
             {
@@ -45,8 +52,9 @@ namespace RdpManager.Core
             }
             catch
             {
-                // Uszkodzony plik: odłóż na bok (.corrupt) i zgłoś — zamiast po cichu skasować CAŁE zaufanie
-                // hostów (dotąd wracaliśmy do pustki, więc przy następnym łączeniu każdy klucz wyglądał jak nowy).
+                // Uszkodzony plik: odłóż na bok (.corrupt), zgłoś i zasygnalizuj wołającemu, żeby nie wracał
+                // po cichu do TOFU (dotąd zmieniony klucz po uszkodzeniu magazynu wyglądał jak „nowy host").
+                storeUnreadable = true;
                 AtomicFile.PreserveCorrupt(path);
                 HealthNotices.Add(HealthNoticeKind.FileQuarantined, Path.GetFileName(path));
             }

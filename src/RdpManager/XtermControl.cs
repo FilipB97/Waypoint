@@ -64,23 +64,34 @@ namespace RdpManager
             if (_ready != null) return await _ready.Task;
             _ready = new TaskCompletionSource<(int, int)>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            await WaitLoadedAsync();
+            try
+            {
+                await WaitLoadedAsync();
 
-            // Folder danych WebView2 w %APPDATA%\RdpManager — obok exe może być tylko-do-odczytu.
-            var env = await CoreWebView2Environment.CreateAsync(null,
-                Path.Combine(SettingsStore.Dir, "webview2"));
-            await Web.EnsureCoreWebView2Async(env);
+                // Folder danych WebView2 w %APPDATA%\RdpManager — obok exe może być tylko-do-odczytu.
+                var env = await CoreWebView2Environment.CreateAsync(null,
+                    Path.Combine(SettingsStore.Dir, "webview2"));
+                await Web.EnsureCoreWebView2Async(env);
 
-            var s = Web.CoreWebView2.Settings;
-            s.AreDefaultContextMenusEnabled = false;
-            s.AreDevToolsEnabled = false;
-            s.IsStatusBarEnabled = false;
-            s.IsZoomControlEnabled = false;
+                var s = Web.CoreWebView2.Settings;
+                s.AreDefaultContextMenusEnabled = false;
+                s.AreDevToolsEnabled = false;
+                s.IsStatusBarEnabled = false;
+                s.IsZoomControlEnabled = false;
 
-            Web.CoreWebView2.WebMessageReceived += OnWebMessage;
-            Web.CoreWebView2.NavigateToString(BuildHtml());
+                Web.CoreWebView2.WebMessageReceived += OnWebMessage;
+                Web.CoreWebView2.NavigateToString(BuildHtml());
 
-            return await _ready.Task;
+                return await _ready.Task;
+            }
+            catch
+            {
+                // Inicjalizacja padła (np. brak runtime WebView2 / zablokowany folder danych). Wyzeruj _ready,
+                // żeby ponowna próba (przycisk „Połącz ponownie") re-inicjalizowała, zamiast czekać w
+                // nieskończoność na TaskCompletionSource, który nigdy się nie ukończy.
+                _ready = null;
+                throw;
+            }
         }
 
         // WebView2 tworzy HWND dopiero po wejściu do drzewa — poczekaj na Loaded.

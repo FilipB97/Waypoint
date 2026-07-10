@@ -34,6 +34,20 @@ namespace RdpManager.Core
         public static (string Host, int Port) SplitHostPort(string address, int defaultPort)
         {
             string host = (address ?? "").Trim();
+            // IPv6 w nawiasach: "[::1]" albo "[::1]:3389" — nawiasy usuwamy, port bierzemy tylko po "]".
+            if (host.StartsWith("[", StringComparison.Ordinal))
+            {
+                int close = host.IndexOf(']');
+                if (close > 1)
+                {
+                    string inner = host.Substring(1, close - 1);
+                    string rest = host.Substring(close + 1);
+                    if (rest.StartsWith(":", StringComparison.Ordinal)
+                        && int.TryParse(rest.Substring(1), out var pp) && pp >= 1 && pp <= 65535)
+                        return (inner, pp);
+                    return (inner, defaultPort);
+                }
+            }
             int i = host.LastIndexOf(':');
             if (i > 0 && host.IndexOf(':') == i
                 && int.TryParse(host.Substring(i + 1), out var p) && p >= 1 && p <= 65535)
