@@ -5,7 +5,7 @@
         Title="" Width="680" Height="460"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize" MinWidth="560" MinHeight="360"
-        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource CanvasBrush}">
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
     <Window.Resources>
         <Style x:Key="EnvIconBtn" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
@@ -91,7 +91,7 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource CanvasBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>

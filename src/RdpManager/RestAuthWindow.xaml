@@ -5,8 +5,8 @@
         Title="" Width="680" Height="440"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize" MinWidth="560" MinHeight="360"
-        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource CanvasBrush}">
-    <Grid>
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+    <Grid Background="{DynamicResource CanvasBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
