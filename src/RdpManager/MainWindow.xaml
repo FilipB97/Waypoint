@@ -283,8 +283,10 @@
                          rzędy 0–2 (wyszukiwarka/chipy/drzewo serwerów są chowane, gdy aktywny). -->
                     <Grid x:Name="RestModule" Grid.Row="0" Grid.RowSpan="3" Visibility="Collapsed">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>   <!-- nagłówek: „Kolekcje REST" + licznik + „+" -->
+                            <RowDefinition Height="Auto"/>   <!-- szukaj żądania -->
+                            <RowDefinition Height="Auto"/>   <!-- chip środowiska -->
+                            <RowDefinition Height="*"/>      <!-- drzewo kolekcji -->
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Margin="14,14,10,8">
                             <Grid.ColumnDefinitions>
@@ -292,7 +294,7 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{DynamicResource S.rest.collection}" Foreground="{DynamicResource TextTer}"
+                            <TextBlock Text="{DynamicResource S.rest.module.title}" Foreground="{DynamicResource TextTer}"
                                        FontWeight="Bold" FontSize="{StaticResource FontCaption}" VerticalAlignment="Center"/>
                             <TextBlock x:Name="RestModuleCount" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0"
                                        Foreground="{DynamicResource TextTer}" FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontCaption}"/>
@@ -301,7 +303,31 @@
                                 <ui:SymbolIcon Symbol="Add20" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource TextSec}"/>
                             </Button>
                         </Grid>
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8,0">
+
+                        <!-- Szukaj żądania (filtruje drzewo po nazwie) -->
+                        <ui:TextBox x:Name="RestSearchBox" Grid.Row="1" Margin="12,0,10,8" PlaceholderText="{DynamicResource S.rest.searchreq}"
+                                    TextChanged="RestSearch_TextChanged">
+                            <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
+                        </ui:TextBox>
+
+                        <!-- Chip aktywnego środowiska (globalne dla modułu, jak w Postmanie) — klik = wybór/zarządzanie -->
+                        <Border x:Name="RestEnvChip" Grid.Row="2" Margin="12,0,10,10" Height="32" CornerRadius="{StaticResource RadiusSm}"
+                                Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                                Cursor="Hand" MouseLeftButtonUp="RestEnvChip_Click">
+                            <Grid Margin="10,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon Grid.Column="0" Symbol="Layer24" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock x:Name="RestEnvChipText" Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}"/>
+                                <ui:SymbolIcon Grid.Column="2" Symbol="ChevronDown16" FontSize="{StaticResource IconXs}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Padding="8,0">
                             <StackPanel x:Name="RestModuleTree"/>
                         </ScrollViewer>
                     </Grid>

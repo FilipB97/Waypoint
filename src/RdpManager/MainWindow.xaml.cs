@@ -625,11 +625,63 @@ namespace RdpManager
         // Rozwinięte węzły modułu (Id wpisu-kolekcji / Id folderu). Sesyjne; domyślnie wszystko ZWINIĘTE —
         // przy wielu kolekcjach z dziesiątkami żądań lista pozostaje kompaktowa (feedback użytkownika).
         private readonly HashSet<string> _restExpanded = new HashSet<string>();
+        private string _restSearch = "";   // filtr „Szukaj żądania…" w sidebarze modułu REST
 
         private void ToggleRestNode(string id)
         {
             if (!_restExpanded.Remove(id)) _restExpanded.Add(id);
             BuildRestModule();
+        }
+
+        private void RestSearch_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _restSearch = RestSearchBox.Text ?? "";
+            if (_restMode) BuildRestModule();
+        }
+
+        // ---------- Środowisko modułu REST (globalne, chip w sidebarze — jak w Postmanie) ----------
+
+        private void RefreshRestEnvChip()
+        {
+            if (RestEnvChipText == null) return;
+            var active = EnvironmentStore.Load().FirstOrDefault(x => x.Id == EnvironmentStore.GetActiveId());
+            RestEnvChipText.Text = L("S.rest.env.label") + ": " + (active?.Name ?? L("S.rest.env.none"));
+        }
+
+        // Klik chipa środowiska: menu wyboru aktywnego środowiska (globalne) + „Zarządzaj środowiskami".
+        private void RestEnvChip_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            var menu = new ContextMenu();
+            string activeId = EnvironmentStore.GetActiveId();
+            var none = new MenuItem { Header = L("S.rest.env.none"), IsCheckable = true, IsChecked = string.IsNullOrEmpty(activeId) };
+            none.Click += (s, a) => SetActiveEnv("");
+            menu.Items.Add(none);
+            foreach (var env in EnvironmentStore.Load())
+            {
+                string id = env.Id;
+                var mi = new MenuItem { Header = env.Name, IsCheckable = true, IsChecked = id == activeId };
+                mi.Click += (s, a) => SetActiveEnv(id);
+                menu.Items.Add(mi);
+            }
+            menu.Items.Add(new Separator());
+            var manage = new MenuItem { Header = L("S.rest.env.manage") };
+            manage.Click += (s, a) => { new RestEnvWindow { Owner = this }.ShowDialog(); RefreshOpenRestConsoles(); RefreshRestEnvChip(); };
+            menu.Items.Add(manage);
+            menu.PlacementTarget = RestEnvChip;
+            menu.IsOpen = true;
+        }
+
+        private void SetActiveEnv(string id)
+        {
+            EnvironmentStore.SetActiveId(id);
+            RefreshOpenRestConsoles();
+            RefreshRestEnvChip();
+        }
+
+        // Środowisko jest globalne — po zmianie każda otwarta konsola przelicza kolory {{zmiennych}}.
+        private void RefreshOpenRestConsoles()
+        {
+            foreach (var s in _sessions) s.Rest?.RefreshActiveEnv();
         }
 
         // Każdy wpis REST = kolekcja → foldery → żądania (dane z RestStore.For per serwer).
@@ -639,15 +691,38 @@ namespace RdpManager
         // menu z BuildRestFolderMenu/BuildRestReqMenu (nowe/zmień nazwę/usuń).
         private void BuildRestModule()
         {
+            RefreshRestEnvChip();
             RestModuleTree.Children.Clear();
             var rest = _vm.Servers.Where(s => s.Protocol == RemoteProtocol.Rest)
                                   .OrderByDescending(s => s.Pinned)   // przypięte kolekcje na górze
                                   .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            string q = (_restSearch ?? "").Trim();
+            bool searching = q.Length > 0;
             int total = 0;
             foreach (var srv in rest)
             {
                 var s = srv;
                 var coll = RestStore.For(srv.Id);
+                total += coll.Requests.Count;
+
+                if (searching)
+                {
+                    // Tryb szukania: płaska lista pasujących żądań pod nagłówkiem kolekcji (jak w Postmanie).
+                    var hits = coll.Requests
+                        .Where(r => (r.Name ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                        .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                    if (hits.Count == 0) continue;
+                    RestModuleTree.Children.Add(RestModuleRow(RestCollHeaderContent(s, true), 0, null));   // nagłówek bez zwijania
+                    foreach (var r in hits)
+                    {
+                        var rr = r;
+                        var reqRow = RestModuleRow(RestReqContent(rr), 1, () => OpenRestRequest(s, rr.Id));
+                        reqRow.ContextMenu = BuildRestReqMenu(s, rr);
+                        RestModuleTree.Children.Add(reqRow);
+                    }
+                    continue;
+                }
+
                 bool open = _restExpanded.Contains(s.Id);
                 var row = RestModuleRow(RestCollHeaderContent(s, open), 0, () => ToggleRestNode(s.Id));
                 row.ContextMenu = BuildServerContextMenu(s);
@@ -664,11 +739,13 @@ namespace RdpManager
                         RestModuleTree.Children.Add(reqRow);
                     }
                 }
-                total += coll.Requests.Count;
             }
             RestModuleCount.Text = total.ToString();
             if (rest.Count == 0)
                 RestModuleTree.Children.Add(new TextBlock { Text = L("S.rest.module.empty"), Foreground = Res("TextTer"),
+                    TextWrapping = TextWrapping.Wrap, Margin = new Thickness(10, 12, 10, 0) });
+            else if (searching && RestModuleTree.Children.Count == 0)
+                RestModuleTree.Children.Add(new TextBlock { Text = string.Format(L("S.tree.noresults"), q), Foreground = Res("TextTer"),
                     TextWrapping = TextWrapping.Wrap, Margin = new Thickness(10, 12, 10, 0) });
         }
 
@@ -5170,6 +5247,10 @@ namespace RdpManager
             for (int i = 2; names.Contains(env.Name); i++) env.Name = baseName + " " + i;
             envs.Add(env);
             EnvironmentStore.Save(envs);
+            // Uaktywnij zaimportowane środowisko globalnie — {{zmienne}} działają od razu, bez ręcznego wyboru.
+            EnvironmentStore.SetActiveId(env.Id);
+            RefreshOpenRestConsoles();
+            if (_restMode) RefreshRestEnvChip();
 
             string msg = string.Format(L("S.rest.env.imported"), env.Name);
             if (blanked.Count > 0)

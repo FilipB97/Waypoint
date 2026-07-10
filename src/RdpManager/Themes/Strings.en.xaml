@@ -11,6 +11,8 @@
     <sys:String x:Key="S.nav.rest">REST collections</sys:String>
     <sys:String x:Key="S.rest.module.empty">No REST collections. Add one with the + button above or import from Postman.</sys:String>
     <sys:String x:Key="S.rest.module.add">New REST collection</sys:String>
+    <sys:String x:Key="S.rest.module.title">REST collections</sys:String>
+    <sys:String x:Key="S.rest.searchreq">Search request…</sys:String>
 
     <!-- secret generator -->
     <sys:String x:Key="S.gen.title">Password generator</sys:String>

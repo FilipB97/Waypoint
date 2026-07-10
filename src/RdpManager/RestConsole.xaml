@@ -146,15 +146,11 @@
                 <RowDefinition Height="Auto"/>   <!-- status -->
             </Grid.RowDefinitions>
 
-            <!-- Nagłówek warsztatu: pasek kart OTWARTYCH żądań (jak w mockupie — badge metody + nazwa + ×),
-                 a po prawej auth całej kolekcji i wybór aktywnego środowiska ({{zmienne}}). -->
+            <!-- Nagłówek warsztatu: pasek kart OTWARTYCH żądań (mockup — badge metody + nazwa + ×) i po prawej
+                 auth całej kolekcji. Selektor środowiska ({{zmienne}}) żyje w sidebarze modułu REST (jak w Postmanie). -->
             <Grid Grid.Row="0" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
@@ -164,15 +160,6 @@
                 <Button Grid.Column="1" Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.authmgr.open}"
                         AutomationProperties.Name="{DynamicResource S.rest.authmgr.open}" Click="CollectionAuth_Click">
                     <ui:SymbolIcon Symbol="Key24" FontSize="{StaticResource IconMd}"/>
-                </Button>
-                <Border Grid.Column="2" Width="1" Margin="6,5" Background="{DynamicResource Border}"/>
-                <TextBlock Grid.Column="3" Text="{DynamicResource S.rest.env.label}" Foreground="{DynamicResource TextTer}"
-                           VerticalAlignment="Center" FontSize="{StaticResource FontBody}" Margin="0,0,6,0"/>
-                <ComboBox Grid.Column="4" x:Name="EnvCombo" MinWidth="160" SelectionChanged="EnvCombo_Changed"
-                          VerticalContentAlignment="Center"/>
-                <Button Grid.Column="5" Style="{StaticResource RestIconBtn}" ToolTip="{DynamicResource S.rest.env.manage}"
-                        AutomationProperties.Name="{DynamicResource S.rest.env.manage}" Click="ManageEnv_Click" Margin="4,0,0,0">
-                    <ui:SymbolIcon Symbol="Settings24" FontSize="{StaticResource IconMd}"/>
                 </Button>
             </Grid>
 

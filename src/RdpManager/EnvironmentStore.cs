@@ -27,6 +27,22 @@ namespace RdpManager
         private static readonly JsonSerializerOptions Options = new JsonSerializerOptions { WriteIndented = true };
 
         private static string FilePath(string dir) => Path.Combine(dir, "environments.json");
+        private static string ActivePath(string dir) => Path.Combine(dir, "rest-active-env");
+
+        // Aktywne środowisko jest GLOBALNE dla całego modułu REST (jak w Postmanie — jeden selektor u góry),
+        // a nie per-kolekcja. Przechowywane w osobnym pliku tekstowym (samo Id). Puste = „brak środowiska".
+        public static string GetActiveId() => GetActiveId(DefaultDir);
+        public static string GetActiveId(string dir)
+        {
+            try { var p = ActivePath(dir); return File.Exists(p) ? File.ReadAllText(p).Trim() : ""; }
+            catch { return ""; }
+        }
+
+        public static void SetActiveId(string id) => SetActiveId(id, DefaultDir);
+        public static void SetActiveId(string id, string dir)
+        {
+            try { File.WriteAllText(ActivePath(dir), id ?? ""); } catch { /* best-effort */ }
+        }
 
         public static List<RestEnvironment> Load() => Load(DefaultDir);
 

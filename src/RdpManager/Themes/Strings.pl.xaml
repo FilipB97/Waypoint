@@ -11,6 +11,8 @@
     <sys:String x:Key="S.nav.rest">Kolekcje REST</sys:String>
     <sys:String x:Key="S.rest.module.empty">Brak kolekcji REST. Dodaj kolekcję przyciskiem + powyżej albo zaimportuj z Postmana.</sys:String>
     <sys:String x:Key="S.rest.module.add">Nowa kolekcja REST</sys:String>
+    <sys:String x:Key="S.rest.module.title">Kolekcje REST</sys:String>
+    <sys:String x:Key="S.rest.searchreq">Szukaj żądania…</sys:String>
 
     <!-- generator sekretów -->
     <sys:String x:Key="S.gen.title">Generator haseł</sys:String>
