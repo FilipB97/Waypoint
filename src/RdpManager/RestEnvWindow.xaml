@@ -39,6 +39,35 @@
             </Setter>
         </Style>
 
+        <!-- Wiersz listy środowisk: akcentowa nakładka hover/zaznaczenia (jak listy w reszcie aplikacji)
+             zamiast systemowego niebieskiego podświetlenia ListBoxa, które gryzło się z motywem. -->
+        <Style x:Key="EnvListItem" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid>
+                            <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.10"/></Trigger>
+                            <!-- Po hoverze — zaznaczenie ma wygrywać (ostatni pasujący trigger ustawia wartość). -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.22"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <DataTemplate x:Key="EnvVarRow">
             <Grid Height="34" Margin="0,1">
                 <Grid.ColumnDefinitions>
@@ -85,6 +114,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <ListBox Grid.Row="0" x:Name="EnvList" DisplayMemberPath="Name" SelectionChanged="Env_Changed"
+                         ItemContainerStyle="{StaticResource EnvListItem}" Padding="4"
                          Foreground="{DynamicResource TextPrim}"
                          BorderThickness="1" BorderBrush="{DynamicResource Border}" Background="Transparent"/>
                 <!-- Akcja główna (Dodaj, z etykietą — jak „Dodaj" przy zmiennych) po lewej; operacje na
