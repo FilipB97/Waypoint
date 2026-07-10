@@ -96,6 +96,25 @@ namespace RdpManager
             Server = server;
             Rest = rest;
         }
+
+        /// <summary>Wspólny stan „połączono" (dedup B3/B4): ustaw flagę + wpis do dziennika połączeń.
+        /// Woła zarówno SessionManager (karta), jak i SessionWindow (osobne okno).</summary>
+        public void MarkConnected()
+        {
+            Connected = true;
+            ConnectionLog.Append("CONNECTED", Server);
+        }
+
+        /// <summary>Wspólny stan „rozłączono" (dedup B3/B4): wyzeruj flagi, zaloguj DISCONNECTED/FAILED wg
+        /// tego, czy zdążono się zalogować, i wyczyść hasło z pamięci, gdy nie jest zapisane w Credential
+        /// Managerze (ponowne łączenie wymusi jego wpisanie).</summary>
+        public void MarkDisconnected(bool wasLoggedIn)
+        {
+            Connected = false;
+            LoggedIn = false;
+            ConnectionLog.Append(wasLoggedIn ? "DISCONNECTED" : "FAILED", Server);
+            if (!Server.SavePassword) Password = "";
+        }
     }
 
     /// <summary>Rodzaj komunikatu statusu (koloruje pasek sesji).</summary>
