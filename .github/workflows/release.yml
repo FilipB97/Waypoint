@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 0   # pełna historia + tagi — do policzenia następnej wersji i listy zmian od poprzedniego wydania
 
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
 
