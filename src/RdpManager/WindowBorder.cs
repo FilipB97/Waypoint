@@ -56,17 +56,27 @@ namespace RdpManager
             catch { /* starszy DWM bez tego atrybutu — bez znaczenia */ }
         }
 
-        /// <summary>Nakłada TERAZ i utrzymuje: przy każdej aktywacji okna oraz raz po pełnym wyrenderowaniu
-        /// (ApplicationIdle — już po tym, jak WPF-UI skończy malować krawędź).</summary>
+        /// <summary>Nakłada TERAZ i utrzymuje: synchronicznie z hooka WM_NCACTIVATE (ogranicza błysk),
+        /// z handlera Activated + odroczonych dobić (ostatnie słowo po repaintach WPF-UI) oraz raz po
+        /// pełnym wyrenderowaniu.</summary>
         public static void Keep(Window window)
         {
             if (window == null) return;
             Apply(window);
             // WM_NCACTIVATE: Windows/WPF-UI przemalowują krawędź (non-client) przy (de)aktywacji — m.in. gdy
-            // zamknie się okno potomne (np. „O aplikacji") i główne wraca na wierzch. Hookujemy tę wiadomość i
-            // przywracamy wybraną obwódkę SYNCHRONICZNIE, w tym samym cyklu repaint (bez odroczenia = bez błysku
-            // kobaltu). Hook jest statyczny (bez domknięcia per-okno) i zwalnia się z HwndSource okna — brak wycieku.
+            // zamknie się okno potomne (np. „O aplikacji") i główne wraca na wierzch. Zapis synchroniczny w tym
+            // hooku ogranicza błysk, a odroczone dobicie w BorderHook domyka cykl. Hook jest statyczny (bez
+            // domknięcia per-okno) i zwalnia się z HwndSource okna — brak wycieku.
             HwndSource.FromHwnd(new WindowInteropHelper(window).Handle)?.AddHook(BorderHook);
+            // Handler Activated — sprawdzona ścieżka sprzed #183: WPF-UI maluje akcent PO Activated, więc
+            // dobicie odroczone stąd ląduje jako ostatnie. #183 usunął to w całości (zostawiając tylko zapis
+            // synchroniczny z hooka, który leci PRZED repaintem WPF-UI) — obwódka zostawała kobaltowa NA STAŁE.
+            window.Activated += (_, __) =>
+            {
+                Apply(window);
+                window.Dispatcher.BeginInvoke(new Action(() => Apply(window)),
+                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            };
             // Dobij raz po pełnym wyrenderowaniu (WPF-UI kończy malować krawędź po Loaded) — asekuracja pierwszej klatki.
             window.Dispatcher.BeginInvoke(new Action(() => Apply(window)),
                 System.Windows.Threading.DispatcherPriority.ApplicationIdle);
@@ -74,16 +84,30 @@ namespace RdpManager
 
         private const int WM_NCACTIVATE = 0x0086;
 
-        // Przy każdym WM_NCACTIVATE ponownie nakłada bieżącą specyfikację obwódki — zanim klatka trafi na ekran.
+        // Przy każdym WM_NCACTIVATE ponownie nakłada bieżącą specyfikację obwódki: raz SYNCHRONICZNIE
+        // (ogranicza błysk — zanim klatka trafi na ekran) i raz ODROCZONO (ApplicationIdle).
+        // Odroczone dobicie jest KONIECZNE: WPF-UI przemalowuje krawędź na akcent PÓŹNIEJ w tym samym
+        // cyklu aktywacji (po zdarzeniu Activated), więc sam synchroniczny zapis przegrywa „ostatnie
+        // słowo" i obwódka ZOSTAWAŁA kobaltowa na stałe (regresja z #183, która to dobicie usunęła).
         private static IntPtr BorderHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             if (msg == WM_NCACTIVATE && hwnd != IntPtr.Zero)
             {
-                uint val = SpecToColorRef(_spec);
-                try { DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref val, sizeof(uint)); }
-                catch { /* starszy DWM bez atrybutu — bez znaczenia */ }
+                WriteBorder(hwnd);
+                var h = hwnd;   // kopia do domknięcia (hwnd to parametr ref-świata WndProc)
+                Application.Current?.Dispatcher.BeginInvoke(new Action(() => WriteBorder(h)),
+                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             }
             return IntPtr.Zero;
+        }
+
+        // Zapis bieżącej specyfikacji wprost na hwnd (okno mogło już nie mieć obiektu Window — np. w trakcie
+        // zamykania; nieaktualny uchwyt jest nieszkodliwy, DWM zwróci błąd, który ignorujemy).
+        private static void WriteBorder(IntPtr hwnd)
+        {
+            uint val = SpecToColorRef(_spec);
+            try { DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref val, sizeof(uint)); }
+            catch { /* starszy DWM bez atrybutu — bez znaczenia */ }
         }
 
         // "" → brak; "System"/"default" → systemowy akcent; "#RRGGBB" → COLORREF (0x00BBGGRR); błędny → brak.
