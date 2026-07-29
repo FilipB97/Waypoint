@@ -23,7 +23,9 @@ namespace RdpManager
             adv.AuthenticationLevel = RdpConfigurator.ClampAuthLevel(server.AuthenticationLevel);
             adv.EnableCredSspSupport = true;
             adv.ConnectToAdministerServer = server.AdminSession;   // sesja konsolowa (mstsc /admin)
-            adv.SmartSizing = false;   // dynamiczna rozdzielczość zajmie się dopasowaniem
+            // Wartość wyjściowa; ostateczną ustala RdpDynamicResolution.ApplyPreConnect wg ustawień
+            // (stała rozdzielczość => SmartSizing, „dopasuj do okna" => dynamiczna rozdzielczość).
+            adv.SmartSizing = false;
             adv.EnableAutoReconnect = settings.AutoReconnect;
             rdp.ColorDepth = settings.ColorDepth;
             adv.RedirectClipboard = server.RedirectClipboard;

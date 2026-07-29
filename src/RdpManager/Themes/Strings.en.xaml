@@ -107,6 +107,12 @@
     <sys:String x:Key="S.set.conn">Connection</sys:String>
     <sys:String x:Key="S.set.port">Default RDP port</sys:String>
     <sys:String x:Key="S.set.colordepth">Default color depth (bit)</sys:String>
+    <sys:String x:Key="S.set.resolution">RDP session resolution</sys:String>
+    <sys:String x:Key="S.set.resolution.sub">“Fit to window” keeps the resolution equal to the window (crisp 1:1 image). A fixed value is stretched to the window.</sys:String>
+    <sys:String x:Key="S.res.auto">Fit to window</sys:String>
+    <sys:String x:Key="S.set.rdpscale">Remote desktop scaling (DPI)</sys:String>
+    <sys:String x:Key="S.set.rdpscale.sub">Enlarges text and icons inside the session without blurring. Helps on 4K/HiDPI displays; requires Windows 10 / Server 2016 or newer.</sys:String>
+    <sys:String x:Key="S.scale.auto">Match local display</sys:String>
     <sys:String x:Key="S.set.autoreconnect">Automatically resume dropped connections</sys:String>
     <sys:String x:Key="S.set.behavior">Behavior</sys:String>
     <sys:String x:Key="S.set.reach">Check server reachability in the background</sys:String>

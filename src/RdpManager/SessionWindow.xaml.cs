@@ -38,6 +38,10 @@ namespace RdpManager
         /// <summary>Czy sesja jest aktualnie połączona (do potwierdzenia zamknięcia aplikacji).</summary>
         public bool IsConnected => _session != null && _session.Connected;
 
+        /// <summary>Zmiana rozdzielczości/skalowania w Ustawieniach managera dotyczy też sesji w tym oknie
+        /// (AppSettings to ten sam obiekt) — wystarczy poprosić o renegocjację, bez ponownego łączenia.</summary>
+        public void ApplyDisplaySettings() => _resizer?.ApplyDisplaySettings();
+
         // Pełny ekran (bezramkowy na bieżącym monitorze) + auto-chowany pasek.
         private bool _fs;
         private bool _fsPinned;   // pasek „przypięty" — nie chowa się automatycznie
@@ -72,7 +76,7 @@ namespace RdpManager
             try { ((System.Windows.Forms.Control)_rdp).CreateControl(); } catch { }
 
             _session = new Session(server, _rdp, _host) { Password = _password };
-            _resizer = new RdpDynamicResolution(_session, _host);
+            _resizer = new RdpDynamicResolution(_session, _host, settings);
             WireEvents();
 
             _fsDelay = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
@@ -134,6 +138,7 @@ namespace RdpManager
             try
             {
                 RdpConnect.Apply(_rdp, _server, _settings, _username, _domain, _password);
+                _resizer?.ApplyPreConnect();   // rozdzielczość + skala DPI z ustawień już na pierwszą klatkę
                 _rdp.Connect();
                 SetStatus(string.Format(L("S.st.connecting"), _server.Host), StatusKind.Connecting, false);
             }

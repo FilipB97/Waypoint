@@ -49,6 +49,17 @@ namespace RdpManager
         /// <summary>Domyślne ustawienia połączeń RDP.</summary>
         public bool AutoReconnect { get; set; } = true;
         public int ColorDepth { get; set; } = 32;
+
+        /// <summary>Rozdzielczość sesji RDP: 0×0 (domyślnie) = „dopasuj do okna", czyli sesja trzyma natywne
+        /// piksele panelu (obraz 1:1). Wartość stała = pulpit negocjuje ten rozmiar, a SmartSizing rozciąga go
+        /// do okna. Wspólne dla wszystkich serwerów RDP. Przeliczenia: <see cref="Core.RdpDisplay"/>.</summary>
+        public int RdpDesktopWidth { get; set; }
+        public int RdpDesktopHeight { get; set; }
+
+        /// <summary>Skalowanie (DPI) pulpitu zdalnego w procentach: 0 (domyślnie) = „jak ekran lokalny",
+        /// inaczej 100..500. Powiększa tekst i ikony W SESJI, bez zmiany rozdzielczości i bez rozmycia —
+        /// na ekranach 4K/HiDPI sesja 1:1 przy 100% daje interfejs nie do odczytania.</summary>
+        public int RdpScalePercent { get; set; }
         // Domyślne przekierowania dla NOWO tworzonych serwerów RDP (istniejące zachowują swoje).
         public bool DefaultRedirectClipboard { get; set; } = true;
         public bool DefaultRedirectDrives { get; set; } = false;   // dyski + drukarki

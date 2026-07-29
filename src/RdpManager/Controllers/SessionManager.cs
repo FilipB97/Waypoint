@@ -180,7 +180,7 @@ namespace RdpManager.Controllers
                 try { ((System.Windows.Forms.Control)rdp).CreateControl(); } catch { }  // wymuś utworzenie kontrolki ActiveX
 
                 session = new Session(server, rdp, host);
-                session.Resizer = new RdpDynamicResolution(session, host);
+                session.Resizer = new RdpDynamicResolution(session, host, _owner._settings);
                 WireEvents(session);
                 // W podziale: klik w panel (RDP przejmuje fokus klawiatury) czyni go aktywnym — karta i toolbar podążają.
                 var focusTarget = session;
@@ -579,6 +579,9 @@ namespace RdpManager.Controllers
                     }
                 }
                 catch { /* starsza kontrolka bez RemoteProgram2 — łączymy jako pełny pulpit */ }
+
+                // Rozdzielczość + skala DPI z ustawień — żeby pierwsza klatka sesji była już poprawna.
+                s.Resizer?.ApplyPreConnect();
 
                 s.Rdp.Connect();
                 SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
