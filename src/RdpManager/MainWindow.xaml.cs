@@ -977,6 +977,8 @@ namespace RdpManager
             BuildThemePresets();
             BuildAccentSwatches();
             SetDefaultPort.Text = _settings.DefaultPort.ToString();
+            ComboSelectTag(SetRdpResolution, RdpDisplay.FormatResolution(_settings.RdpDesktopWidth, _settings.RdpDesktopHeight));
+            ComboSelectTag(SetRdpScale, _settings.RdpScalePercent > 0 ? _settings.RdpScalePercent.ToString() : "");
             SelectColorDepthSeg(_settings.ColorDepth);
             SetRedirClip.IsChecked = _settings.DefaultRedirectClipboard;
             SetRedirDrives.IsChecked = _settings.DefaultRedirectDrives;
@@ -1228,6 +1230,10 @@ namespace RdpManager
             _settings.TerminalFontSize = int.TryParse(SetTermFontSize.Text.Trim(), out var tfs) ? Math.Clamp(tfs, 8, 24) : 14;
             _settings.DefaultPort = int.TryParse(SetDefaultPort.Text.Trim(), out var p) ? Math.Clamp(p, 1, 65535) : 3389;
             _settings.ColorDepth = ParseColorDepth();
+            var (rdpW, rdpH) = RdpDisplay.ParseResolution(ComboTag(SetRdpResolution));
+            _settings.RdpDesktopWidth = rdpW;
+            _settings.RdpDesktopHeight = rdpH;
+            _settings.RdpScalePercent = RdpDisplay.ParseScale(ComboTag(SetRdpScale));
             _settings.DefaultRedirectClipboard = SetRedirClip.IsChecked == true;
             _settings.DefaultRedirectDrives = SetRedirDrives.IsChecked == true;
             _settings.ProbeTimeoutSeconds = int.TryParse(SetProbeTimeout.Text.Trim(), out var pt) ? Math.Clamp(pt, 1, 60) : 2;
@@ -1261,6 +1267,18 @@ namespace RdpManager
 
         private int ParseColorDepth() => RdpUtils.ParseColorDepth(SegTag(ColorDepthSeg));
 
+        // Listy rozwijane z wartością w Tagu (rozdzielczość i skalowanie RDP) — odpowiednik SegTag/SegSet
+        // dla ComboBoxa. Brak dopasowania → pierwsza pozycja (u nas: „auto").
+        private static string ComboTag(ComboBox combo) => (combo?.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
+
+        private static void ComboSelectTag(ComboBox combo, string tag)
+        {
+            if (combo == null) return;
+            foreach (var item in combo.Items.OfType<ComboBoxItem>())
+                if ((item.Tag as string ?? "") == (tag ?? "")) { combo.SelectedItem = item; return; }
+            combo.SelectedIndex = 0;
+        }
+
         // Zaznacza segment głębi kolorów (16/24/32) wg wartości z ustawień.
         private void SelectColorDepthSeg(int depth)
         {
@@ -1276,6 +1294,11 @@ namespace RdpManager
             // Clampy także tutaj — ustawienia mogą przyjść z importu profilu (plik zewnętrzny).
             _fs.ApplyBarDelay();   // opóźnienie paska pełnoekranowego + peeku wg ustawień (PR 5)
             _reach?.ApplySettings();   // limit czasu sondy + interwał + wł/wył cyklu wg ustawień
+
+            // Rozdzielczość / skalowanie RDP: renegocjuj w już otwartych sesjach (karty i osobne okna),
+            // żeby zmiana działała od razu, bez ponownego łączenia.
+            foreach (var s in _sessions) s.Resizer?.ApplyDisplaySettings();
+            foreach (var w in _sessionWindows) w.ApplyDisplaySettings();
 
             // Cykliczne sprawdzanie aktualizacji wg tego samego przełącznika co start.
             _update?.ApplyCheckUpdatesSetting();

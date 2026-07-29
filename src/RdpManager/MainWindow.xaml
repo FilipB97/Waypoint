@@ -823,6 +823,45 @@
                             <Border Style="{DynamicResource SetRow}">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.set.resolution}" Style="{DynamicResource SetLbl}"/>
+                                        <TextBlock Text="{DynamicResource S.set.resolution.sub}" Style="{DynamicResource SetSub}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="SetRdpResolution" Grid.Column="1" Width="190" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="{DynamicResource S.res.auto}" Tag=""/>
+                                        <ComboBoxItem Content="1024 × 768" Tag="1024x768"/>
+                                        <ComboBoxItem Content="1280 × 720" Tag="1280x720"/>
+                                        <ComboBoxItem Content="1280 × 1024" Tag="1280x1024"/>
+                                        <ComboBoxItem Content="1366 × 768" Tag="1366x768"/>
+                                        <ComboBoxItem Content="1600 × 900" Tag="1600x900"/>
+                                        <ComboBoxItem Content="1680 × 1050" Tag="1680x1050"/>
+                                        <ComboBoxItem Content="1920 × 1080" Tag="1920x1080"/>
+                                        <ComboBoxItem Content="1920 × 1200" Tag="1920x1200"/>
+                                        <ComboBoxItem Content="2560 × 1440" Tag="2560x1440"/>
+                                        <ComboBoxItem Content="3840 × 2160" Tag="3840x2160"/>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.set.rdpscale}" Style="{DynamicResource SetLbl}"/>
+                                        <TextBlock Text="{DynamicResource S.set.rdpscale.sub}" Style="{DynamicResource SetSub}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="SetRdpScale" Grid.Column="1" Width="190" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="{DynamicResource S.scale.auto}" Tag=""/>
+                                        <ComboBoxItem Content="100%" Tag="100"/>
+                                        <ComboBoxItem Content="125%" Tag="125"/>
+                                        <ComboBoxItem Content="150%" Tag="150"/>
+                                        <ComboBoxItem Content="175%" Tag="175"/>
+                                        <ComboBoxItem Content="200%" Tag="200"/>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="{DynamicResource S.set.colordepth}" Style="{DynamicResource SetLbl}"/>
                                     <Border Grid.Column="1" Style="{DynamicResource SegBar}">
                                         <StackPanel x:Name="ColorDepthSeg" Orientation="Horizontal">
