@@ -22,7 +22,8 @@ current priorities.
   window controls move onto the strip. Distinct from true full screen (F11).
 - ✅ **Full-screen** with auto-hiding, draggable, pinnable bar + "other connections" flyout.
 - ✅ **Dynamic resolution** — session = window/monitor physical pixels, DPI-safe; optionally a
-  fixed resolution, plus remote desktop scaling (DPI) for readable text on 4K/HiDPI screens.
+  fixed resolution, plus remote desktop scaling 50–200% (session DPI above 100%, oversized
+  desktop scaled into the window below it).
 - ✅ **Credentials in Windows Credential Manager** (DPAPI); prompt at connect; "connect as".
 - ✅ **Server tree** — groups, favorites (pinned), collapsible groups, one-click group
   rename, search, drag-and-drop reorder, background reachability dots.

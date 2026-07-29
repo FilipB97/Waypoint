@@ -110,8 +110,8 @@
     <sys:String x:Key="S.set.resolution">Rozdzielczość sesji RDP</sys:String>
     <sys:String x:Key="S.set.resolution.sub">„Dopasuj do okna" trzyma rozdzielczość równą oknu (ostry obraz 1:1). Stała wartość jest rozciągana do okna.</sys:String>
     <sys:String x:Key="S.res.auto">Dopasuj do okna</sys:String>
-    <sys:String x:Key="S.set.rdpscale">Skalowanie pulpitu zdalnego (DPI)</sys:String>
-    <sys:String x:Key="S.set.rdpscale.sub">Powiększa tekst i ikony w sesji bez rozmycia. Pomaga na ekranach 4K/HiDPI; wymaga serwera Windows 10 / Server 2016 lub nowszego.</sys:String>
+    <sys:String x:Key="S.set.rdpscale">Skalowanie pulpitu zdalnego</sys:String>
+    <sys:String x:Key="S.set.rdpscale.sub">Powyżej 100% serwer rysuje tekst i ikony większe, bez rozmycia (DPI sesji; wymaga Windows 10 / Server 2016 lub nowszego). Poniżej 100% klient żąda wyższej rozdzielczości i zmniejsza obraz — więcej pulpitu, drobniejszy interfejs, nieco mniej ostro.</sys:String>
     <sys:String x:Key="S.scale.auto">Jak ekran lokalny</sys:String>
     <sys:String x:Key="S.set.autoreconnect">Automatycznie wznawiaj zerwane połączenie</sys:String>
     <sys:String x:Key="S.set.behavior">Zachowanie</sys:String>
