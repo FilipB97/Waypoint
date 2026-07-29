@@ -26,8 +26,10 @@ namespace RdpManager
     /// przeliczane przez <see cref="RdpDisplay"/>) modyfikują oba wymiary tego zachowania:
     ///  - stała rozdzielczość → nie mierzymy panelu, wysyłamy wybrany rozmiar i włączamy SmartSizing
     ///    (pulpit i tak wypełnia okno, kosztem skalowania);
-    ///  - skala DPI → jedzie w ulDesktopScaleFactor, więc zdalny pulpit rysuje UI większe zamiast
-    ///    upychać je w natywnych pikselach 4K (to ratunek na „nic nie da się odczytać").
+    ///  - skala &gt;= 100% → jedzie w ulDesktopScaleFactor, więc zdalny pulpit rysuje UI większe zamiast
+    ///    upychać je w natywnych pikselach 4K (to ratunek na „nic nie da się odczytać");
+    ///  - skala &lt; 100% → DPI zostaje 100%, ale żądamy pulpitu WIĘKSZEGO niż panel i wciskamy go
+    ///    SmartSizingiem (pomniejszenie — protokół nie zna DPI poniżej 100%).
     /// </summary>
     public sealed class RdpDynamicResolution : IDisposable
     {
@@ -80,16 +82,27 @@ namespace RdpManager
             return (w, h);
         }
 
-        /// <summary>Skala DPI dla serwera: wybór użytkownika, a przy „auto" mnożnik DPI okna (jak mstsc).</summary>
-        private uint EffectiveScale()
+        /// <summary>Skala wybrana przez użytkownika, a przy „auto" mnożnik DPI okna (jak mstsc). Wartości
+        /// poniżej 100% nie są DPI — realizuje je mnożnik rozdzielczości (patrz <see cref="RdpDisplay"/>).</summary>
+        private int EffectiveScale()
         {
             double dpi = TryGetDpiScale(out var sx, out _) ? sx : 1.0;
-            return (uint)RdpDisplay.EffectiveScale(_settings?.RdpScalePercent ?? 0, dpi);
+            return RdpDisplay.EffectiveScale(_settings?.RdpScalePercent ?? 0, dpi);
         }
 
-        /// <summary>Przy stałej rozdzielczości SmartSizing musi zostać włączony niezależnie od trybu podziału —
-        /// inaczej wybrany pulpit siedziałby w letterboxie zamiast wypełniać okno.</summary>
-        private bool WantSmartSizing(bool hasFixedRes) => _fit || hasFixedRes;
+        /// <summary>Wymiary do wysłania: baza (piksele panelu albo stała rozdzielczość) po nałożeniu mnożnika
+        /// dla skali poniżej 100%.</summary>
+        private (int W, int H) TargetRes(int baseW, int baseH)
+        {
+            var (w, h) = RdpDisplay.ScaleResolution(baseW, baseH, EffectiveScale());
+            return (w, h);
+        }
+
+        /// <summary>SmartSizing musi być włączony niezależnie od trybu podziału, gdy: (a) rozdzielczość jest
+        /// stała — inaczej pulpit siedziałby w letterboxie zamiast wypełniać okno; (b) skala jest poniżej 100%
+        /// — tam pomniejszenie POLEGA na wciśnięciu większego pulpitu w panel.</summary>
+        private bool WantSmartSizing(bool hasFixedRes)
+            => _fit || hasFixedRes || EffectiveScale() < RdpDisplay.ProtocolMinScale;
 
         private bool _fit;
         /// <summary>„Dopasuj do okna": host skaluje pulpit do swojego rozmiaru (SmartSizing), więc pulpit zawsze
@@ -130,13 +143,14 @@ namespace RdpManager
             {
                 // Tylko dla stałej rozdzielczości. W trybie „dopasuj do okna" zostawiamy domyślny rozmiar
                 // kontrolki i renegocjujemy po zalogowaniu (ApplyInitial) — tak działało to do tej pory.
-                try { rdp.DesktopWidth = fx.W; rdp.DesktopHeight = fx.H; }
+                var target = TargetRes(fx.W, fx.H);
+                try { rdp.DesktopWidth = target.W; rdp.DesktopHeight = target.H; }
                 catch (COMException) { }
                 catch (InvalidComObjectException) { }
             }
 
             TrySetSmartSizing(rdp, WantSmartSizing(fx.W > 0));
-            TrySetPreConnectScale(rdp, EffectiveScale());
+            TrySetPreConnectScale(rdp, RdpDisplay.DesktopScaleFactor(EffectiveScale()));
         }
 
         /// <summary>
@@ -166,9 +180,9 @@ namespace RdpManager
             var fx = FixedRes();
             if (fx.W > 0) { physW = fx.W; physH = fx.H; }
 
-            physW = RdpUtils.NormalizeDim(physW);
-            physH = RdpUtils.NormalizeDim(physH);
-            if (physW < MinDim || physH < MinDim) return;
+            var target = TargetRes(physW, physH);   // skala < 100% => pulpit większy niż monitor
+            if (target.W < MinDim || target.H < MinDim) return;
+            physW = target.W; physH = target.H;     // TargetRes już normalizuje (parzyste, [200..8192])
 
             var rdp = _session.Rdp;
             if (rdp == null) return;
@@ -216,18 +230,16 @@ namespace RdpManager
             catch (COMException) { return; }
             if (!live) return;
 
-            int w, h;
+            int baseW, baseH;
             var fx = FixedRes();
             if (fx.W > 0)
             {
-                w = fx.W; h = fx.H;   // stała rozdzielczość: nie mierzymy panelu, tylko wysyłamy wybraną
+                baseW = fx.W; baseH = fx.H;   // stała rozdzielczość: nie mierzymy panelu, tylko wysyłamy wybraną
             }
-            else
-            {
-                if (!TryGetPhysicalPixels(out w, out h)) return;
-                w = RdpUtils.NormalizeDim(w);
-                h = RdpUtils.NormalizeDim(h);
-            }
+            else if (!TryGetPhysicalPixels(out baseW, out baseH)) return;
+
+            // Skala < 100% => pulpit większy niż baza, wciśnięty w panel SmartSizingiem (pomniejszenie).
+            var (w, h) = TargetRes(baseW, baseH);
             if (w < MinDim || h < MinDim) return;
             if (w == _lastW && h == _lastH) return;
 
@@ -269,7 +281,7 @@ namespace RdpManager
         /// </summary>
         private void UpdateDisplay(AxMsRdpClient11NotSafeForScripting rdp, int w, int h)
         {
-            uint scale = EffectiveScale();
+            uint scale = RdpDisplay.DesktopScaleFactor(EffectiveScale());
             if (scale == 100u)
             {
                 rdp.UpdateSessionDisplaySettings((uint)w, (uint)h, 0u, 0u, 0u, 100u, RdpDisplay.DeviceScaleFactor);

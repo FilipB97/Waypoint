@@ -851,6 +851,11 @@
                                     </StackPanel>
                                     <ComboBox x:Name="SetRdpScale" Grid.Column="1" Width="190" VerticalAlignment="Center">
                                         <ComboBoxItem Content="{DynamicResource S.scale.auto}" Tag=""/>
+                                        <ComboBoxItem Content="50%" Tag="50"/>
+                                        <ComboBoxItem Content="60%" Tag="60"/>
+                                        <ComboBoxItem Content="75%" Tag="75"/>
+                                        <ComboBoxItem Content="80%" Tag="80"/>
+                                        <ComboBoxItem Content="90%" Tag="90"/>
                                         <ComboBoxItem Content="100%" Tag="100"/>
                                         <ComboBoxItem Content="125%" Tag="125"/>
                                         <ComboBoxItem Content="150%" Tag="150"/>

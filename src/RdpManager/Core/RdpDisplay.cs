@@ -10,19 +10,29 @@ namespace RdpManager.Core
     /// Dwa niezależne pokrętła (Ustawienia → Połączenie → Domyślne RDP):
     ///  - ROZDZIELCZOŚĆ: 0×0 = „dopasuj do okna" (domyślne — sesja trzyma natywne piksele panelu, obraz 1:1),
     ///    wartość stała (np. 1600×900) = sesja negocjuje ten rozmiar, a SmartSizing rozciąga go do okna.
-    ///  - SKALOWANIE (DPI): 0 = „jak ekran lokalny" (mnożnik DPI okna — tak robi mstsc), inaczej stałe procenty.
-    ///    Trafia do ulDesktopScaleFactor (UpdateSessionDisplaySettings) i „DesktopScaleFactor" przed Connect,
-    ///    więc zdalny pulpit RYSUJE interfejs większy — bez utraty ostrości (odwrotnie niż SmartSizing).
-    ///    Na ekranie 4K/HiDPI sesja 1:1 przy 100% daje mikroskopijny tekst; to jest na to lekarstwo.
+    ///  - SKALOWANIE: 0 = „jak ekran lokalny" (mnożnik DPI okna — tak robi mstsc), inaczej stałe procenty.
+    ///    Dwa mechanizmy, bo protokół zna DPI tylko w zakresie 100..500%:
+    ///     • &gt;= 100% → ulDesktopScaleFactor (UpdateSessionDisplaySettings) i „DesktopScaleFactor" przed
+    ///       Connect, więc zdalny pulpit RYSUJE interfejs większy — bez utraty ostrości. Na ekranie 4K/HiDPI
+    ///       sesja 1:1 przy 100% daje mikroskopijny tekst; to jest na to lekarstwo.
+    ///     • &lt; 100% → DPI zostaje 100%, a żądamy PULPITU WIĘKSZEGO niż panel (<see cref="ResolutionMultiplier"/>)
+    ///       i zmniejszamy obraz SmartSizingiem: więcej pulpitu, mniejszy UI, kosztem lekkiego rozmycia.
     /// </summary>
     public static class RdpDisplay
     {
         // Zakresy z dokumentacji IMsRdpClient9::UpdateSessionDisplaySettings: ulDesktopScaleFactor 100..500,
         // ulDeviceScaleFactor TYLKO 100/140/180 (inna wartość => E_INVALIDARG, cała zmiana odrzucona).
         // Device trzymamy na 100 („bez dodatkowego skalowania urządzenia") — DPI sesji ustala desktopScaleFactor.
-        public const int MinScale = 100;
         public const int MaxScale = 500;
         public const uint DeviceScaleFactor = 100u;
+
+        /// <summary>Dół protokołu: DPI sesji nie zejdzie poniżej 100% (mniejsze wartości serwer IGNORUJE).</summary>
+        public const int ProtocolMinScale = 100;
+
+        /// <summary>Dół naszego suwaka. Poniżej 100% DPI nie wchodzi w grę, więc pomniejszenie robimy drugą
+        /// drogą — patrz <see cref="ResolutionMultiplier"/>. Niżej niż 50% nie ma sensu (rozdzielczość rośnie
+        /// dwukrotnie, tekst i tak nieczytelny).</summary>
+        public const int MinScale = 50;
 
         /// <summary>Czy ustawienie opisuje STAŁĄ rozdzielczość (a nie „dopasuj do okna").</summary>
         public static bool IsFixed(int width, int height)
@@ -69,18 +79,57 @@ namespace RdpManager.Core
         }
 
         /// <summary>
-        /// Skala DPI wysyłana serwerowi. <paramref name="configured"/> &gt; 0 = wybór użytkownika (przycięty do
-        /// [100..500]); 0 = „jak ekran lokalny", czyli mnożnik DPI okna (1.5 → 150%). Zaokrąglamy do 5%, bo
+        /// Skala wybrana przez użytkownika. <paramref name="configured"/> &gt; 0 = jego wartość (przycięta do
+        /// [50..500]); 0 = „jak ekran lokalny", czyli mnożnik DPI okna (1.5 → 150%). Zaokrąglamy do 5%, bo
         /// mnożnik z <c>VisualTreeHelper.GetDpi</c> bywa niecałkowity (np. 1.4999), a serwer i tak operuje
-        /// na okrągłych krokach DPI.
+        /// na okrągłych krokach DPI. W trybie „auto" nie schodzimy poniżej 100% — ekran lokalny poniżej 100%
+        /// to zwykle artefakt pomiaru, a nie życzenie użytkownika (pomniejszenie wybiera się świadomie).
         /// </summary>
         public static int EffectiveScale(int configured, double localDpiScale)
         {
             if (configured > 0) return Math.Clamp(configured, MinScale, MaxScale);
-            if (double.IsNaN(localDpiScale) || double.IsInfinity(localDpiScale) || localDpiScale <= 0) return MinScale;
+            if (double.IsNaN(localDpiScale) || double.IsInfinity(localDpiScale) || localDpiScale <= 0) return ProtocolMinScale;
 
             int pct = (int)Math.Round(localDpiScale * 100.0 / 5.0, MidpointRounding.AwayFromZero) * 5;
-            return Math.Clamp(pct, MinScale, MaxScale);
+            return Math.Clamp(pct, ProtocolMinScale, MaxScale);
+        }
+
+        /// <summary>
+        /// Wartość do <c>ulDesktopScaleFactor</c>: dla skali &gt;= 100% to wprost skala (serwer rysuje UI
+        /// większe, obraz zostaje ostry). Poniżej 100% protokół nie pozwala zejść, więc DPI zostaje na 100%,
+        /// a pomniejszenie realizuje <see cref="ResolutionMultiplier"/>.
+        /// </summary>
+        public static uint DesktopScaleFactor(int effectiveScale)
+            => (uint)Math.Clamp(effectiveScale, ProtocolMinScale, MaxScale);
+
+        /// <summary>
+        /// Mnożnik ROZDZIELCZOŚCI dla skali poniżej 100%: żądamy pulpitu większego niż panel (100/75 = 1.33×)
+        /// i zmniejszamy obraz SmartSizingiem. Skutek jak DPI &lt; 100% — więcej pulpitu, mniejszy interfejs —
+        /// kosztem lekkiego rozmycia (skalowanie w dół wygląda znacznie lepiej niż w górę). Dla &gt;= 100%
+        /// zwraca 1.0, bo tam pracuje już desktopScaleFactor i obraz ma zostać 1:1.
+        /// </summary>
+        public static double ResolutionMultiplier(int effectiveScale)
+            => effectiveScale >= ProtocolMinScale || effectiveScale <= 0
+                ? 1.0
+                : ProtocolMinScale / (double)Math.Max(effectiveScale, MinScale);
+
+        /// <summary>
+        /// Nakłada <see cref="ResolutionMultiplier"/> na wymiary bazowe (piksele panelu albo stała
+        /// rozdzielczość) i normalizuje wynik. Gdy po przemnożeniu któryś wymiar wychodzi za limit sesji
+        /// (8192), przycinamy MNOŻNIK, nie pojedynczy wymiar — inaczej pulpit dostałby inne proporcje
+        /// niż okno i obraz byłby rozciągnięty.
+        /// </summary>
+        public static (int Width, int Height) ScaleResolution(int width, int height, int effectiveScale)
+        {
+            if (width < RdpUtils.MinDim || height < RdpUtils.MinDim) return (0, 0);
+
+            double mult = ResolutionMultiplier(effectiveScale);
+            if (mult > 1.0)
+                mult = Math.Min(mult, Math.Min(RdpUtils.MaxDim / (double)width, RdpUtils.MaxDim / (double)height));
+            if (mult <= 1.0) return (RdpUtils.NormalizeDim(width), RdpUtils.NormalizeDim(height));
+
+            return (RdpUtils.NormalizeDim((int)Math.Round(width * mult)),
+                    RdpUtils.NormalizeDim((int)Math.Round(height * mult)));
         }
     }
 }

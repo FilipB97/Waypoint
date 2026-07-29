@@ -23,8 +23,9 @@ it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 
 - **RDP** — Microsoft's official ActiveX control (`mstscax`): dynamic resolution that follows the
   window/full-screen size (falls back to smart-sizing on older hosts) or a **fixed resolution** of your
-  choice, **remote desktop scaling (DPI)** so text stays readable on 4K/HiDPI screens
-  (*Settings → Connection*), clipboard/drive/printer/audio redirection, server-identity verification
+  choice, **remote desktop scaling** from 50% to 200% — larger, crisp text on 4K/HiDPI screens or a
+  smaller UI with more desktop area (*Settings → Connection*),
+  clipboard/drive/printer/audio redirection, server-identity verification
   level, RD Gateway / jump-host and admin session.
 - **SSH** — embedded **xterm.js** terminal: password and private-key auth (including
   **passphrase-protected keys**), host-key verification (trust-on-first-use with fingerprint prompt),
