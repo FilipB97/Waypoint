@@ -50,6 +50,13 @@ namespace RdpManager
         private int _retries;
         private bool _disposed;
 
+        // Cel zamrożony dla „dopasuj do okna" + skala < 100% (patrz LockedFitTarget) — inaczej OnDebounceTick
+        // renegocjowałby rozdzielczość PRZY KAŻDYM resize (bo mnożnik nakłada się na żywo mierzony panel,
+        // który zmienia się z każdym resize), a to dokładnie ten rodzaj powtórnych wywołań Display-Update
+        // pod włączonym SmartSizingiem, który już raz psuł render (patrz komentarz niżej o „szarych pasach
+        // letterboxu aż do maksymalizacji" — kontrolka nie zawsze poprawnie przelicza skalę na bieżąco).
+        private int _lockedTargetW = -1, _lockedTargetH = -1;
+
         /// <param name="settings">Ustawienia aplikacji (rozdzielczość + skala DPI). Null = domyślne
         /// „dopasuj do okna" / „jak ekran lokalny" — czytamy je przy każdym użyciu, więc zmiana
         /// w Ustawieniach działa na żywo (patrz <see cref="ApplyDisplaySettings"/>).</param>
@@ -91,11 +98,40 @@ namespace RdpManager
         }
 
         /// <summary>Wymiary do wysłania: baza (piksele panelu albo stała rozdzielczość) po nałożeniu mnożnika
-        /// dla skali poniżej 100%.</summary>
+        /// dla skali poniżej 100%. Użyj dla baz, które są z natury stałe (stała rozdzielczość z ustawień,
+        /// albo pojedynczy pomiar monitora przy wejściu w pełny ekran) — tam ponowne przeliczenie jest tanie
+        /// i bezstratne. Dla żywo mierzonego panelu w trybie „dopasuj do okna" użyj <see cref="LockedFitTarget"/>.</summary>
         private (int W, int H) TargetRes(int baseW, int baseH)
         {
             var (w, h) = RdpDisplay.ScaleResolution(baseW, baseH, EffectiveScale());
             return (w, h);
+        }
+
+        /// <summary>
+        /// Jak <see cref="TargetRes"/>, ale dla „dopasuj do okna" ze skalą &lt; 100%: zamiast przeliczać cel
+        /// na nowo przy KAŻDYM resize (baza = żywo mierzony panel, więc zmienia się z każdym resize —
+        /// wysyłalibyśmy nową rozdzielczość przy każdym drgnięciu okna, ze SmartSizingiem cały czas
+        /// włączonym), zamrażamy wynik przy pierwszym pomiarze po połączeniu / zmianie ustawień / zmianie
+        /// trybu podziału. Od tej chwili dopasowanie do zmieniającego się okna robi WYŁĄCZNIE SmartSizing —
+        /// dokładnie tak samo, jak przy jawnie wybranej stałej rozdzielczości (sprawdzona ścieżka: Display-
+        /// Update raz, dalej czysto wizualne skalowanie, bez kolejnych wywołań COM na każdy resize).
+        /// Skala &gt;= 100% nie ma mnożnika (SmartSizing niepotrzebny do tego), więc tam nie zamrażamy —
+        /// zachowanie zostaje jak dotąd: rozdzielczość zawsze równa aktualnym pikselom panelu.
+        /// </summary>
+        private (int W, int H) LockedFitTarget(int baseW, int baseH)
+        {
+            int scale = EffectiveScale();
+            if (scale >= RdpDisplay.ProtocolMinScale)
+            {
+                _lockedTargetW = _lockedTargetH = -1;   // brak mnożnika — nic do zamrożenia, kasujemy stary lock
+                return RdpDisplay.ScaleResolution(baseW, baseH, scale);
+            }
+            if (_lockedTargetW <= 0)
+            {
+                var (lockedW, lockedH) = RdpDisplay.ScaleResolution(baseW, baseH, scale);
+                _lockedTargetW = lockedW; _lockedTargetH = lockedH;
+            }
+            return (_lockedTargetW, _lockedTargetH);
         }
 
         /// <summary>SmartSizing musi być włączony niezależnie od trybu podziału, gdy: (a) rozdzielczość jest
@@ -116,6 +152,7 @@ namespace RdpManager
             {
                 if (_fit == value) return;
                 _fit = value;
+                _lockedTargetW = _lockedTargetH = -1;   // podział/zjednoczenie widoku = inny rozmiar panelu
                 bool hasFixed = FixedRes().W > 0;
                 TrySetSmartSizing(_session.Rdp, WantSmartSizing(hasFixed));   // zastosuj od razu
                 // Powrót do natywnej rozdzielczości (re-negocjacja) — przy stałej nie ma czego negocjować.
@@ -136,6 +173,7 @@ namespace RdpManager
             if (rdp == null) return;
 
             _lastW = _lastH = -1;
+            _lockedTargetW = _lockedTargetH = -1;   // nowe połączenie = nowa baza do zamrożenia
             _debounce.Stop();
 
             var fx = FixedRes();
@@ -162,6 +200,7 @@ namespace RdpManager
         {
             if (_disposed) return;
             _lastW = _lastH = -1;
+            _lockedTargetW = _lockedTargetH = -1;   // ustawienia się zmieniły — policz zamrożony cel od nowa
             TrySetSmartSizing(_session.Rdp, WantSmartSizing(FixedRes().W > 0));
             Kick();
         }
@@ -176,6 +215,10 @@ namespace RdpManager
         public void ApplyExact(int physW, int physH)
         {
             if (_disposed) return;
+
+            // Pełny ekran = nowa baza (piksele monitora, nie panelu okna) — kolejny pomiar w oknie (po
+            // wyjściu z pełnego ekranu) ma policzyć zamrożony cel od nowa, nie użyć tego sprzed przejścia.
+            _lockedTargetW = _lockedTargetH = -1;
 
             var fx = FixedRes();
             if (fx.W > 0) { physW = fx.W; physH = fx.H; }
@@ -197,7 +240,7 @@ namespace RdpManager
             try
             {
                 UpdateDisplay(rdp, physW, physH);
-                TrySetSmartSizing(rdp, WantSmartSizing(fx.W > 0));
+                RefreshSmartSizingAfterResize(rdp, WantSmartSizing(fx.W > 0));
                 _lastW = physW; _lastH = physH;
             }
             catch (COMException) { TrySetSmartSizing(rdp, true); }
@@ -230,16 +273,20 @@ namespace RdpManager
             catch (COMException) { return; }
             if (!live) return;
 
-            int baseW, baseH;
+            int w, h;
             var fx = FixedRes();
             if (fx.W > 0)
             {
-                baseW = fx.W; baseH = fx.H;   // stała rozdzielczość: nie mierzymy panelu, tylko wysyłamy wybraną
+                // Stała rozdzielczość: nie mierzymy panelu, tylko wysyłamy wybraną (ew. powiększoną mnożnikiem).
+                (w, h) = TargetRes(fx.W, fx.H);
             }
-            else if (!TryGetPhysicalPixels(out baseW, out baseH)) return;
-
-            // Skala < 100% => pulpit większy niż baza, wciśnięty w panel SmartSizingiem (pomniejszenie).
-            var (w, h) = TargetRes(baseW, baseH);
+            else
+            {
+                if (!TryGetPhysicalPixels(out int baseW, out int baseH)) return;
+                // Skala < 100% => pulpit większy niż baza, zamrożony po pierwszym pomiarze (LockedFitTarget) —
+                // dalsze resize okna dopasowuje wyłącznie SmartSizing, bez kolejnych Display-Update.
+                (w, h) = LockedFitTarget(baseW, baseH);
+            }
             if (w < MinDim || h < MinDim) return;
             if (w == _lastW && h == _lastH) return;
 
@@ -248,7 +295,7 @@ namespace RdpManager
                 // Piksele fizyczne "wbite" w rozdzielczość => serwer nie skaluje bitmapy; czytelność
                 // reguluje osobno skala DPI (desktopScaleFactor), nie rozmycie.
                 UpdateDisplay(rdp, w, h);
-                TrySetSmartSizing(rdp, WantSmartSizing(fx.W > 0));   // natywny (ostry) albo dobicie do okna
+                RefreshSmartSizingAfterResize(rdp, WantSmartSizing(fx.W > 0));   // natywny (ostry) albo dobicie do okna
                 _lastW = w; _lastH = h;
                 _retries = 0;
             }
@@ -360,6 +407,23 @@ namespace RdpManager
             try { rdp.AdvancedSettings9.SmartSizing = on; }
             catch (COMException) { }
             catch (InvalidComObjectException) { }
+        }
+
+        /// <summary>
+        /// Ustawia SmartSizing PO zmianie rozdzielczości sesji. Gdy włączamy — dobijamy wyłącz/włącz zamiast
+        /// ustawić raz: podejrzenie (zgodne z komentarzem w OnDebounceTick o „szarych pasach letterboxu aż
+        /// do maksymalizacji") jest takie, że kontrolka przelicza współczynnik skalowania W MOMENCIE
+        /// WŁĄCZENIA SmartSizingu względem BIEŻĄCEGO DesktopWidth/Height — jeśli SmartSizing był już włączony
+        /// z POPRZEDNIEJ rozdzielczości, samo UpdateSessionDisplaySettings może nie wymusić przeliczenia,
+        /// zostawiając stary (błędny) współczynnik. Wyłącz/włącz zmusza kontrolkę do przeliczenia od nowa.
+        /// Tani, bezpieczny zabieg (jeden dodatkowy wywołanie COM) — stosować tylko TUŻ PO realnej zmianie
+        /// rozdzielczości (Display-Update), nie przy zwykłych przełącznikach trybu.
+        /// </summary>
+        private static void RefreshSmartSizingAfterResize(AxMsRdpClient11NotSafeForScripting rdp, bool on)
+        {
+            if (rdp == null) return;
+            if (on) TrySetSmartSizing(rdp, false);
+            TrySetSmartSizing(rdp, on);
         }
 
         public void Dispose()
