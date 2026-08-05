@@ -128,8 +128,8 @@ namespace RdpManager
             }
             if (_lockedTargetW <= 0)
             {
-                var locked = RdpDisplay.ScaleResolution(baseW, baseH, scale);
-                _lockedTargetW = locked.W; _lockedTargetH = locked.H;
+                var (lockedW, lockedH) = RdpDisplay.ScaleResolution(baseW, baseH, scale);
+                _lockedTargetW = lockedW; _lockedTargetH = lockedH;
             }
             return (_lockedTargetW, _lockedTargetH);
         }
