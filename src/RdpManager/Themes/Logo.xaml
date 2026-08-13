@@ -1,42 +1,55 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Znak marki jako wektor — jedno źródło dla widoków w aplikacji (pusty stan, karta „O aplikacji").
-         Geometria 1:1 z logo-export/waypoint-logo.svg (viewBox 0 0 512 512): łamana „W" w gradiencie,
-         pierścienie na końcach trasy, biała kropka w punkcie docelowym. Wektor, a nie app.ico, bo skaluje
-         się ostro przy każdym DPI i zoomie interfejsu. Motyw go NIE przebarwia — znak jest jeden. -->
+    <!-- Znak marki jako wektor — jedno źródło dla widoków w aplikacji (pasek tytułu, pusty stan, karta
+         „O aplikacji"). Geometria 1:1 z logo-export/waypoint-logo.svg (układ współrzędnych 0..512): łamana
+         „W" w gradiencie, pierścienie na końcach trasy, biała kropka w punkcie docelowym. Wektor, a nie
+         app.ico, bo skaluje się ostro przy każdym DPI i zoomie interfejsu. Motyw go NIE przebarwia. -->
 
-    <!-- Wariant z kaflem (ciemne tło + zaokrąglone rogi) — jak ikona aplikacji w Windows. -->
+    <!-- Sam znak (bez kafla). Granice rysunku = jego własny bounding box, więc wypełnia przydzielone
+         miejsce — dlatego nadaje się na małe ikony (pasek tytułu), gdzie kafel byłby ciemnym kwadracikiem
+         z mikroskopijnym znakiem w środku. Współdzielony przez oba warianty niżej. -->
+    <DrawingGroup x:Key="LogoMarkDrawing">
+        <GeometryDrawing Geometry="M82,124 L145,374 L205,206 L256,350 L307,206 L367,374 L430,124">
+            <GeometryDrawing.Pen>
+                <Pen Thickness="48" StartLineCap="Round" EndLineCap="Round" LineJoin="Round">
+                    <Pen.Brush>
+                        <LinearGradientBrush StartPoint="80,70" EndPoint="430,440" MappingMode="Absolute">
+                            <GradientStop Color="#5B8CFF" Offset="0"/>
+                            <GradientStop Color="#7C4DFF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Pen.Brush>
+                </Pen>
+            </GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#0F1117">
+            <GeometryDrawing.Pen><Pen Brush="#7AA2FF" Thickness="12"/></GeometryDrawing.Pen>
+            <GeometryDrawing.Geometry><EllipseGeometry Center="82,124" RadiusX="27" RadiusY="27"/></GeometryDrawing.Geometry>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#0F1117">
+            <GeometryDrawing.Pen><Pen Brush="#7AA2FF" Thickness="12"/></GeometryDrawing.Pen>
+            <GeometryDrawing.Geometry><EllipseGeometry Center="430,124" RadiusX="27" RadiusY="27"/></GeometryDrawing.Geometry>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#FFFFFF">
+            <GeometryDrawing.Geometry><EllipseGeometry Center="256,350" RadiusX="22" RadiusY="22"/></GeometryDrawing.Geometry>
+        </GeometryDrawing>
+    </DrawingGroup>
+
+    <!-- Wariant do małych ikon i nakładek na ciemnym tle. -->
+    <DrawingImage x:Key="LogoMark" Drawing="{StaticResource LogoMarkDrawing}"/>
+
+    <!-- Wariant z kaflem (ciemne tło + zaokrąglone rogi) — jak ikona aplikacji w Windows. Kafel niesie
+         własne tło, więc czyta się na dowolnym motywie; używany tam, gdzie znak ma być „ikoną aplikacji". -->
     <DrawingImage x:Key="LogoTile">
         <DrawingImage.Drawing>
             <DrawingGroup>
-                <GeometryDrawing Brush="#0F1117">
-                    <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="0,0,512,512" RadiusX="112" RadiusY="112"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <GeometryDrawing Geometry="M82,124 L145,374 L205,206 L256,350 L307,206 L367,374 L430,124">
-                    <GeometryDrawing.Pen>
-                        <Pen Thickness="48" StartLineCap="Round" EndLineCap="Round" LineJoin="Round">
-                            <Pen.Brush>
-                                <LinearGradientBrush StartPoint="80,70" EndPoint="430,440" MappingMode="Absolute">
-                                    <GradientStop Color="#5B8CFF" Offset="0"/>
-                                    <GradientStop Color="#7C4DFF" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Pen.Brush>
-                        </Pen>
-                    </GeometryDrawing.Pen>
-                </GeometryDrawing>
-                <GeometryDrawing Brush="#0F1117">
-                    <GeometryDrawing.Pen><Pen Brush="#7AA2FF" Thickness="12"/></GeometryDrawing.Pen>
-                    <GeometryDrawing.Geometry><EllipseGeometry Center="82,124" RadiusX="27" RadiusY="27"/></GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <GeometryDrawing Brush="#0F1117">
-                    <GeometryDrawing.Pen><Pen Brush="#7AA2FF" Thickness="12"/></GeometryDrawing.Pen>
-                    <GeometryDrawing.Geometry><EllipseGeometry Center="430,124" RadiusX="27" RadiusY="27"/></GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <GeometryDrawing Brush="#FFFFFF">
-                    <GeometryDrawing.Geometry><EllipseGeometry Center="256,350" RadiusX="22" RadiusY="22"/></GeometryDrawing.Geometry>
-                </GeometryDrawing>
+                <DrawingGroup.Children>
+                    <GeometryDrawing Brush="#0F1117">
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="0,0,512,512" RadiusX="112" RadiusY="112"/>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                    <StaticResource ResourceKey="LogoMarkDrawing"/>
+                </DrawingGroup.Children>
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>

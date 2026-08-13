@@ -111,7 +111,7 @@
     <sys:String x:Key="S.set.resolution.sub">“Fit to window” keeps the resolution equal to the window (crisp 1:1 image). A fixed value is stretched to the window.</sys:String>
     <sys:String x:Key="S.res.auto">Fit to window</sys:String>
     <sys:String x:Key="S.set.rdpscale">Remote desktop scaling</sys:String>
-    <sys:String x:Key="S.set.rdpscale.sub">Above 100% the server draws text and icons larger, without blurring (session DPI; requires Windows 10 / Server 2016 or newer). Below 100% the client requests a higher resolution and scales the image down — more desktop, smaller interface, slightly softer.</sys:String>
+    <sys:String x:Key="S.set.rdpscale.sub">Above 100%: the server draws text and icons larger, without blurring (requires Windows 10 / Server 2016). Below 100%: more desktop in the window, at the cost of slight blurring.</sys:String>
     <sys:String x:Key="S.scale.auto">Match local display</sys:String>
     <sys:String x:Key="S.set.autoreconnect">Automatically resume dropped connections</sys:String>
     <sys:String x:Key="S.set.behavior">Behavior</sys:String>
