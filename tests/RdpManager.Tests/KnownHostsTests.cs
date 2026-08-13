@@ -6,6 +6,8 @@ using Xunit;
 
 namespace RdpManager.Tests
 {
+    // Opróżnia globalny HealthNotices (Load_Corrupt_QuarantinesAndNotifies) — patrz HealthNoticesCollection.
+    [Collection("HealthNotices")]
     public class KnownHostsTests
     {
         [Fact]
