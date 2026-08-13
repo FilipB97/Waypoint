@@ -1,29 +1,39 @@
-WayPoint — logo / ikona (wariant 1a, kolor 2c Kobalt)
+WayPoint — logo / ikona (znak „W" — trasa z punktami)
 =====================================================
 
+Znak: łamana trasy w kształcie „W" z zaznaczonymi punktami początku i końca
+(pierścienie) oraz punktem docelowym pośrodku (biała kropka).
+
 Kolory marki
-  Kobalt (brand)      #2657D6
-  Kobalt ekranowy     #3A6BE8   (jaśniejszy — lepiej widoczny na ciemnym pasku zadań)
-  Ink (tło ciemne)    #0E1116
+  Gradient znaku      #5B8CFF  ->  #7C4DFF   (niebieski -> fiolet, po przekątnej)
+  Pierścienie punktów #7AA2FF
+  Punkt docelowy      #FFFFFF
+  Ink (tło kafla)     #0F1117
   Paper (tło jasne)   #EEF1F4
 
-IKONA APLIKACJI — sama ikona, bez kwadratowego tła (przezroczyste PNG, dziurka w pinezce)
-  waypoint-glyph.svg                 wektor, kolor brandowy #2657D6
-  waypoint-glyph.ico                 wielorozmiarowy .ico (16–256) — dla aplikacji WPF
+Wszystko poniżej jest generowane z jednego mastera — waypoint-logo.svg.
+
+MASTER
+  waypoint-logo.svg                  kafel 512x512 (r=112) — źródło prawdy dla całej reszty
+
+IKONA APLIKACJI — kafel (ciemne tło + znak); tak wygląda ikona w Windows
+  waypoint-icon-tile.svg             wektor
+  waypoint.ico                       wielorozmiarowy .ico (16-256)
+  icon/waypoint-*.png                16/32/48/64/128/256/512 px
+
+  Kafel jest wariantem DOMYŚLNYM także na pasku zadań: niesie własne ciemne tło,
+  więc czyta się tak samo na jasnym i ciemnym pasku (stąd nie ma już osobnego
+  wariantu „bright", który był potrzebny przy jednolitym, ciemnym znaku kobaltowym).
+
+ZNAK BEZ TŁA — przezroczysty, do nakładek i lockupów
+  waypoint-glyph.svg                 wektor
+  waypoint-glyph.ico                 wielorozmiarowy .ico (16-256)
   glyph/waypoint-glyph-*.png         16/32/48/64/128/256/512 px
 
-  waypoint-glyph-bright.svg          wariant #3A6BE8 (REKOMENDOWANY na pasek zadań)
-  waypoint-glyph-bright.ico          wielorozmiarowy .ico
-  glyph-bright/waypoint-glyph-*.png  16/32/48/64/128/256/512 px
-
-WERSJA „TILE" — ikona w zaokrąglonym kwadracie (gdyby jednak była potrzebna)
-  waypoint-icon-tile.svg
-  waypoint.ico
-  icon/waypoint-*.png                16–512 px
-
-ZNAK NA TŁO (do lockupu / dokumentów)
-  waypoint-mark-on-light.svg / -512.png / -256.png    (na jasne tło, kolor #2657D6)
-  waypoint-mark-on-dark.svg  / -512.png / -256.png    (na ciemne tło, kolor #3A6BE8)
+ZNAK NA TŁO (do dokumentów)
+  waypoint-mark-on-light.svg / -512.png / -256.png    (na jasne tło — oczka punktów w kolorze Paper)
+  waypoint-mark-on-dark.svg  / -512.png / -256.png    (na ciemne tło — oczka punktów w kolorze Ink)
 
 Podmiana ikony w aplikacji WPF:
-  W .csproj:  <ApplicationIcon>waypoint-glyph-bright.ico</ApplicationIcon>
+  scripts\waypoint-icon.png  ->  scripts\make-icon.ps1  ->  src\RdpManager\Assets\app.ico
+  (w .csproj: <ApplicationIcon>Assets\app.ico</ApplicationIcon>)

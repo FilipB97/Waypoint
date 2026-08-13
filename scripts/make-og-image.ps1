@@ -1,5 +1,7 @@
 # Generates site/og-image.png (1200x630) - the social preview (Open Graph / Twitter Card).
-# Dark site-matching background + cobalt glow + logo tile + wordmark + tagline.
+# Dark site-matching background + brand glow + logo mark + wordmark + tagline.
+# Uses the TRANSPARENT glyph (not the tile): the tile's ink background is the same colour as
+# the canvas here, so the mark reads cleaner floating on it.
 # ASCII-only source (PS 5.1 reads BOM-less .ps1 as ANSI); special glyphs built via [char] at runtime.
 # Run: & "scripts\make-og-image.ps1"
 
@@ -7,7 +9,7 @@ Add-Type -AssemblyName System.Drawing
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
-$logo = Join-Path $root 'logo-export\icon\waypoint-512.png'
+$logo = Join-Path $root 'logo-export\glyph\waypoint-glyph-512.png'
 $out  = Join-Path $root 'site\og-image.png'
 
 $mid  = [char]0x00B7   # middot
@@ -24,12 +26,12 @@ $g.PixelOffsetMode   = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
 # Background (ink) - same as --bg on the site.
 $g.Clear([System.Drawing.Color]::FromArgb(255, 15, 16, 20))
 
-# Cobalt glow top-right (PathGradientBrush: bright center -> transparent edge).
+# Brand glow top-right (PathGradientBrush: bright center -> transparent edge).
 $path = New-Object System.Drawing.Drawing2D.GraphicsPath
 $path.AddEllipse([single]520, [single](-260), [single]980, [single]760)
 $pgb = New-Object System.Drawing.Drawing2D.PathGradientBrush($path)
-$pgb.CenterColor = [System.Drawing.Color]::FromArgb(150, 38, 87, 214)
-$pgb.SurroundColors = @([System.Drawing.Color]::FromArgb(0, 38, 87, 214))
+$pgb.CenterColor = [System.Drawing.Color]::FromArgb(150, 91, 140, 255)
+$pgb.SurroundColors = @([System.Drawing.Color]::FromArgb(0, 91, 140, 255))
 $g.FillPath($pgb, $path)
 $pgb.Dispose(); $path.Dispose()
 
@@ -45,7 +47,7 @@ if (Test-Path $logo) {
 $textX = $logoX + $logoSize + 56
 $white  = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 241, 242, 244))
 $muted  = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 157, 160, 168))
-$accent = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 58, 107, 232))
+$accent = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 108, 109, 255))
 $dim    = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 108, 111, 120))
 
 $fTitle = New-Object System.Drawing.Font("Segoe UI", 76, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
