@@ -503,10 +503,7 @@
                          Leży w SessionContainer, ale gdy pusto nie ma tu kontrolki RDP, więc airspace nie przeszkadza. -->
                     <StackPanel x:Name="EmptyState" Grid.ColumnSpan="3" VerticalAlignment="Center" HorizontalAlignment="Center"
                                 MaxWidth="480" Margin="24">
-                        <Border Width="60" Height="60" CornerRadius="{StaticResource RadiusLg}" Background="{DynamicResource LogoBrush}"
-                                HorizontalAlignment="Center">
-                            <ui:SymbolIcon Symbol="Desktop24" FontSize="30" Foreground="{DynamicResource TextOnColor}"/>
-                        </Border>
+                        <Image Source="{StaticResource LogoTile}" Width="60" Height="60" HorizontalAlignment="Center"/>
                         <TextBlock Text="{DynamicResource S.empty.title}" Foreground="{DynamicResource TextPrim}"
                                    FontSize="{StaticResource FontSubtitle}" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,16,0,0"/>
                         <TextBlock Text="{DynamicResource S.emptyhint}" Foreground="{DynamicResource TextSec}"
@@ -1047,7 +1044,7 @@
                             <!-- Karta z wersją -->
                             <Border Style="{DynamicResource Card}" Padding="16,14">
                                 <StackPanel Orientation="Horizontal">
-                                    <Image Source="pack://application:,,,/Assets/app.ico" Width="44" Height="44" RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                                    <Image Source="{StaticResource LogoTile}" Width="44" Height="44" VerticalAlignment="Center"/>
                                     <StackPanel VerticalAlignment="Center" Margin="14,0,0,0">
                                         <TextBlock Text="Waypoint" FontSize="{StaticResource FontBodyLg}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrim}"/>
                                         <TextBlock x:Name="AboutVersion" Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}" Margin="0,2,0,0"/>

@@ -51,9 +51,6 @@
     <LinearGradientBrush x:Key="AvClient" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#36C4CF" Offset="0"/><GradientStop Color="#1F8B94" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="LogoBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#3A6BE8" Offset="0"/><GradientStop Color="#2657D6" Offset="1"/>
-    </LinearGradientBrush>
     <!-- Tło: chłodna czerń z lekkim uniesieniem i gradientem (bliżej wyglądu sprzed mockupu — mniej płasko). -->
     <LinearGradientBrush x:Key="CanvasBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#0F1014" Offset="0"/><GradientStop Color="#181A22" Offset="1"/>
