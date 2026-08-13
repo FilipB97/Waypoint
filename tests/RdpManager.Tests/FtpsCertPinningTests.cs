@@ -8,6 +8,8 @@ using Xunit;
 
 namespace RdpManager.Tests
 {
+    // Opróżnia globalny HealthNotices (Load_Corrupt_QuarantinesAndNotifies) — patrz HealthNoticesCollection.
+    [Collection("HealthNotices")]
     public class FtpsCertPinningTests
     {
         // Certyfikat efemeryczny (tylko w pamięci) — Fingerprint nie potrzebuje ważnego/zaufanego łańcucha,
