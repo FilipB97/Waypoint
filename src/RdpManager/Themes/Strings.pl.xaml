@@ -111,7 +111,7 @@
     <sys:String x:Key="S.set.resolution.sub">„Dopasuj do okna" trzyma rozdzielczość równą oknu (ostry obraz 1:1). Stała wartość jest rozciągana do okna.</sys:String>
     <sys:String x:Key="S.res.auto">Dopasuj do okna</sys:String>
     <sys:String x:Key="S.set.rdpscale">Skalowanie pulpitu zdalnego</sys:String>
-    <sys:String x:Key="S.set.rdpscale.sub">Powyżej 100% serwer rysuje tekst i ikony większe, bez rozmycia (DPI sesji; wymaga Windows 10 / Server 2016 lub nowszego). Poniżej 100% klient żąda wyższej rozdzielczości i zmniejsza obraz — więcej pulpitu, drobniejszy interfejs, nieco mniej ostro.</sys:String>
+    <sys:String x:Key="S.set.rdpscale.sub">Powyżej 100%: serwer rysuje tekst i ikony większe, bez rozmycia (wymaga Windows 10 / Server 2016). Poniżej 100%: więcej pulpitu w oknie, kosztem lekkiego rozmycia.</sys:String>
     <sys:String x:Key="S.scale.auto">Jak ekran lokalny</sys:String>
     <sys:String x:Key="S.set.autoreconnect">Automatycznie wznawiaj zerwane połączenie</sys:String>
     <sys:String x:Key="S.set.behavior">Zachowanie</sys:String>
