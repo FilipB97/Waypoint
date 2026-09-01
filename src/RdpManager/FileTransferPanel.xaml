@@ -16,13 +16,20 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="Transparent">
+                        <Grid Background="Transparent">
                             <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
-                        </Border>
+                            <Border x:Name="Underline" Height="1" VerticalAlignment="Bottom" Background="Transparent" IsHitTestVisible="False"/>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+                            </Trigger>
+                            <!-- Przycisk bez tła i ramki — fokus niesie kolor tekstu i podkreślenie,
+                                 bo obwódka wokół samego napisu wyglądałaby jak pole edycji. -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="Underline" Property="Background" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -75,12 +82,20 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/>
-                        </Border>
+                        <Grid>
+                            <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            </Border>
+                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="1"
+                                    BorderBrush="Transparent" IsHitTestVisible="False"/>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Border}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -99,7 +114,7 @@
                         <Grid>
                             <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
                             <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
-                            <ContentPresenter Margin="8,5" VerticalAlignment="Center"/>
+                            <ContentPresenter Margin="8,6" VerticalAlignment="Center"/>
                             <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -188,7 +203,7 @@
             </Grid>
 
             <!-- Nagłówek kolumn -->
-            <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Margin="12,0,14,0" Padding="0,0,0,5">
+            <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Margin="12,0,14,0" Padding="0,0,0,6">
                 <Grid Margin="12,0,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="24"/>

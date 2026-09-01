@@ -157,7 +157,7 @@ namespace RdpManager
                     sw.Child = new TextBlock
                     {
                         Text = "A", Foreground = (Brush)TryFindResource("TextSec") ?? Brushes.White,
-                        FontWeight = FontWeights.Bold, FontSize = 12,
+                        FontWeight = FontWeights.Bold, FontSize = (double)TryFindResource("FontSmall"),
                         HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                     };
                 }

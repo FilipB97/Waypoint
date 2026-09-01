@@ -55,6 +55,8 @@
                             <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="1"
+                                    BorderBrush="Transparent" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.10"/></Trigger>
@@ -63,6 +65,11 @@
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.22"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
                             </Trigger>
+                            <!-- Fokus osobno od zaznaczenia: w ListBoxie da się przejść strzałkami po
+                                 pozycjach bez zmiany wyboru, więc oba stany muszą być widoczne naraz. -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -70,7 +77,7 @@
         </Style>
 
         <DataTemplate x:Key="EnvVarRow">
-            <Grid Height="34" Margin="0,1">
+            <Grid Height="34" Margin="0,2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="1*"/>
                     <ColumnDefinition Width="1.3*"/>

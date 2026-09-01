@@ -80,9 +80,16 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                             <ScrollViewer x:Name="PART_ContentHost" Focusable="False" Padding="{TemplateBinding Padding}"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- Kursor tekstowy sam w sobie nie mówi, KTÓRE z kilku pól jest aktywne —
+                                 przy siatce klucz/wartość to istotne. Ramka przejmuje akcent. -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -119,7 +126,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Border x:Name="Bd" Margin="0,0,22,0" BorderThickness="0,0,0,2" BorderBrush="Transparent">
-                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center" Margin="0,9"
+                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center" Margin="0,10"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -128,6 +135,12 @@
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                            </Trigger>
+                            <!-- Zakładka niewybrana, ale z fokusem: podkreślenie przygaszonym akcentem,
+                                 żeby nie udawało wyboru. Kolejność po IsSelected — wybrana wygrywa. -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentSoft}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -342,7 +355,7 @@
                              można wpisać {{zmienną}} środowiska (podstawianą przy wysyłce) i widzieć kolor
                              (niebieski = znaleziona, czerwony = brak) oraz podgląd wartości w tooltipie. -->
                         <StackPanel x:Name="BearerPanel" Visibility="Collapsed">
-                            <TextBlock Text="{DynamicResource S.rest.auth.token}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,3"/>
+                            <TextBlock Text="{DynamicResource S.rest.auth.token}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,4"/>
                             <TextBox x:Name="TokenBox" Style="{StaticResource RestCell}" FontFamily="{DynamicResource Mono}"
                                      MaxWidth="520" HorizontalAlignment="Left" MinWidth="360"/>
                             <TextBlock Text="{DynamicResource S.rest.auth.tokenvar}" Foreground="{DynamicResource TextTer}"
@@ -351,9 +364,9 @@
 
                         <!-- Basic -->
                         <StackPanel x:Name="BasicPanel" Visibility="Collapsed">
-                            <TextBlock Text="{DynamicResource S.rest.auth.user}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,3"/>
+                            <TextBlock Text="{DynamicResource S.rest.auth.user}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,4"/>
                             <TextBox x:Name="AuthUserBox" Style="{StaticResource RestCell}" MaxWidth="520" MinWidth="360" HorizontalAlignment="Left" Margin="0,0,0,8"/>
-                            <TextBlock Text="{DynamicResource S.rest.auth.pass}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,3"/>
+                            <TextBlock Text="{DynamicResource S.rest.auth.pass}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,4"/>
                             <PasswordBox x:Name="AuthPassBox" MaxWidth="520" MinWidth="360" HorizontalAlignment="Left"/>
                         </StackPanel>
 
@@ -374,11 +387,11 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="{DynamicResource S.rest.script.pre}" Foreground="{DynamicResource TextSec}" FontWeight="SemiBold" Margin="2,0,0,3"/>
+                        <TextBlock Grid.Row="0" Text="{DynamicResource S.rest.script.pre}" Foreground="{DynamicResource TextSec}" FontWeight="SemiBold" Margin="2,0,0,4"/>
                         <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusSm}" Margin="0,0,0,8">
                             <TextBox x:Name="PreScriptBox" Style="{StaticResource CodeBox}"/>
                         </Border>
-                        <TextBlock Grid.Row="2" Text="{DynamicResource S.rest.script.post}" Foreground="{DynamicResource TextSec}" FontWeight="SemiBold" Margin="2,0,0,3"/>
+                        <TextBlock Grid.Row="2" Text="{DynamicResource S.rest.script.post}" Foreground="{DynamicResource TextSec}" FontWeight="SemiBold" Margin="2,0,0,4"/>
                         <Border Grid.Row="3" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="{StaticResource RadiusSm}">
                             <TextBox x:Name="TestScriptBox" Style="{StaticResource CodeBox}"/>
                         </Border>
@@ -467,14 +480,14 @@
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Margin="2,3">
+                                    <StackPanel Margin="2,4">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding Method}" FontWeight="SemiBold" Width="52"
                                                        Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontBody}"/>
                                             <TextBlock Text="{Binding Url}" Foreground="{DynamicResource TextPrim}"
                                                        TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontBody}"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}" Margin="0,1,0,0"/>
+                                        <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>

@@ -34,7 +34,7 @@ namespace RdpManager
                 {
                     Text = s.Host ?? "",
                     Foreground = (Brush)TryFindResource("TextTer"),
-                    FontFamily = (FontFamily)TryFindResource("Mono"), FontSize = 11,
+                    FontFamily = (FontFamily)TryFindResource("Mono"), FontSize = (double)TryFindResource("FontCaption"),
                     Margin = new Thickness(10, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center
                 });
                 var cb = new CheckBox { IsChecked = true, Content = text, Margin = new Thickness(0, 3, 0, 3) };

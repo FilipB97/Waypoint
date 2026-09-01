@@ -223,7 +223,9 @@ namespace RdpManager.Controllers
             var arrow = new TextBlock
             {
                 Text = collapsed ? "▸" : "▾",
-                Foreground = _owner.Res("TextTer"), FontSize = 10, Width = 12,
+                // Strzałka to afordancja („tu się klika, żeby zwinąć"), a nie ozdobnik — w TextTer 10px
+                // była praktycznie niewidoczna. TextSec + 11px (FontCaption).
+                Foreground = _owner.Res("TextSec"), FontSize = (double)_owner.TryFindResource("FontCaption"), Width = 12,
                 VerticalAlignment = VerticalAlignment.Center
             };
             Grid.SetColumn(arrow, 0);
@@ -232,7 +234,7 @@ namespace RdpManager.Controllers
             FrameworkElement badge = isPinned
                 ? new TextBlock
                 {
-                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = 11,
+                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = (double)_owner.TryFindResource("FontCaption"),
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 }
                 : (FrameworkElement)new Ellipse
@@ -248,7 +250,7 @@ namespace RdpManager.Controllers
             {
                 Text = isPinned ? L("S.group.pinned") : name.ToUpperInvariant(),
                 Foreground = _owner.Res("TextSec"),
-                FontSize = 10.5, FontWeight = FontWeights.Bold,
+                FontSize = (double)_owner.TryFindResource("FontCaption"), FontWeight = FontWeights.Bold,
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
@@ -258,8 +260,11 @@ namespace RdpManager.Controllers
             var counter = new TextBlock
             {
                 Text = count.ToString(),
+                // Był 10.5px w TextTer, gdy TextTer miał 2.71 kontrastu — mały i blady naraz. Sam TextTer
+                // jest już poprawiony (4.52), więc zostaje: trzyma hierarchię wobec nazwy grupy (TextSec,
+                // bold). Zmienia się tylko rozmiar, na FontCaption.
                 Foreground = _owner.Res("TextTer"),
-                FontSize = 10.5, VerticalAlignment = VerticalAlignment.Center,
+                FontSize = (double)_owner.TryFindResource("FontCaption"), VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(8, 0, 2, 0)
             };
             Grid.SetColumn(counter, 3);
@@ -331,7 +336,9 @@ namespace RdpManager.Controllers
             {
                 CornerRadius = new CornerRadius(6),
                 Margin = new Thickness(18, 1, 0, 1),   // wcięcie = element należy do grupy powyżej (Compass §4.3)
-                Padding = new Thickness(6, 7, 8, 7),
+                Padding = new Thickness(5, 6, 7, 6),    // -1 z każdej strony: miejsce na ramkę fokusu
+                BorderThickness = new Thickness(1),
+                BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Tag = server
@@ -368,7 +375,7 @@ namespace RdpManager.Controllers
 
             // Sam adres (DisplayHost) zdjęty z wiersza — nie mieścił się z nazwą; jest w tooltipie (WireServerRow).
             var meta = new StackPanel { Margin = new Thickness(9, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            var nameText = new TextBlock { Text = server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+            var nameText = new TextBlock { Text = server.Name, Foreground = _owner.Res("TextPrim"), FontSize = (double)_owner.TryFindResource("FontSmall"), TextTrimming = TextTrimming.CharacterEllipsis };
             meta.Children.Add(nameText);
             Grid.SetColumn(meta, 2);
             grid.Children.Add(meta);
@@ -386,7 +393,7 @@ namespace RdpManager.Controllers
             if (server.Pinned)
                 right.Children.Add(new TextBlock
                 {
-                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = 10,
+                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = (double)_owner.TryFindResource("FontCaption"),
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
             right.Children.Add(status);
@@ -415,7 +422,11 @@ namespace RdpManager.Controllers
                 // Wcięcie grupy rozbite na margines + padding: bez paddingu tło zaznaczenia zaczynałoby się
                 // dokładnie na krawędzi kafelka z glifem, bez oddechu. Suma wcięcia bez zmian (12 + 6 = 18).
                 Margin = new Thickness(12, 1, 0, 1),
-                Padding = new Thickness(6, 4, 8, 4),
+                // Padding o 1 mniej z każdej strony, bo doszła stała ramka 1px (przezroczysta w spoczynku,
+                // akcent przy fokusie klawiatury). Rezerwujemy ją zawsze, żeby fokus nie przesuwał treści.
+                Padding = new Thickness(5, 3, 7, 3),
+                BorderThickness = new Thickness(1),
+                BorderBrush = Brushes.Transparent,
                 MinHeight = 27,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
@@ -440,6 +451,8 @@ namespace RdpManager.Controllers
                 Child = new Wpf.Ui.Controls.SymbolIcon
                 {
                     Symbol = MainWindow.ProtocolSymbol(server.Protocol),
+                    // Poza skalą Icon* świadomie: rozmiar jest dobrany do kafelka 22 px, a nie do
+                    // hierarchii ikon (IconXs 11 gubi się w kafelku, IconSm 14 go wypełnia po brzegi).
                     FontSize = 13, Foreground = serverColor,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
@@ -449,7 +462,7 @@ namespace RdpManager.Controllers
 
             var name = new TextBlock
             {
-                Text = server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12, FontWeight = FontWeights.Medium,
+                Text = server.Name, Foreground = _owner.Res("TextPrim"), FontSize = (double)_owner.TryFindResource("FontSmall"), FontWeight = FontWeights.Medium,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(9, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis
             };
             Grid.SetColumn(name, 1);
@@ -473,7 +486,7 @@ namespace RdpManager.Controllers
             if (server.Pinned)
                 rightPanel.Children.Add(new TextBlock
                 {
-                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = 10,
+                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = (double)_owner.TryFindResource("FontCaption"),
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
             rightPanel.Children.Add(status);
@@ -555,10 +568,14 @@ namespace RdpManager.Controllers
             if (_serverStatusDot.TryGetValue(server, out var statusDot))
                 System.Windows.Automation.AutomationProperties.SetName(statusDot, MainWindow.StatusLabel(server.Status));
 
+            // Hover i fokus klawiatury malowały DOKŁADNIE to samo tło (Elevated), więc przechodząc listę
+            // Tabem z myszą leżącą nad innym wierszem nie dało się powiedzieć, który jest który. Fokus
+            // dostaje własny znak — obwódkę akcentu — i jest niezależny od tła: może wystąpić razem
+            // z hoverem i z zaznaczeniem, i wtedy widać wszystkie trzy stany naraz.
             row.MouseEnter += (s, e) => { if (_owner._active?.Server != server) row.Background = _owner.Res("Elevated"); };
-            row.MouseLeave += (s, e) => { if (_owner._active?.Server != server && !row.IsKeyboardFocused) row.Background = RowRestBackground(server); };
-            row.GotKeyboardFocus += (s, e) => { if (_owner._active?.Server != server) row.Background = _owner.Res("Elevated"); };
-            row.LostKeyboardFocus += (s, e) => { if (_owner._active?.Server != server) row.Background = RowRestBackground(server); };
+            row.MouseLeave += (s, e) => { if (_owner._active?.Server != server) row.Background = RowRestBackground(server); };
+            row.GotKeyboardFocus += (s, e) => row.BorderBrush = _owner.Res("Accent");
+            row.LostKeyboardFocus += (s, e) => row.BorderBrush = Brushes.Transparent;
             row.KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Enter || e.Key == Key.Space) { _owner.LaunchServer(server, true); e.Handled = true; }

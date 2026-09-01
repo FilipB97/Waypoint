@@ -57,7 +57,9 @@ namespace RdpManager
         private readonly Dictionary<string, LinearGradientBrush> _avatarCache = new Dictionary<string, LinearGradientBrush>();
         private static readonly string[][] GroupPalette =
         {
-            new[]{"#7C6CFB","#4F3FD1"}, new[]{"#FFB454","#D98F2E"}, new[]{"#36C4CF","#1F8B94"},
+            // Slot 0 był #7C6CFB — ten sam kolor co akcent (ΔE 4.1), więc grupa hashująca się tutaj
+            // dostawała kropkę nie do odróżnienia od zaznaczenia. Magenta jak GdProd: ΔE 37.9.
+            new[]{"#D06BD8","#8E3AA0"}, new[]{"#FFB454","#D98F2E"}, new[]{"#36C4CF","#1F8B94"},
             new[]{"#3DDC97","#1F9E6B"}, new[]{"#FB6C9C","#D13F6E"}, new[]{"#6C9CFB","#3F5FD1"},
             new[]{"#C06CFB","#7A3FD1"}, new[]{"#F0C05A","#C79030"}
         };
@@ -717,7 +719,7 @@ namespace RdpManager
             sp.Children.Add(new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Folder24, FontSize = (double)TryFindResource("IconSm"), Foreground = Res("Accent"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
             sp.Children.Add(new TextBlock { Text = srv.Name, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
             if (srv.Pinned)
-                sp.Children.Add(new TextBlock { Text = "★", Foreground = Res("Idle"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) });
+                sp.Children.Add(new TextBlock { Text = "★", Foreground = Res("Idle"), FontSize = (double)TryFindResource("FontCaption"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) });
             return sp;
         }
 
@@ -738,7 +740,7 @@ namespace RdpManager
             {
                 Background = RestConsole.MethodBadgeBg(method), CornerRadius = new CornerRadius(5),
                 Padding = new Thickness(5, 1, 5, 1), MinWidth = 38, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0),
-                Child = new TextBlock { Text = method, Foreground = RestConsole.MethodBrush(method), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Center }
+                Child = new TextBlock { Text = method, Foreground = RestConsole.MethodBrush(method), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.Bold, FontSize = (double)TryFindResource("FontCaption"), TextAlignment = TextAlignment.Center }
             });
             sp.Children.Add(new TextBlock { Text = r.Name, Foreground = Res("TextSec"), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
             return sp;
@@ -1044,7 +1046,7 @@ namespace RdpManager
                 AutoConnectList.Children.Add(new TextBlock
                 {
                     Text = L("S.set.autoconnect.empty"),
-                    Foreground = Res("TextTer"), FontSize = 12
+                    Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontSmall")
                 });
                 return;
             }
@@ -1065,7 +1067,7 @@ namespace RdpManager
         private FrameworkElement MakeAcHeader(string label, int count) => new TextBlock
         {
             Text = label + "  ·  " + count,
-            Foreground = Res("TextTer"), FontSize = 11, FontWeight = FontWeights.SemiBold,
+            Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontCaption"), FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(2, 8, 0, 3)
         };
 
@@ -1098,7 +1100,7 @@ namespace RdpManager
             panel.Children.Clear();
             if (_credProfiles.Count == 0)
             {
-                panel.Children.Add(new TextBlock { Text = L("S.prof.empty"), Foreground = Res("TextTer"), FontSize = 12 });
+                panel.Children.Add(new TextBlock { Text = L("S.prof.empty"), Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontSmall") });
                 return;
             }
             foreach (var pr in _credProfiles)
@@ -1192,7 +1194,7 @@ namespace RdpManager
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
             sp.Children.Add(new TextBlock
             {
-                Text = "⠿", Foreground = Res("TextTer"), FontSize = 13, Cursor = Cursors.SizeAll,
+                Text = "⠿", Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontBody"), Cursor = Cursors.SizeAll,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 8, 0)
             });
             sp.Children.Add(new CheckBox
@@ -1581,10 +1583,10 @@ namespace RdpManager
         // Kafelek KPI: duża wartość (+ jednostka) nad etykietą; pionowy dzielnik po prawej (poza ostatnim).
         private FrameworkElement KpiCell(string value, string unit, string label, Brush valueBrush, bool last)
         {
-            var val = new TextBlock { FontSize = 25, FontWeight = FontWeights.Bold };
+            var val = new TextBlock { FontSize = (double)TryFindResource("FontStat"), FontWeight = FontWeights.Bold };
             val.Inlines.Add(new Run(value) { Foreground = valueBrush });
             if (!string.IsNullOrEmpty(unit))
-                val.Inlines.Add(new Run(unit) { Foreground = Res("TextTer"), FontSize = 14, FontWeight = FontWeights.SemiBold });
+                val.Inlines.Add(new Run(unit) { Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontBodyLg"), FontWeight = FontWeights.SemiBold });
             var sp = new StackPanel();
             sp.Children.Add(val);
             sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontCaption"), Margin = new Thickness(0, 4, 0, 0) });
@@ -1749,7 +1751,7 @@ namespace RdpManager
                 lbls.Children.Add(new TextBlock
                 {
                     Text = i < labels.Length ? labels[i] : "",
-                    Foreground = Res("TextTer"), FontSize = 11, TextAlignment = TextAlignment.Center
+                    Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontCaption"), TextAlignment = TextAlignment.Center
                 });
             }
             var host = new StackPanel { Height = 210 };
@@ -1858,7 +1860,7 @@ namespace RdpManager
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
                 var name = new TextBlock { Text = kv.Key, Foreground = Res("TextPrim"),
-                    FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center,
+                    FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center,
                     TextTrimming = TextTrimming.CharacterEllipsis };
                 Grid.SetColumn(name, 0); grid.Children.Add(name);
 
@@ -1869,7 +1871,7 @@ namespace RdpManager
                 Grid.SetColumn(barGrid, 1); grid.Children.Add(barGrid);
 
                 var count = new TextBlock { Text = kv.Value.ToString(), Foreground = Res("TextSec"),
-                    FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, MinWidth = 24, TextAlignment = TextAlignment.Right };
+                    FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center, MinWidth = 24, TextAlignment = TextAlignment.Right };
                 Grid.SetColumn(count, 2); grid.Children.Add(count);
 
                 panel.Children.Add(grid);
@@ -1944,8 +1946,8 @@ namespace RdpManager
                 CornerRadius = new CornerRadius(10), Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
             };
             var sp = new StackPanel();
-            sp.Children.Add(new TextBlock { Text = value, Foreground = Res("Accent"), FontSize = 26, FontWeight = FontWeights.Bold });
-            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = 12 });
+            sp.Children.Add(new TextBlock { Text = value, Foreground = Res("Accent"), FontSize = (double)TryFindResource("FontStat"), FontWeight = FontWeights.Bold });
+            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall") });
             card.Child = sp;
             return card;
         }
@@ -2287,7 +2289,7 @@ namespace RdpManager
                 Margin = new Thickness(0, 1, 0, 1),
                 Child = new TextBlock
                 {
-                    Text = label, Foreground = Res("TextPrim"), FontSize = 12,
+                    Text = label, Foreground = Res("TextPrim"), FontSize = (double)TryFindResource("FontSmall"),
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 0, 0)
                 }
             };
@@ -2367,7 +2369,7 @@ namespace RdpManager
 
             var name = new TextBlock
             {
-                Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12,
+                Text = server.Name, Foreground = Res("TextPrim"), FontSize = (double)TryFindResource("FontSmall"),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             Grid.SetColumn(name, 1);

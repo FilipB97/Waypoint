@@ -34,6 +34,13 @@
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Elevated}"/>
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
+                            <!-- Karta ma już ramkę 1px, więc fokus tylko ją przebarwia — bez zmiany układu.
+                                 Tło zostaje spoczynkowe, żeby fokus dało się odróżnić od hoveru. -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="2"/>
+                                <Setter TargetName="Bd" Property="Padding" Value="11"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -63,7 +70,7 @@
                 <Button Style="{StaticResource SrcCard}" Tag="mstsc" Click="Card_Click">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,11,0">
+                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,12,0">
                             <ui:SymbolIcon Symbol="Desktop24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource Accent}"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -75,7 +82,7 @@
                 <Button Style="{StaticResource SrcCard}" Tag="rdp" Click="Card_Click">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,11,0">
+                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,12,0">
                             <ui:SymbolIcon Symbol="Document24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource Accent}"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -87,7 +94,7 @@
                 <Button Style="{StaticResource SrcCard}" Tag="mrng" Click="Card_Click">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,11,0">
+                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,12,0">
                             <ui:SymbolIcon Symbol="Server24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource Accent}"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -99,7 +106,7 @@
                 <Button Style="{StaticResource SrcCard}" Tag="rdcman" Click="Card_Click">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,11,0">
+                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,12,0">
                             <ui:SymbolIcon Symbol="ServerMultiple20" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource Accent}"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -111,7 +118,7 @@
                 <Button Style="{StaticResource SrcCard}" Tag="rdm" Click="Card_Click">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,11,0">
+                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,12,0">
                             <ui:SymbolIcon Symbol="Apps24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource Accent}"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -127,7 +134,7 @@
                 <Button Style="{StaticResource SrcCard}" Tag="filezilla" Click="Card_Click">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,11,0">
+                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,12,0">
                             <ui:SymbolIcon Symbol="FolderPeople24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource Accent}"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -143,7 +150,7 @@
                 <Button Style="{StaticResource SrcCard}" Tag="postman" Click="Card_Click">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,11,0">
+                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Elevated}" Margin="0,0,12,0">
                             <ui:SymbolIcon Symbol="Globe24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource Accent}"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">

@@ -55,7 +55,7 @@
                     <!-- Bearer: TextBox (jak w konsoli) — token widoczny, można wpisać {{zmienną}} środowiska;
                          kolor sygnalizuje, czy zmienna istnieje (niebieski) czy nie (czerwony). -->
                     <StackPanel x:Name="BearerPanel" Visibility="Collapsed">
-                        <TextBlock Text="{DynamicResource S.rest.auth.token}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,3"/>
+                        <TextBlock Text="{DynamicResource S.rest.auth.token}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,4"/>
                         <TextBox x:Name="TokenBox" MaxWidth="420" MinWidth="320" HorizontalAlignment="Left"
                                  FontFamily="{DynamicResource Mono}" TextChanged="Token_TextChanged"
                                  Background="Transparent" Foreground="{DynamicResource TextPrim}" CaretBrush="{DynamicResource TextPrim}"
@@ -66,11 +66,11 @@
 
                     <!-- Basic -->
                     <StackPanel x:Name="BasicPanel" Visibility="Collapsed">
-                        <TextBlock Text="{DynamicResource S.rest.auth.user}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,3"/>
+                        <TextBlock Text="{DynamicResource S.rest.auth.user}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,4"/>
                         <TextBox x:Name="UserBox" MaxWidth="420" MinWidth="320" HorizontalAlignment="Left" Margin="0,0,0,8"
                                  Background="Transparent" Foreground="{DynamicResource TextPrim}" CaretBrush="{DynamicResource TextPrim}"
                                  BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="4,4"/>
-                        <TextBlock Text="{DynamicResource S.rest.auth.pass}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,3"/>
+                        <TextBlock Text="{DynamicResource S.rest.auth.pass}" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" Margin="0,0,0,4"/>
                         <PasswordBox x:Name="PassBox" MaxWidth="420" MinWidth="320" HorizontalAlignment="Left"/>
                     </StackPanel>
 

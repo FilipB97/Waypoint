@@ -24,6 +24,10 @@
     <sys:Double x:Key="FontTitle">18</sys:Double>
     <sys:Double x:Key="FontHeading">20</sys:Double>
     <sys:Double x:Key="FontDisplay">22</sys:Double>
+    <!-- Duża liczba na kafelku statystyki (pulpit). Osobny stopień, bo to nie nagłówek tekstu tylko
+         wartość do rzucenia okiem. Był wpisany na sztywno w dwóch miejscach jako 25 i 26 — ten sam
+         element w dwóch rozmiarach, bez powodu. -->
+    <sys:Double x:Key="FontStat">26</sys:Double>
 
     <!-- Skala fontów: glify ikon (SymbolIcon / znaki Unicode użyte jako ikony) — osobna skala,
          bo rozmiar ikony dobiera się do przycisku/kontenera, nie do hierarchii czytelnego tekstu. -->
@@ -32,6 +36,23 @@
     <sys:Double x:Key="IconMd">16</sys:Double>
     <sys:Double x:Key="IconLg">18</sys:Double>
     <sys:Double x:Key="IconXl">34</sys:Double>
+
+    <!-- Skala odstępów. Powód: składowe Margin/Padding w XAML-u chodziły po wartościach 1,3,5,7,9,11
+         obok 2,4,6,8,10,12 — czyli różnice o piksel, których nikt nie zaprojektował, a które łamią
+         wspólną linię między sąsiadującymi widokami. Baza to 4 (4/8/12/16/20/24), z półkrokiem 2
+         (2/6/10/14/18) dla gęstych miejsc: wierszy list, pasków narzędzi, wnętrz kontrolek.
+         Zasada: nowy i edytowany kod bierze wartość z tej drabiny, nie z oka. Tokeny są Double,
+         bo Thickness w WPF nie składa się z zasobów — służą do wyliczeń w kodzie i jako słownik
+         dozwolonych wartości przy pisaniu XAML-a. -->
+    <sys:Double x:Key="Space2">2</sys:Double>
+    <sys:Double x:Key="Space4">4</sys:Double>
+    <sys:Double x:Key="Space6">6</sys:Double>
+    <sys:Double x:Key="Space8">8</sys:Double>
+    <sys:Double x:Key="Space10">10</sys:Double>
+    <sys:Double x:Key="Space12">12</sys:Double>
+    <sys:Double x:Key="Space16">16</sys:Double>
+    <sys:Double x:Key="Space20">20</sys:Double>
+    <sys:Double x:Key="Space24">24</sys:Double>
 
     <!-- Marginesy okien dialogowych: warianty, które już się pokrywały między kilkoma oknami (2.4) -->
     <Thickness x:Key="DialogContentMargin">18,8,18,8</Thickness>

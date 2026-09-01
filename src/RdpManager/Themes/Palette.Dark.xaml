@@ -9,7 +9,10 @@
     <SolidColorBrush x:Key="Border"     Color="#22FFFFFF"/>
     <SolidColorBrush x:Key="TextPrim"   Color="#E7E8EE"/>
     <SolidColorBrush x:Key="TextSec"    Color="#8A8C97"/>
-    <SolidColorBrush x:Key="TextTer"    Color="#5A5C66"/>
+    <!-- TextTer nie jest ozdobnikiem: niesie etykiety pól, puste stany, nazwy folderów i loginy
+         (79 użyć w XAML). Dawne #5A5C66 dawało 2.71 wobec kanwy — pod progiem AA nawet dla dużego
+         tekstu (3.0). #7C7F8C to 4.52, czyli powyżej progu dla tekstu zwykłego. -->
+    <SolidColorBrush x:Key="TextTer"    Color="#7C7F8C"/>
     <!-- Akcent zgodny ze znakiem marki (logo-export/waypoint-logo.svg: #5B8CFF -> #7C4DFF) — indygo
          zamiast dawnego kobaltu. Kontrast białego tekstu na akcencie wychodzi lepiej niż poprzednio
          (3.99 vs 3.41), a wobec kanwy #0C0D11 to 4.87. -->
@@ -23,7 +26,9 @@
     <SolidColorBrush x:Key="Idle"       Color="#FFB454"/>
     <SolidColorBrush x:Key="Offline"    Color="#5B5D66"/>
     <SolidColorBrush x:Key="Danger"     Color="#E8463F"/>
-    <SolidColorBrush x:Key="GdProd"     Color="#7C6CFB"/>
+    <!-- Kolor grupy „Produkcja". Dawne indygo #7C6CFB dzieliło od akcentu #6C6DFF odległość barwną
+         ΔE 4.1 — czyli to był ten sam kolor, a kropka grupy udawała zaznaczenie. Magenta: ΔE 37.9. -->
+    <SolidColorBrush x:Key="GdProd"     Color="#D06BD8"/>
     <SolidColorBrush x:Key="GdStaging"  Color="#FFB454"/>
     <SolidColorBrush x:Key="GdClient"   Color="#36B8C4"/>
 
@@ -46,7 +51,7 @@
     <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
 
     <LinearGradientBrush x:Key="AvProd" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#7C6CFB" Offset="0"/><GradientStop Color="#4F3FD1" Offset="1"/>
+        <GradientStop Color="#D06BD8" Offset="0"/><GradientStop Color="#8E3AA0" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="AvStaging" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#FFB454" Offset="0"/><GradientStop Color="#D98F2E" Offset="1"/>

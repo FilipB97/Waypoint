@@ -99,7 +99,7 @@ namespace RdpManager.Controllers
             });
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12,
+                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = (double)_owner.TryFindResource("FontSmall"),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -157,7 +157,7 @@ namespace RdpManager.Controllers
             content.Children.Add(tabDot);
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12,
+                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = (double)_owner.TryFindResource("FontSmall"),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -181,7 +181,7 @@ namespace RdpManager.Controllers
         {
             var close = new TextBlock
             {
-                Text = "✕", Foreground = _owner.Res("TextTer"), FontSize = 11,
+                Text = "✕", Foreground = _owner.Res("TextTer"), FontSize = (double)_owner.TryFindResource("FontCaption"),
                 Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(3, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand,
                 Visibility = Visibility.Hidden
@@ -591,7 +591,7 @@ namespace RdpManager.Controllers
             var pillRow = new StackPanel { Orientation = Orientation.Horizontal };
             pillRow.Children.Add(new TextBlock
             {
-                Text = g.Collapsed ? "▸" : "▾", Foreground = new SolidColorBrush(color), FontSize = 10,
+                Text = g.Collapsed ? "▸" : "▾", Foreground = new SolidColorBrush(color), FontSize = (double)_owner.TryFindResource("FontCaption"),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 5, 0)
             });
             pillRow.Children.Add(new TextBlock
@@ -604,7 +604,7 @@ namespace RdpManager.Controllers
                 {
                     CornerRadius = new CornerRadius(9), Background = _owner.Res("Elevated"),
                     Padding = new Thickness(6, 0, 6, 1), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
-                    Child = new TextBlock { Text = members.Count.ToString(), Foreground = _owner.Res("TextSec"), FontSize = 10.5 }
+                    Child = new TextBlock { Text = members.Count.ToString(), Foreground = _owner.Res("TextSec"), FontSize = (double)_owner.TryFindResource("FontCaption") }
                 });
             pill.Child = pillRow;
             // e.Handled: klik przebudowuje pasek (usuwa tę pastylkę) — nie pozwól zdarzeniu bąbelkować dalej.
@@ -635,7 +635,7 @@ namespace RdpManager.Controllers
             foreach (var c in GroupColors)
             {
                 var cc = c;
-                var swatch = new MenuItem { Header = new TextBlock { Text = "●", Foreground = new SolidColorBrush(cc), FontSize = 15 } };
+                var swatch = new MenuItem { Header = new TextBlock { Text = "●", Foreground = new SolidColorBrush(cc), FontSize = (double)_owner.TryFindResource("FontBodyLg") } };
                 swatch.Click += (s, e) => { g.Color = cc; SaveTabGroups(); RebuildTabStrip(); };
                 colorItem.Items.Add(swatch);
             }

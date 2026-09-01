@@ -169,7 +169,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Height="28" Padding="13,0">
+                        <!-- Ramka rezerwowana zawsze (przezroczysta), żeby zaznaczenie fokusem nie
+                             przesuwało treści segmentu o 2 px. -->
+                        <Border x:Name="bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Height="28" Padding="12,0"
+                                BorderThickness="1" BorderBrush="Transparent">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
@@ -180,6 +183,11 @@
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                            </Trigger>
+                            <!-- Własny szablon zjada domyślny prostokąt fokusu WPF — bez tego przez segmenty
+                                 nie da się przejść klawiaturą świadomie. -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -469,7 +477,7 @@
 
                 <!-- session toolbar: two states -->
                 <Border x:Name="SessionToolbar" Grid.Row="1" Background="{DynamicResource Panel}"
-                        BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="12,5">
+                        BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="12,6">
                     <Grid>
                         <!-- disconnected -> kompaktowy pasek połączenia (pełna edycja jest w oknie serwera) -->
                         <StackPanel x:Name="ConnectForm" Orientation="Horizontal" VerticalAlignment="Center">
@@ -631,7 +639,7 @@
                                         <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent"
                                                 BorderThickness="2" BorderBrush="Transparent"/>
                                         <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Panel}" Opacity="0"/>
-                                        <Grid Margin="12,9">
+                                        <Grid Margin="12,10">
                                             <Border x:Name="Bar" Width="3" CornerRadius="{StaticResource RadiusXs}" HorizontalAlignment="Left"
                                                     Background="{DynamicResource Accent}" Visibility="Collapsed"/>
                                             <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
@@ -678,43 +686,43 @@
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Options24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Options24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.iface}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="PlugConnected24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="PlugConnected24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.conn}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="WrenchScrewdriver24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="WrenchScrewdriver24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.behavior}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Flash24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Flash24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.autoconnect}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Person24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Person24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.profiles}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Database24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Database24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.data}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Info24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Info24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.nav.about}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
@@ -1309,7 +1317,7 @@
         <!-- floating fullscreen bar (Popup = osobny HWND -> rysuje się nad kontrolką RDP) -->
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
-            <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,7" Margin="12,4,12,12"
+            <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,8" Margin="12,4,12,12"
                     BorderBrush="{DynamicResource Border}" BorderThickness="1">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/>
