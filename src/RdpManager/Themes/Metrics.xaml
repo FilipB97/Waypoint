@@ -41,12 +41,20 @@
     <!-- Karta (uniesiona powierzchnia na treść). Przeniesiona tu z MainWindow.Resources, bo używa jej też
          okno sesji (karta stanu „łączenie / rozłączono") — a to ta sama sesja, tylko wypięta do osobnego
          okna, więc nie może wyglądać inaczej. Pędzle przez DynamicResource: podążają za motywem. -->
+    <!-- Uniesienie zamiast obramowania: ramka hairline NA TLE panelu to były dwa sposoby powiedzenia
+         „to jest karta". Zostaje jaśniejsza powierzchnia (Elevated) i miękki cień — karta leży na tle,
+         zamiast być z niego wycięta. Kart jest kilka (stan sesji, „O aplikacji"), więc koszt efektu
+         jest bez znaczenia; nie nadaje się to natomiast na długie listy powtarzalnych elementów. -->
     <Style x:Key="Card" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource Panel}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource Elevated}"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}"/>
         <Setter Property="Padding" Value="18,14"/>
         <Setter Property="Margin" Value="0,0,0,14"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Direction="270" Opacity="0.34" Color="#000000"/>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

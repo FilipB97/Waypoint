@@ -361,7 +361,8 @@
                                 </ui:Button.ContentTemplate>
                             </ui:Button>
                             <ui:Button Content="{DynamicResource S.quickConnect}" HorizontalAlignment="Stretch"
-                                       Appearance="Primary" Click="QuickConnect_Click"
+                                       Appearance="Primary" Background="{StaticResource BrandGradient}"
+                                       Click="QuickConnect_Click"
                                        ToolTip="{DynamicResource S.quickConnect.tip}"/>
                             <!-- „Dodaj serwer" jako cicha akcja: dwa przyciski pełnej szerokości pod sobą
                                  konkurowały ze sobą o uwagę, a dodawanie serwera jest rzadsze niż łączenie. -->

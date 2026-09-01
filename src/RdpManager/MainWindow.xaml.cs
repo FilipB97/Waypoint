@@ -1900,6 +1900,25 @@ namespace RdpManager
             _ => ProtocolLabel(p)
         };
 
+        /// <summary>
+        /// Ikona protokołu do wiersza listy. Grupowanie jak w <see cref="ProtocolBrush"/>: pulpit zdalny
+        /// (RDP/VNC), terminal (SSH/Telnet/Serial), pliki (SFTP/FTP). Ikona mówi CO to za połączenie —
+        /// w liście mieszanej protokołowo to realna informacja, a nie dekoracja.
+        /// </summary>
+        internal static Wpf.Ui.Controls.SymbolRegular ProtocolSymbol(RemoteProtocol p) => p switch
+        {
+            RemoteProtocol.Rdp => Wpf.Ui.Controls.SymbolRegular.Desktop24,
+            RemoteProtocol.Vnc => Wpf.Ui.Controls.SymbolRegular.Desktop24,
+            RemoteProtocol.Ssh => Wpf.Ui.Controls.SymbolRegular.Keyboard24,
+            RemoteProtocol.Telnet => Wpf.Ui.Controls.SymbolRegular.Keyboard24,
+            RemoteProtocol.Serial => Wpf.Ui.Controls.SymbolRegular.Keyboard24,
+            RemoteProtocol.Sftp => Wpf.Ui.Controls.SymbolRegular.Folder24,
+            RemoteProtocol.Ftp => Wpf.Ui.Controls.SymbolRegular.Folder24,
+            RemoteProtocol.Rest => Wpf.Ui.Controls.SymbolRegular.Braces24,
+            RemoteProtocol.Http => Wpf.Ui.Controls.SymbolRegular.Globe24,
+            _ => Wpf.Ui.Controls.SymbolRegular.Server24
+        };
+
         // Kolor etykiety protokołu (Compass §2). VNC dzieli kolor z RDP (pulpit zdalny), FTP z SFTP
         // (transfer plików), Serial z Telnet (terminal) — brak osobnych kluczy dla tych trzech.
         internal Brush ProtocolBrush(RemoteProtocol p) => p switch

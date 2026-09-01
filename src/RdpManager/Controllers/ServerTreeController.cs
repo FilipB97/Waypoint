@@ -412,8 +412,10 @@ namespace RdpManager.Controllers
             var row = new Border
             {
                 CornerRadius = new CornerRadius(6),
-                Margin = new Thickness(18, 1, 0, 1),   // wcięcie = element należy do grupy powyżej (Compass §4.3)
-                Padding = new Thickness(0, 4, 8, 4),
+                // Wcięcie grupy rozbite na margines + padding: bez paddingu tło zaznaczenia zaczynałoby się
+                // dokładnie na krawędzi kafelka z glifem, bez oddechu. Suma wcięcia bez zmian (12 + 6 = 18).
+                Margin = new Thickness(12, 1, 0, 1),
+                Padding = new Thickness(6, 4, 8, 4),
                 MinHeight = 27,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
@@ -421,45 +423,52 @@ namespace RdpManager.Controllers
             };
 
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });                    // pasek koloru
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                      // kropka
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                      // glif protokołu
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // nazwa
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                      // host
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                      // prawa strona
 
-            // Pasek koloru przy lewej krawędzi = tożsamość serwera; zmienia się na akcent, gdy zaznaczony.
+            // Jeden element po lewej zamiast dwóch: kafelek niesie ORAZ kolor serwera (tożsamość), ORAZ ikonę
+            // protokołu (co to za połączenie). Wcześniej stały tu obok siebie pasek koloru i kropka statusu —
+            // dwa znaczniki o różnym znaczeniu w odległości kilku pikseli, które oko musiało rozróżniać.
+            // Status przenosi się na prawą stronę wiersza, gdzie nic z nim nie konkuruje.
             var serverColor = _owner.AvatarBrush(server);
-            var bar = new Rectangle
+            var glyph = new Border
             {
-                Width = 3, RadiusX = 2, RadiusY = 2, Fill = serverColor,
-                VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(0, 3, 0, 3)
+                Width = 22, Height = 22, CornerRadius = new CornerRadius(7),
+                Background = TintBrush(serverColor, 0.16),
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new Wpf.Ui.Controls.SymbolIcon
+                {
+                    Symbol = MainWindow.ProtocolSymbol(server.Protocol),
+                    FontSize = 13, Foreground = serverColor,
+                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                }
             };
-            Grid.SetColumn(bar, 0);
-            grid.Children.Add(bar);
-
-            var status = new Ellipse
-            {
-                Width = 7, Height = 7, Fill = _owner.StatusBrush(server.Status),
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(11, 0, 0, 0)
-            };
-            _serverStatusDot[server] = status;
-            Grid.SetColumn(status, 1);
-            grid.Children.Add(status);
+            Grid.SetColumn(glyph, 0);
+            grid.Children.Add(glyph);
 
             var name = new TextBlock
             {
                 Text = server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12, FontWeight = FontWeights.Medium,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(9, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis
             };
-            Grid.SetColumn(name, 2);
+            Grid.SetColumn(name, 1);
             grid.Children.Add(name);
 
-            // Po prawej: znacznik protokołu (+ opcjonalne opóźnienie / gwiazdka). Adres (DisplayHost) zdjęty
+            var status = new Ellipse
+            {
+                Width = 7, Height = 7, Fill = _owner.StatusBrush(server.Status),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _serverStatusDot[server] = status;
+
+            // Po prawej: opóźnienie, gwiazdka przypięcia i kropka statusu. Adres (DisplayHost) zdjęty
             // z wiersza — nazwa nie mieściła się z adresem; adres jest w tooltipie (WireServerRow).
             var rightPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center
             };
-            if (ShowProtocolTag) rightPanel.Children.Add(BuildProtocolTag(server));
+            // Etykieta tekstowa protokołu jest tu już zbędna — niesie ją glif po lewej.
             AddLatencyLabel(rightPanel, server);
             if (server.Pinned)
                 rightPanel.Children.Add(new TextBlock
@@ -467,7 +476,8 @@ namespace RdpManager.Controllers
                     Text = "★", Foreground = _owner.Res("Idle"), FontSize = 10,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
-            Grid.SetColumn(rightPanel, 3);
+            rightPanel.Children.Add(status);
+            Grid.SetColumn(rightPanel, 2);
             grid.Children.Add(rightPanel);
 
             row.Child = grid;
@@ -475,11 +485,28 @@ namespace RdpManager.Controllers
             _serverActivate[server] = active =>
             {
                 row.Background = active ? _owner.Res("AccentSoft") : Brushes.Transparent;
-                bar.Fill = active ? _owner.Res("Accent") : serverColor;
                 name.FontWeight = active ? FontWeights.SemiBold : FontWeights.Medium;
             };
             WireServerRow(row, server);
             return row;
+        }
+
+        /// <summary>
+        /// Przygaszona wersja pędzla serwera na tło kafelka z glifem. Bierze kolor „środkowy" (dla gradientu
+        /// pierwszy stop, bo to on definiuje wrażenie barwy) i nakłada mu krycie — kafelek ma być podkładem
+        /// pod ikonę, a nie kolejną plamą konkurującą z nazwą. Zamrożony, bo wiersze powstają setkami.
+        /// </summary>
+        private static Brush TintBrush(Brush source, double opacity)
+        {
+            Color c = source switch
+            {
+                SolidColorBrush s => s.Color,
+                GradientBrush g when g.GradientStops.Count > 0 => g.GradientStops[0].Color,
+                _ => Colors.Gray
+            };
+            var b = new SolidColorBrush(Color.FromArgb((byte)Math.Round(255 * opacity), c.R, c.G, c.B));
+            b.Freeze();
+            return b;
         }
 
         // Kolorowa etykieta protokołu (mono) po prawej stronie wiersza — świadoma protokołów lista (Compass §3).
