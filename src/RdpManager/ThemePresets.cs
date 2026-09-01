@@ -30,7 +30,7 @@ namespace RdpManager
             // — Ciemne — (Waypoint = podgląd bazy; reszta wg kanonicznych kolorów motywów)
             new ThemePreset { Id = "Waypoint", Name = "Waypoint", Light = false,
                 Canvas = C("#0C0D11"), Panel = C("#17181D"), Border = C("#2A2B31"), RailBg = C("#121319"),
-                TextPrim = C("#E7E8EE"), TextSec = C("#8A8C97"), TextTer = C("#5A5C66"), Accent = C("#4C86FF") },
+                TextPrim = C("#E7E8EE"), TextSec = C("#8A8C97"), TextTer = C("#5A5C66"), Accent = C("#6C6DFF") },
             new ThemePreset { Id = "AtomOne", Name = "Atom One Dark", Light = false,
                 Canvas = C("#282C34"), Panel = C("#2F343D"), Border = C("#3B414D"), RailBg = C("#21252B"),
                 TextPrim = C("#ABB2BF"), TextSec = C("#828997"), TextTer = C("#5C6370"), Accent = C("#61AFEF") },
@@ -50,7 +50,7 @@ namespace RdpManager
             // — Jasne —
             new ThemePreset { Id = "Waypoint", Name = "Waypoint", Light = true,
                 Canvas = C("#EEF0F3"), Panel = C("#FFFFFF"), Border = C("#DDE1E7"), RailBg = C("#F2F3F5"),
-                TextPrim = C("#1B1D22"), TextSec = C("#565A62"), TextTer = C("#888B93"), Accent = C("#2657D6") },
+                TextPrim = C("#1B1D22"), TextSec = C("#565A62"), TextTer = C("#888B93"), Accent = C("#5B4BD6") },
             new ThemePreset { Id = "GitHubLight", Name = "GitHub Light", Light = true,
                 Canvas = C("#FFFFFF"), Panel = C("#F6F8FA"), Border = C("#D0D7DE"), RailBg = C("#F6F8FA"),
                 TextPrim = C("#1F2328"), TextSec = C("#656D76"), TextTer = C("#8C959F"), Accent = C("#0969DA") },

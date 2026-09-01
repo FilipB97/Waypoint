@@ -10,10 +10,13 @@
     <SolidColorBrush x:Key="TextPrim"   Color="#E7E8EE"/>
     <SolidColorBrush x:Key="TextSec"    Color="#8A8C97"/>
     <SolidColorBrush x:Key="TextTer"    Color="#5A5C66"/>
-    <SolidColorBrush x:Key="Accent"       Color="#4C86FF"/>
-    <SolidColorBrush x:Key="AccentSoft"   Color="#1F4C86FF"/>
-    <SolidColorBrush x:Key="AccentBright" Color="#6E9EFF"/>
-    <SolidColorBrush x:Key="AccentStrong" Color="#664C86FF"/>
+    <!-- Akcent zgodny ze znakiem marki (logo-export/waypoint-logo.svg: #5B8CFF -> #7C4DFF) — indygo
+         zamiast dawnego kobaltu. Kontrast białego tekstu na akcencie wychodzi lepiej niż poprzednio
+         (3.99 vs 3.41), a wobec kanwy #0C0D11 to 4.87. -->
+    <SolidColorBrush x:Key="Accent"       Color="#6C6DFF"/>
+    <SolidColorBrush x:Key="AccentSoft"   Color="#266C6DFF"/>
+    <SolidColorBrush x:Key="AccentBright" Color="#8A8BFF"/>
+    <SolidColorBrush x:Key="AccentStrong" Color="#666C6DFF"/>
     <SolidColorBrush x:Key="SplitDim"     Color="#33000000"/>
     <SolidColorBrush x:Key="TextOnColor" Color="White"/>
     <SolidColorBrush x:Key="Online"     Color="#3DDC97"/>

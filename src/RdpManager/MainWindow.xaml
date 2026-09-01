@@ -30,6 +30,13 @@
                         <Grid>
                             <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusMd}"
                                     BorderThickness="2" BorderBrush="Transparent"/>
+                            <!-- Wskaźnik aktywnego widoku: pigułka akcentu przy lewej krawędzi raila. Samo tło
+                                 (AccentSoft) było ledwo czytelne, a to jest konwencja, którą użytkownik zna
+                                 z pasków nawigacji — od razu widać, w którym widoku się jest. Widoczność
+                                 przełącza SetNav przez FindName: Tag przycisku niesie już nazwę widoku
+                                 (Nav_Click), więc nie da się użyć go do stanu. -->
+                            <Border x:Name="ActivePill" Width="3" Height="20" HorizontalAlignment="Left" CornerRadius="0,2,2,0"
+                                    Background="{DynamicResource Accent}" Margin="-7,0,0,0" Visibility="Collapsed"/>
                             <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusMd}" Background="{DynamicResource RailHover}" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
@@ -356,8 +363,10 @@
                             <ui:Button Content="{DynamicResource S.quickConnect}" HorizontalAlignment="Stretch"
                                        Appearance="Primary" Click="QuickConnect_Click"
                                        ToolTip="{DynamicResource S.quickConnect.tip}"/>
+                            <!-- „Dodaj serwer" jako cicha akcja: dwa przyciski pełnej szerokości pod sobą
+                                 konkurowały ze sobą o uwagę, a dodawanie serwera jest rzadsze niż łączenie. -->
                             <ui:Button Content="{DynamicResource S.addServer}" HorizontalAlignment="Stretch"
-                                       Appearance="Secondary" Margin="0,6,0,0" Click="AddServer_Click"/>
+                                       Appearance="Transparent" Margin="0,2,0,0" Click="AddServer_Click"/>
                             <!-- Import celowo bez przycisku tutaj — rail ma dedykowany NavImport (ten sam OpenImport_Click). -->
                         </StackPanel>
                     </Border>
@@ -826,7 +835,7 @@
                                     <Border Grid.Column="1" Style="{DynamicResource SegBar}">
                                         <StackPanel x:Name="BorderSeg" Orientation="Horizontal">
                                             <RadioButton Style="{DynamicResource Seg}" Tag="" Content="{DynamicResource S.border.none}" Checked="SegSetting_Changed"/>
-                                            <RadioButton Style="{DynamicResource Seg}" Tag="#2657D6" Content="{DynamicResource S.border.cobalt}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="#6C6DFF" Content="{DynamicResource S.border.brand}" Checked="SegSetting_Changed"/>
                                             <RadioButton Style="{DynamicResource Seg}" Tag="System" Content="{DynamicResource S.border.system}" Checked="SegSetting_Changed"/>
                                         </StackPanel>
                                     </Border>

@@ -39,7 +39,20 @@ namespace RdpManager
                 }
             }
             PersistLog.Write(dir, $"settings.Load: główny (score={(main == null ? -1 : DataScore(main))}, istnieje={File.Exists(path)})");
-            return main ?? new AppSettings();
+            return Migrate(main ?? new AppSettings());
+        }
+
+        /// <summary>
+        /// Drobne przeniesienia wartości, gdy ZNACZENIE opcji się nie zmieniło, ale jej wartość tak.
+        /// Dziś jedno: opcja obwódki okna „kolor marki" była kobaltowa (#2657D6), a marka przeszła na
+        /// indygo (#6C6DFF). Bez tego zapisany kobalt nie pasowałby już do żadnego segmentu w Ustawieniach
+        /// i użytkownik zobaczyłby nic niezaznaczonego, mimo że obwódka dalej się rysuje.
+        /// </summary>
+        private static AppSettings Migrate(AppSettings s)
+        {
+            if (string.Equals(s.WindowBorderColor, "#2657D6", StringComparison.OrdinalIgnoreCase))
+                s.WindowBorderColor = "#6C6DFF";
+            return s;
         }
 
         private static AppSettings ReadOrNull(string p, bool preserveCorrupt)

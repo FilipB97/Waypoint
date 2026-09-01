@@ -442,6 +442,14 @@ namespace RdpManager
         {
             b.Background = active ? Res("AccentSoft") : Brushes.Transparent;
             ico.Foreground = active ? Res("Accent") : Res("TextTer");
+
+            // Pigułka akcentu przy krawędzi raila (szablon RailBtn). Sam odcień tła bywał ledwo czytelny,
+            // zwłaszcza na jasnym motywie. Tag przycisku niesie nazwę widoku (Nav_Click), więc stanu nie da
+            // się przekazać triggerem — sięgamy do części szablonu. ApplyTemplate, bo pierwsze wywołanie
+            // przychodzi ze startu okna, zanim szablon zdąży się rozwinąć.
+            b.ApplyTemplate();
+            if (b.Template?.FindName("ActivePill", b) is FrameworkElement pill)
+                pill.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
         }
 
         // ---------- Moduł REST (rail „REST" przełącza sidebar na kolekcje; Compass §4.4) ----------

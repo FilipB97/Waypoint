@@ -79,16 +79,18 @@ namespace RdpManager.Controllers
             if (protos.Count < 2) { _owner.ProtoFilterBar.Visibility = Visibility.Collapsed; return; }
             _owner.ProtoFilterBar.Visibility = Visibility.Visible;
 
-            _owner.ProtoFilterBar.Children.Add(MakeProtocolChip(L("S.proto.filter.all"), null, _owner.Res("TextSec")));
+            // Bez chipa „Wszystkie": zjadał ~1/3 szerokości paska i spychał resztę do drugiego rzędu, a to
+            // samo robi klik w aktywny chip (zaznaczony → wyczyść). Podpowiedź siedzi w tooltipie chipa.
             foreach (var p in protos)
                 _owner.ProtoFilterBar.Children.Add(MakeProtocolChip(MainWindow.ProtocolShort(p), p, _owner.ProtocolBrush(p)));
         }
 
         private FrameworkElement MakeProtocolChip(string text, RemoteProtocol? proto, Brush accent)
         {
-            bool selected = _protocolFilter == proto || (proto == null && _protocolFilter == null);
+            bool selected = _protocolFilter == proto;
             var chip = new Border
             {
+                ToolTip = selected ? L("S.proto.filter.clear") : null,
                 CornerRadius = new CornerRadius(9),
                 Padding = new Thickness(9, 3, 9, 3),
                 Margin = new Thickness(0, 0, 5, 5),
@@ -104,7 +106,12 @@ namespace RdpManager.Controllers
                     FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal
                 }
             };
-            chip.MouseLeftButtonUp += (s, e) => { _protocolFilter = proto; RenderTree(_owner.SearchBox.Text); };
+            // Klik w aktywny chip = powrót do „wszystkie" (zastępuje usunięty chip „Wszystkie").
+            chip.MouseLeftButtonUp += (s, e) =>
+            {
+                _protocolFilter = (_protocolFilter == proto) ? null : proto;
+                RenderTree(_owner.SearchBox.Text);
+            };
             return chip;
         }
 
@@ -190,43 +197,73 @@ namespace RdpManager.Controllers
 
         private FrameworkElement BuildGroupHeader(string name, int count, bool collapsed, bool isPinned)
         {
+            // Włosowa kreska nad każdą grupą POZA pierwszą — rozdziela sekcje bez dokładania pustej
+            // przestrzeni. Pierwszy nagłówek jej nie dostaje, bo nad nim jest już pasek chipów.
+            bool first = _owner.ServerTree.Children.Count == 0;
             var row = new Border
             {
                 // Minimal: ciaśniejszy padding niż domyślny (lżejsze nagłówki grup i sekcja przypiętych).
                 Padding = IsMinimalList ? new Thickness(6, 5, 6, 2) : new Thickness(6, 10, 6, 4),
                 Background = Brushes.Transparent,
+                BorderBrush = _owner.Res("Border"),
+                BorderThickness = first ? new Thickness(0) : new Thickness(0, 1, 0, 0),
+                Margin = first ? new Thickness(0) : new Thickness(0, 6, 0, 0),
                 Cursor = Cursors.Hand
             };
-            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+
+            // Grid, nie StackPanel: licznik ma siedzieć przy prawej krawędzi (kolumna liczb), a nie
+            // doklejony do nazwy przez „ · ” — przy różnych długościach nazw to była poszarpana linia.
+            var sp = new Grid();
+            sp.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            sp.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            sp.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            sp.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             // Strzałka zwijania (▸ zwinięte / ▾ rozwinięte).
-            sp.Children.Add(new TextBlock
+            var arrow = new TextBlock
             {
                 Text = collapsed ? "▸" : "▾",
                 Foreground = _owner.Res("TextTer"), FontSize = 10, Width = 12,
                 VerticalAlignment = VerticalAlignment.Center
-            });
+            };
+            Grid.SetColumn(arrow, 0);
+            sp.Children.Add(arrow);
 
-            if (isPinned)
-                sp.Children.Add(new TextBlock
+            FrameworkElement badge = isPinned
+                ? new TextBlock
                 {
                     Text = "★", Foreground = _owner.Res("Idle"), FontSize = 11,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
-                });
-            else
-                sp.Children.Add(new Ellipse
+                }
+                : (FrameworkElement)new Ellipse
                 {
                     Width = 6, Height = 6, Fill = _owner.GroupDotBrush(name),
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
-                });
+                };
+            Grid.SetColumn(badge, 1);
+            sp.Children.Add(badge);
 
-            sp.Children.Add(new TextBlock
+            // Nazwa: mniejsza i wersalikami — nagłówek ma organizować listę, a nie z nią konkurować.
+            var title = new TextBlock
             {
-                Text = (isPinned ? L("S.group.pinned") : name.ToUpperInvariant()) + "  ·  " + count,
+                Text = isPinned ? L("S.group.pinned") : name.ToUpperInvariant(),
                 Foreground = _owner.Res("TextSec"),
-                FontSize = 13, FontWeight = FontWeights.Bold,   // grupa nadrzędna — wyraźniej niż wiersze w środku
-                VerticalAlignment = VerticalAlignment.Center
-            });
+                FontSize = 10.5, FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            Grid.SetColumn(title, 2);
+            sp.Children.Add(title);
+
+            var counter = new TextBlock
+            {
+                Text = count.ToString(),
+                Foreground = _owner.Res("TextTer"),
+                FontSize = 10.5, VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(8, 0, 2, 0)
+            };
+            Grid.SetColumn(counter, 3);
+            sp.Children.Add(counter);
 
             row.Child = sp;
 
@@ -331,7 +368,8 @@ namespace RdpManager.Controllers
 
             // Sam adres (DisplayHost) zdjęty z wiersza — nie mieścił się z nazwą; jest w tooltipie (WireServerRow).
             var meta = new StackPanel { Margin = new Thickness(9, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            meta.Children.Add(new TextBlock { Text = server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
+            var nameText = new TextBlock { Text = server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+            meta.Children.Add(nameText);
             Grid.SetColumn(meta, 2);
             grid.Children.Add(meta);
 
@@ -361,6 +399,8 @@ namespace RdpManager.Controllers
             {
                 row.Background = active ? _owner.Res("AccentSoft") : Brushes.Transparent;
                 accent.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+                // Samo tło akcentu bywa ledwo widoczne (zwłaszcza na jasnym motywie) — nazwa dobija sygnał.
+                nameText.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
             };
             WireServerRow(row, server);
             return row;
@@ -373,7 +413,8 @@ namespace RdpManager.Controllers
             {
                 CornerRadius = new CornerRadius(6),
                 Margin = new Thickness(18, 1, 0, 1),   // wcięcie = element należy do grupy powyżej (Compass §4.3)
-                Padding = new Thickness(0, 3, 8, 3),
+                Padding = new Thickness(0, 4, 8, 4),
+                MinHeight = 27,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Tag = server
@@ -435,6 +476,7 @@ namespace RdpManager.Controllers
             {
                 row.Background = active ? _owner.Res("AccentSoft") : Brushes.Transparent;
                 bar.Fill = active ? _owner.Res("Accent") : serverColor;
+                name.FontWeight = active ? FontWeights.SemiBold : FontWeights.Medium;
             };
             WireServerRow(row, server);
             return row;

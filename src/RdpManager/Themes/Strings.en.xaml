@@ -96,7 +96,7 @@
     <sys:String x:Key="S.proto.filter.all">All</sys:String>
     <sys:String x:Key="S.set.border">Window border</sys:String>
     <sys:String x:Key="S.border.none">None</sys:String>
-    <sys:String x:Key="S.border.cobalt">Cobalt</sys:String>
+    <sys:String x:Key="S.border.brand">Brand</sys:String>
     <sys:String x:Key="S.border.system">System</sys:String>
     <sys:String x:Key="S.set.accent">Accent color</sys:String>
     <sys:String x:Key="S.accent.default">Default</sys:String>
@@ -651,4 +651,5 @@ This may indicate an attack (server spoofing) or a certificate rotation. Continu
     <sys:String x:Key="S.keys.zoom">UI zoom in, out / reset</sys:String>
     <sys:String x:Key="S.keys.quick">Quick connect (global hotkey)</sys:String>
     <sys:String x:Key="S.keys.help">This cheat sheet</sys:String>
+    <sys:String x:Key="S.proto.filter.clear">Click again to show all protocols</sys:String>
 </ResourceDictionary>
