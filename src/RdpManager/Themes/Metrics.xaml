@@ -42,11 +42,15 @@
          okno sesji (karta stanu „łączenie / rozłączono") — a to ta sama sesja, tylko wypięta do osobnego
          okna, więc nie może wyglądać inaczej. Pędzle przez DynamicResource: podążają za motywem. -->
     <!-- Uniesienie zamiast obramowania: ramka hairline NA TLE panelu to były dwa sposoby powiedzenia
-         „to jest karta". Zostaje jaśniejsza powierzchnia (Elevated) i miękki cień — karta leży na tle,
-         zamiast być z niego wycięta. Kart jest kilka (stan sesji, „O aplikacji"), więc koszt efektu
-         jest bez znaczenia; nie nadaje się to natomiast na długie listy powtarzalnych elementów. -->
+         „to jest karta". Zostaje sama powierzchnia i miękki cień — karta leży na tle, zamiast być z niego
+         wycięta. Kart jest kilka (stan sesji, „O aplikacji"), więc koszt efektu jest bez znaczenia; nie
+         nadaje się to natomiast na długie listy powtarzalnych elementów.
+         UWAGA: powierzchnią jest Panel, NIE Elevated. Elevated znaczy „krok kontrastu od tła" i ma
+         przeciwny znak w obu motywach (ciemny: 13% bieli, jasny: 8% czerni) — na jasnym karta wyszłaby
+         CIEMNIEJSZA niż strona, czyli dziura z cieniem zamiast uniesienia. Panel jest jaśniejszy od kanwy
+         w obu motywach, a uniesienie i tak niesie cień. -->
     <Style x:Key="Card" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource Elevated}"/>
+        <Setter Property="Background" Value="{DynamicResource Panel}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}"/>
         <Setter Property="Padding" Value="18,14"/>
