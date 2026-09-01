@@ -16,11 +16,11 @@ namespace RdpManager
         // WPF-UI domyślnie bierze akcent SYSTEMOWY (stąd „szare" przyciski Primary, ProgressRing, focus,
         // przełączniki) — wymuszamy własny akcent PO zastosowaniu motywu, żeby akcentowe kontrolki WPF-UI
         // zgadzały się z paletą Waypoint (klucz „Accent") i UI nie było monochromatyczne.
-        // Compass §2 rozróżnia akcent interakcji per motyw: ciemny #4C86FF (jaśniejszy, na chłodnej czerni),
-        // jasny #2657D6 (kobalt — lepszy kontrast białego tekstu na akcencie). To domyślna para Compass;
-        // użytkownik może ją nadpisać własnym akcentem (§4.7).
-        private static readonly Color AccentDark = Color.FromRgb(0x4C, 0x86, 0xFF);
-        private static readonly Color AccentLight = Color.FromRgb(0x26, 0x57, 0xD6);
+        // Ostatnia deska ratunku, gdyby w zasobach zabrakło klucza „Accent" (paleta i preset go dostarczają,
+        // więc w praktyce nie odpala). Wartości muszą być te, co w Palette.* — stały tu kobalt sprzed
+        // rebrandingu, czyli kolor, którego aplikacja już nigdzie nie używa.
+        private static readonly Color AccentDark = Color.FromRgb(0x6C, 0x6D, 0xFF);
+        private static readonly Color AccentLight = Color.FromRgb(0x5B, 0x4B, 0xD6);
 
         // Rodzina kluczy akcentu nadpisywana bezpośrednio w zasobach App, gdy wybrano własny kolor (§4.7).
         private static readonly string[] AccentKeys = { "Accent", "AccentSoft", "AccentStrong", "AccentBright" };
@@ -91,6 +91,23 @@ namespace RdpManager
             d["AccentSoft"] = new SolidColorBrush(Color.FromArgb(0x1F, p.Accent.R, p.Accent.G, p.Accent.B));
             d["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, p.Accent.R, p.Accent.G, p.Accent.B));
             d["AccentBright"] = new SolidColorBrush(Lighten(p.Accent, 0.25));
+
+            // Te same kolory pod kontrolki WPF-UI (patrz blok „Kontrolki WPF-UI" w Palette.*). Bez tego
+            // preset przestawiał tło, panele i tekst CAŁEJ aplikacji poza formularzami — pola i przełączniki
+            // zostawały na kolorach palety bazowej, czyli w innym tonie niż wszystko dokoła.
+            B("TextFillColorPrimaryBrush", p.TextPrim);
+            B("TextFillColorSecondaryBrush", p.TextSec);
+            B("TextFillColorTertiaryBrush", p.TextTer);
+            B("TextControlForeground", p.TextPrim);
+            B("TextControlPlaceholderForeground", p.TextTer);
+            B("ControlFillColorDefaultBrush", p.Panel);
+            B("TextControlBackground", p.Panel);
+            B("TextControlBackgroundFocused", p.Panel);
+            B("ControlStrokeColorDefaultBrush", p.Border);
+            B("CardBackgroundFillColorDefaultBrush", p.Panel);
+            B("SolidBackgroundFillColorBaseBrush", p.Canvas);
+            B("SolidBackgroundFillColorSecondaryBrush", p.Panel);
+
             dicts.Add(d);
             _presetOverlay = d;
         }
