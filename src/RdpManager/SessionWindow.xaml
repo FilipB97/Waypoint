@@ -60,7 +60,7 @@
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal">
-                            <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="10"
+                            <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="{StaticResource RadiusMd}"
                                     Background="{DynamicResource Accent}" VerticalAlignment="Center">
                                 <TextBlock x:Name="OverlayInitials" Foreground="White" FontSize="14" FontWeight="Bold"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -97,8 +97,8 @@
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
             <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,8" Margin="12,4,12,12"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1">
-                <Border.Effect><DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/></Border.Effect>
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                    Effect="{DynamicResource ShadowLg}">
                 <StackPanel Orientation="Horizontal">
                     <Thumb x:Name="FsBarThumb" Width="20" Cursor="SizeWE" DragDelta="FsBarThumb_DragDelta" Margin="0,0,10,0">
                         <Thumb.Template>

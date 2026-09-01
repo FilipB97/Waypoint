@@ -69,7 +69,7 @@ namespace RdpManager.Controllers
         {
             var tab = new Border
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = Radii.Sm,
                 BorderThickness = new Thickness(1),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
@@ -89,7 +89,7 @@ namespace RdpManager.Controllers
             content.Children.Add(new Border
             {
                 // 14 px kafelek z inicjałami 7 px był nieczytelny — dwa wersaliki zlewały się w plamę.
-                Width = 17, Height = 17, CornerRadius = new CornerRadius(5),
+                Width = 17, Height = 17, CornerRadius = Radii.Xs,
                 Background = _owner.AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
@@ -133,7 +133,7 @@ namespace RdpManager.Controllers
         {
             var tab = new Border
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = Radii.Sm,
                 BorderThickness = new Thickness(1),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
@@ -574,7 +574,7 @@ namespace RdpManager.Controllers
 
             var box = new Border
             {
-                CornerRadius = new CornerRadius(8), Background = tint, BorderBrush = strong, BorderThickness = new Thickness(1),
+                CornerRadius = Radii.Sm, Background = tint, BorderBrush = strong, BorderThickness = new Thickness(1),
                 Padding = new Thickness(3, 0, 4, 0), Margin = new Thickness(0, 0, 5, 0)
             };
             var row = new StackPanel { Orientation = Orientation.Horizontal };
@@ -583,7 +583,7 @@ namespace RdpManager.Controllers
             // Pastylka z nazwą: klik = zwiń/rozwiń; prawy klik = menu (nazwa / kolor / rozgrupuj).
             var pill = new Border
             {
-                CornerRadius = new CornerRadius(5), Background = strong, Cursor = Cursors.Hand,
+                CornerRadius = Radii.Xs, Background = strong, Cursor = Cursors.Hand,
                 Padding = new Thickness(6, IsMinimalList ? 1 : 2, 7, IsMinimalList ? 1 : 3),
                 Margin = new Thickness(1, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center,
                 ContextMenu = BuildGroupMenu(g)
@@ -602,7 +602,7 @@ namespace RdpManager.Controllers
             if (g.Collapsed)
                 pillRow.Children.Add(new Border
                 {
-                    CornerRadius = new CornerRadius(9), Background = _owner.Res("Elevated"),
+                    CornerRadius = Radii.Sm, Background = _owner.Res("Elevated"),
                     Padding = new Thickness(6, 0, 6, 1), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
                     Child = new TextBlock { Text = members.Count.ToString(), Foreground = _owner.Res("TextSec"), FontSize = (double)_owner.TryFindResource("FontCaption") }
                 });

@@ -9,7 +9,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="28"/>
-            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="Margin" Value="2,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -23,10 +23,10 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0.12" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0.12" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.20"/></Trigger>
@@ -89,6 +89,7 @@
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -143,6 +144,7 @@
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentSoft}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>

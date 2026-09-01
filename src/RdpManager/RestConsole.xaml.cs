@@ -342,7 +342,7 @@ namespace RdpManager
             var sp = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             sp.Children.Add(new Border
             {
-                Background = MethodBadgeBg(method), CornerRadius = new CornerRadius(5),
+                Background = MethodBadgeBg(method), CornerRadius = Radii.Xs,
                 Padding = new Thickness(5, 1, 5, 1), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0),
                 Child = new TextBlock { Text = method, Foreground = MethodBrush(method), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.Bold, FontSize = (double)TryFindResource("FontCaption") }
             });
@@ -359,7 +359,7 @@ namespace RdpManager
             var bd = new Border
             {
                 Height = 28, Padding = new Thickness(10, 0, 8, 0), Margin = new Thickness(0, 0, 4, 0),
-                CornerRadius = new CornerRadius(8), Cursor = Cursors.Hand, Child = sp,
+                CornerRadius = Radii.Sm, Cursor = Cursors.Hand, Child = sp,
                 Background = active ? Res("Panel") : Brushes.Transparent,
                 BorderThickness = new Thickness(1), BorderBrush = active ? Res("Border") : Brushes.Transparent
             };

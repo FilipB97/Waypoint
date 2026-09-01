@@ -91,7 +91,10 @@ namespace RdpManager.Controllers
             var chip = new Border
             {
                 ToolTip = selected ? L("S.proto.filter.clear") : null,
-                CornerRadius = new CornerRadius(9),
+                // Pełne zaokrąglenie: chip filtra to etykieta-pigułka, a nie mały przycisk — przy
+                // promieniu ze skali (8 na wysokości 21) wychodził kształt „prawie pigułka", czyli
+                // najgorszy z możliwych. Border przycina promień do połowy boku, więc 999 jest bezpieczne.
+                CornerRadius = Radii.Pill,
                 Padding = new Thickness(9, 3, 9, 3),
                 Margin = new Thickness(0, 0, 5, 5),
                 Background = selected ? _owner.Res("AccentSoft") : Brushes.Transparent,
@@ -334,10 +337,10 @@ namespace RdpManager.Controllers
         {
             var row = new Border
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = Radii.Sm,
                 Margin = new Thickness(18, 1, 0, 1),   // wcięcie = element należy do grupy powyżej (Compass §4.3)
-                Padding = new Thickness(5, 6, 7, 6),    // -1 z każdej strony: miejsce na ramkę fokusu
-                BorderThickness = new Thickness(1),
+                Padding = new Thickness(4, 5, 6, 5),    // -2 z każdej strony: miejsce na ramkę fokusu 2 px
+                BorderThickness = new Thickness(2),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
@@ -361,7 +364,7 @@ namespace RdpManager.Controllers
 
             var avatar = new Border
             {
-                Width = 22, Height = 22, CornerRadius = new CornerRadius(6),
+                Width = 22, Height = 22, CornerRadius = Radii.Sm,
                 Background = _owner.AvatarBrush(server), Margin = new Thickness(8, 0, 0, 0),
                 Child = new TextBlock
                 {
@@ -418,14 +421,16 @@ namespace RdpManager.Controllers
         {
             var row = new Border
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = Radii.Sm,
                 // Wcięcie grupy rozbite na margines + padding: bez paddingu tło zaznaczenia zaczynałoby się
                 // dokładnie na krawędzi kafelka z glifem, bez oddechu. Suma wcięcia bez zmian (12 + 6 = 18).
                 Margin = new Thickness(12, 1, 0, 1),
-                // Padding o 1 mniej z każdej strony, bo doszła stała ramka 1px (przezroczysta w spoczynku,
+                // Padding o 2 mniej z każdej strony, bo doszła stała ramka 2px (przezroczysta w spoczynku,
                 // akcent przy fokusie klawiatury). Rezerwujemy ją zawsze, żeby fokus nie przesuwał treści.
-                Padding = new Thickness(5, 3, 7, 3),
-                BorderThickness = new Thickness(1),
+                // 2 px, nie 1 — taka sama grubość jak w każdym innym szablonie; przy 1 px obwódka ginęła
+                // na tle włosowych kresek listy.
+                Padding = new Thickness(4, 2, 6, 2),
+                BorderThickness = new Thickness(2),
                 BorderBrush = Brushes.Transparent,
                 MinHeight = 27,
                 Background = Brushes.Transparent,
@@ -445,7 +450,7 @@ namespace RdpManager.Controllers
             var serverColor = _owner.AvatarBrush(server);
             var glyph = new Border
             {
-                Width = 22, Height = 22, CornerRadius = new CornerRadius(7),
+                Width = 22, Height = 22, CornerRadius = Radii.Sm,
                 Background = TintBrush(serverColor, 0.16),
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new Wpf.Ui.Controls.SymbolIcon

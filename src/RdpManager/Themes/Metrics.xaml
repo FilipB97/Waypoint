@@ -6,11 +6,18 @@
          w runtime (ThemeManager.SwapPalette dopasowuje po "Palette." w URI źródła), więc StaticResource
          (nie DynamicResource) jest tu właściwym wyborem (2.1/2.2/2.4/2.5 z przeglądu). -->
 
-    <!-- Promienie zaokrągleń (Compass §2: 4 / 7 / 9 / 14) -->
+    <!-- Promienie zaokrągleń. Skala miała 4 stopnie, ale w kodzie chodziło 10 różnych wartości w C#
+         (2,4,5,6,7,8,9,10,11,14) i 8 w XAML — a stopnie 7 i 9 różnią się o 2 px, czyli o nic.
+         Drabina 2 / 4 / 8 / 12 / 16: każdy stopień jest odróżnialny, a przejście z dotychczasowych
+         wartości to maksymalnie 2 px. Wszystko idzie teraz przez te klucze, więc gdyby całość okazała
+         się za okrągła albo za ostra, zmienia się PIĘĆ liczb tutaj, a nie kilkadziesiąt miejsc w kodzie.
+         Pill = pełne zaokrąglenie (chipy filtrów). -->
+    <CornerRadius x:Key="RadiusXxs">2</CornerRadius>
     <CornerRadius x:Key="RadiusXs">4</CornerRadius>
-    <CornerRadius x:Key="RadiusSm">7</CornerRadius>
-    <CornerRadius x:Key="RadiusMd">9</CornerRadius>
-    <CornerRadius x:Key="RadiusLg">14</CornerRadius>
+    <CornerRadius x:Key="RadiusSm">8</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">12</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">16</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
 
     <!-- Skala fontów: tekst czytelny (podpisy → nagłówki). Dostrojona do Compass §2 (Body 13, BodyLg 15,
          Subtitle 18, Heading 22); tekst niosący informację ≥ 12 (REVIEW 1.6). FontMicro pozostaje dla
@@ -29,6 +36,19 @@
          element w dwóch rozmiarach, bez powodu. -->
     <sys:Double x:Key="FontStat">26</sys:Double>
 
+    <!-- Interlinie. W całej aplikacji LineHeight była ustawiona dokładnie raz — wszędzie indziej WPF
+         bierze metrykę kroju, która przy Segoe UI daje około 1.33x i różny rytm dla różnych stopni.
+         Tu każdy stopień tekstu ma swoją interlinię (~1.45x, zaokrągloną do parzystej), więc akapity
+         w ustawieniach, puste stany i notatki wydania układają się na wspólnej siatce. -->
+    <sys:Double x:Key="LineCaption">16</sys:Double>
+    <sys:Double x:Key="LineSmall">18</sys:Double>
+    <sys:Double x:Key="LineBody">20</sys:Double>
+    <sys:Double x:Key="LineBodyLg">22</sys:Double>
+    <sys:Double x:Key="LineSubtitle">24</sys:Double>
+    <sys:Double x:Key="LineTitle">26</sys:Double>
+    <sys:Double x:Key="LineHeading">28</sys:Double>
+    <sys:Double x:Key="LineDisplay">30</sys:Double>
+
     <!-- Skala fontów: glify ikon (SymbolIcon / znaki Unicode użyte jako ikony) — osobna skala,
          bo rozmiar ikony dobiera się do przycisku/kontenera, nie do hierarchii czytelnego tekstu. -->
     <sys:Double x:Key="IconXs">11</sys:Double>
@@ -36,6 +56,18 @@
     <sys:Double x:Key="IconMd">16</sys:Double>
     <sys:Double x:Key="IconLg">18</sys:Double>
     <sys:Double x:Key="IconXl">34</sys:Double>
+
+    <!-- Ruch. Dotąd były dwa słowniki: 14 animacji w XAML na LINIOWYCH 120 ms i trzy w C# z krzywymi
+         (CubicEase, QuadraticEase) na 90 i 130 ms. Liniowe wygaszanie czyta się mechanicznie — rzecz
+         rusza i staje z tą samą prędkością, czego oko nie zna z fizyki.
+         Trzy czasy, dobrane do przebytego dystansu:
+           MotionFast  110 ms — zmiana stanu w miejscu (hover, wciśnięcie, fokus),
+           MotionBase  180 ms — pojawienie się i znikanie elementu (widok, nakładka),
+           MotionSlow  260 ms — ruch na dystansie (wjazd panelu, przesunięcie).
+         Krzywa jest jedna: EaseOut — rzecz startuje szybko i dochodzi miękko, jak przy wytracaniu pędu.
+         Czasy zostają literałami przy animacjach (Duration nie składa się dobrze z zasobów), krzywa
+         jest współdzielona przez ten klucz. -->
+    <CubicEase x:Key="EaseStandard" EasingMode="EaseOut"/>
 
     <!-- Skala odstępów. Powód: składowe Margin/Padding w XAML-u chodziły po wartościach 1,3,5,7,9,11
          obok 2,4,6,8,10,12 — czyli różnice o piksel, których nikt nie zaprojektował, a które łamią
@@ -76,10 +108,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}"/>
         <Setter Property="Padding" Value="18,14"/>
         <Setter Property="Margin" Value="0,0,0,14"/>
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Direction="270" Opacity="0.34" Color="#000000"/>
-            </Setter.Value>
-        </Setter>
+        <!-- Cień z palety, nie literał: siła musi być inna w motywie jasnym i ciemnym (patrz Palette.*). -->
+        <Setter Property="Effect" Value="{DynamicResource ShadowSm}"/>
     </Style>
 </ResourceDictionary>

@@ -20,7 +20,7 @@
         <Style x:Key="RailBtn" TargetType="Button">
             <Setter Property="Width" Value="38"/>
             <Setter Property="Height" Value="38"/>
-            <Setter Property="Margin" Value="0,3"/>
+            <Setter Property="Margin" Value="0,4"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextTer}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -43,12 +43,19 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
+                            <!-- Wciśnięcie: warstwa hoveru na pełne krycie, BEZ animacji — potwierdzenie
+                                 kliknięcia ma być natychmiastowe, inaczej interfejs sprawia wrażenie ospałego. -->
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="HoverFill" Property="Opacity" Value="1"/>
+                                <Setter TargetName="HoverFill" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
@@ -65,7 +72,7 @@
         <Style x:Key="IconBtn" TargetType="Button">
             <Setter Property="Width" Value="28"/>
             <Setter Property="Height" Value="28"/>
-            <Setter Property="Margin" Value="3,0,0,0"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -80,12 +87,19 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
+                            <!-- Wciśnięcie: warstwa hoveru na pełne krycie, BEZ animacji — potwierdzenie
+                                 kliknięcia ma być natychmiastowe, inaczej interfejs sprawia wrażenie ospałego. -->
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="HoverFill" Property="Opacity" Value="1"/>
+                                <Setter TargetName="HoverFill" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
@@ -100,6 +114,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineBody}"/>
         </Style>
 
         <!-- Styl „Card" przeniesiony do Themes/Metrics.xaml — dzieli go okno sesji (karta stanu). -->
@@ -107,6 +122,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="{StaticResource FontBodyLg}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineBodyLg}"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
 
@@ -116,11 +132,13 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="{StaticResource FontTitle}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineTitle}"/>
         </Style>
         <Style x:Key="SetPageSub" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
-            <Setter Property="Margin" Value="0,5,0,20"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineBody}"/>
+            <Setter Property="Margin" Value="0,6,0,20"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
         <!-- Pod-sekcja (WYGLĄD / LISTA SERWERÓW …) -->
@@ -134,12 +152,13 @@
         <Style x:Key="SetRow" TargetType="Border">
             <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="Padding" Value="0,11"/>
+            <Setter Property="Padding" Value="0,12"/>
             <Setter Property="MinHeight" Value="46"/>
         </Style>
         <Style x:Key="SetLbl" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineBody}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <!-- Podpis pod etykietą ustawienia. TextWrapping jest OBOWIĄZKOWE: podpis siedzi w kolumnie „*"
@@ -148,6 +167,7 @@
         <Style x:Key="SetSub" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextTer}"/>
             <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineSmall}"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
@@ -171,8 +191,8 @@
                     <ControlTemplate TargetType="RadioButton">
                         <!-- Ramka rezerwowana zawsze (przezroczysta), żeby zaznaczenie fokusem nie
                              przesuwało treści segmentu o 2 px. -->
-                        <Border x:Name="bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Height="28" Padding="12,0"
-                                BorderThickness="1" BorderBrush="Transparent">
+                        <Border x:Name="bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Height="28" Padding="11,0"
+                                BorderThickness="2" BorderBrush="Transparent">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
@@ -184,6 +204,10 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
                             </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                             <!-- Własny szablon zjada domyślny prostokąt fokusu WPF — bez tego przez segmenty
                                  nie da się przejść klawiaturą świadomie. -->
                             <Trigger Property="IsKeyboardFocused" Value="True">
@@ -573,7 +597,7 @@
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="10"
+                                    <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="{StaticResource RadiusMd}"
                                             Background="{DynamicResource Accent}" VerticalAlignment="Center">
                                         <TextBlock x:Name="OverlayInitials" Foreground="White" FontSize="14" FontWeight="Bold"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -630,7 +654,7 @@
                     <!-- Pozycja lewej nawigacji Ustawień: przezroczysta; hover/zaznaczenie = tło Panel + pasek akcentu. -->
                     <Style x:Key="SettingsNavItem" TargetType="ListBoxItem">
                         <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
-                        <Setter Property="Margin" Value="0,1"/>
+                        <Setter Property="Margin" Value="0,2"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="Template">
                             <Setter.Value>
@@ -648,10 +672,10 @@
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Trigger.EnterActions>
-                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                             </Trigger.EnterActions>
                                             <Trigger.ExitActions>
-                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                             </Trigger.ExitActions>
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
@@ -659,6 +683,7 @@
                                             <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
                                             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
                                         </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                                         <Trigger Property="IsKeyboardFocused" Value="True">
                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                         </Trigger>
@@ -1170,8 +1195,8 @@
         <Popup x:Name="ShortcutsPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
                StaysOpen="False" AllowsTransparency="True" Focusable="False">
             <Border Background="{DynamicResource RailBg}" CornerRadius="{StaticResource RadiusLg}" Padding="22,18"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="420">
-                <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45"/></Border.Effect>
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="420"
+                    Effect="{DynamicResource ShadowMd}">
                 <Border.Resources>
                     <!-- Klawisz: „kapsel" o stałej szerokości, żeby opisy tworzyły równą kolumnę. -->
                     <Style x:Key="KeyCap" TargetType="Border">
@@ -1179,7 +1204,7 @@
                         <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
                         <Setter Property="BorderThickness" Value="1"/>
                         <Setter Property="CornerRadius" Value="{StaticResource RadiusXs}"/>
-                        <Setter Property="Padding" Value="7,2"/>
+                        <Setter Property="Padding" Value="8,2"/>
                         <Setter Property="MinWidth" Value="104"/>
                         <Setter Property="Margin" Value="0,0,12,0"/>
                         <Setter Property="VerticalAlignment" Value="Center"/>
@@ -1198,7 +1223,7 @@
                     </Style>
                     <Style x:Key="KeyRow" TargetType="StackPanel">
                         <Setter Property="Orientation" Value="Horizontal"/>
-                        <Setter Property="Margin" Value="0,0,0,7"/>
+                        <Setter Property="Margin" Value="0,0,0,8"/>
                     </Style>
                 </Border.Resources>
                 <StackPanel>
@@ -1248,8 +1273,8 @@
         <Popup x:Name="QuickSwitchPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
                StaysOpen="False" AllowsTransparency="True">
             <Border Background="{DynamicResource RailBg}" CornerRadius="{StaticResource RadiusLg}" Padding="8"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="460">
-                <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45"/></Border.Effect>
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="460"
+                    Effect="{DynamicResource ShadowMd}">
                 <StackPanel>
                     <ui:TextBox x:Name="QuickSwitchSearch" PlaceholderText="{DynamicResource S.cmd.placeholder}"
                                 Margin="0,0,0,6" TextChanged="QuickSwitchSearch_TextChanged" KeyDown="QuickSwitchSearch_KeyDown">
@@ -1318,10 +1343,9 @@
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
             <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,8" Margin="12,4,12,12"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/>
-                </Border.Effect>
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                    Effect="{DynamicResource ShadowLg}">
+
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <Thumb x:Name="FsBarThumb" Width="20" Cursor="SizeWE" DragDelta="FsBarThumb_DragDelta"

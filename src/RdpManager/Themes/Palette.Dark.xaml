@@ -48,6 +48,15 @@
     <SolidColorBrush x:Key="MethodDelete" Color="#F0736C"/>
     <SolidColorBrush x:Key="MethodPatch"  Color="#B08CE8"/>
 
+    <!-- Cienie jako tokeny motywu. Były literałami w pięciu miejscach (trzy różne definicje), dobranymi
+         pod ciemne tło i użytymi też na jasnym — 45-50% czerni na jasnej kanwie to nie uniesienie, tylko
+         brudna plama. Skala odpowiada wysokości: Sm = element przy powierzchni (karta), Md = warstwa nad
+         treścią (flyout, paleta poleceń), Lg = nakładka nad wszystkim (pasek pełnoekranowy).
+         Kierunek 270 (w dół) wszędzie — jedno źródło światła w całym interfejsie. -->
+    <DropShadowEffect x:Key="ShadowSm" BlurRadius="14" ShadowDepth="3"  Direction="270" Opacity="0.40" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowMd" BlurRadius="24" ShadowDepth="6"  Direction="270" Opacity="0.48" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowLg" BlurRadius="32" ShadowDepth="10" Direction="270" Opacity="0.55" Color="#000000"/>
+
     <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
 
     <LinearGradientBrush x:Key="AvProd" StartPoint="0,0" EndPoint="1,1">

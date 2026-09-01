@@ -26,13 +26,14 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0.12" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0.12" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
-                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.22"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -44,8 +45,8 @@
              zamiast systemowego niebieskiego podświetlenia ListBoxa, które gryzło się z motywem. -->
         <Style x:Key="EnvListItem" TargetType="ListBoxItem">
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
-            <Setter Property="Padding" Value="10,7"/>
-            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,2"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
@@ -55,7 +56,7 @@
                             <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
-                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="1"
+                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="2"
                                     BorderBrush="Transparent" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -70,6 +71,7 @@
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>

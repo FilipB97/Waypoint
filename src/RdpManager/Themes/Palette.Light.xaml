@@ -45,6 +45,13 @@
     <SolidColorBrush x:Key="MethodDelete" Color="#D23A34"/>
     <SolidColorBrush x:Key="MethodPatch"  Color="#6A5FE0"/>
 
+    <!-- Cienie: te same klucze co w Palette.Dark, ale znacznie delikatniejsze i płytsze. Na jasnym tle
+         cień pracuje przez subtelne przyciemnienie, nie przez kontrast — stąd większe rozmycie przy
+         mniejszym przesunięciu i krycie rzędu 0.10-0.16 zamiast 0.40-0.55. -->
+    <DropShadowEffect x:Key="ShadowSm" BlurRadius="16" ShadowDepth="2" Direction="270" Opacity="0.10" Color="#101420"/>
+    <DropShadowEffect x:Key="ShadowMd" BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.13" Color="#101420"/>
+    <DropShadowEffect x:Key="ShadowLg" BlurRadius="34" ShadowDepth="7" Direction="270" Opacity="0.16" Color="#101420"/>
+
     <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
 
     <LinearGradientBrush x:Key="AvProd" StartPoint="0,0" EndPoint="1,1">

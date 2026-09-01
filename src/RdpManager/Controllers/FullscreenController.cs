@@ -156,8 +156,10 @@ namespace RdpManager.Controllers
             _owner.FocusPeekClip.Background = FocusPeekBackground();
             _owner.FocusPeekPopup.IsOpen = true;
 
+            // 260 ms = MotionSlow ze skali ruchu (Themes/Metrics.xaml): panel pokonuje 280 px, więc
+            // dostaje najdłuższy czas — przy 160 ms ruch na tym dystansie czyta się jak przeskok.
             var slide = new System.Windows.Media.Animation.DoubleAnimation(-280, 0,
-                new Duration(TimeSpan.FromMilliseconds(160)))
+                new Duration(TimeSpan.FromMilliseconds(260)))
             {
                 EasingFunction = new System.Windows.Media.Animation.CubicEase
                 { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }

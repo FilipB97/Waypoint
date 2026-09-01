@@ -147,7 +147,7 @@ namespace RdpManager
             {
                 var sw = new Border
                 {
-                    Width = 26, Height = 26, CornerRadius = new CornerRadius(6),
+                    Width = 26, Height = 26, CornerRadius = Radii.Sm,
                     Margin = new Thickness(0, 0, 8, 6), Cursor = Cursors.Hand, BorderThickness = new Thickness(2),
                     ToolTip = hex.Length == 0 ? LocalizationManager.S("S.se.iconcolor.auto") : hex
                 };

@@ -303,7 +303,8 @@ namespace RdpManager
 
             target.BeginAnimation(OpacityProperty, null);   // ubij poprzednią, gdy ktoś klika szybko
             target.Opacity = 0;
-            target.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(130))
+            // 180 ms = MotionBase ze skali ruchu w Themes/Metrics.xaml (pojawienie się elementu).
+            target.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             });
@@ -691,7 +692,7 @@ namespace RdpManager
             var bd = new Border
             {
                 Padding = new Thickness(8 + depth * 14, 5, 8, 5),
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = Radii.Sm,
                 Background = Brushes.Transparent,
                 Cursor = onClick != null ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow,
                 Child = content
@@ -738,7 +739,7 @@ namespace RdpManager
             string method = (r.Method ?? "GET").ToUpperInvariant();
             sp.Children.Add(new Border
             {
-                Background = RestConsole.MethodBadgeBg(method), CornerRadius = new CornerRadius(5),
+                Background = RestConsole.MethodBadgeBg(method), CornerRadius = Radii.Xs,
                 Padding = new Thickness(5, 1, 5, 1), MinWidth = 38, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0),
                 Child = new TextBlock { Text = method, Foreground = RestConsole.MethodBrush(method), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.Bold, FontSize = (double)TryFindResource("FontCaption"), TextAlignment = TextAlignment.Center }
             });
@@ -863,7 +864,7 @@ namespace RdpManager
                     : (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
                 var dot = new Border
                 {
-                    Width = 20, Height = 20, CornerRadius = new CornerRadius(6),
+                    Width = 20, Height = 20, CornerRadius = Radii.Sm,
                     Background = new SolidColorBrush(color),
                     Margin = new Thickness(0, 0, 8, 0), Cursor = Cursors.Hand,
                     BorderBrush = selected ? Res("Accent") : Res("Border"),
@@ -910,7 +911,7 @@ namespace RdpManager
                 bars.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18, GridUnitType.Star) });
                 void Bar(Color c, int col) { var b = new Border { Background = new SolidColorBrush(c) }; Grid.SetColumn(b, col); bars.Children.Add(b); }
                 Bar(p.Canvas, 0); Bar(p.Panel, 1); Bar(p.Accent, 2);
-                var preview = new Border { CornerRadius = new CornerRadius(7), ClipToBounds = true, Child = bars };
+                var preview = new Border { CornerRadius = Radii.Sm, ClipToBounds = true, Child = bars };
 
                 var nameRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 7, 0, 0) };
                 nameRow.Children.Add(new Ellipse { Width = 9, Height = 9, Fill = new SolidColorBrush(p.Accent), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
@@ -925,7 +926,7 @@ namespace RdpManager
                 sp.Children.Add(nameRow);
                 var card = new Border
                 {
-                    Width = 172, CornerRadius = new CornerRadius(11), Padding = new Thickness(9),
+                    Width = 172, CornerRadius = Radii.Md, Padding = new Thickness(9),
                     Margin = new Thickness(0, 0, 10, 10), Cursor = Cursors.Hand, Background = Res("Panel"),
                     BorderBrush = selected ? Res("Accent") : Res("Border"),
                     BorderThickness = new Thickness(selected ? 2 : 1),
@@ -1187,7 +1188,7 @@ namespace RdpManager
         {
             var row = new Border
             {
-                Tag = server.Id, CornerRadius = new CornerRadius(6), Background = Brushes.Transparent,
+                Tag = server.Id, CornerRadius = Radii.Sm, Background = Brushes.Transparent,
                 BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0),
                 Padding = new Thickness(2, 1, 2, 1), Margin = new Thickness(0, 1, 0, 1), AllowDrop = true
             };
@@ -1615,7 +1616,7 @@ namespace RdpManager
             return new Border
             {
                 Background = Res("Panel"), BorderBrush = Res("Border"), BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(14), Padding = new Thickness(15, 13, 17, 13), Child = panel
+                CornerRadius = Radii.Lg, Padding = new Thickness(15, 13, 17, 13), Child = panel
             };
         }
 
@@ -1721,7 +1722,7 @@ namespace RdpManager
         private FrameworkElement LegendRow(Brush color, string label, int count)
         {
             var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 3) };
-            sp.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = new CornerRadius(2), Background = color, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            sp.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = Radii.Xxs, Background = color, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
             sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center });
             sp.Children.Add(new TextBlock { Text = count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
             return sp;
@@ -1776,13 +1777,13 @@ namespace RdpManager
                 var seg = new Border { Background = ProtocolBrush(protos[i].Key), Margin = new Thickness(0, 0, i < protos.Count - 1 ? 2 : 0, 0) };
                 Grid.SetColumn(seg, i); barGrid.Children.Add(seg);
             }
-            var bar = new Border { Height = 11, CornerRadius = new CornerRadius(6), ClipToBounds = true, Child = barGrid, Margin = new Thickness(0, 6, 0, 14) };
+            var bar = new Border { Height = 11, CornerRadius = Radii.Sm, ClipToBounds = true, Child = barGrid, Margin = new Thickness(0, 6, 0, 14) };
 
             var legend = new WrapPanel();
             foreach (var p in protos)
             {
                 var item = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 16, 8) };
-                item.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = new CornerRadius(2), Background = ProtocolBrush(p.Key), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+                item.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = Radii.Xxs, Background = ProtocolBrush(p.Key), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
                 item.Children.Add(new TextBlock { Text = ProtocolLabel(p.Key), Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center });
                 item.Children.Add(new TextBlock { Text = p.Count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(7, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
                 legend.Children.Add(item);
@@ -1814,7 +1815,7 @@ namespace RdpManager
         private FrameworkElement DashCard(FrameworkElement content) => new Border
         {
             Background = Res("Panel"), BorderBrush = Res("Border"),
-            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10),
+            BorderThickness = new Thickness(1), CornerRadius = Radii.Md,
             Padding = new Thickness(16, 14, 16, 14), Margin = new Thickness(0, 0, 0, 22), Child = content
         };
 
@@ -1865,9 +1866,9 @@ namespace RdpManager
                 Grid.SetColumn(name, 0); grid.Children.Add(name);
 
                 var barGrid = new Grid { Width = 200, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 10, 0) };
-                barGrid.Children.Add(new Border { Height = 8, Background = track, CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Stretch });
+                barGrid.Children.Add(new Border { Height = 8, Background = track, CornerRadius = Radii.Xs, HorizontalAlignment = HorizontalAlignment.Stretch });
                 barGrid.Children.Add(new Border { Height = 8, Width = 200.0 * kv.Value / max, Background = accent,
-                    CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Left });
+                    CornerRadius = Radii.Xs, HorizontalAlignment = HorizontalAlignment.Left });
                 Grid.SetColumn(barGrid, 1); grid.Children.Add(barGrid);
 
                 var count = new TextBlock { Text = kv.Value.ToString(), Foreground = Res("TextSec"),
@@ -1943,7 +1944,7 @@ namespace RdpManager
             var card = new Border
             {
                 Background = Res("Panel"), BorderBrush = Res("Border"), BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10), Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
+                CornerRadius = Radii.Md, Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
             };
             var sp = new StackPanel();
             sp.Children.Add(new TextBlock { Text = value, Foreground = Res("Accent"), FontSize = (double)TryFindResource("FontStat"), FontWeight = FontWeights.Bold });
@@ -2283,7 +2284,7 @@ namespace RdpManager
             var row = new Border
             {
                 Padding = new Thickness(7, 6, 7, 6),
-                CornerRadius = new CornerRadius(7),
+                CornerRadius = Radii.Sm,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Thickness(0, 1, 0, 1),
@@ -2344,7 +2345,7 @@ namespace RdpManager
             var row = new Border
             {
                 Padding = new Thickness(7, 6, 7, 6),
-                CornerRadius = new CornerRadius(7),
+                CornerRadius = Radii.Sm,
                 Background = isActive ? Res("AccentSoft") : Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Thickness(0, 1, 0, 1)
@@ -2357,7 +2358,7 @@ namespace RdpManager
 
             var avatar = new Border
             {
-                Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = AvatarBrush(server),
+                Width = 18, Height = 18, CornerRadius = Radii.Xs, Background = AvatarBrush(server),
                 Child = new TextBlock
                 {
                     Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
@@ -2527,7 +2528,7 @@ namespace RdpManager
             });
             var chip = new Border
             {
-                CornerRadius = new CornerRadius(9),
+                CornerRadius = Radii.Sm,
                 Padding = new Thickness(10, 5, 10, 5),
                 Margin = new Thickness(0, 0, 6, 6),
                 Background = Res("Panel"),

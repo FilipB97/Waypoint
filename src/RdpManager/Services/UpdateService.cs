@@ -445,7 +445,7 @@ namespace RdpManager.Services
             var c = (color as SolidColorBrush)?.Color ?? System.Windows.Media.Colors.Gray;
             return new Border
             {
-                CornerRadius = new CornerRadius(5),   // .clk/.cltag mockupu: radius 5, tło ~14–16% koloru
+                CornerRadius = Radii.Xs,   // .clk/.cltag mockupu: radius 5, tło ~14–16% koloru
                 Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x26, c.R, c.G, c.B)),
                 Padding = new Thickness(6, 2, 6, 2),
                 Margin = leadingMargin ? new Thickness(8, 0, 0, 0) : new Thickness(0),
