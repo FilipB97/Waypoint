@@ -8,19 +8,33 @@
     <SolidColorBrush x:Key="Elevated"   Color="#22FFFFFF"/>
     <SolidColorBrush x:Key="Border"     Color="#22FFFFFF"/>
     <SolidColorBrush x:Key="TextPrim"   Color="#E7E8EE"/>
-    <SolidColorBrush x:Key="TextSec"    Color="#8A8C97"/>
-    <SolidColorBrush x:Key="TextTer"    Color="#5A5C66"/>
-    <SolidColorBrush x:Key="Accent"       Color="#4C86FF"/>
-    <SolidColorBrush x:Key="AccentSoft"   Color="#1F4C86FF"/>
-    <SolidColorBrush x:Key="AccentBright" Color="#6E9EFF"/>
-    <SolidColorBrush x:Key="AccentStrong" Color="#664C86FF"/>
+    <!-- Trzy stopnie tekstu mierzone wobec PANELU (#2C2E37), nie kanwy — bo na panelach leży większość
+         tekstu (karty, wiersze ustawień, lista), a panel w motywie ciemnym jest JAŚNIEJSZY od kanwy, więc
+         to gorszy przypadek. Wcześniejsza poprawka TextTer liczyła kontrast wobec kanwy i dawała 4.52,
+         ale na panelu wychodziło 3.39 — wciąż pod progiem. Teraz: 11.06 / 6.55 / 4.61, czyli ten sam
+         układ, co w motywie jasnym (16.27 / 6.68 / 4.86). Stopnie różnią się o ΔE 19 i 11, więc
+         hierarchia zostaje widoczna. -->
+    <SolidColorBrush x:Key="TextSec"    Color="#B1B4C2"/>
+    <SolidColorBrush x:Key="TextTer"    Color="#9396A6"/>
+    <!-- Akcent zgodny ze znakiem marki (logo-export/waypoint-logo.svg: #5B8CFF -> #7C4DFF) — indygo
+         zamiast dawnego kobaltu. Kontrast białego tekstu na akcencie wychodzi lepiej niż poprzednio
+         (3.99 vs 3.41), a wobec kanwy #0C0D11 to 4.87. -->
+    <SolidColorBrush x:Key="Accent"       Color="#6C6DFF"/>
+    <SolidColorBrush x:Key="AccentSoft"   Color="#266C6DFF"/>
+    <SolidColorBrush x:Key="AccentBright" Color="#8A8BFF"/>
+    <SolidColorBrush x:Key="AccentStrong" Color="#666C6DFF"/>
     <SolidColorBrush x:Key="SplitDim"     Color="#33000000"/>
     <SolidColorBrush x:Key="TextOnColor" Color="White"/>
     <SolidColorBrush x:Key="Online"     Color="#3DDC97"/>
     <SolidColorBrush x:Key="Idle"       Color="#FFB454"/>
-    <SolidColorBrush x:Key="Offline"    Color="#5B5D66"/>
+    <!-- Kropka „rozłączony" miała na panelu 2.06 — poniżej progu 3.0 dla elementów nietekstowych
+         niosących znaczenie. To najczęstszy stan na liście, więc „przygaszony" nie może znaczyć
+         „niewidoczny": informacja, że serwer jest offline, jest równie ważna jak ta, że jest online. -->
+    <SolidColorBrush x:Key="Offline"    Color="#747783"/>
     <SolidColorBrush x:Key="Danger"     Color="#E8463F"/>
-    <SolidColorBrush x:Key="GdProd"     Color="#7C6CFB"/>
+    <!-- Kolor grupy „Produkcja". Dawne indygo #7C6CFB dzieliło od akcentu #6C6DFF odległość barwną
+         ΔE 4.1 — czyli to był ten sam kolor, a kropka grupy udawała zaznaczenie. Magenta: ΔE 37.9. -->
+    <SolidColorBrush x:Key="GdProd"     Color="#D06BD8"/>
     <SolidColorBrush x:Key="GdStaging"  Color="#FFB454"/>
     <SolidColorBrush x:Key="GdClient"   Color="#36B8C4"/>
 
@@ -40,10 +54,65 @@
     <SolidColorBrush x:Key="MethodDelete" Color="#F0736C"/>
     <SolidColorBrush x:Key="MethodPatch"  Color="#B08CE8"/>
 
+    <!-- Cienie jako tokeny motywu. Były literałami w pięciu miejscach (trzy różne definicje), dobranymi
+         pod ciemne tło i użytymi też na jasnym — 45-50% czerni na jasnej kanwie to nie uniesienie, tylko
+         brudna plama. Skala odpowiada wysokości: Sm = element przy powierzchni (karta), Md = warstwa nad
+         treścią (flyout, paleta poleceń), Lg = nakładka nad wszystkim (pasek pełnoekranowy).
+         Kierunek 270 (w dół) wszędzie — jedno źródło światła w całym interfejsie. -->
+    <DropShadowEffect x:Key="ShadowSm" BlurRadius="14" ShadowDepth="3"  Direction="270" Opacity="0.40" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowMd" BlurRadius="24" ShadowDepth="6"  Direction="270" Opacity="0.48" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowLg" BlurRadius="32" ShadowDepth="10" Direction="270" Opacity="0.55" Color="#000000"/>
+
+    <!-- ================= Kontrolki WPF-UI (Fluent) =================
+         W aplikacji jest 13 ComboBoxów, 18 przełączników, 11 pól wyboru, 7 pól haseł i 41 pól tekstowych
+         ui:TextBox — wszystkie renderowane stylami WPF-UI, czyli na kolorach Fluenta Microsoftu. Chrom był
+         autorski, a formularze windowsowe; w jednym oknie stały obok siebie dwa różne systemy.
+         Nie przepisujemy szablonów (ComboBox i ToggleSwitch to duże, kruche drzewa z częściami PART_*),
+         tylko podmieniamy klucze, z których te szablony czytają kolory. Działa, bo:
+           1. style WPF-UI sięgają po nie przez DynamicResource (sprawdzone w źródle 4.3.0),
+           2. słowniki scalone przeszukuje się od końca, a Palette.* jest dołączana JAKO OSTATNIA —
+              i w App.xaml, i przy każdej zmianie motywu (ThemeManager.SwapPalette dopisuje na koniec).
+         Zmiana szablonu w nowszym WPF-UI może przestać czytać któryś klucz; wtedy kontrolka wróci do
+         wyglądu Fluenta, ale nic się nie zepsuje. -->
+    <SolidColorBrush x:Key="ControlFillColorDefaultBrush"    Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush"  Color="#1FFFFFFF"/>
+    <SolidColorBrush x:Key="ControlFillColorTertiaryBrush"   Color="#0DFFFFFF"/>
+    <SolidColorBrush x:Key="ControlFillColorDisabledBrush"   Color="#0AFFFFFF"/>
+    <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush"  Color="#26FFFFFF"/>
+    <SolidColorBrush x:Key="ControlStrokeColorSecondaryBrush" Color="#1AFFFFFF"/>
+
+    <!-- Pola tekstowe i hasła: tło jak pozostałe kontrolki, podpowiedź w kolorze tekstu trzeciorzędnego. -->
+    <SolidColorBrush x:Key="TextControlBackground"            Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#1FFFFFFF"/>
+    <SolidColorBrush x:Key="TextControlBackgroundFocused"     Color="#26FFFFFF"/>
+    <SolidColorBrush x:Key="TextControlBackgroundDisabled"    Color="#0AFFFFFF"/>
+    <SolidColorBrush x:Key="TextControlForeground"            Color="#E7E8EE"/>
+    <SolidColorBrush x:Key="TextControlForegroundDisabled"    Color="#5A5C66"/>
+    <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#9396A6"/>
+    <SolidColorBrush x:Key="TextControlBorderBrushDisabled"   Color="#14FFFFFF"/>
+
+    <!-- Tekst wewnątrz kontrolek Fluenta — te same trzy stopnie co TextPrim/Sec/Ter. -->
+    <SolidColorBrush x:Key="TextFillColorPrimaryBrush"   Color="#E7E8EE"/>
+    <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#B1B4C2"/>
+    <SolidColorBrush x:Key="TextFillColorTertiaryBrush"  Color="#9396A6"/>
+    <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5A5C66"/>
+
+    <!-- Powierzchnie: karty Fluenta = nasz Panel; tła NIEPRZEZROCZYSTE, bo siedzą pod listą rozwijaną
+         ComboBoxa i menu — przez półprzezroczyste tło przebijałaby treść okna. -->
+    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush"   Color="#1D1E26"/>
+    <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#22232B"/>
+    <SolidColorBrush x:Key="SolidBackgroundFillColorBaseBrush"        Color="#181A22"/>
+    <SolidColorBrush x:Key="SolidBackgroundFillColorSecondaryBrush"   Color="#1D1E26"/>
+    <SolidColorBrush x:Key="SolidBackgroundFillColorTertiaryBrush"    Color="#22232B"/>
+    <SolidColorBrush x:Key="SolidBackgroundFillColorQuarternaryBrush" Color="#282A33"/>
+
+    <!-- Promień kontrolek Fluenta = RadiusSm z naszej drabiny (Fluent domyślnie ma 4). -->
+    <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+
     <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
 
     <LinearGradientBrush x:Key="AvProd" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#7C6CFB" Offset="0"/><GradientStop Color="#4F3FD1" Offset="1"/>
+        <GradientStop Color="#D06BD8" Offset="0"/><GradientStop Color="#8E3AA0" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="AvStaging" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#FFB454" Offset="0"/><GradientStop Color="#D98F2E" Offset="1"/>

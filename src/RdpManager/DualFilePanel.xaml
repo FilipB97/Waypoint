@@ -13,7 +13,7 @@
         <ContentControl x:Name="LocalHost" Grid.Column="0"/>
 
         <!-- Środek: transfer w obie strony -->
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0">
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0">
             <ui:Button x:Name="PushBtn" Appearance="Secondary" ToolTip="{DynamicResource S.dual.push}"
                        AutomationProperties.Name="{DynamicResource S.dual.push}"
                        Click="ToRemote_Click" Width="42" Height="36" Margin="0,0,0,10" Padding="0">

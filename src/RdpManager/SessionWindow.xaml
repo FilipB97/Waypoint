@@ -36,7 +36,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{DynamicResource TextTer}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{DynamicResource TextTer}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock x:Name="StatusText" Text="—" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"
                                MaxWidth="640" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
@@ -60,7 +60,7 @@
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal">
-                            <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="10"
+                            <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="{StaticResource RadiusMd}"
                                     Background="{DynamicResource Accent}" VerticalAlignment="Center">
                                 <TextBlock x:Name="OverlayInitials" Foreground="White" FontSize="14" FontWeight="Bold"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -96,9 +96,9 @@
         <!-- pasek pełnoekranowy (auto-hide) -->
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
-            <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,7" Margin="12,4,12,12"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1">
-                <Border.Effect><DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/></Border.Effect>
+            <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,8" Margin="12,4,12,12"
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                    Effect="{DynamicResource ShadowLg}">
                 <StackPanel Orientation="Horizontal">
                     <Thumb x:Name="FsBarThumb" Width="20" Cursor="SizeWE" DragDelta="FsBarThumb_DragDelta" Margin="0,0,10,0">
                         <Thumb.Template>

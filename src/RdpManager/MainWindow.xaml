@@ -20,7 +20,7 @@
         <Style x:Key="RailBtn" TargetType="Button">
             <Setter Property="Width" Value="38"/>
             <Setter Property="Height" Value="38"/>
-            <Setter Property="Margin" Value="0,3"/>
+            <Setter Property="Margin" Value="0,4"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextTer}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -30,18 +30,32 @@
                         <Grid>
                             <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusMd}"
                                     BorderThickness="2" BorderBrush="Transparent"/>
+                            <!-- Wskaźnik aktywnego widoku: pigułka akcentu przy lewej krawędzi raila. Samo tło
+                                 (AccentSoft) było ledwo czytelne, a to jest konwencja, którą użytkownik zna
+                                 z pasków nawigacji — od razu widać, w którym widoku się jest. Widoczność
+                                 przełącza SetNav przez FindName: Tag przycisku niesie już nazwę widoku
+                                 (Nav_Click), więc nie da się użyć go do stanu. -->
+                            <Border x:Name="ActivePill" Width="3" Height="20" HorizontalAlignment="Left" CornerRadius="0,2,2,0"
+                                    Background="{DynamicResource Accent}" Margin="-7,0,0,0" Visibility="Collapsed"/>
                             <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusMd}" Background="{DynamicResource RailHover}" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
+                            <!-- Wciśnięcie: warstwa hoveru na pełne krycie, BEZ animacji — potwierdzenie
+                                 kliknięcia ma być natychmiastowe, inaczej interfejs sprawia wrażenie ospałego. -->
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="HoverFill" Property="Opacity" Value="1"/>
+                                <Setter TargetName="HoverFill" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
@@ -58,7 +72,7 @@
         <Style x:Key="IconBtn" TargetType="Button">
             <Setter Property="Width" Value="28"/>
             <Setter Property="Height" Value="28"/>
-            <Setter Property="Margin" Value="3,0,0,0"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -73,12 +87,19 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
+                            <!-- Wciśnięcie: warstwa hoveru na pełne krycie, BEZ animacji — potwierdzenie
+                                 kliknięcia ma być natychmiastowe, inaczej interfejs sprawia wrażenie ospałego. -->
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="HoverFill" Property="Opacity" Value="1"/>
+                                <Setter TargetName="HoverFill" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
@@ -93,6 +114,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineBody}"/>
         </Style>
 
         <!-- Styl „Card" przeniesiony do Themes/Metrics.xaml — dzieli go okno sesji (karta stanu). -->
@@ -100,6 +122,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="{StaticResource FontBodyLg}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineBodyLg}"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
 
@@ -109,11 +132,13 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="{StaticResource FontTitle}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineTitle}"/>
         </Style>
         <Style x:Key="SetPageSub" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
-            <Setter Property="Margin" Value="0,5,0,20"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineBody}"/>
+            <Setter Property="Margin" Value="0,6,0,20"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
         <!-- Pod-sekcja (WYGLĄD / LISTA SERWERÓW …) -->
@@ -127,12 +152,13 @@
         <Style x:Key="SetRow" TargetType="Border">
             <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="Padding" Value="0,11"/>
+            <Setter Property="Padding" Value="0,12"/>
             <Setter Property="MinHeight" Value="46"/>
         </Style>
         <Style x:Key="SetLbl" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineBody}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <!-- Podpis pod etykietą ustawienia. TextWrapping jest OBOWIĄZKOWE: podpis siedzi w kolumnie „*"
@@ -141,6 +167,7 @@
         <Style x:Key="SetSub" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextTer}"/>
             <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+            <Setter Property="LineHeight" Value="{StaticResource LineSmall}"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
@@ -162,7 +189,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Height="28" Padding="13,0">
+                        <!-- Ramka rezerwowana zawsze (przezroczysta), żeby zaznaczenie fokusem nie
+                             przesuwało treści segmentu o 2 px. -->
+                        <Border x:Name="bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent" Height="28" Padding="11,0"
+                                BorderThickness="2" BorderBrush="Transparent">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
@@ -173,6 +203,15 @@
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
+                            <!-- Własny szablon zjada domyślny prostokąt fokusu WPF — bez tego przez segmenty
+                                 nie da się przejść klawiaturą świadomie. -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -354,10 +393,13 @@
                                 </ui:Button.ContentTemplate>
                             </ui:Button>
                             <ui:Button Content="{DynamicResource S.quickConnect}" HorizontalAlignment="Stretch"
-                                       Appearance="Primary" Click="QuickConnect_Click"
+                                       Appearance="Primary" Background="{StaticResource BrandGradient}"
+                                       Click="QuickConnect_Click"
                                        ToolTip="{DynamicResource S.quickConnect.tip}"/>
+                            <!-- „Dodaj serwer" jako cicha akcja: dwa przyciski pełnej szerokości pod sobą
+                                 konkurowały ze sobą o uwagę, a dodawanie serwera jest rzadsze niż łączenie. -->
                             <ui:Button Content="{DynamicResource S.addServer}" HorizontalAlignment="Stretch"
-                                       Appearance="Secondary" Margin="0,6,0,0" Click="AddServer_Click"/>
+                                       Appearance="Transparent" Margin="0,2,0,0" Click="AddServer_Click"/>
                             <!-- Import celowo bez przycisku tutaj — rail ma dedykowany NavImport (ten sam OpenImport_Click). -->
                         </StackPanel>
                     </Border>
@@ -407,27 +449,27 @@
                         <StackPanel x:Name="FocusControls" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="4,0,6,0" Visibility="Collapsed">
                             <Button x:Name="QuickSwitchBtn" Style="{DynamicResource IconBtn}" Click="QuickSwitch_Click"
-                                    ToolTip="{DynamicResource S.qs.tip}">
+                                    ToolTip="{DynamicResource S.qs.tip}" AutomationProperties.Name="{DynamicResource S.qs.tip}">
                                 <ui:SymbolIcon Symbol="Add24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click"
-                                    ToolTip="{DynamicResource S.focus.toggle}">
+                                    ToolTip="{DynamicResource S.focus.toggle}" AutomationProperties.Name="{DynamicResource S.focus.toggle}">
                                 <TextBlock Text="&#x25A3;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click"
-                                    ToolTip="{DynamicResource S.tip.fullscreen}">
+                                    ToolTip="{DynamicResource S.tip.fullscreen}" AutomationProperties.Name="{DynamicResource S.tip.fullscreen}">
                                 <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusMinimize_Click"
-                                    ToolTip="{DynamicResource S.tip.minimize}">
+                                    ToolTip="{DynamicResource S.tip.minimize}" AutomationProperties.Name="{DynamicResource S.tip.minimize}">
                                 <TextBlock Text="&#x2212;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusRestore_Click"
-                                    ToolTip="{DynamicResource S.fs.restore}">
+                                    ToolTip="{DynamicResource S.fs.restore}" AutomationProperties.Name="{DynamicResource S.fs.restore}">
                                 <TextBlock Text="&#x2750;" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusClose_Click"
-                                    ToolTip="{DynamicResource S.m.close}">
+                                    ToolTip="{DynamicResource S.m.close}" AutomationProperties.Name="{DynamicResource S.m.close}">
                                 <TextBlock Text="&#x2715;" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource Danger}" VerticalAlignment="Center"/>
                             </Button>
                         </StackPanel>
@@ -437,20 +479,20 @@
                         <StackPanel x:Name="SessionActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="4,0,6,0" Visibility="Collapsed">
                             <Button x:Name="FilesBtn" Style="{DynamicResource IconBtn}" Click="Files_Click"
-                                    Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}">
+                                    Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}" AutomationProperties.Name="{DynamicResource S.sftp.toggle}">
                                 <ui:SymbolIcon Symbol="Folder24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button x:Name="CadBtn" Style="{DynamicResource IconBtn}" Click="SendCtrlAltDel_Click"
-                                    Visibility="Collapsed" ToolTip="{DynamicResource S.tip.cad}">
+                                    Visibility="Collapsed" ToolTip="{DynamicResource S.tip.cad}" AutomationProperties.Name="{DynamicResource S.tip.cad}">
                                 <ui:SymbolIcon Symbol="Keyboard24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}">
+                            <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}" AutomationProperties.Name="{DynamicResource S.focus.toggle}">
                                 <TextBlock Text="&#x25A3;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
+                            <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}" AutomationProperties.Name="{DynamicResource S.tip.fullscreen}">
                                 <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="{DynamicResource S.disconnect}">
+                            <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="{DynamicResource S.disconnect}" AutomationProperties.Name="{DynamicResource S.disconnect}">
                                 <TextBlock Text="✕" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource Danger}"/>
                             </Button>
                         </StackPanel>
@@ -459,12 +501,15 @@
 
                 <!-- session toolbar: two states -->
                 <Border x:Name="SessionToolbar" Grid.Row="1" Background="{DynamicResource Panel}"
-                        BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="12,5">
+                        BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="12,6">
                     <Grid>
                         <!-- disconnected -> kompaktowy pasek połączenia (pełna edycja jest w oknie serwera) -->
                         <StackPanel x:Name="ConnectForm" Orientation="Horizontal" VerticalAlignment="Center">
                             <Border x:Name="CfAvatar" Width="18" Height="18" CornerRadius="{StaticResource RadiusSm}" VerticalAlignment="Center" Margin="0,0,8,0">
-                                <TextBlock x:Name="CfAvatarText" Foreground="{DynamicResource TextOnColor}" FontSize="{StaticResource FontMicro}" FontWeight="Bold"
+                                <!-- 9.5, nie FontMicro (7.5): dwa wersaliki na kafelku 18 px zlewały się w plamę.
+                                     Ta sama wartość co w awatarach kart i wierszy listy. FontMicro zostaje dla
+                                     strzałek sortowania, gdzie 7.5 px wystarcza (to glif, nie tekst). -->
+                                <TextBlock x:Name="CfAvatarText" Foreground="{DynamicResource TextOnColor}" FontSize="9.5" FontWeight="Bold"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock x:Name="CfName" Foreground="{DynamicResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>
@@ -552,7 +597,7 @@
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="10"
+                                    <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="{StaticResource RadiusMd}"
                                             Background="{DynamicResource Accent}" VerticalAlignment="Center">
                                         <TextBlock x:Name="OverlayInitials" Foreground="White" FontSize="14" FontWeight="Bold"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -609,7 +654,7 @@
                     <!-- Pozycja lewej nawigacji Ustawień: przezroczysta; hover/zaznaczenie = tło Panel + pasek akcentu. -->
                     <Style x:Key="SettingsNavItem" TargetType="ListBoxItem">
                         <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
-                        <Setter Property="Margin" Value="0,1"/>
+                        <Setter Property="Margin" Value="0,2"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="Template">
                             <Setter.Value>
@@ -618,7 +663,7 @@
                                         <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="Transparent"
                                                 BorderThickness="2" BorderBrush="Transparent"/>
                                         <Border x:Name="HoverFill" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Panel}" Opacity="0"/>
-                                        <Grid Margin="12,9">
+                                        <Grid Margin="12,10">
                                             <Border x:Name="Bar" Width="3" CornerRadius="{StaticResource RadiusXs}" HorizontalAlignment="Left"
                                                     Background="{DynamicResource Accent}" Visibility="Collapsed"/>
                                             <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
@@ -627,10 +672,10 @@
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Trigger.EnterActions>
-                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                             </Trigger.EnterActions>
                                             <Trigger.ExitActions>
-                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
                                             </Trigger.ExitActions>
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
@@ -638,6 +683,7 @@
                                             <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
                                             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
                                         </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
                                         <Trigger Property="IsKeyboardFocused" Value="True">
                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                         </Trigger>
@@ -665,43 +711,43 @@
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Options24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Options24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.iface}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="PlugConnected24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="PlugConnected24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.conn}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="WrenchScrewdriver24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="WrenchScrewdriver24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.behavior}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Flash24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Flash24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.autoconnect}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Person24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Person24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.profiles}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Database24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Database24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.set.data}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Info24" FontSize="{StaticResource IconMd}" Margin="0,0,11,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                <ui:SymbolIcon Symbol="Info24" FontSize="{StaticResource IconMd}" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 <TextBlock Text="{DynamicResource S.nav.about}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
@@ -826,7 +872,7 @@
                                     <Border Grid.Column="1" Style="{DynamicResource SegBar}">
                                         <StackPanel x:Name="BorderSeg" Orientation="Horizontal">
                                             <RadioButton Style="{DynamicResource Seg}" Tag="" Content="{DynamicResource S.border.none}" Checked="SegSetting_Changed"/>
-                                            <RadioButton Style="{DynamicResource Seg}" Tag="#2657D6" Content="{DynamicResource S.border.cobalt}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="#6C6DFF" Content="{DynamicResource S.border.brand}" Checked="SegSetting_Changed"/>
                                             <RadioButton Style="{DynamicResource Seg}" Tag="System" Content="{DynamicResource S.border.system}" Checked="SegSetting_Changed"/>
                                         </StackPanel>
                                     </Border>
@@ -1149,8 +1195,8 @@
         <Popup x:Name="ShortcutsPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
                StaysOpen="False" AllowsTransparency="True" Focusable="False">
             <Border Background="{DynamicResource RailBg}" CornerRadius="{StaticResource RadiusLg}" Padding="22,18"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="420">
-                <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45"/></Border.Effect>
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="420"
+                    Effect="{DynamicResource ShadowMd}">
                 <Border.Resources>
                     <!-- Klawisz: „kapsel" o stałej szerokości, żeby opisy tworzyły równą kolumnę. -->
                     <Style x:Key="KeyCap" TargetType="Border">
@@ -1158,7 +1204,7 @@
                         <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
                         <Setter Property="BorderThickness" Value="1"/>
                         <Setter Property="CornerRadius" Value="{StaticResource RadiusXs}"/>
-                        <Setter Property="Padding" Value="7,2"/>
+                        <Setter Property="Padding" Value="8,2"/>
                         <Setter Property="MinWidth" Value="104"/>
                         <Setter Property="Margin" Value="0,0,12,0"/>
                         <Setter Property="VerticalAlignment" Value="Center"/>
@@ -1177,7 +1223,7 @@
                     </Style>
                     <Style x:Key="KeyRow" TargetType="StackPanel">
                         <Setter Property="Orientation" Value="Horizontal"/>
-                        <Setter Property="Margin" Value="0,0,0,7"/>
+                        <Setter Property="Margin" Value="0,0,0,8"/>
                     </Style>
                 </Border.Resources>
                 <StackPanel>
@@ -1227,8 +1273,8 @@
         <Popup x:Name="QuickSwitchPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
                StaysOpen="False" AllowsTransparency="True">
             <Border Background="{DynamicResource RailBg}" CornerRadius="{StaticResource RadiusLg}" Padding="8"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="460">
-                <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45"/></Border.Effect>
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="460"
+                    Effect="{DynamicResource ShadowMd}">
                 <StackPanel>
                     <ui:TextBox x:Name="QuickSwitchSearch" PlaceholderText="{DynamicResource S.cmd.placeholder}"
                                 Margin="0,0,0,6" TextChanged="QuickSwitchSearch_TextChanged" KeyDown="QuickSwitchSearch_KeyDown">
@@ -1296,11 +1342,10 @@
         <!-- floating fullscreen bar (Popup = osobny HWND -> rysuje się nad kontrolką RDP) -->
         <Popup x:Name="FsPopup" Placement="Custom" PlacementTarget="{Binding ElementName=HotZone}"
                AllowsTransparency="True" StaysOpen="True" MouseLeave="FsPopup_MouseLeave">
-            <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,7" Margin="12,4,12,12"
-                    BorderBrush="{DynamicResource Border}" BorderThickness="1">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.5"/>
-                </Border.Effect>
+            <Border Background="{DynamicResource FsBarBg}" CornerRadius="{StaticResource RadiusLg}" Padding="14,8" Margin="12,4,12,12"
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                    Effect="{DynamicResource ShadowLg}">
+
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <Thumb x:Name="FsBarThumb" Width="20" Cursor="SizeWE" DragDelta="FsBarThumb_DragDelta"
@@ -1320,7 +1365,7 @@
                         <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
                         <ui:Button x:Name="PinBtn" Content="{DynamicResource S.fs.pin}" Appearance="Secondary" Click="TogglePin_Click"/>
                         <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
-                        <Button Style="{DynamicResource IconBtn}" Click="Minimize_Click" ToolTip="{DynamicResource S.tip.minimize}">
+                        <Button Style="{DynamicResource IconBtn}" Click="Minimize_Click" ToolTip="{DynamicResource S.tip.minimize}" AutomationProperties.Name="{DynamicResource S.tip.minimize}">
                             <TextBlock Text="&#x2212;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                         </Button>
                         <ui:Button Content="{DynamicResource S.fs.restore}" Appearance="Secondary" Click="Fullscreen_Click" Margin="6,0,0,0"/>

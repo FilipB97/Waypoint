@@ -23,7 +23,7 @@ namespace RdpManager
             string notesText = string.IsNullOrWhiteSpace(notes) ? LocalizationManager.S("S.update.nonotes") : notes.Trim();
             var doc = MarkdownLite.Build(notesText, OpenLink);
             doc.FontFamily = FontFamily;                 // czcionka okna (Segoe UI Variable), nie domyślna FlowDocument
-            doc.FontSize = 13;
+            doc.FontSize = (double)TryFindResource("FontBody");
             doc.PagePadding = new Thickness(14, 12, 14, 12);
             doc.TextAlignment = TextAlignment.Left;      // bez „justowania" (poprzednia wersja rozciągała wiersze)
             doc.Foreground = TryFindResource("TextSec") as Brush ?? Brushes.Gray;

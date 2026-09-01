@@ -69,7 +69,7 @@ namespace RdpManager.Controllers
         {
             var tab = new Border
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = Radii.Sm,
                 BorderThickness = new Thickness(1),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
@@ -88,17 +88,19 @@ namespace RdpManager.Controllers
             var content = new StackPanel { Orientation = Orientation.Horizontal };
             content.Children.Add(new Border
             {
-                Width = 14, Height = 14, CornerRadius = new CornerRadius(4),
+                // 14 px kafelek z inicjałami 7 px był nieczytelny — dwa wersaliki zlewały się w plamę.
+                Width = 17, Height = 17, CornerRadius = Radii.Xs,
                 Background = _owner.AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = MainWindow.ServerInitials(session.Server), Foreground = Brushes.White, FontSize = 7, FontWeight = FontWeights.Bold,
+                    Text = MainWindow.ServerInitials(session.Server),
+                    Foreground = MainWindow.AvatarInk(_owner.AvatarBrush(session.Server)), FontSize = 9.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             });
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12,
+                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = (double)_owner.TryFindResource("FontSmall"),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -132,7 +134,7 @@ namespace RdpManager.Controllers
         {
             var tab = new Border
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = Radii.Sm,
                 BorderThickness = new Thickness(1),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
@@ -156,7 +158,7 @@ namespace RdpManager.Controllers
             content.Children.Add(tabDot);
             var tabName = new TextBlock
             {
-                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = 12,
+                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = (double)_owner.TryFindResource("FontSmall"),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             _tabName[session] = tabName;
@@ -180,7 +182,7 @@ namespace RdpManager.Controllers
         {
             var close = new TextBlock
             {
-                Text = "✕", Foreground = _owner.Res("TextTer"), FontSize = 11,
+                Text = "✕", Foreground = _owner.Res("TextTer"), FontSize = (double)_owner.TryFindResource("FontCaption"),
                 Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(3, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand,
                 Visibility = Visibility.Hidden
@@ -573,7 +575,7 @@ namespace RdpManager.Controllers
 
             var box = new Border
             {
-                CornerRadius = new CornerRadius(8), Background = tint, BorderBrush = strong, BorderThickness = new Thickness(1),
+                CornerRadius = Radii.Sm, Background = tint, BorderBrush = strong, BorderThickness = new Thickness(1),
                 Padding = new Thickness(3, 0, 4, 0), Margin = new Thickness(0, 0, 5, 0)
             };
             var row = new StackPanel { Orientation = Orientation.Horizontal };
@@ -582,7 +584,7 @@ namespace RdpManager.Controllers
             // Pastylka z nazwą: klik = zwiń/rozwiń; prawy klik = menu (nazwa / kolor / rozgrupuj).
             var pill = new Border
             {
-                CornerRadius = new CornerRadius(5), Background = strong, Cursor = Cursors.Hand,
+                CornerRadius = Radii.Xs, Background = strong, Cursor = Cursors.Hand,
                 Padding = new Thickness(6, IsMinimalList ? 1 : 2, 7, IsMinimalList ? 1 : 3),
                 Margin = new Thickness(1, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center,
                 ContextMenu = BuildGroupMenu(g)
@@ -590,7 +592,7 @@ namespace RdpManager.Controllers
             var pillRow = new StackPanel { Orientation = Orientation.Horizontal };
             pillRow.Children.Add(new TextBlock
             {
-                Text = g.Collapsed ? "▸" : "▾", Foreground = new SolidColorBrush(color), FontSize = 10,
+                Text = g.Collapsed ? "▸" : "▾", Foreground = new SolidColorBrush(color), FontSize = (double)_owner.TryFindResource("FontCaption"),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 5, 0)
             });
             pillRow.Children.Add(new TextBlock
@@ -601,9 +603,9 @@ namespace RdpManager.Controllers
             if (g.Collapsed)
                 pillRow.Children.Add(new Border
                 {
-                    CornerRadius = new CornerRadius(9), Background = _owner.Res("Elevated"),
+                    CornerRadius = Radii.Sm, Background = _owner.Res("Elevated"),
                     Padding = new Thickness(6, 0, 6, 1), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
-                    Child = new TextBlock { Text = members.Count.ToString(), Foreground = _owner.Res("TextSec"), FontSize = 10.5 }
+                    Child = new TextBlock { Text = members.Count.ToString(), Foreground = _owner.Res("TextSec"), FontSize = (double)_owner.TryFindResource("FontCaption") }
                 });
             pill.Child = pillRow;
             // e.Handled: klik przebudowuje pasek (usuwa tę pastylkę) — nie pozwól zdarzeniu bąbelkować dalej.
@@ -634,7 +636,7 @@ namespace RdpManager.Controllers
             foreach (var c in GroupColors)
             {
                 var cc = c;
-                var swatch = new MenuItem { Header = new TextBlock { Text = "●", Foreground = new SolidColorBrush(cc), FontSize = 15 } };
+                var swatch = new MenuItem { Header = new TextBlock { Text = "●", Foreground = new SolidColorBrush(cc), FontSize = (double)_owner.TryFindResource("FontBodyLg") } };
                 swatch.Click += (s, e) => { g.Color = cc; SaveTabGroups(); RebuildTabStrip(); };
                 colorItem.Items.Add(swatch);
             }

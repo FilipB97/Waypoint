@@ -228,6 +228,7 @@ namespace RdpManager
             var owner = Application.Current?.MainWindow as MainWindow;
             if (owner != null) OverlayAvatar.Background = owner.AvatarBrush(_server);
             OverlayInitials.Text = MainWindow.ServerInitials(_server);
+            OverlayInitials.Foreground = MainWindow.AvatarInk(OverlayAvatar.Background);
             OverlayServerName.Text = string.IsNullOrWhiteSpace(_server.Name) ? _server.Host : _server.Name;
             OverlayHost.Text = MainWindow.DisplayHost(_server);
 

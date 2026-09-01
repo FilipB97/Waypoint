@@ -39,7 +39,29 @@ namespace RdpManager
                 }
             }
             PersistLog.Write(dir, $"settings.Load: główny (score={(main == null ? -1 : DataScore(main))}, istnieje={File.Exists(path)})");
-            return main ?? new AppSettings();
+            return Migrate(main ?? new AppSettings());
+        }
+
+        /// <summary>
+        /// Drobne przeniesienia wartości, gdy ZNACZENIE opcji się nie zmieniło, ale jej wartość tak.
+        /// Bez nich zapisany wybór nie pasuje już do żadnej opcji w Ustawieniach i użytkownik widzi
+        /// pusty segment, mimo że ustawienie dalej działa.
+        /// </summary>
+        private static AppSettings Migrate(AppSettings s)
+        {
+            // Obwódka okna „kolor marki": kobalt (#2657D6) -> indygo (#6C6DFF) po rebrandingu.
+            if (string.Equals(s.WindowBorderColor, "#2657D6", StringComparison.OrdinalIgnoreCase))
+                s.WindowBorderColor = "#6C6DFF";
+
+            // Akcent „Fiolet" (#7C6CFB) zniknął z próbnika, bo po rebrandingu dzieliło go od akcentu
+            // domyślnego ΔE 4.1 — czyli był tym samym kolorem pod inną nazwą. Czyścimy go do wartości
+            // pustej, czyli „Domyślny": użytkownik zobaczy DOKŁADNIE ten sam kolor co dotąd, tyle że
+            // teraz zaznaczy się właściwa próbka. Podmiana na nowy kobalt byłaby zmianą wyglądu bez
+            // jego zgody.
+            if (string.Equals(s.AccentColor, "#7C6CFB", StringComparison.OrdinalIgnoreCase))
+                s.AccentColor = "";
+
+            return s;
         }
 
         private static AppSettings ReadOrNull(string p, bool preserveCorrupt)

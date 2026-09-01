@@ -96,11 +96,11 @@
     <sys:String x:Key="S.proto.filter.all">Wszystkie</sys:String>
     <sys:String x:Key="S.set.border">Obwódka okna</sys:String>
     <sys:String x:Key="S.border.none">Brak</sys:String>
-    <sys:String x:Key="S.border.cobalt">Kobalt</sys:String>
+    <sys:String x:Key="S.border.brand">Marka</sys:String>
     <sys:String x:Key="S.border.system">Systemowa</sys:String>
     <sys:String x:Key="S.set.accent">Kolor akcentu</sys:String>
     <sys:String x:Key="S.accent.default">Domyślny</sys:String>
-    <sys:String x:Key="S.accent.violet">Fiolet</sys:String>
+    <sys:String x:Key="S.accent.cobalt">Kobalt</sys:String>
     <sys:String x:Key="S.accent.green">Zielony</sys:String>
     <sys:String x:Key="S.accent.amber">Bursztyn</sys:String>
     <sys:String x:Key="S.accent.rose">Róż</sys:String>
@@ -651,4 +651,5 @@ To może oznaczać atak (podszywanie się pod serwer) albo wymianę certyfikatu.
     <sys:String x:Key="S.keys.zoom">Powiększenie interfejsu / reset</sys:String>
     <sys:String x:Key="S.keys.quick">Szybkie połączenie (skrót globalny)</sys:String>
     <sys:String x:Key="S.keys.help">Ta ściąga</sys:String>
+    <sys:String x:Key="S.proto.filter.clear">Kliknij ponownie, aby pokazać wszystkie protokoły</sys:String>
 </ResourceDictionary>

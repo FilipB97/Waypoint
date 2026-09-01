@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 using Microsoft.Win32;
+using RdpManager.Core;
 using Wpf.Ui.Appearance;
 
 namespace RdpManager
@@ -16,11 +17,11 @@ namespace RdpManager
         // WPF-UI domyślnie bierze akcent SYSTEMOWY (stąd „szare" przyciski Primary, ProgressRing, focus,
         // przełączniki) — wymuszamy własny akcent PO zastosowaniu motywu, żeby akcentowe kontrolki WPF-UI
         // zgadzały się z paletą Waypoint (klucz „Accent") i UI nie było monochromatyczne.
-        // Compass §2 rozróżnia akcent interakcji per motyw: ciemny #4C86FF (jaśniejszy, na chłodnej czerni),
-        // jasny #2657D6 (kobalt — lepszy kontrast białego tekstu na akcencie). To domyślna para Compass;
-        // użytkownik może ją nadpisać własnym akcentem (§4.7).
-        private static readonly Color AccentDark = Color.FromRgb(0x4C, 0x86, 0xFF);
-        private static readonly Color AccentLight = Color.FromRgb(0x26, 0x57, 0xD6);
+        // Ostatnia deska ratunku, gdyby w zasobach zabrakło klucza „Accent" (paleta i preset go dostarczają,
+        // więc w praktyce nie odpala). Wartości muszą być te, co w Palette.* — stały tu kobalt sprzed
+        // rebrandingu, czyli kolor, którego aplikacja już nigdzie nie używa.
+        private static readonly Color AccentDark = Color.FromRgb(0x6C, 0x6D, 0xFF);
+        private static readonly Color AccentLight = Color.FromRgb(0x5B, 0x4B, 0xD6);
 
         // Rodzina kluczy akcentu nadpisywana bezpośrednio w zasobach App, gdy wybrano własny kolor (§4.7).
         private static readonly string[] AccentKeys = { "Accent", "AccentSoft", "AccentStrong", "AccentBright" };
@@ -86,11 +87,38 @@ namespace RdpManager
             void B(string k, Color c) => d[k] = new SolidColorBrush(c);
             B("CanvasBrush", p.Canvas); B("Canvas", p.Canvas);
             B("Panel", p.Panel); B("Border", p.Border); B("RailBg", p.RailBg);
-            B("TextPrim", p.TextPrim); B("TextSec", p.TextSec); B("TextTer", p.TextTer);
+
+            // Próg czytelności NA PANELU, bo tam leży większość tekstu (karty, wiersze ustawień, lista),
+            // a panel jest bliżej koloru tekstu niż kanwa — czyli to gorszy przypadek. Presety niosą
+            // własne kolory z kanonicznych palet edytorów, gdzie trzeci stopień to kolor KOMENTARZA:
+            // celowo przygaszony. U nas ten sam klucz trzyma etykiety pól i komunikaty pustych stanów.
+            // We wszystkich dwunastu presetach TextTer wypadał między 2.07 a 3.77 przy progu 4.5.
+            // Barwa presetu zostaje, dociągana jest tylko jasność — i tylko o tyle, o ile trzeba.
+            Color prim = ColorMath.EnsureContrast(p.TextPrim, p.Panel, 4.5);
+            Color sec = ColorMath.EnsureContrast(p.TextSec, p.Panel, 4.5);
+            Color ter = ColorMath.EnsureContrast(p.TextTer, p.Panel, 4.5);
+            B("TextPrim", prim); B("TextSec", sec); B("TextTer", ter);
             B("Accent", p.Accent);
             d["AccentSoft"] = new SolidColorBrush(Color.FromArgb(0x1F, p.Accent.R, p.Accent.G, p.Accent.B));
             d["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, p.Accent.R, p.Accent.G, p.Accent.B));
             d["AccentBright"] = new SolidColorBrush(Lighten(p.Accent, 0.25));
+
+            // Te same kolory pod kontrolki WPF-UI (patrz blok „Kontrolki WPF-UI" w Palette.*). Bez tego
+            // preset przestawiał tło, panele i tekst CAŁEJ aplikacji poza formularzami — pola i przełączniki
+            // zostawały na kolorach palety bazowej, czyli w innym tonie niż wszystko dokoła.
+            B("TextFillColorPrimaryBrush", prim);
+            B("TextFillColorSecondaryBrush", sec);
+            B("TextFillColorTertiaryBrush", ter);
+            B("TextControlForeground", prim);
+            B("TextControlPlaceholderForeground", ter);
+            B("ControlFillColorDefaultBrush", p.Panel);
+            B("TextControlBackground", p.Panel);
+            B("TextControlBackgroundFocused", p.Panel);
+            B("ControlStrokeColorDefaultBrush", p.Border);
+            B("CardBackgroundFillColorDefaultBrush", p.Panel);
+            B("SolidBackgroundFillColorBaseBrush", p.Canvas);
+            B("SolidBackgroundFillColorSecondaryBrush", p.Panel);
+
             dicts.Add(d);
             _presetOverlay = d;
         }

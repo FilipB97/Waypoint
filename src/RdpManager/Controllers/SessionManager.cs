@@ -360,6 +360,7 @@ namespace RdpManager.Controllers
             var srv = _owner._active.Server;
             _owner.OverlayAvatar.Background = _owner.AvatarBrush(srv);
             _owner.OverlayInitials.Text = MainWindow.ServerInitials(srv);
+            _owner.OverlayInitials.Foreground = MainWindow.AvatarInk(_owner.OverlayAvatar.Background);
             _owner.OverlayServerName.Text = string.IsNullOrWhiteSpace(srv.Name) ? srv.Host : srv.Name;
             _owner.OverlayHost.Text = MainWindow.DisplayHost(srv);
 
@@ -385,6 +386,7 @@ namespace RdpManager.Controllers
         {
             _owner.CfAvatar.Background = _owner.AvatarBrush(s.Server);
             _owner.CfAvatarText.Text = MainWindow.ServerInitials(s.Server);
+            _owner.CfAvatarText.Foreground = MainWindow.AvatarInk(_owner.CfAvatar.Background);
             _owner.CfName.Text = s.Server.Name;
             _owner.CfHost.Text = s.Server.Host + ":" + s.Server.Port;
             // Konto Windows tylko dla RDP; Telnet/Serial nie mają pól poświadczeń w ogóle.

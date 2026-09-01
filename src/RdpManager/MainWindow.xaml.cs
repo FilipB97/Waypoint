@@ -57,9 +57,15 @@ namespace RdpManager
         private readonly Dictionary<string, LinearGradientBrush> _avatarCache = new Dictionary<string, LinearGradientBrush>();
         private static readonly string[][] GroupPalette =
         {
-            new[]{"#7C6CFB","#4F3FD1"}, new[]{"#FFB454","#D98F2E"}, new[]{"#36C4CF","#1F8B94"},
+            // Slot 0 był #7C6CFB — ten sam kolor co akcent (ΔE 4.1), więc grupa hashująca się tutaj
+            // dostawała kropkę nie do odróżnienia od zaznaczenia. Magenta jak GdProd: ΔE 37.9.
+            new[]{"#D06BD8","#8E3AA0"}, new[]{"#FFB454","#D98F2E"}, new[]{"#36C4CF","#1F8B94"},
             new[]{"#3DDC97","#1F9E6B"}, new[]{"#FB6C9C","#D13F6E"}, new[]{"#6C9CFB","#3F5FD1"},
-            new[]{"#C06CFB","#7A3FD1"}, new[]{"#F0C05A","#C79030"}
+            // Slot 7 był DRUGIM bursztynem obok slotu 1 (#FFB454): ΔE 12.3, czyli dwie grupy dostawały
+            // praktycznie ten sam kolor. Ceglany jest jedynym ciepłym odcieniem, którego w zestawie nie
+            // było — najbliższy sąsiad oddalony o ΔE 33, a białe inicjały mają na nim najlepszy kontrast
+            // w całej palecie (4.44).
+            new[]{"#C06CFB","#7A3FD1"}, new[]{"#E85C3A","#B83A1E"}
         };
 
         // Pełny ekran + tryb skupienia (maszyny stanu) — logika w Controllers/FullscreenController (PR 5).
@@ -301,7 +307,8 @@ namespace RdpManager
 
             target.BeginAnimation(OpacityProperty, null);   // ubij poprzednią, gdy ktoś klika szybko
             target.Opacity = 0;
-            target.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(130))
+            // 180 ms = MotionBase ze skali ruchu w Themes/Metrics.xaml (pojawienie się elementu).
+            target.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             });
@@ -442,6 +449,14 @@ namespace RdpManager
         {
             b.Background = active ? Res("AccentSoft") : Brushes.Transparent;
             ico.Foreground = active ? Res("Accent") : Res("TextTer");
+
+            // Pigułka akcentu przy krawędzi raila (szablon RailBtn). Sam odcień tła bywał ledwo czytelny,
+            // zwłaszcza na jasnym motywie. Tag przycisku niesie nazwę widoku (Nav_Click), więc stanu nie da
+            // się przekazać triggerem — sięgamy do części szablonu. ApplyTemplate, bo pierwsze wywołanie
+            // przychodzi ze startu okna, zanim szablon zdąży się rozwinąć.
+            b.ApplyTemplate();
+            if (b.Template?.FindName("ActivePill", b) is FrameworkElement pill)
+                pill.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
         }
 
         // ---------- Moduł REST (rail „REST" przełącza sidebar na kolekcje; Compass §4.4) ----------
@@ -681,7 +696,7 @@ namespace RdpManager
             var bd = new Border
             {
                 Padding = new Thickness(8 + depth * 14, 5, 8, 5),
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = Radii.Sm,
                 Background = Brushes.Transparent,
                 Cursor = onClick != null ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow,
                 Child = content
@@ -709,7 +724,7 @@ namespace RdpManager
             sp.Children.Add(new Wpf.Ui.Controls.SymbolIcon { Symbol = Wpf.Ui.Controls.SymbolRegular.Folder24, FontSize = (double)TryFindResource("IconSm"), Foreground = Res("Accent"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
             sp.Children.Add(new TextBlock { Text = srv.Name, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
             if (srv.Pinned)
-                sp.Children.Add(new TextBlock { Text = "★", Foreground = Res("Idle"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) });
+                sp.Children.Add(new TextBlock { Text = "★", Foreground = Res("Idle"), FontSize = (double)TryFindResource("FontCaption"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) });
             return sp;
         }
 
@@ -728,9 +743,9 @@ namespace RdpManager
             string method = (r.Method ?? "GET").ToUpperInvariant();
             sp.Children.Add(new Border
             {
-                Background = RestConsole.MethodBadgeBg(method), CornerRadius = new CornerRadius(5),
+                Background = RestConsole.MethodBadgeBg(method), CornerRadius = Radii.Xs,
                 Padding = new Thickness(5, 1, 5, 1), MinWidth = 38, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0),
-                Child = new TextBlock { Text = method, Foreground = RestConsole.MethodBrush(method), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Center }
+                Child = new TextBlock { Text = method, Foreground = RestConsole.MethodBrush(method), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.Bold, FontSize = (double)TryFindResource("FontCaption"), TextAlignment = TextAlignment.Center }
             });
             sp.Children.Add(new TextBlock { Text = r.Name, Foreground = Res("TextSec"), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
             return sp;
@@ -833,7 +848,11 @@ namespace RdpManager
         private static readonly (string key, string hex)[] AccentOptions = new[]
         {
             ("S.accent.default", ""),
-            ("S.accent.violet",  "#7C6CFB"),
+            // Był tu „Fiolet" #7C6CFB — po zmianie akcentu na #6C6DFF dzieliło je ΔE 4.1, więc próbka
+            // nie robiła NIC widocznego: użytkownik klikał inny kolor i dostawał ten sam. Kobalt to
+            // dawny akcent Waypointa, oddany jako świadomy wybór, i jedyny odcień w zestawie
+            // (zieleń / bursztyn / róż) oddalony od domyślnego o więcej niż ΔE 20.
+            ("S.accent.cobalt",  "#2F6BE0"),
             ("S.accent.green",   "#22B07D"),
             ("S.accent.amber",   "#E0872E"),
             ("S.accent.rose",    "#E8556B"),
@@ -853,7 +872,7 @@ namespace RdpManager
                     : (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
                 var dot = new Border
                 {
-                    Width = 20, Height = 20, CornerRadius = new CornerRadius(6),
+                    Width = 20, Height = 20, CornerRadius = Radii.Sm,
                     Background = new SolidColorBrush(color),
                     Margin = new Thickness(0, 0, 8, 0), Cursor = Cursors.Hand,
                     BorderBrush = selected ? Res("Accent") : Res("Border"),
@@ -900,7 +919,7 @@ namespace RdpManager
                 bars.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18, GridUnitType.Star) });
                 void Bar(Color c, int col) { var b = new Border { Background = new SolidColorBrush(c) }; Grid.SetColumn(b, col); bars.Children.Add(b); }
                 Bar(p.Canvas, 0); Bar(p.Panel, 1); Bar(p.Accent, 2);
-                var preview = new Border { CornerRadius = new CornerRadius(7), ClipToBounds = true, Child = bars };
+                var preview = new Border { CornerRadius = Radii.Sm, ClipToBounds = true, Child = bars };
 
                 var nameRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 7, 0, 0) };
                 nameRow.Children.Add(new Ellipse { Width = 9, Height = 9, Fill = new SolidColorBrush(p.Accent), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
@@ -915,7 +934,7 @@ namespace RdpManager
                 sp.Children.Add(nameRow);
                 var card = new Border
                 {
-                    Width = 172, CornerRadius = new CornerRadius(11), Padding = new Thickness(9),
+                    Width = 172, CornerRadius = Radii.Md, Padding = new Thickness(9),
                     Margin = new Thickness(0, 0, 10, 10), Cursor = Cursors.Hand, Background = Res("Panel"),
                     BorderBrush = selected ? Res("Accent") : Res("Border"),
                     BorderThickness = new Thickness(selected ? 2 : 1),
@@ -1036,7 +1055,7 @@ namespace RdpManager
                 AutoConnectList.Children.Add(new TextBlock
                 {
                     Text = L("S.set.autoconnect.empty"),
-                    Foreground = Res("TextTer"), FontSize = 12
+                    Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontSmall")
                 });
                 return;
             }
@@ -1057,7 +1076,7 @@ namespace RdpManager
         private FrameworkElement MakeAcHeader(string label, int count) => new TextBlock
         {
             Text = label + "  ·  " + count,
-            Foreground = Res("TextTer"), FontSize = 11, FontWeight = FontWeights.SemiBold,
+            Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontCaption"), FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(2, 8, 0, 3)
         };
 
@@ -1090,7 +1109,7 @@ namespace RdpManager
             panel.Children.Clear();
             if (_credProfiles.Count == 0)
             {
-                panel.Children.Add(new TextBlock { Text = L("S.prof.empty"), Foreground = Res("TextTer"), FontSize = 12 });
+                panel.Children.Add(new TextBlock { Text = L("S.prof.empty"), Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontSmall") });
                 return;
             }
             foreach (var pr in _credProfiles)
@@ -1177,14 +1196,14 @@ namespace RdpManager
         {
             var row = new Border
             {
-                Tag = server.Id, CornerRadius = new CornerRadius(6), Background = Brushes.Transparent,
+                Tag = server.Id, CornerRadius = Radii.Sm, Background = Brushes.Transparent,
                 BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0),
                 Padding = new Thickness(2, 1, 2, 1), Margin = new Thickness(0, 1, 0, 1), AllowDrop = true
             };
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
             sp.Children.Add(new TextBlock
             {
-                Text = "⠿", Foreground = Res("TextTer"), FontSize = 13, Cursor = Cursors.SizeAll,
+                Text = "⠿", Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontBody"), Cursor = Cursors.SizeAll,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 8, 0)
             });
             sp.Children.Add(new CheckBox
@@ -1573,10 +1592,10 @@ namespace RdpManager
         // Kafelek KPI: duża wartość (+ jednostka) nad etykietą; pionowy dzielnik po prawej (poza ostatnim).
         private FrameworkElement KpiCell(string value, string unit, string label, Brush valueBrush, bool last)
         {
-            var val = new TextBlock { FontSize = 25, FontWeight = FontWeights.Bold };
+            var val = new TextBlock { FontSize = (double)TryFindResource("FontStat"), FontWeight = FontWeights.Bold };
             val.Inlines.Add(new Run(value) { Foreground = valueBrush });
             if (!string.IsNullOrEmpty(unit))
-                val.Inlines.Add(new Run(unit) { Foreground = Res("TextTer"), FontSize = 14, FontWeight = FontWeights.SemiBold });
+                val.Inlines.Add(new Run(unit) { Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontBodyLg"), FontWeight = FontWeights.SemiBold });
             var sp = new StackPanel();
             sp.Children.Add(val);
             sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontCaption"), Margin = new Thickness(0, 4, 0, 0) });
@@ -1605,7 +1624,7 @@ namespace RdpManager
             return new Border
             {
                 Background = Res("Panel"), BorderBrush = Res("Border"), BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(14), Padding = new Thickness(15, 13, 17, 13), Child = panel
+                CornerRadius = Radii.Lg, Padding = new Thickness(15, 13, 17, 13), Child = panel
             };
         }
 
@@ -1711,7 +1730,7 @@ namespace RdpManager
         private FrameworkElement LegendRow(Brush color, string label, int count)
         {
             var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 3) };
-            sp.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = new CornerRadius(2), Background = color, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            sp.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = Radii.Xxs, Background = color, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
             sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center });
             sp.Children.Add(new TextBlock { Text = count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
             return sp;
@@ -1741,7 +1760,7 @@ namespace RdpManager
                 lbls.Children.Add(new TextBlock
                 {
                     Text = i < labels.Length ? labels[i] : "",
-                    Foreground = Res("TextTer"), FontSize = 11, TextAlignment = TextAlignment.Center
+                    Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontCaption"), TextAlignment = TextAlignment.Center
                 });
             }
             var host = new StackPanel { Height = 210 };
@@ -1766,13 +1785,13 @@ namespace RdpManager
                 var seg = new Border { Background = ProtocolBrush(protos[i].Key), Margin = new Thickness(0, 0, i < protos.Count - 1 ? 2 : 0, 0) };
                 Grid.SetColumn(seg, i); barGrid.Children.Add(seg);
             }
-            var bar = new Border { Height = 11, CornerRadius = new CornerRadius(6), ClipToBounds = true, Child = barGrid, Margin = new Thickness(0, 6, 0, 14) };
+            var bar = new Border { Height = 11, CornerRadius = Radii.Sm, ClipToBounds = true, Child = barGrid, Margin = new Thickness(0, 6, 0, 14) };
 
             var legend = new WrapPanel();
             foreach (var p in protos)
             {
                 var item = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 16, 8) };
-                item.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = new CornerRadius(2), Background = ProtocolBrush(p.Key), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+                item.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = Radii.Xxs, Background = ProtocolBrush(p.Key), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
                 item.Children.Add(new TextBlock { Text = ProtocolLabel(p.Key), Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center });
                 item.Children.Add(new TextBlock { Text = p.Count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(7, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
                 legend.Children.Add(item);
@@ -1804,7 +1823,7 @@ namespace RdpManager
         private FrameworkElement DashCard(FrameworkElement content) => new Border
         {
             Background = Res("Panel"), BorderBrush = Res("Border"),
-            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10),
+            BorderThickness = new Thickness(1), CornerRadius = Radii.Md,
             Padding = new Thickness(16, 14, 16, 14), Margin = new Thickness(0, 0, 0, 22), Child = content
         };
 
@@ -1850,18 +1869,18 @@ namespace RdpManager
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
                 var name = new TextBlock { Text = kv.Key, Foreground = Res("TextPrim"),
-                    FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center,
+                    FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center,
                     TextTrimming = TextTrimming.CharacterEllipsis };
                 Grid.SetColumn(name, 0); grid.Children.Add(name);
 
                 var barGrid = new Grid { Width = 200, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 10, 0) };
-                barGrid.Children.Add(new Border { Height = 8, Background = track, CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Stretch });
+                barGrid.Children.Add(new Border { Height = 8, Background = track, CornerRadius = Radii.Xs, HorizontalAlignment = HorizontalAlignment.Stretch });
                 barGrid.Children.Add(new Border { Height = 8, Width = 200.0 * kv.Value / max, Background = accent,
-                    CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Left });
+                    CornerRadius = Radii.Xs, HorizontalAlignment = HorizontalAlignment.Left });
                 Grid.SetColumn(barGrid, 1); grid.Children.Add(barGrid);
 
                 var count = new TextBlock { Text = kv.Value.ToString(), Foreground = Res("TextSec"),
-                    FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, MinWidth = 24, TextAlignment = TextAlignment.Right };
+                    FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center, MinWidth = 24, TextAlignment = TextAlignment.Right };
                 Grid.SetColumn(count, 2); grid.Children.Add(count);
 
                 panel.Children.Add(grid);
@@ -1892,6 +1911,25 @@ namespace RdpManager
             _ => ProtocolLabel(p)
         };
 
+        /// <summary>
+        /// Ikona protokołu do wiersza listy. Grupowanie jak w <see cref="ProtocolBrush"/>: pulpit zdalny
+        /// (RDP/VNC), terminal (SSH/Telnet/Serial), pliki (SFTP/FTP). Ikona mówi CO to za połączenie —
+        /// w liście mieszanej protokołowo to realna informacja, a nie dekoracja.
+        /// </summary>
+        internal static Wpf.Ui.Controls.SymbolRegular ProtocolSymbol(RemoteProtocol p) => p switch
+        {
+            RemoteProtocol.Rdp => Wpf.Ui.Controls.SymbolRegular.Desktop24,
+            RemoteProtocol.Vnc => Wpf.Ui.Controls.SymbolRegular.Desktop24,
+            RemoteProtocol.Ssh => Wpf.Ui.Controls.SymbolRegular.Keyboard24,
+            RemoteProtocol.Telnet => Wpf.Ui.Controls.SymbolRegular.Keyboard24,
+            RemoteProtocol.Serial => Wpf.Ui.Controls.SymbolRegular.Keyboard24,
+            RemoteProtocol.Sftp => Wpf.Ui.Controls.SymbolRegular.Folder24,
+            RemoteProtocol.Ftp => Wpf.Ui.Controls.SymbolRegular.Folder24,
+            RemoteProtocol.Rest => Wpf.Ui.Controls.SymbolRegular.Braces24,
+            RemoteProtocol.Http => Wpf.Ui.Controls.SymbolRegular.Globe24,
+            _ => Wpf.Ui.Controls.SymbolRegular.Server24
+        };
+
         // Kolor etykiety protokołu (Compass §2). VNC dzieli kolor z RDP (pulpit zdalny), FTP z SFTP
         // (transfer plików), Serial z Telnet (terminal) — brak osobnych kluczy dla tych trzech.
         internal Brush ProtocolBrush(RemoteProtocol p) => p switch
@@ -1914,11 +1952,11 @@ namespace RdpManager
             var card = new Border
             {
                 Background = Res("Panel"), BorderBrush = Res("Border"), BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10), Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
+                CornerRadius = Radii.Md, Padding = new Thickness(18, 14, 18, 14), Margin = new Thickness(0, 0, 12, 0), MinWidth = 130
             };
             var sp = new StackPanel();
-            sp.Children.Add(new TextBlock { Text = value, Foreground = Res("Accent"), FontSize = 26, FontWeight = FontWeights.Bold });
-            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = 12 });
+            sp.Children.Add(new TextBlock { Text = value, Foreground = Res("Accent"), FontSize = (double)TryFindResource("FontStat"), FontWeight = FontWeights.Bold });
+            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall") });
             card.Child = sp;
             return card;
         }
@@ -2254,13 +2292,13 @@ namespace RdpManager
             var row = new Border
             {
                 Padding = new Thickness(7, 6, 7, 6),
-                CornerRadius = new CornerRadius(7),
+                CornerRadius = Radii.Sm,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Thickness(0, 1, 0, 1),
                 Child = new TextBlock
                 {
-                    Text = label, Foreground = Res("TextPrim"), FontSize = 12,
+                    Text = label, Foreground = Res("TextPrim"), FontSize = (double)TryFindResource("FontSmall"),
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 0, 0)
                 }
             };
@@ -2315,7 +2353,7 @@ namespace RdpManager
             var row = new Border
             {
                 Padding = new Thickness(7, 6, 7, 6),
-                CornerRadius = new CornerRadius(7),
+                CornerRadius = Radii.Sm,
                 Background = isActive ? Res("AccentSoft") : Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Thickness(0, 1, 0, 1)
@@ -2328,10 +2366,10 @@ namespace RdpManager
 
             var avatar = new Border
             {
-                Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = AvatarBrush(server),
+                Width = 18, Height = 18, CornerRadius = Radii.Xs, Background = AvatarBrush(server),
                 Child = new TextBlock
                 {
-                    Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 7.5, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(server), Foreground = AvatarInk(AvatarBrush(server)), FontSize = 9.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -2340,7 +2378,7 @@ namespace RdpManager
 
             var name = new TextBlock
             {
-                Text = server.Name, Foreground = Res("TextPrim"), FontSize = 12,
+                Text = server.Name, Foreground = Res("TextPrim"), FontSize = (double)TryFindResource("FontSmall"),
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
             };
             Grid.SetColumn(name, 1);
@@ -2498,7 +2536,7 @@ namespace RdpManager
             });
             var chip = new Border
             {
-                CornerRadius = new CornerRadius(9),
+                CornerRadius = Radii.Sm,
                 Padding = new Thickness(10, 5, 10, 5),
                 Margin = new Thickness(0, 0, 6, 6),
                 Background = Res("Panel"),
@@ -3076,6 +3114,37 @@ namespace RdpManager
         }
 
         internal static string ServerInitials(ServerInfo s) => RdpUtils.MakeInitials(s?.Name);
+
+        // Inkaust czytelny na dowolnym kolorze awatara. Białe inicjały na WSZYSTKICH kolorach dawały
+        // kontrast 2.16-4.42 — na bursztynie i zieleni tekst po prostu ginął, bo to kolory jasne.
+        // Przyciemnienie palety naprawiłoby kontrast, ale bursztyn zrobiłby się brązem, a turkus
+        // butelkową zielenią — kolor grupy przestałby być rozpoznawalny. Dlatego zmienną jest INKAUST,
+        // nie tło: bierzemy ten z dwóch, który wypada lepiej. Najgorszy przypadek idzie z 2.16 na 4.31.
+        // Konsekwencja jest widoczna i zamierzona: część awatarów ma teraz ciemne inicjały zamiast białych.
+        private static readonly Brush AvatarInkLight = Brushes.White;
+        private static readonly Brush AvatarInkDark = new SolidColorBrush(Color.FromRgb(0x14, 0x16, 0x20));
+
+        internal static Brush AvatarInk(Brush background)
+        {
+            // Punkt odniesienia = środek gradientu: tam leżą inicjały. Dla pędzla jednolitego — jego kolor.
+            Color c;
+            if (background is LinearGradientBrush g && g.GradientStops.Count >= 2)
+            {
+                Color a = g.GradientStops[0].Color, b = g.GradientStops[g.GradientStops.Count - 1].Color;
+                c = Color.FromRgb((byte)((a.R + b.R) / 2), (byte)((a.G + b.G) / 2), (byte)((a.B + b.B) / 2));
+            }
+            else if (background is SolidColorBrush sb) c = sb.Color;
+            else return AvatarInkLight;
+
+            // Nie „lepszy kontrast wygrywa", tylko „biel, chyba że ciemny jest WYRAŹNIE lepszy" (1.3x).
+            // Reguła bez progu dawałaby ciemne inicjały na awatarze w kolorze akcentu (4.52 vs 3.99) —
+            // tuż obok przycisku „Połącz", który ma biały tekst na dokładnie tym samym tle. Próg zostawia
+            // biel tam, gdzie i tak jest wystarczająca (błękity, fiolety), a przełącza na ciemny inkaust
+            // tylko na kolorach jasnych, gdzie biel naprawdę ginie: bursztyn 2.16, zieleń 2.41, turkus 2.89.
+            double white = RdpManager.Core.ColorMath.Contrast(c, Colors.White);
+            double dark = RdpManager.Core.ColorMath.Contrast(c, Color.FromRgb(0x14, 0x16, 0x20));
+            return dark >= white * 1.3 ? AvatarInkDark : AvatarInkLight;
+        }
 
         internal void CopyToClipboard(string text)
         {

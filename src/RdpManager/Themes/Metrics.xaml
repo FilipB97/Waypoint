@@ -6,11 +6,18 @@
          w runtime (ThemeManager.SwapPalette dopasowuje po "Palette." w URI źródła), więc StaticResource
          (nie DynamicResource) jest tu właściwym wyborem (2.1/2.2/2.4/2.5 z przeglądu). -->
 
-    <!-- Promienie zaokrągleń (Compass §2: 4 / 7 / 9 / 14) -->
+    <!-- Promienie zaokrągleń. Skala miała 4 stopnie, ale w kodzie chodziło 10 różnych wartości w C#
+         (2,4,5,6,7,8,9,10,11,14) i 8 w XAML — a stopnie 7 i 9 różnią się o 2 px, czyli o nic.
+         Drabina 2 / 4 / 8 / 12 / 16: każdy stopień jest odróżnialny, a przejście z dotychczasowych
+         wartości to maksymalnie 2 px. Wszystko idzie teraz przez te klucze, więc gdyby całość okazała
+         się za okrągła albo za ostra, zmienia się PIĘĆ liczb tutaj, a nie kilkadziesiąt miejsc w kodzie.
+         Pill = pełne zaokrąglenie (chipy filtrów). -->
+    <CornerRadius x:Key="RadiusXxs">2</CornerRadius>
     <CornerRadius x:Key="RadiusXs">4</CornerRadius>
-    <CornerRadius x:Key="RadiusSm">7</CornerRadius>
-    <CornerRadius x:Key="RadiusMd">9</CornerRadius>
-    <CornerRadius x:Key="RadiusLg">14</CornerRadius>
+    <CornerRadius x:Key="RadiusSm">8</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">12</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">16</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
 
     <!-- Skala fontów: tekst czytelny (podpisy → nagłówki). Dostrojona do Compass §2 (Body 13, BodyLg 15,
          Subtitle 18, Heading 22); tekst niosący informację ≥ 12 (REVIEW 1.6). FontMicro pozostaje dla
@@ -24,6 +31,23 @@
     <sys:Double x:Key="FontTitle">18</sys:Double>
     <sys:Double x:Key="FontHeading">20</sys:Double>
     <sys:Double x:Key="FontDisplay">22</sys:Double>
+    <!-- Duża liczba na kafelku statystyki (pulpit). Osobny stopień, bo to nie nagłówek tekstu tylko
+         wartość do rzucenia okiem. Był wpisany na sztywno w dwóch miejscach jako 25 i 26 — ten sam
+         element w dwóch rozmiarach, bez powodu. -->
+    <sys:Double x:Key="FontStat">26</sys:Double>
+
+    <!-- Interlinie. W całej aplikacji LineHeight była ustawiona dokładnie raz — wszędzie indziej WPF
+         bierze metrykę kroju, która przy Segoe UI daje około 1.33x i różny rytm dla różnych stopni.
+         Tu każdy stopień tekstu ma swoją interlinię (~1.45x, zaokrągloną do parzystej), więc akapity
+         w ustawieniach, puste stany i notatki wydania układają się na wspólnej siatce. -->
+    <sys:Double x:Key="LineCaption">16</sys:Double>
+    <sys:Double x:Key="LineSmall">18</sys:Double>
+    <sys:Double x:Key="LineBody">20</sys:Double>
+    <sys:Double x:Key="LineBodyLg">22</sys:Double>
+    <sys:Double x:Key="LineSubtitle">24</sys:Double>
+    <sys:Double x:Key="LineTitle">26</sys:Double>
+    <sys:Double x:Key="LineHeading">28</sys:Double>
+    <sys:Double x:Key="LineDisplay">30</sys:Double>
 
     <!-- Skala fontów: glify ikon (SymbolIcon / znaki Unicode użyte jako ikony) — osobna skala,
          bo rozmiar ikony dobiera się do przycisku/kontenera, nie do hierarchii czytelnego tekstu. -->
@@ -33,6 +57,35 @@
     <sys:Double x:Key="IconLg">18</sys:Double>
     <sys:Double x:Key="IconXl">34</sys:Double>
 
+    <!-- Ruch. Dotąd były dwa słowniki: 14 animacji w XAML na LINIOWYCH 120 ms i trzy w C# z krzywymi
+         (CubicEase, QuadraticEase) na 90 i 130 ms. Liniowe wygaszanie czyta się mechanicznie — rzecz
+         rusza i staje z tą samą prędkością, czego oko nie zna z fizyki.
+         Trzy czasy, dobrane do przebytego dystansu:
+           MotionFast  110 ms — zmiana stanu w miejscu (hover, wciśnięcie, fokus),
+           MotionBase  180 ms — pojawienie się i znikanie elementu (widok, nakładka),
+           MotionSlow  260 ms — ruch na dystansie (wjazd panelu, przesunięcie).
+         Krzywa jest jedna: EaseOut — rzecz startuje szybko i dochodzi miękko, jak przy wytracaniu pędu.
+         Czasy zostają literałami przy animacjach (Duration nie składa się dobrze z zasobów), krzywa
+         jest współdzielona przez ten klucz. -->
+    <CubicEase x:Key="EaseStandard" EasingMode="EaseOut"/>
+
+    <!-- Skala odstępów. Powód: składowe Margin/Padding w XAML-u chodziły po wartościach 1,3,5,7,9,11
+         obok 2,4,6,8,10,12 — czyli różnice o piksel, których nikt nie zaprojektował, a które łamią
+         wspólną linię między sąsiadującymi widokami. Baza to 4 (4/8/12/16/20/24), z półkrokiem 2
+         (2/6/10/14/18) dla gęstych miejsc: wierszy list, pasków narzędzi, wnętrz kontrolek.
+         Zasada: nowy i edytowany kod bierze wartość z tej drabiny, nie z oka. Tokeny są Double,
+         bo Thickness w WPF nie składa się z zasobów — służą do wyliczeń w kodzie i jako słownik
+         dozwolonych wartości przy pisaniu XAML-a. -->
+    <sys:Double x:Key="Space2">2</sys:Double>
+    <sys:Double x:Key="Space4">4</sys:Double>
+    <sys:Double x:Key="Space6">6</sys:Double>
+    <sys:Double x:Key="Space8">8</sys:Double>
+    <sys:Double x:Key="Space10">10</sys:Double>
+    <sys:Double x:Key="Space12">12</sys:Double>
+    <sys:Double x:Key="Space16">16</sys:Double>
+    <sys:Double x:Key="Space20">20</sys:Double>
+    <sys:Double x:Key="Space24">24</sys:Double>
+
     <!-- Marginesy okien dialogowych: warianty, które już się pokrywały między kilkoma oknami (2.4) -->
     <Thickness x:Key="DialogContentMargin">18,8,18,8</Thickness>
     <Thickness x:Key="DialogButtonRowMargin">18,4,18,16</Thickness>
@@ -41,12 +94,21 @@
     <!-- Karta (uniesiona powierzchnia na treść). Przeniesiona tu z MainWindow.Resources, bo używa jej też
          okno sesji (karta stanu „łączenie / rozłączono") — a to ta sama sesja, tylko wypięta do osobnego
          okna, więc nie może wyglądać inaczej. Pędzle przez DynamicResource: podążają za motywem. -->
+    <!-- Uniesienie zamiast obramowania: ramka hairline NA TLE panelu to były dwa sposoby powiedzenia
+         „to jest karta". Zostaje sama powierzchnia i miękki cień — karta leży na tle, zamiast być z niego
+         wycięta. Kart jest kilka (stan sesji, „O aplikacji"), więc koszt efektu jest bez znaczenia; nie
+         nadaje się to natomiast na długie listy powtarzalnych elementów.
+         UWAGA: powierzchnią jest Panel, NIE Elevated. Elevated znaczy „krok kontrastu od tła" i ma
+         przeciwny znak w obu motywach (ciemny: 13% bieli, jasny: 8% czerni) — na jasnym karta wyszłaby
+         CIEMNIEJSZA niż strona, czyli dziura z cieniem zamiast uniesienia. Panel jest jaśniejszy od kanwy
+         w obu motywach, a uniesienie i tak niesie cień. -->
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource Panel}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}"/>
         <Setter Property="Padding" Value="18,14"/>
         <Setter Property="Margin" Value="0,0,0,14"/>
+        <!-- Cień z palety, nie literał: siła musi być inna w motywie jasnym i ciemnym (patrz Palette.*). -->
+        <Setter Property="Effect" Value="{DynamicResource ShadowSm}"/>
     </Style>
 </ResourceDictionary>

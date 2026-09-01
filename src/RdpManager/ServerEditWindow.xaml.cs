@@ -147,7 +147,7 @@ namespace RdpManager
             {
                 var sw = new Border
                 {
-                    Width = 26, Height = 26, CornerRadius = new CornerRadius(6),
+                    Width = 26, Height = 26, CornerRadius = Radii.Sm,
                     Margin = new Thickness(0, 0, 8, 6), Cursor = Cursors.Hand, BorderThickness = new Thickness(2),
                     ToolTip = hex.Length == 0 ? LocalizationManager.S("S.se.iconcolor.auto") : hex
                 };
@@ -157,7 +157,7 @@ namespace RdpManager
                     sw.Child = new TextBlock
                     {
                         Text = "A", Foreground = (Brush)TryFindResource("TextSec") ?? Brushes.White,
-                        FontWeight = FontWeights.Bold, FontSize = 12,
+                        FontWeight = FontWeights.Bold, FontSize = (double)TryFindResource("FontSmall"),
                         HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                     };
                 }

@@ -8,40 +8,95 @@
     <SolidColorBrush x:Key="Border"     Color="#22000000"/>
     <SolidColorBrush x:Key="TextPrim"   Color="#1B1D22"/>
     <SolidColorBrush x:Key="TextSec"    Color="#565A62"/>
-    <SolidColorBrush x:Key="TextTer"    Color="#888B93"/>
-    <SolidColorBrush x:Key="Accent"       Color="#2657D6"/>
-    <SolidColorBrush x:Key="AccentSoft"   Color="#222657D6"/>
-    <SolidColorBrush x:Key="AccentBright" Color="#4C86FF"/>
-    <SolidColorBrush x:Key="AccentStrong" Color="#662657D6"/>
+    <!-- Jak w Palette.Dark: dawne #888B93 to 2.80 wobec kanwy, pod progiem. #6B6F78 to 4.14. -->
+    <SolidColorBrush x:Key="TextTer"    Color="#6B6F78"/>
+    <!-- Akcent zgodny ze znakiem marki, wariant na jasne tło. Kontrast białego tekstu 6.14 —
+         praktycznie tyle samo co dawny kobalt (6.15), więc przyciski nie tracą czytelności. -->
+    <SolidColorBrush x:Key="Accent"       Color="#5B4BD6"/>
+    <SolidColorBrush x:Key="AccentSoft"   Color="#225B4BD6"/>
+    <SolidColorBrush x:Key="AccentBright" Color="#6C6DFF"/>
+    <SolidColorBrush x:Key="AccentStrong" Color="#665B4BD6"/>
     <SolidColorBrush x:Key="SplitDim"     Color="#33000000"/>
     <SolidColorBrush x:Key="TextOnColor" Color="White"/>
-    <SolidColorBrush x:Key="Online"     Color="#1FA871"/>
-    <SolidColorBrush x:Key="Idle"       Color="#C9852B"/>
-    <SolidColorBrush x:Key="Offline"    Color="#9CA0A8"/>
-    <SolidColorBrush x:Key="Danger"     Color="#D23A34"/>
-    <SolidColorBrush x:Key="GdProd"     Color="#7C6CFB"/>
-    <SolidColorBrush x:Key="GdStaging"  Color="#D98F2E"/>
+    <!-- Statusy na jasnym tle były wyraźnie słabsze niż na ciemnym (10.2 vs 2.5). Kropka statusu to
+         element nietekstowy niosący znaczenie, więc próg to 3.0 (WCAG 1.4.11) — poniżej były wszystkie
+         trzy. Nowe wartości: 3.81 / 4.07 / 3.53; Danger 3.93 -> 4.84. Ciemna paleta bez zmian. -->
+    <SolidColorBrush x:Key="Online"     Color="#12855A"/>
+    <SolidColorBrush x:Key="Idle"       Color="#9A6512"/>
+    <SolidColorBrush x:Key="Offline"    Color="#767A83"/>
+    <SolidColorBrush x:Key="Danger"     Color="#C0281F"/>
+    <!-- Jak w Palette.Dark — magenta zamiast indygo kolidującego z akcentem (ΔE 12.8 -> 31.2). -->
+    <SolidColorBrush x:Key="GdProd"     Color="#A32FAE"/>
+    <SolidColorBrush x:Key="GdStaging"  Color="#C28029"/>
     <SolidColorBrush x:Key="GdClient"   Color="#1F8B94"/>
 
     <!-- Kolory etykiet protokołów (Compass §2) — warianty przyciemnione dla kontrastu na jasnym tle. -->
     <SolidColorBrush x:Key="ProtoRdp"    Color="#2F6BE0"/>
-    <SolidColorBrush x:Key="ProtoSsh"    Color="#1FA871"/>
-    <SolidColorBrush x:Key="ProtoSftp"   Color="#C9852B"/>
+    <SolidColorBrush x:Key="ProtoSsh"    Color="#1EA16C"/>
+    <SolidColorBrush x:Key="ProtoSftp"   Color="#C28029"/>
     <SolidColorBrush x:Key="ProtoRest"   Color="#1F97A0"/>
     <SolidColorBrush x:Key="ProtoWeb"    Color="#6A5FE0"/>
     <SolidColorBrush x:Key="ProtoTelnet" Color="#5A5D66"/>
 
     <!-- Kolory metod REST (Compass §2) — warianty przyciemnione dla kontrastu na jasnym tle. -->
-    <SolidColorBrush x:Key="MethodGet"    Color="#1FA871"/>
+    <SolidColorBrush x:Key="MethodGet"    Color="#1EA16C"/>
     <SolidColorBrush x:Key="MethodPost"   Color="#2F6BE0"/>
-    <SolidColorBrush x:Key="MethodPut"    Color="#C9852B"/>
+    <SolidColorBrush x:Key="MethodPut"    Color="#C28029"/>
     <SolidColorBrush x:Key="MethodDelete" Color="#D23A34"/>
     <SolidColorBrush x:Key="MethodPatch"  Color="#6A5FE0"/>
+
+    <!-- Cienie: te same klucze co w Palette.Dark, ale znacznie delikatniejsze i płytsze. Na jasnym tle
+         cień pracuje przez subtelne przyciemnienie, nie przez kontrast — stąd większe rozmycie przy
+         mniejszym przesunięciu i krycie rzędu 0.10-0.16 zamiast 0.40-0.55. -->
+    <DropShadowEffect x:Key="ShadowSm" BlurRadius="16" ShadowDepth="2" Direction="270" Opacity="0.10" Color="#101420"/>
+    <DropShadowEffect x:Key="ShadowMd" BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.13" Color="#101420"/>
+    <DropShadowEffect x:Key="ShadowLg" BlurRadius="34" ShadowDepth="7" Direction="270" Opacity="0.16" Color="#101420"/>
+
+    <!-- ================= Kontrolki WPF-UI (Fluent) =================
+         W aplikacji jest 13 ComboBoxów, 18 przełączników, 11 pól wyboru, 7 pól haseł i 41 pól tekstowych
+         ui:TextBox — wszystkie renderowane stylami WPF-UI, czyli na kolorach Fluenta Microsoftu. Chrom był
+         autorski, a formularze windowsowe; w jednym oknie stały obok siebie dwa różne systemy.
+         Nie przepisujemy szablonów (ComboBox i ToggleSwitch to duże, kruche drzewa z częściami PART_*),
+         tylko podmieniamy klucze, z których te szablony czytają kolory. Działa, bo:
+           1. style WPF-UI sięgają po nie przez DynamicResource (sprawdzone w źródle 4.3.0),
+           2. słowniki scalone przeszukuje się od końca, a Palette.* jest dołączana JAKO OSTATNIA —
+              i w App.xaml, i przy każdej zmianie motywu (ThemeManager.SwapPalette dopisuje na koniec).
+         Zmiana szablonu w nowszym WPF-UI może przestać czytać któryś klucz; wtedy kontrolka wróci do
+         wyglądu Fluenta, ale nic się nie zepsuje. -->
+    <SolidColorBrush x:Key="ControlFillColorDefaultBrush"    Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush"  Color="#F7F8FA"/>
+    <SolidColorBrush x:Key="ControlFillColorTertiaryBrush"   Color="#EDEFF3"/>
+    <SolidColorBrush x:Key="ControlFillColorDisabledBrush"   Color="#F2F3F5"/>
+    <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush"  Color="#22000000"/>
+    <SolidColorBrush x:Key="ControlStrokeColorSecondaryBrush" Color="#14000000"/>
+
+    <SolidColorBrush x:Key="TextControlBackground"            Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TextControlBackgroundFocused"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TextControlBackgroundDisabled"    Color="#F2F3F5"/>
+    <SolidColorBrush x:Key="TextControlForeground"            Color="#1B1D22"/>
+    <SolidColorBrush x:Key="TextControlForegroundDisabled"    Color="#9CA0A8"/>
+    <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#6B6F78"/>
+    <SolidColorBrush x:Key="TextControlBorderBrushDisabled"   Color="#14000000"/>
+
+    <SolidColorBrush x:Key="TextFillColorPrimaryBrush"   Color="#1B1D22"/>
+    <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#565A62"/>
+    <SolidColorBrush x:Key="TextFillColorTertiaryBrush"  Color="#6B6F78"/>
+    <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#9CA0A8"/>
+
+    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush"   Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#F7F8FA"/>
+    <SolidColorBrush x:Key="SolidBackgroundFillColorBaseBrush"        Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SolidBackgroundFillColorSecondaryBrush"   Color="#F7F8FA"/>
+    <SolidColorBrush x:Key="SolidBackgroundFillColorTertiaryBrush"    Color="#EDEFF3"/>
+    <SolidColorBrush x:Key="SolidBackgroundFillColorQuarternaryBrush" Color="#E4E7EC"/>
+
+    <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
 
     <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
 
     <LinearGradientBrush x:Key="AvProd" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#7C6CFB" Offset="0"/><GradientStop Color="#4F3FD1" Offset="1"/>
+        <GradientStop Color="#D06BD8" Offset="0"/><GradientStop Color="#8E3AA0" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="AvStaging" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#FFB454" Offset="0"/><GradientStop Color="#D98F2E" Offset="1"/>
