@@ -93,7 +93,8 @@ namespace RdpManager.Controllers
                 Background = _owner.AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = MainWindow.ServerInitials(session.Server), Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
+                    Text = MainWindow.ServerInitials(session.Server),
+                    Foreground = MainWindow.AvatarInk(_owner.AvatarBrush(session.Server)), FontSize = 9.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             });

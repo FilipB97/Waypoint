@@ -61,7 +61,11 @@ namespace RdpManager
             // dostawała kropkę nie do odróżnienia od zaznaczenia. Magenta jak GdProd: ΔE 37.9.
             new[]{"#D06BD8","#8E3AA0"}, new[]{"#FFB454","#D98F2E"}, new[]{"#36C4CF","#1F8B94"},
             new[]{"#3DDC97","#1F9E6B"}, new[]{"#FB6C9C","#D13F6E"}, new[]{"#6C9CFB","#3F5FD1"},
-            new[]{"#C06CFB","#7A3FD1"}, new[]{"#F0C05A","#C79030"}
+            // Slot 7 był DRUGIM bursztynem obok slotu 1 (#FFB454): ΔE 12.3, czyli dwie grupy dostawały
+            // praktycznie ten sam kolor. Ceglany jest jedynym ciepłym odcieniem, którego w zestawie nie
+            // było — najbliższy sąsiad oddalony o ΔE 33, a białe inicjały mają na nim najlepszy kontrast
+            // w całej palecie (4.44).
+            new[]{"#C06CFB","#7A3FD1"}, new[]{"#E85C3A","#B83A1E"}
         };
 
         // Pełny ekran + tryb skupienia (maszyny stanu) — logika w Controllers/FullscreenController (PR 5).
@@ -844,7 +848,11 @@ namespace RdpManager
         private static readonly (string key, string hex)[] AccentOptions = new[]
         {
             ("S.accent.default", ""),
-            ("S.accent.violet",  "#7C6CFB"),
+            // Był tu „Fiolet" #7C6CFB — po zmianie akcentu na #6C6DFF dzieliło je ΔE 4.1, więc próbka
+            // nie robiła NIC widocznego: użytkownik klikał inny kolor i dostawał ten sam. Kobalt to
+            // dawny akcent Waypointa, oddany jako świadomy wybór, i jedyny odcień w zestawie
+            // (zieleń / bursztyn / róż) oddalony od domyślnego o więcej niż ΔE 20.
+            ("S.accent.cobalt",  "#2F6BE0"),
             ("S.accent.green",   "#22B07D"),
             ("S.accent.amber",   "#E0872E"),
             ("S.accent.rose",    "#E8556B"),
@@ -2361,7 +2369,7 @@ namespace RdpManager
                 Width = 18, Height = 18, CornerRadius = Radii.Xs, Background = AvatarBrush(server),
                 Child = new TextBlock
                 {
-                    Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(server), Foreground = AvatarInk(AvatarBrush(server)), FontSize = 9.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -3106,6 +3114,54 @@ namespace RdpManager
         }
 
         internal static string ServerInitials(ServerInfo s) => RdpUtils.MakeInitials(s?.Name);
+
+        // Inkaust czytelny na dowolnym kolorze awatara. Białe inicjały na WSZYSTKICH kolorach dawały
+        // kontrast 2.16-4.42 — na bursztynie i zieleni tekst po prostu ginął, bo to kolory jasne.
+        // Przyciemnienie palety naprawiłoby kontrast, ale bursztyn zrobiłby się brązem, a turkus
+        // butelkową zielenią — kolor grupy przestałby być rozpoznawalny. Dlatego zmienną jest INKAUST,
+        // nie tło: bierzemy ten z dwóch, który wypada lepiej. Najgorszy przypadek idzie z 2.16 na 4.31.
+        // Konsekwencja jest widoczna i zamierzona: część awatarów ma teraz ciemne inicjały zamiast białych.
+        private static readonly Brush AvatarInkLight = Brushes.White;
+        private static readonly Brush AvatarInkDark = new SolidColorBrush(Color.FromRgb(0x14, 0x16, 0x20));
+
+        internal static Brush AvatarInk(Brush background)
+        {
+            // Punkt odniesienia = środek gradientu: tam leżą inicjały. Dla pędzla jednolitego — jego kolor.
+            Color c;
+            if (background is LinearGradientBrush g && g.GradientStops.Count >= 2)
+            {
+                Color a = g.GradientStops[0].Color, b = g.GradientStops[g.GradientStops.Count - 1].Color;
+                c = Color.FromRgb((byte)((a.R + b.R) / 2), (byte)((a.G + b.G) / 2), (byte)((a.B + b.B) / 2));
+            }
+            else if (background is SolidColorBrush sb) c = sb.Color;
+            else return AvatarInkLight;
+
+            // Nie „lepszy kontrast wygrywa", tylko „biel, chyba że ciemny jest WYRAŹNIE lepszy" (1.3x).
+            // Reguła bez progu dawałaby ciemne inicjały na awatarze w kolorze akcentu (4.52 vs 3.99) —
+            // tuż obok przycisku „Połącz", który ma biały tekst na dokładnie tym samym tle. Próg zostawia
+            // biel tam, gdzie i tak jest wystarczająca (błękity, fiolety), a przełącza na ciemny inkaust
+            // tylko na kolorach jasnych, gdzie biel naprawdę ginie: bursztyn 2.16, zieleń 2.41, turkus 2.89.
+            double white = Contrast(c, Colors.White);
+            double dark = Contrast(c, Color.FromRgb(0x14, 0x16, 0x20));
+            return dark >= white * 1.3 ? AvatarInkDark : AvatarInkLight;
+        }
+
+        // Kontrast wg WCAG 2.1 (1.4.3): (jaśniejsza + 0.05) / (ciemniejsza + 0.05) z luminancji względnej.
+        private static double Contrast(Color x, Color y)
+        {
+            double lx = RelativeLuminance(x), ly = RelativeLuminance(y);
+            return (Math.Max(lx, ly) + 0.05) / (Math.Min(lx, ly) + 0.05);
+        }
+
+        private static double RelativeLuminance(Color c)
+        {
+            double F(byte v)
+            {
+                double s = v / 255.0;
+                return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
+            }
+            return 0.2126 * F(c.R) + 0.7152 * F(c.G) + 0.0722 * F(c.B);
+        }
 
         internal void CopyToClipboard(string text)
         {

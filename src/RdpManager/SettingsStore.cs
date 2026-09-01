@@ -44,14 +44,23 @@ namespace RdpManager
 
         /// <summary>
         /// Drobne przeniesienia wartości, gdy ZNACZENIE opcji się nie zmieniło, ale jej wartość tak.
-        /// Dziś jedno: opcja obwódki okna „kolor marki" była kobaltowa (#2657D6), a marka przeszła na
-        /// indygo (#6C6DFF). Bez tego zapisany kobalt nie pasowałby już do żadnego segmentu w Ustawieniach
-        /// i użytkownik zobaczyłby nic niezaznaczonego, mimo że obwódka dalej się rysuje.
+        /// Bez nich zapisany wybór nie pasuje już do żadnej opcji w Ustawieniach i użytkownik widzi
+        /// pusty segment, mimo że ustawienie dalej działa.
         /// </summary>
         private static AppSettings Migrate(AppSettings s)
         {
+            // Obwódka okna „kolor marki": kobalt (#2657D6) -> indygo (#6C6DFF) po rebrandingu.
             if (string.Equals(s.WindowBorderColor, "#2657D6", StringComparison.OrdinalIgnoreCase))
                 s.WindowBorderColor = "#6C6DFF";
+
+            // Akcent „Fiolet" (#7C6CFB) zniknął z próbnika, bo po rebrandingu dzieliło go od akcentu
+            // domyślnego ΔE 4.1 — czyli był tym samym kolorem pod inną nazwą. Czyścimy go do wartości
+            // pustej, czyli „Domyślny": użytkownik zobaczy DOKŁADNIE ten sam kolor co dotąd, tyle że
+            // teraz zaznaczy się właściwa próbka. Podmiana na nowy kobalt byłaby zmianą wyglądu bez
+            // jego zgody.
+            if (string.Equals(s.AccentColor, "#7C6CFB", StringComparison.OrdinalIgnoreCase))
+                s.AccentColor = "";
+
             return s;
         }
 

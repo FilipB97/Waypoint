@@ -369,7 +369,8 @@ namespace RdpManager.Controllers
                 Child = new TextBlock
                 {
                     // 9.5 px było poniżej progu czytelności dwóch wersalików na 22 px kafelku.
-                    Text = MainWindow.ServerInitials(server), Foreground = Brushes.White, FontSize = 10.5, FontWeight = FontWeights.Bold,
+                    Text = MainWindow.ServerInitials(server),
+                    Foreground = MainWindow.AvatarInk(_owner.AvatarBrush(server)), FontSize = 10.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };

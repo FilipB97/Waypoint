@@ -100,7 +100,7 @@
     <sys:String x:Key="S.border.system">Systemowa</sys:String>
     <sys:String x:Key="S.set.accent">Kolor akcentu</sys:String>
     <sys:String x:Key="S.accent.default">Domyślny</sys:String>
-    <sys:String x:Key="S.accent.violet">Fiolet</sys:String>
+    <sys:String x:Key="S.accent.cobalt">Kobalt</sys:String>
     <sys:String x:Key="S.accent.green">Zielony</sys:String>
     <sys:String x:Key="S.accent.amber">Bursztyn</sys:String>
     <sys:String x:Key="S.accent.rose">Róż</sys:String>
