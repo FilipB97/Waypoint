@@ -9,6 +9,7 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         WindowCornerPreference="Round"
+        UseLayoutRounding="True"
         Loaded="Window_Loaded" KeyDown="Window_KeyDown" PreviewMouseWheel="Window_PreviewMouseWheel" Closing="Window_Closing" StateChanged="Window_StateChanged">
 
     <Window.Resources>
@@ -94,14 +95,7 @@
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
         </Style>
 
-        <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource Panel}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}"/>
-            <Setter Property="Padding" Value="18,14"/>
-            <Setter Property="Margin" Value="0,0,0,14"/>
-        </Style>
+        <!-- Styl „Card" przeniesiony do Themes/Metrics.xaml — dzieli go okno sesji (karta stanu). -->
         <Style x:Key="CardHead" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -204,6 +198,10 @@
 
         <!-- BODY (skalowane zoomem Ctrl+kółko; titlebar zostaje 1:1) -->
         <Grid x:Name="BodyGrid" Grid.Row="1">
+            <!-- Zoom interfejsu (Ctrl+kółko / UiScale 0.7-1.8). To on wymusza UseLayoutRounding na oknie:
+                 przy skali niecałkowitej włoski 1px (obramowania, separator raila), 3px pasek koloru
+                 w wierszu serwera i 7px kropka statusu lądowałyby MIĘDZY pikselami — czyli szare,
+                 rozmyte krawędzie i wiersze listy różniące się o pół piksela. -->
             <Grid.LayoutTransform>
                 <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1"/>
             </Grid.LayoutTransform>
@@ -545,18 +543,45 @@
                                   HorizontalAlignment="Center" VerticalAlignment="Stretch"
                                   ResizeBehavior="PreviousAndNext" Background="{DynamicResource Border}"/>
 
-                    <!-- Stan sesji gdy kontrolka RDP jest schowana (łączenie / rozłączono) -->
+                    <!-- Stan sesji gdy kontrolka RDP jest schowana (łączenie / rozłączono).
+                         Karta, a nie sam spinner na środku pustki: w tym miejscu użytkownik pyta „z czym
+                         się właśnie łączę i co się dzieje", więc tożsamość serwera (inicjały, nazwa, adres)
+                         jest tu ważniejsza niż animacja. Nazwy elementów zgodne z SessionManager.UpdateCanvas. -->
                     <Border x:Name="SessionOverlay" Grid.ColumnSpan="3" Visibility="Collapsed" Background="{DynamicResource CanvasBrush}">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
-                            <ui:ProgressRing x:Name="OverlaySpinner" IsIndeterminate="True" Width="46" Height="46"
-                                             Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,0,0,18"/>
-                            <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontSubtitle}"
-                                       FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="OverlayMsg" Foreground="{DynamicResource TextSec}" HorizontalAlignment="Center"
-                                       TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                            <ui:Button x:Name="OverlayReconnect" Content="{DynamicResource S.reconnect}" Appearance="Primary"
-                                       Click="OverlayAction_Click" HorizontalAlignment="Center" Margin="0,18,0,0" Visibility="Collapsed"/>
-                        </StackPanel>
+                        <Border Style="{DynamicResource Card}" Padding="26,22" MinWidth="360" MaxWidth="460"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="10"
+                                            Background="{DynamicResource Accent}" VerticalAlignment="Center">
+                                        <TextBlock x:Name="OverlayInitials" Foreground="White" FontSize="14" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="OverlayServerName" Foreground="{DynamicResource TextPrim}"
+                                                   FontSize="{StaticResource FontBodyLg}" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock x:Name="OverlayHost" Foreground="{DynamicResource TextTer}"
+                                                   FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontSmall}"
+                                                   Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <Border Height="1" Background="{DynamicResource Border}" Margin="0,18,0,16"/>
+
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:ProgressRing x:Name="OverlaySpinner" IsIndeterminate="True" Width="18" Height="18"
+                                                     Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}"
+                                               FontSize="{StaticResource FontBody}" FontWeight="Medium"
+                                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <TextBlock x:Name="OverlayMsg" Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontSmall}"
+                                           TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                <ui:Button x:Name="OverlayReconnect" Content="{DynamicResource S.reconnect}" Appearance="Primary"
+                                           Click="OverlayAction_Click" HorizontalAlignment="Left" Margin="0,18,0,0" Visibility="Collapsed"/>
+                            </StackPanel>
+                        </Border>
                     </Border>
                 </Grid>
             </Grid>
@@ -1118,6 +1143,87 @@
         </Grid>
 
         <!-- Szybkie przełączanie z paska kart (tryb skupienia): popup = osobny HWND, rysuje się nad sesją -->
+        <!-- Ściąga ze skrótami (F1). Popup, a nie nakładka w drzewie WPF: kontrolka RDP to okno HWND
+             (WindowsFormsHost), które zamalowałoby każdy zwykły overlay — popup ma własne okno i rysuje się
+             nad nim. Focusable=False, żeby klawisze nadal trafiały do Window_KeyDown (F1/Esc zamykają). -->
+        <Popup x:Name="ShortcutsPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
+               StaysOpen="False" AllowsTransparency="True" Focusable="False">
+            <Border Background="{DynamicResource RailBg}" CornerRadius="{StaticResource RadiusLg}" Padding="22,18"
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="420">
+                <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45"/></Border.Effect>
+                <Border.Resources>
+                    <!-- Klawisz: „kapsel" o stałej szerokości, żeby opisy tworzyły równą kolumnę. -->
+                    <Style x:Key="KeyCap" TargetType="Border">
+                        <Setter Property="Background" Value="{DynamicResource Elevated}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="CornerRadius" Value="{StaticResource RadiusXs}"/>
+                        <Setter Property="Padding" Value="7,2"/>
+                        <Setter Property="MinWidth" Value="104"/>
+                        <Setter Property="Margin" Value="0,0,12,0"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                    </Style>
+                    <Style x:Key="KeyCapText" TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+                        <Setter Property="FontFamily" Value="{DynamicResource Mono}"/>
+                        <Setter Property="FontSize" Value="{StaticResource FontCaption}"/>
+                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                    </Style>
+                    <Style x:Key="KeyDesc" TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+                        <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                    </Style>
+                    <Style x:Key="KeyRow" TargetType="StackPanel">
+                        <Setter Property="Orientation" Value="Horizontal"/>
+                        <Setter Property="Margin" Value="0,0,0,7"/>
+                    </Style>
+                </Border.Resources>
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource S.keys.title}" Foreground="{DynamicResource TextPrim}"
+                               FontSize="{StaticResource FontBodyLg}" FontWeight="SemiBold" Margin="0,0,0,14"/>
+
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+P" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.palette}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+F" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.search}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+Tab" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.cycle}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Alt+1…9" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.jump}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+W" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.close}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="F11" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.fullscreen}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+ +/−/0" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.zoom}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+Alt+Q" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.quick}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}" Margin="0,0,0,0">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="F1" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.help}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+
         <Popup x:Name="QuickSwitchPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
                StaysOpen="False" AllowsTransparency="True">
             <Border Background="{DynamicResource RailBg}" CornerRadius="{StaticResource RadiusLg}" Padding="8"

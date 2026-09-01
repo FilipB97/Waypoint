@@ -56,6 +56,14 @@ namespace RdpManager.Controllers
 
         private bool IsMinimalList => _owner._settings != null && _owner._settings.ListStyle == "Minimal";
 
+        /// <summary>
+        /// Czy wiersz ma nieść tag protokołu („RDP"/„SFTP"…). Przy AKTYWNYM filtrze protokołu tag jest
+        /// tautologią — cała lista jest już jednego protokołu — a w wierszu wysokości ~22 px konkuruje
+        /// z paskiem koloru, kropką statusu, nazwą, opóźnieniem i gwiazdką. Pasek koloru zostaje jako
+        /// tożsamość serwera; tag pokazujemy tylko wtedy, gdy naprawdę coś rozróżnia (filtr „Wszystkie").
+        /// </summary>
+        private bool ShowProtocolTag => _protocolFilter == null;
+
         // ---------- Filtr protokołów ----------
 
         private void BuildProtocolFilter()
@@ -313,7 +321,8 @@ namespace RdpManager.Controllers
                 Background = _owner.AvatarBrush(server), Margin = new Thickness(8, 0, 0, 0),
                 Child = new TextBlock
                 {
-                    Text = MainWindow.ServerInitials(server), Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
+                    // 9.5 px było poniżej progu czytelności dwóch wersalików na 22 px kafelku.
+                    Text = MainWindow.ServerInitials(server), Foreground = Brushes.White, FontSize = 10.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -334,7 +343,7 @@ namespace RdpManager.Controllers
             _serverStatusDot[server] = status;
 
             var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            right.Children.Add(BuildProtocolTag(server));
+            if (ShowProtocolTag) right.Children.Add(BuildProtocolTag(server));
             AddLatencyLabel(right, server);
             if (server.Pinned)
                 right.Children.Add(new TextBlock
@@ -409,7 +418,7 @@ namespace RdpManager.Controllers
             {
                 Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center
             };
-            rightPanel.Children.Add(BuildProtocolTag(server));
+            if (ShowProtocolTag) rightPanel.Children.Add(BuildProtocolTag(server));
             AddLatencyLabel(rightPanel, server);
             if (server.Pinned)
                 rightPanel.Children.Add(new TextBlock

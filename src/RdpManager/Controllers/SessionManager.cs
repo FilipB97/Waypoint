@@ -354,6 +354,15 @@ namespace RdpManager.Controllers
 
             _owner.SessionOverlay.Visibility = Visibility.Visible;
             bool connecting = _owner._active.StatusKind == StatusKind.Connecting;
+
+            // Tożsamość serwera na karcie — ten sam awatar i adres co w liście/toolbarze, żeby przy kilku
+            // otwartych kartach było bez wątpliwości, do czego odnosi się status.
+            var srv = _owner._active.Server;
+            _owner.OverlayAvatar.Background = _owner.AvatarBrush(srv);
+            _owner.OverlayInitials.Text = MainWindow.ServerInitials(srv);
+            _owner.OverlayServerName.Text = string.IsNullOrWhiteSpace(srv.Name) ? srv.Host : srv.Name;
+            _owner.OverlayHost.Text = MainWindow.DisplayHost(srv);
+
             _owner.OverlaySpinner.Visibility = connecting ? Visibility.Visible : Visibility.Collapsed;
             _owner.OverlayReconnect.Visibility = connecting ? Visibility.Collapsed : Visibility.Visible;
             _owner.OverlayReconnect.Content = L("S.reconnect");

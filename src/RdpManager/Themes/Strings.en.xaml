@@ -639,4 +639,16 @@ This may indicate an attack (server spoofing) or a certificate rotation. Continu
     <sys:String x:Key="S.cp.header">Enter credentials for {0} ({1}).</sys:String>
     <sys:String x:Key="S.cp.needuser">Enter a username.</sys:String>
     <sys:String x:Key="S.se.needname">Enter a name and host.</sys:String>
+
+    <!-- Keyboard cheat sheet (F1) -->
+    <sys:String x:Key="S.keys.title">Keyboard shortcuts</sys:String>
+    <sys:String x:Key="S.keys.palette">Command palette</sys:String>
+    <sys:String x:Key="S.keys.search">Search servers</sys:String>
+    <sys:String x:Key="S.keys.cycle">Next session (with Shift — previous)</sys:String>
+    <sys:String x:Key="S.keys.jump">Jump to tab by number</sys:String>
+    <sys:String x:Key="S.keys.close">Close current session</sys:String>
+    <sys:String x:Key="S.keys.fullscreen">Full screen</sys:String>
+    <sys:String x:Key="S.keys.zoom">UI zoom in, out / reset</sys:String>
+    <sys:String x:Key="S.keys.quick">Quick connect (global hotkey)</sys:String>
+    <sys:String x:Key="S.keys.help">This cheat sheet</sys:String>
 </ResourceDictionary>

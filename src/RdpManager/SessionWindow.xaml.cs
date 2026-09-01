@@ -222,6 +222,15 @@ namespace RdpManager
             if (_session.Connected) { Overlay.Visibility = Visibility.Collapsed; return; }
             Overlay.Visibility = Visibility.Visible;
             bool connecting = kind == StatusKind.Connecting;
+
+            // Tożsamość serwera na karcie — jak w managerze (SessionManager.UpdateCanvas). Kolor awatara
+            // liczy manager (ma cache i pędzle grup); gdy z jakiegoś powodu go nie ma, zostaje akcent z XAML.
+            var owner = Application.Current?.MainWindow as MainWindow;
+            if (owner != null) OverlayAvatar.Background = owner.AvatarBrush(_server);
+            OverlayInitials.Text = MainWindow.ServerInitials(_server);
+            OverlayServerName.Text = string.IsNullOrWhiteSpace(_server.Name) ? _server.Host : _server.Name;
+            OverlayHost.Text = MainWindow.DisplayHost(_server);
+
             Spinner.Visibility = connecting ? Visibility.Visible : Visibility.Collapsed;
             OverlayReconnect.Visibility = (connecting || !reconnect) ? Visibility.Collapsed : Visibility.Visible;
             OverlayTitle.Text = connecting ? string.Format(L("S.st.connecting"), _server.Host)

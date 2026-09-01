@@ -6,6 +6,7 @@
         WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica"
         Icon="pack://application:,,,/Assets/app.ico"
+        UseLayoutRounding="True"
         Loaded="Window_Loaded" Closing="Window_Closing" KeyDown="Window_KeyDown" StateChanged="Window_StateChanged">
 
     <!-- Kolory żyją w Themes/Palette.{Dark,Light}.xaml (App), przełączane przez ThemeManager. -->
@@ -52,17 +53,43 @@
         <Border x:Name="HotZone" Grid.Row="2" Background="Transparent" MouseEnter="HotZone_MouseEnter"/>
 
         <Grid x:Name="HostContainer" Grid.Row="3" Background="{DynamicResource Canvas}">
+            <!-- Karta stanu jak w oknie managera (MainWindow: SessionOverlay) — okno sesji nie może wyglądać
+                 inaczej niż karta w managerze, bo to ta sama sesja tylko wypięta do osobnego okna. -->
             <Border x:Name="Overlay" Visibility="Collapsed" Background="{DynamicResource Canvas}">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
-                    <ui:ProgressRing x:Name="Spinner" IsIndeterminate="True" Width="46" Height="46"
-                                     Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,0,0,18"/>
-                    <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontSubtitle}"
-                               FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="OverlayMsg" Foreground="{DynamicResource TextSec}" HorizontalAlignment="Center"
-                               TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                    <ui:Button x:Name="OverlayReconnect" Content="{DynamicResource S.reconnect}" Appearance="Primary"
-                               Click="Connect_Click" HorizontalAlignment="Center" Margin="0,18,0,0" Visibility="Collapsed"/>
-                </StackPanel>
+                <Border Style="{DynamicResource Card}" Padding="26,22" MinWidth="360" MaxWidth="460"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="OverlayAvatar" Width="40" Height="40" CornerRadius="10"
+                                    Background="{DynamicResource Accent}" VerticalAlignment="Center">
+                                <TextBlock x:Name="OverlayInitials" Foreground="White" FontSize="14" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="OverlayServerName" Foreground="{DynamicResource TextPrim}"
+                                           FontSize="{StaticResource FontBodyLg}" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="OverlayHost" Foreground="{DynamicResource TextTer}"
+                                           FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontSmall}"
+                                           Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{DynamicResource Border}" Margin="0,18,0,16"/>
+
+                        <StackPanel Orientation="Horizontal">
+                            <ui:ProgressRing x:Name="Spinner" IsIndeterminate="True" Width="18" Height="18"
+                                             Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="OverlayTitle" Foreground="{DynamicResource TextPrim}"
+                                       FontSize="{StaticResource FontBody}" FontWeight="Medium"
+                                       VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <TextBlock x:Name="OverlayMsg" Foreground="{DynamicResource TextSec}" FontSize="{StaticResource FontSmall}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        <ui:Button x:Name="OverlayReconnect" Content="{DynamicResource S.reconnect}" Appearance="Primary"
+                                   Click="Connect_Click" HorizontalAlignment="Left" Margin="0,18,0,0" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Border>
             </Border>
         </Grid>
 

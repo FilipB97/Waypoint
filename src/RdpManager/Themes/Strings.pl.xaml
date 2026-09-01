@@ -639,4 +639,16 @@ To może oznaczać atak (podszywanie się pod serwer) albo wymianę certyfikatu.
     <sys:String x:Key="S.cp.header">Podaj poświadczenia dla {0} ({1}).</sys:String>
     <sys:String x:Key="S.cp.needuser">Podaj nazwę użytkownika.</sys:String>
     <sys:String x:Key="S.se.needname">Podaj nazwę i host.</sys:String>
+
+    <!-- Ściąga ze skrótami (F1) -->
+    <sys:String x:Key="S.keys.title">Skróty klawiszowe</sys:String>
+    <sys:String x:Key="S.keys.palette">Paleta poleceń</sys:String>
+    <sys:String x:Key="S.keys.search">Szukaj serwera</sys:String>
+    <sys:String x:Key="S.keys.cycle">Następna sesja (z Shift — poprzednia)</sys:String>
+    <sys:String x:Key="S.keys.jump">Skok do karty o danym numerze</sys:String>
+    <sys:String x:Key="S.keys.close">Zamknij bieżącą sesję</sys:String>
+    <sys:String x:Key="S.keys.fullscreen">Pełny ekran</sys:String>
+    <sys:String x:Key="S.keys.zoom">Powiększenie interfejsu / reset</sys:String>
+    <sys:String x:Key="S.keys.quick">Szybkie połączenie (skrót globalny)</sys:String>
+    <sys:String x:Key="S.keys.help">Ta ściąga</sys:String>
 </ResourceDictionary>

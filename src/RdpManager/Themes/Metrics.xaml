@@ -37,4 +37,16 @@
     <Thickness x:Key="DialogContentMargin">18,8,18,8</Thickness>
     <Thickness x:Key="DialogButtonRowMargin">18,4,18,16</Thickness>
     <Thickness x:Key="DialogContentMarginTight">18,4,18,4</Thickness>
+
+    <!-- Karta (uniesiona powierzchnia na treść). Przeniesiona tu z MainWindow.Resources, bo używa jej też
+         okno sesji (karta stanu „łączenie / rozłączono") — a to ta sama sesja, tylko wypięta do osobnego
+         okna, więc nie może wyglądać inaczej. Pędzle przez DynamicResource: podążają za motywem. -->
+    <Style x:Key="Card" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}"/>
+        <Setter Property="Padding" Value="18,14"/>
+        <Setter Property="Margin" Value="0,0,0,14"/>
+    </Style>
 </ResourceDictionary>
