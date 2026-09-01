@@ -3141,26 +3141,9 @@ namespace RdpManager
             // tuż obok przycisku „Połącz", który ma biały tekst na dokładnie tym samym tle. Próg zostawia
             // biel tam, gdzie i tak jest wystarczająca (błękity, fiolety), a przełącza na ciemny inkaust
             // tylko na kolorach jasnych, gdzie biel naprawdę ginie: bursztyn 2.16, zieleń 2.41, turkus 2.89.
-            double white = Contrast(c, Colors.White);
-            double dark = Contrast(c, Color.FromRgb(0x14, 0x16, 0x20));
+            double white = RdpManager.Core.ColorMath.Contrast(c, Colors.White);
+            double dark = RdpManager.Core.ColorMath.Contrast(c, Color.FromRgb(0x14, 0x16, 0x20));
             return dark >= white * 1.3 ? AvatarInkDark : AvatarInkLight;
-        }
-
-        // Kontrast wg WCAG 2.1 (1.4.3): (jaśniejsza + 0.05) / (ciemniejsza + 0.05) z luminancji względnej.
-        private static double Contrast(Color x, Color y)
-        {
-            double lx = RelativeLuminance(x), ly = RelativeLuminance(y);
-            return (Math.Max(lx, ly) + 0.05) / (Math.Min(lx, ly) + 0.05);
-        }
-
-        private static double RelativeLuminance(Color c)
-        {
-            double F(byte v)
-            {
-                double s = v / 255.0;
-                return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
-            }
-            return 0.2126 * F(c.R) + 0.7152 * F(c.G) + 0.0722 * F(c.B);
         }
 
         internal void CopyToClipboard(string text)

@@ -449,27 +449,27 @@
                         <StackPanel x:Name="FocusControls" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="4,0,6,0" Visibility="Collapsed">
                             <Button x:Name="QuickSwitchBtn" Style="{DynamicResource IconBtn}" Click="QuickSwitch_Click"
-                                    ToolTip="{DynamicResource S.qs.tip}">
+                                    ToolTip="{DynamicResource S.qs.tip}" AutomationProperties.Name="{DynamicResource S.qs.tip}">
                                 <ui:SymbolIcon Symbol="Add24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click"
-                                    ToolTip="{DynamicResource S.focus.toggle}">
+                                    ToolTip="{DynamicResource S.focus.toggle}" AutomationProperties.Name="{DynamicResource S.focus.toggle}">
                                 <TextBlock Text="&#x25A3;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click"
-                                    ToolTip="{DynamicResource S.tip.fullscreen}">
+                                    ToolTip="{DynamicResource S.tip.fullscreen}" AutomationProperties.Name="{DynamicResource S.tip.fullscreen}">
                                 <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusMinimize_Click"
-                                    ToolTip="{DynamicResource S.tip.minimize}">
+                                    ToolTip="{DynamicResource S.tip.minimize}" AutomationProperties.Name="{DynamicResource S.tip.minimize}">
                                 <TextBlock Text="&#x2212;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusRestore_Click"
-                                    ToolTip="{DynamicResource S.fs.restore}">
+                                    ToolTip="{DynamicResource S.fs.restore}" AutomationProperties.Name="{DynamicResource S.fs.restore}">
                                 <TextBlock Text="&#x2750;" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                             </Button>
                             <Button Style="{DynamicResource IconBtn}" Click="FocusClose_Click"
-                                    ToolTip="{DynamicResource S.m.close}">
+                                    ToolTip="{DynamicResource S.m.close}" AutomationProperties.Name="{DynamicResource S.m.close}">
                                 <TextBlock Text="&#x2715;" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource Danger}" VerticalAlignment="Center"/>
                             </Button>
                         </StackPanel>
@@ -479,20 +479,20 @@
                         <StackPanel x:Name="SessionActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="4,0,6,0" Visibility="Collapsed">
                             <Button x:Name="FilesBtn" Style="{DynamicResource IconBtn}" Click="Files_Click"
-                                    Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}">
+                                    Visibility="Collapsed" ToolTip="{DynamicResource S.sftp.toggle}" AutomationProperties.Name="{DynamicResource S.sftp.toggle}">
                                 <ui:SymbolIcon Symbol="Folder24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
                             <Button x:Name="CadBtn" Style="{DynamicResource IconBtn}" Click="SendCtrlAltDel_Click"
-                                    Visibility="Collapsed" ToolTip="{DynamicResource S.tip.cad}">
+                                    Visibility="Collapsed" ToolTip="{DynamicResource S.tip.cad}" AutomationProperties.Name="{DynamicResource S.tip.cad}">
                                 <ui:SymbolIcon Symbol="Keyboard24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}">
+                            <Button Style="{DynamicResource IconBtn}" Click="ToggleFocus_Click" ToolTip="{DynamicResource S.focus.toggle}" AutomationProperties.Name="{DynamicResource S.focus.toggle}">
                                 <TextBlock Text="&#x25A3;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}" VerticalAlignment="Center"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}">
+                            <Button Style="{DynamicResource IconBtn}" Click="Fullscreen_Click" ToolTip="{DynamicResource S.tip.fullscreen}" AutomationProperties.Name="{DynamicResource S.tip.fullscreen}">
                                 <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextTer}"/>
                             </Button>
-                            <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="{DynamicResource S.disconnect}">
+                            <Button Style="{DynamicResource IconBtn}" Click="Disconnect_Click" ToolTip="{DynamicResource S.disconnect}" AutomationProperties.Name="{DynamicResource S.disconnect}">
                                 <TextBlock Text="✕" FontSize="{StaticResource IconSm}" Foreground="{DynamicResource Danger}"/>
                             </Button>
                         </StackPanel>
@@ -1365,7 +1365,7 @@
                         <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
                         <ui:Button x:Name="PinBtn" Content="{DynamicResource S.fs.pin}" Appearance="Secondary" Click="TogglePin_Click"/>
                         <Border Width="1" Background="{DynamicResource Border}" Margin="12,2"/>
-                        <Button Style="{DynamicResource IconBtn}" Click="Minimize_Click" ToolTip="{DynamicResource S.tip.minimize}">
+                        <Button Style="{DynamicResource IconBtn}" Click="Minimize_Click" ToolTip="{DynamicResource S.tip.minimize}" AutomationProperties.Name="{DynamicResource S.tip.minimize}">
                             <TextBlock Text="&#x2212;" FontSize="{StaticResource IconMd}" Foreground="{DynamicResource TextSec}" VerticalAlignment="Center"/>
                         </Button>
                         <ui:Button Content="{DynamicResource S.fs.restore}" Appearance="Secondary" Click="Fullscreen_Click" Margin="6,0,0,0"/>

@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 using Microsoft.Win32;
+using RdpManager.Core;
 using Wpf.Ui.Appearance;
 
 namespace RdpManager
@@ -86,7 +87,17 @@ namespace RdpManager
             void B(string k, Color c) => d[k] = new SolidColorBrush(c);
             B("CanvasBrush", p.Canvas); B("Canvas", p.Canvas);
             B("Panel", p.Panel); B("Border", p.Border); B("RailBg", p.RailBg);
-            B("TextPrim", p.TextPrim); B("TextSec", p.TextSec); B("TextTer", p.TextTer);
+
+            // Próg czytelności NA PANELU, bo tam leży większość tekstu (karty, wiersze ustawień, lista),
+            // a panel jest bliżej koloru tekstu niż kanwa — czyli to gorszy przypadek. Presety niosą
+            // własne kolory z kanonicznych palet edytorów, gdzie trzeci stopień to kolor KOMENTARZA:
+            // celowo przygaszony. U nas ten sam klucz trzyma etykiety pól i komunikaty pustych stanów.
+            // We wszystkich dwunastu presetach TextTer wypadał między 2.07 a 3.77 przy progu 4.5.
+            // Barwa presetu zostaje, dociągana jest tylko jasność — i tylko o tyle, o ile trzeba.
+            Color prim = ColorMath.EnsureContrast(p.TextPrim, p.Panel, 4.5);
+            Color sec = ColorMath.EnsureContrast(p.TextSec, p.Panel, 4.5);
+            Color ter = ColorMath.EnsureContrast(p.TextTer, p.Panel, 4.5);
+            B("TextPrim", prim); B("TextSec", sec); B("TextTer", ter);
             B("Accent", p.Accent);
             d["AccentSoft"] = new SolidColorBrush(Color.FromArgb(0x1F, p.Accent.R, p.Accent.G, p.Accent.B));
             d["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, p.Accent.R, p.Accent.G, p.Accent.B));
@@ -95,11 +106,11 @@ namespace RdpManager
             // Te same kolory pod kontrolki WPF-UI (patrz blok „Kontrolki WPF-UI" w Palette.*). Bez tego
             // preset przestawiał tło, panele i tekst CAŁEJ aplikacji poza formularzami — pola i przełączniki
             // zostawały na kolorach palety bazowej, czyli w innym tonie niż wszystko dokoła.
-            B("TextFillColorPrimaryBrush", p.TextPrim);
-            B("TextFillColorSecondaryBrush", p.TextSec);
-            B("TextFillColorTertiaryBrush", p.TextTer);
-            B("TextControlForeground", p.TextPrim);
-            B("TextControlPlaceholderForeground", p.TextTer);
+            B("TextFillColorPrimaryBrush", prim);
+            B("TextFillColorSecondaryBrush", sec);
+            B("TextFillColorTertiaryBrush", ter);
+            B("TextControlForeground", prim);
+            B("TextControlPlaceholderForeground", ter);
             B("ControlFillColorDefaultBrush", p.Panel);
             B("TextControlBackground", p.Panel);
             B("TextControlBackgroundFocused", p.Panel);
