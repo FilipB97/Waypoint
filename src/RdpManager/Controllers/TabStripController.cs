@@ -267,11 +267,24 @@ namespace RdpManager.Controllers
             closeOthers.Click += (s, e) => _owner.CloseOtherSessions(session);
             var closeThis = new MenuItem { Header = L("S.m.close") };
             closeThis.Click += (s, e) => _owner.RequestCloseSession(session);
-            if (session.IsSsh)
+            // Szukanie w buforze i zrzut transkryptu ma KAŻDY terminal (SSH, Telnet, Serial) — to funkcje
+            // samego xterma, nie transportu. Rozgłaszanie zostaje przy SSH, bo tylko tam ma sens.
+            if (session.IsTerm)
             {
-                var broadcastItem = new MenuItem { Header = L("S.m.broadcast") };
-                broadcastItem.Click += (s, e) => _owner.BroadcastToSsh();
-                tabMenu.Items.Add(broadcastItem);
+                var findItem = new MenuItem { Header = L("S.m.find") };
+                findItem.Click += (s, e) => session.Term?.OpenFind();
+                tabMenu.Items.Add(findItem);
+
+                var transcriptItem = new MenuItem { Header = L("S.m.transcript") };
+                transcriptItem.Click += (s, e) => session.Term?.SaveTranscript();
+                tabMenu.Items.Add(transcriptItem);
+
+                if (session.IsSsh)
+                {
+                    var broadcastItem = new MenuItem { Header = L("S.m.broadcast") };
+                    broadcastItem.Click += (s, e) => _owner.BroadcastToSsh();
+                    tabMenu.Items.Add(broadcastItem);
+                }
                 tabMenu.Items.Add(new Separator());
             }
             MenuItem splitItem = null, unsplitItem = null;

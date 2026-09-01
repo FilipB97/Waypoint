@@ -367,6 +367,14 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.saved">Saved ✓</sys:String>
     <sys:String x:Key="S.st.exportedProfile">Profile exported ✓</sys:String>
     <sys:String x:Key="S.m.broadcast">Broadcast to all SSH…</sys:String>
+    <sys:String x:Key="S.m.find">Find in buffer…</sys:String>
+    <sys:String x:Key="S.m.transcript">Save transcript…</sys:String>
+    <sys:String x:Key="S.term.find.ph">Search scrollback…</sys:String>
+    <sys:String x:Key="S.term.find.prev">Previous (Shift+Enter)</sys:String>
+    <sys:String x:Key="S.term.find.next">Next (Enter)</sys:String>
+    <sys:String x:Key="S.term.find.close">Close (Esc)</sys:String>
+    <sys:String x:Key="S.term.find.none">no matches</sys:String>
+    <sys:String x:Key="S.term.find.of">of</sys:String>
     <sys:String x:Key="S.bc.none">No connected SSH sessions to broadcast to.</sys:String>
     <sys:String x:Key="S.bc.prompt">Send a command to {0} SSH session(s):</sys:String>
     <sys:String x:Key="S.bc.sent">Sent to {0} session(s) ✓</sys:String>

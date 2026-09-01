@@ -367,6 +367,14 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.st.saved">Zapisano ✓</sys:String>
     <sys:String x:Key="S.st.exportedProfile">Wyeksportowano profil ✓</sys:String>
     <sys:String x:Key="S.m.broadcast">Broadcast do wszystkich SSH…</sys:String>
+    <sys:String x:Key="S.m.find">Szukaj w buforze…</sys:String>
+    <sys:String x:Key="S.m.transcript">Zapisz transkrypt…</sys:String>
+    <sys:String x:Key="S.term.find.ph">Szukaj w buforze…</sys:String>
+    <sys:String x:Key="S.term.find.prev">Poprzednie (Shift+Enter)</sys:String>
+    <sys:String x:Key="S.term.find.next">Następne (Enter)</sys:String>
+    <sys:String x:Key="S.term.find.close">Zamknij (Esc)</sys:String>
+    <sys:String x:Key="S.term.find.none">brak trafień</sys:String>
+    <sys:String x:Key="S.term.find.of">z</sys:String>
     <sys:String x:Key="S.bc.none">Brak połączonych sesji SSH do broadcastu.</sys:String>
     <sys:String x:Key="S.bc.prompt">Wyślij komendę do {0} sesji SSH:</sys:String>
     <sys:String x:Key="S.bc.sent">Wysłano do {0} sesji ✓</sys:String>
