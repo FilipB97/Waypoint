@@ -384,7 +384,7 @@ term.loadAddon(searchAddon);
 term.loadAddon(serializeAddon);
 // Kliknięcie w adres NIE otwiera niczego tutaj — przeglądarkę uruchamia C# i dopiero PO sprawdzeniu
 // schematu (UrlValidation: tylko http/https). Wyjście terminala pochodzi ze zdalnego serwera, więc
-// „link" wypisany przez serwer to potencjalnie polecenie uruchomienia czegokolwiek na tej maszynie.
+// „link” wypisany przez serwer to potencjalnie polecenie uruchomienia czegokolwiek na tej maszynie.
 term.loadAddon(new LinksCtor((ev, uri) => window.chrome.webview.postMessage({ t:'link', d:uri })));
 
 term.open(document.getElementById('t'));
