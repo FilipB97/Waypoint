@@ -4,6 +4,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="" Width="680" Height="460"
         Icon="pack://application:,,,/Assets/app.ico"
+        UseLayoutRounding="True"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize" MinWidth="560" MinHeight="360"
         ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
     <Window.Resources>

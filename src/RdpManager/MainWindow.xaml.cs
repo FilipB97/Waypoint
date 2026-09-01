@@ -285,7 +285,26 @@ namespace RdpManager
             else if (view == "Recent") BuildRecent();
             else if (view == "Settings") { LoadSettingsForm(); SettingsSearch.Text = ""; }   // wejście = wyczyść filtr (pokaż wszystkie karty)
 
+            FadeInView(view);
             UpdateImmersive();
+        }
+
+        // Krótkie wejście widoku (opacity 0→1). Tylko dla widoków CZYSTO WPF-owych: „Sesje"/„REST" trzymają
+        // kontrolki z własnym HWND (RDP przez WindowsFormsHost, terminal przez WebView2), a animowanie
+        // przezroczystości kontenera z takim dzieckiem daje artefakty airspace — tam zostaje twarde przełączenie.
+        private void FadeInView(string view)
+        {
+            UIElement target = view == "Dashboard" ? (UIElement)DashboardView
+                             : view == "Recent" ? RecentView
+                             : view == "Settings" ? SettingsView : null;
+            if (target == null) return;
+
+            target.BeginAnimation(OpacityProperty, null);   // ubij poprzednią, gdy ktoś klika szybko
+            target.Opacity = 0;
+            target.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(130))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            });
         }
 
         private void Window_StateChanged(object sender, System.EventArgs e)
@@ -2360,6 +2379,10 @@ namespace RdpManager
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
+            // F1 = ściąga ze skrótami; Esc zamyka ją, zanim zajmie się nim pełny ekran.
+            if (e.Key == Key.F1) { ShortcutsPopup.IsOpen = !ShortcutsPopup.IsOpen; e.Handled = true; return; }
+            if (e.Key == Key.Escape && ShortcutsPopup.IsOpen) { ShortcutsPopup.IsOpen = false; e.Handled = true; return; }
+
             if (e.Key == Key.F11) { _fs.ToggleFullscreen(); return; }
             if (e.Key == Key.Escape && _isFullscreen) { _fs.ToggleFullscreen(); return; }
 
