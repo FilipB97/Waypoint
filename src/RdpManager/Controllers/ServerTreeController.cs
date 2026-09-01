@@ -464,7 +464,7 @@ namespace RdpManager.Controllers
             if (server.Pinned)
                 rightPanel.Children.Add(new TextBlock
                 {
-                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = 9,
+                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = 10,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 });
             Grid.SetColumn(rightPanel, 3);
@@ -788,7 +788,7 @@ namespace RdpManager.Controllers
         {
             if (server == null || !_serverRows.TryGetValue(server, out var row)) return;
 
-            Color accent = (_owner.TryFindResource("Accent") as SolidColorBrush)?.Color ?? Color.FromRgb(0x29, 0xC5, 0xD6);
+            Color accent = (_owner.TryFindResource("Accent") as SolidColorBrush)?.Color ?? Color.FromRgb(0x6C, 0x6D, 0xFF);
             var brush = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
             row.Background = brush;
 

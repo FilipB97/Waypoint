@@ -473,7 +473,10 @@
                         <!-- disconnected -> kompaktowy pasek połączenia (pełna edycja jest w oknie serwera) -->
                         <StackPanel x:Name="ConnectForm" Orientation="Horizontal" VerticalAlignment="Center">
                             <Border x:Name="CfAvatar" Width="18" Height="18" CornerRadius="{StaticResource RadiusSm}" VerticalAlignment="Center" Margin="0,0,8,0">
-                                <TextBlock x:Name="CfAvatarText" Foreground="{DynamicResource TextOnColor}" FontSize="{StaticResource FontMicro}" FontWeight="Bold"
+                                <!-- 9.5, nie FontMicro (7.5): dwa wersaliki na kafelku 18 px zlewały się w plamę.
+                                     Ta sama wartość co w awatarach kart i wierszy listy. FontMicro zostaje dla
+                                     strzałek sortowania, gdzie 7.5 px wystarcza (to glif, nie tekst). -->
+                                <TextBlock x:Name="CfAvatarText" Foreground="{DynamicResource TextOnColor}" FontSize="9.5" FontWeight="Bold"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock x:Name="CfName" Foreground="{DynamicResource TextPrim}" FontWeight="SemiBold" VerticalAlignment="Center"/>

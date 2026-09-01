@@ -2339,7 +2339,7 @@ namespace RdpManager
                 Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = AvatarBrush(server),
                 Child = new TextBlock
                 {
-                    Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 7.5, FontWeight = FontWeights.Bold,
+                    Text = ServerInitials(server), Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };

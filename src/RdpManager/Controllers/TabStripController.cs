@@ -88,11 +88,12 @@ namespace RdpManager.Controllers
             var content = new StackPanel { Orientation = Orientation.Horizontal };
             content.Children.Add(new Border
             {
-                Width = 14, Height = 14, CornerRadius = new CornerRadius(4),
+                // 14 px kafelek z inicjałami 7 px był nieczytelny — dwa wersaliki zlewały się w plamę.
+                Width = 17, Height = 17, CornerRadius = new CornerRadius(5),
                 Background = _owner.AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = MainWindow.ServerInitials(session.Server), Foreground = Brushes.White, FontSize = 7, FontWeight = FontWeights.Bold,
+                    Text = MainWindow.ServerInitials(session.Server), Foreground = Brushes.White, FontSize = 9.5, FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             });
