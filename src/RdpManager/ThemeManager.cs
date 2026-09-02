@@ -105,6 +105,19 @@ namespace RdpManager
             res["AccentFillColorTertiaryBrush"] = new SolidColorBrush(step2);
             res["SystemAccentBrush"] = new SolidColorBrush(accent);
 
+            // SystemAccentColorPrimary to klucz, przez który idzie NAJWIĘCEJ powierzchni akcentowych
+            // Fluenta — a pominąłem go za pierwszym razem, przez co przełączniki i pola wyboru dalej
+            // świeciły wariantem rozjaśnionym. W motywie Dark.xaml WPF-UI wiszą na nim m.in.:
+            // ToggleSwitchFillOn, CheckBoxCheckBackgroundFillChecked, AccentButtonBackground,
+            // ProgressBarForeground, ProgressRingForegroundThemeBrush, SliderThumbBackground,
+            // RadioButtonOuterEllipseCheckedStroke, TextControlFocusedBorderBrush oraz wskaźniki
+            // zaznaczenia list i drzew. Secondary/Tertiary trzymają hover i wciśnięcie tych samych
+            // kontrolek, więc zostają zróżnicowane — inaczej zniknęłaby reakcja na dotknięcie.
+            res["SystemAccentColor"] = accent;
+            res["SystemAccentColorPrimary"] = accent;
+            res["SystemAccentColorSecondary"] = step1;
+            res["SystemAccentColorTertiary"] = step2;
+
             // Tekst NA akcencie nie może być na sztywno biały: przy jasnym akcencie (pomarańcz presetu
             // „Claude", bursztyn z próbnika, błękit Norda) biel ma na nim kontrast 2.0-3.1. Reguła jest
             // wspólna z inicjałami na awatarach — patrz ColorMath.PrefersDarkInk.
