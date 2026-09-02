@@ -428,6 +428,7 @@ namespace RdpManager
             bool immersive = IsImmersive();
             if (!immersive) _fs.HideFocusPeek();   // wyjście ze skupienia: zwiń peek (przenosi Rail/Sidebar z powrotem)
             AppTitleBar.Visibility = immersive ? Visibility.Collapsed : Visibility.Visible;
+            SetTitleBarChromeHitTest(!immersive);   // patrz niżej — zwinięty pasek NADAL zajmuje strefę niekliencką
             // Panel boczny ukryty w skupieniu — chyba że chwilowo wysunięty (wtedy żyje w FocusPeekPopup, nie tu).
             if (!_fs.Peeking)
             {
@@ -451,6 +452,53 @@ namespace RdpManager
             // (puls przerysowania, hover Setterem zamiast animacji) — to pierwsze rusza WEJŚCIE.
             // Priorytet Loaded: po przeliczeniu layoutu, inaczej trafiłoby w stary układ.
             Dispatcher.BeginInvoke(new Action(() => Mouse.Synchronize()), DispatcherPriority.Loaded);
+        }
+
+        // Przyciski systemowe paska tytułu WPF-UI. Szablon realizuje się raz, więc trzymamy je w cache;
+        // pusta tablica oznacza „szablon jeszcze nierozwinięty" i próbujemy ponownie przy kolejnym wywołaniu.
+        private Wpf.Ui.Controls.TitleBarButton[] _titleBarButtons;
+
+        /// <summary>
+        /// Wł/wył udział paska tytułu w hit-teście obszaru NIEKLIENCKIEGO okna.
+        ///
+        /// PRZYCZYNA (ustalona sondą Diagnostics/HoverProbe, nie zgadnięta): WPF-UI podpina się pod
+        /// WM_NCHITTEST okna (TitleBar.HwndSourceHook) i dla każdego przycisku systemowego sprawdza
+        /// UiElementExtensions.IsMouseOverElement, czyli dwa warunki: czy punkt mieści się w
+        /// Rect(0,0, RenderSize) przycisku ORAZ czy przycisk ma IsHitTestVisible. Ukrycie paska przez
+        /// Visibility=Collapsed nie rusza ŻADNEGO z nich — WPF nie rozmieszcza ponownie zwiniętego
+        /// poddrzewa, więc przyciski zachowują OSTATNI znany RenderSize i offset. W trybie skupienia
+        /// pasek kart wjeżdża dokładnie w miejsce po pasku tytułu, więc okno na najechanie ikony
+        /// odpowiadało kodem HTMINBUTTON zamiast HTCLIENT. A gdy okno zgłosi obszar niekliencki, WPF
+        /// w ogóle nie dostarcza tam myszy do warstwy WPF: Mouse.DirectlyOver=null, IsMouseOver
+        /// zostaje False i podświetlenie się nie zapala. Malowanie działało przez cały czas —
+        /// wymuszone krycie warstwy hoveru było widoczne. Zmiana rozmiaru okna „naprawiała" objaw,
+        /// bo przesuwała nieaktualny prostokąt względem ikon.
+        ///
+        /// IsHitTestVisible to jedyny warunek tej ścieżki, który da się zdjąć z zewnątrz — i akurat
+        /// ten, który WPF-UI sam sprawdza. Zdejmujemy go z przycisków ORAZ z samego paska: bez tego
+        /// drugiego pasek zgłasza HTCAPTION dla całej reszty strefy (ostatnia gałąź tego samego hooka),
+        /// więc ikony poza prostokątami przycisków byłyby martwe tak samo.
+        /// </summary>
+        private void SetTitleBarChromeHitTest(bool enabled)
+        {
+            AppTitleBar.IsHitTestVisible = enabled;
+            if (_titleBarButtons == null || _titleBarButtons.Length == 0)
+            {
+                AppTitleBar.ApplyTemplate();
+                _titleBarButtons = Descendants<Wpf.Ui.Controls.TitleBarButton>(AppTitleBar).ToArray();
+            }
+            foreach (var b in _titleBarButtons) b.IsHitTestVisible = enabled;
+        }
+
+        private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+        {
+            if (root == null) yield break;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var c = VisualTreeHelper.GetChild(root, i);
+                if (c is T t) yield return t;
+                foreach (var d in Descendants<T>(c)) yield return d;
+            }
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku) — logika w FullscreenController (PR 5).
