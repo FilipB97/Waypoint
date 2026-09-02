@@ -5,16 +5,24 @@ using System.Windows.Media;
 namespace RdpManager
 {
     /// <summary>
-    /// Cienka pozioma linia (akcent) na górnej albo dolnej krawędzi wiersza — pokazuje podczas
-    /// przeciągania, gdzie wyląduje serwer. Rysowana w warstwie adornerów, więc nie zmienia układu.
+    /// Cienka linia (akcent) na krawędzi elementu — pokazuje podczas przeciągania, gdzie wyląduje
+    /// element. Rysowana w warstwie adornerów, więc NIE ZMIENIA UKŁADU: to jej sens, bo wcześniejszy
+    /// wskaźnik na pasku kart ustawiał obramowanie na samej karcie i przesuwał jej treść w trakcie
+    /// przeciągania.
+    ///
+    /// Pozioma dla listy serwerów (elementy jeden pod drugim), pionowa dla paska kart (obok siebie) —
+    /// jedna definicja obsługuje oba, bo różni je wyłącznie oś.
     /// </summary>
     internal sealed class InsertionAdorner : Adorner
     {
         private readonly Pen _pen;
         private readonly Brush _brush;
 
-        /// <summary>Czy linia ma być na dolnej (true) czy górnej (false) krawędzi wiersza.</summary>
-        public bool AtBottom { get; set; }
+        /// <summary>Krawędź: dla poziomej dolna (true) albo górna, dla pionowej prawa albo lewa.</summary>
+        public bool AtEnd { get; set; }
+
+        /// <summary>Linia pionowa (pasek kart) zamiast poziomej (lista serwerów).</summary>
+        public bool Vertical { get; set; }
 
         public InsertionAdorner(UIElement adorned, Brush brush) : base(adorned)
         {
@@ -26,11 +34,21 @@ namespace RdpManager
 
         protected override void OnRender(DrawingContext dc)
         {
-            double w = AdornedElement.RenderSize.Width;
-            double y = AtBottom ? AdornedElement.RenderSize.Height : 0;
-            dc.DrawLine(_pen, new Point(3, y), new Point(w - 3, y));
-            dc.DrawEllipse(_brush, null, new Point(3, y), 2.5, 2.5);
-            dc.DrawEllipse(_brush, null, new Point(w - 3, y), 2.5, 2.5);
+            Size size = AdornedElement.RenderSize;
+            Point a, b;
+            if (Vertical)
+            {
+                double x = AtEnd ? size.Width : 0;
+                a = new Point(x, 3); b = new Point(x, size.Height - 3);
+            }
+            else
+            {
+                double y = AtEnd ? size.Height : 0;
+                a = new Point(3, y); b = new Point(size.Width - 3, y);
+            }
+            dc.DrawLine(_pen, a, b);
+            dc.DrawEllipse(_brush, null, a, 2.5, 2.5);
+            dc.DrawEllipse(_brush, null, b, 2.5, 2.5);
         }
     }
 }

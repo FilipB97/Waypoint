@@ -237,7 +237,9 @@ namespace RdpManager.Controllers
             FrameworkElement badge = isPinned
                 ? new TextBlock
                 {
-                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = (double)_owner.TryFindResource("FontCaption"),
+                    // TextTer, nie Idle: „Idle" to kolor STATUSU (wolna odpowiedź serwera). Ten sam
+                    // odcień raz znaczyłby stan, a raz nic — to uczy błędnego kodu barwnego.
+                    Text = "★", Foreground = _owner.Res("TextTer"), FontSize = (double)_owner.TryFindResource("FontCaption"),
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 }
                 : (FrameworkElement)new Ellipse
@@ -394,12 +396,6 @@ namespace RdpManager.Controllers
             var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             if (ShowProtocolTag) right.Children.Add(BuildProtocolTag(server));
             AddLatencyLabel(right, server);
-            if (server.Pinned)
-                right.Children.Add(new TextBlock
-                {
-                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = (double)_owner.TryFindResource("FontCaption"),
-                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
-                });
             right.Children.Add(status);
             Grid.SetColumn(right, 3);
             grid.Children.Add(right);
@@ -489,12 +485,6 @@ namespace RdpManager.Controllers
             };
             // Etykieta tekstowa protokołu jest tu już zbędna — niesie ją glif po lewej.
             AddLatencyLabel(rightPanel, server);
-            if (server.Pinned)
-                rightPanel.Children.Add(new TextBlock
-                {
-                    Text = "★", Foreground = _owner.Res("Idle"), FontSize = (double)_owner.TryFindResource("FontCaption"),
-                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
-                });
             rightPanel.Children.Add(status);
             Grid.SetColumn(rightPanel, 2);
             grid.Children.Add(rightPanel);
@@ -578,7 +568,7 @@ namespace RdpManager.Controllers
             // Tabem z myszą leżącą nad innym wierszem nie dało się powiedzieć, który jest który. Fokus
             // dostaje własny znak — obwódkę akcentu — i jest niezależny od tła: może wystąpić razem
             // z hoverem i z zaznaczeniem, i wtedy widać wszystkie trzy stany naraz.
-            row.MouseEnter += (s, e) => { if (_owner._active?.Server != server) row.Background = _owner.Res("Elevated"); };
+            row.MouseEnter += (s, e) => { if (_owner._active?.Server != server) row.Background = RowHoverBackground(server); };
             row.MouseLeave += (s, e) => { if (_owner._active?.Server != server) row.Background = RowRestBackground(server); };
             row.GotKeyboardFocus += (s, e) => row.BorderBrush = _owner.Res("Accent");
             row.LostKeyboardFocus += (s, e) => row.BorderBrush = Brushes.Transparent;
@@ -649,6 +639,17 @@ namespace RdpManager.Controllers
         // Tło wiersza w stanie spoczynku (nie hover/focus/aktywny): zaznaczony = AccentSoft, inaczej przezroczysty.
         private Brush RowRestBackground(ServerInfo s)
             => _multiSelect.Contains(s) ? _owner.Res("AccentSoft") : Brushes.Transparent;
+
+        /// <summary>
+        /// Tło wiersza POD KURSOREM. Musi być krokiem NAD stanem spoczynkowym, a nie jego zamiennikiem:
+        /// wcześniej hover ustawiał „Elevated" bezwarunkowo, więc przejechanie myszą nad zaznaczeniem
+        /// gasiło „AccentSoft" na wszystkich mijanych wierszach — zaznaczenie znikało w trakcie wodzenia
+        /// wzrokiem po liście, choć logicznie trwało (RowRestBackground uwzględniał _multiSelect,
+        /// MouseEnter nie). Zaznaczony wiersz dostaje mocniejszy stopień TEGO SAMEGO akcentu,
+        /// niezaznaczony — neutralne uniesienie.
+        /// </summary>
+        private Brush RowHoverBackground(ServerInfo s)
+            => _multiSelect.Contains(s) ? _owner.Res("AccentSoftHover") : _owner.Res("Elevated");
 
         // Ctrl+klik: przełącz pojedynczy wiersz w zaznaczeniu (ustaw kotwicę dla ewentualnego Shift).
         private void ToggleSelect(ServerInfo server)
@@ -816,11 +817,11 @@ namespace RdpManager.Controllers
 
             if (_dropRow == row && _dropAdorner != null)
             {
-                if (_dropAdorner.AtBottom != bottom) { _dropAdorner.AtBottom = bottom; _dropAdorner.InvalidateVisual(); }
+                if (_dropAdorner.AtEnd != bottom) { _dropAdorner.AtEnd = bottom; _dropAdorner.InvalidateVisual(); }
                 return;
             }
             ClearDropIndicator();
-            _dropAdorner = new InsertionAdorner(row, _owner.Res("Accent")) { AtBottom = bottom };
+            _dropAdorner = new InsertionAdorner(row, _owner.Res("Accent")) { AtEnd = bottom };
             layer.Add(_dropAdorner);
             _dropRow = row;
         }

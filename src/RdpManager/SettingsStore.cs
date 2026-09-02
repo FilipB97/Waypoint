@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using RdpManager.Core;
@@ -35,7 +36,10 @@ namespace RdpManager
                     PersistLog.Write(dir, $"settings.Load: SELF-HEAL z .bak (main={(main == null ? -1 : DataScore(main))}, bak={DataScore(bak)})");
                     try { File.Copy(path + ".bak", path, overwrite: true); } catch { /* best-effort */ }
                     HealthNotices.Add(HealthNoticeKind.SettingsRestored);
-                    return bak;
+                    // Migrate TAKŻE tutaj: kopia zapasowa jest z definicji STARSZA od pliku głównego,
+                    // więc to właśnie ona najczęściej niesie wartości wymagające przeniesienia. Ta ścieżka
+                    // zwracała ją surową, czyli samonaprawa cofała wszystkie migracje naraz.
+                    return Migrate(bak);
                 }
             }
             PersistLog.Write(dir, $"settings.Load: główny (score={(main == null ? -1 : DataScore(main))}, istnieje={File.Exists(path)})");
@@ -60,6 +64,15 @@ namespace RdpManager
             // jego zgody.
             if (string.Equals(s.AccentColor, "#7C6CFB", StringComparison.OrdinalIgnoreCase))
                 s.AccentColor = "";
+
+            // Ten sam fiolet siedział jako PIERWSZY kolor palety grup kart, więc dostawała go pierwsza
+            // utworzona grupa — i była nieodróżnialna od akcentu (ΔE 4,1). Tu, inaczej niż przy akcencie,
+            // nie da się wyczyścić do „domyślnego": grupa musi mieć jakiś kolor. Podmieniamy więc na
+            // pierwszy kolor nowej palety (GdProd). To ZMIANA WYGLĄDU, ale świadoma: dotychczasowa
+            // wartość nie pełniła swojej funkcji, bo znacznik grupy zlewał się z akcentem.
+            foreach (var g in s.TabGroups ?? new List<TabGroupDef>())
+                if (string.Equals(g.Color, "#FF7C6CFB", StringComparison.OrdinalIgnoreCase))
+                    g.Color = "#FFD06BD8";
 
             return s;
         }
