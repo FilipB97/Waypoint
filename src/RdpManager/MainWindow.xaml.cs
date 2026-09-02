@@ -1433,6 +1433,11 @@ namespace RdpManager
         {
             if (_currentView == "Dashboard") BuildDashboard();
             else if (_currentView == "Recent") BuildRecent();
+
+            // Terminale nie widzą DynamicResource (WebView2 to osobny dokument), więc zmiana motywu,
+            // presetu albo akcentu musi do nich dojść wiadomością. Bez tego przemalowywały się dopiero
+            // nowo otwierane sesje, a już otwarte zostawały na palecie sprzed zmiany.
+            foreach (var s in _sessions) s.Term?.ApplyTheme();
         }
 
         // Filtr Ustawień: chowa karty, których zagregowany (zlokalizowany) tekst nie zawiera zapytania.
