@@ -29,6 +29,9 @@ namespace RdpManager
             TrustCertificate = trustCertificate;
         }
 
+        /// <summary>Limit czasu pojedynczej operacji gniazda (łączenie, odczyt, kanał danych).</summary>
+        private const int TimeoutMs = 20000;
+
         public bool IsConnected => _c != null && _c.IsConnected;
 
         public void Connect()
@@ -38,6 +41,18 @@ namespace RdpManager
             int port = _server.Port > 0 ? _server.Port : 21;
 
             _c = new FtpClient(_server.Host, user, pass, port);
+
+            // JAWNE limity czasu. Bez nich pojedyncza operacja potrafiła nie wrócić nigdy — najczęściej
+            // w trybie pasywnym, gdy serwer poda adres kanału danych, do którego nie da się połączyć
+            // (NAT, zapora, adres z sieci prywatnej). Panel plików puszcza jedną operację naraz, więc
+            // taka operacja blokowała go do restartu aplikacji. Limity są PER OPERACJA gniazda, nie na
+            // cały transfer, więc pobieranie wielkiego pliku ich nie dotyka. 20 s to ta sama skala co
+            // limit sesji SSH (15 s) plus zapas na uzgodnienie TLS.
+            _c.Config.ConnectTimeout = TimeoutMs;
+            _c.Config.ReadTimeout = TimeoutMs;
+            _c.Config.DataConnectionConnectTimeout = TimeoutMs;
+            _c.Config.DataConnectionReadTimeout = TimeoutMs;
+
             _c.Config.EncryptionMode = _server.FtpEncryption == 1 ? FtpEncryptionMode.Implicit
                                      : _server.FtpEncryption == 2 ? FtpEncryptionMode.None
                                      : _server.FtpEncryption == 3 ? FtpEncryptionMode.Auto

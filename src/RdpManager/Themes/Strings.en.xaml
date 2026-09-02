@@ -529,7 +529,13 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.delete.confirmmany">Delete selected ({0})? This cannot be undone.</sys:String>
     <sys:String x:Key="S.sftp.unsafename">The server returned an unsafe file name: "{0}" — download refused.</sys:String>
     <sys:String x:Key="S.sftp.toodeep">The folder tree is too deep (over {0} levels) — transfer stopped (possible symlink loop).</sys:String>
-    <sys:String x:Key="S.sftp.connecting">Connecting SFTP…</sys:String>
+    <sys:String x:Key="S.sftp.connecting">Connecting…</sys:String>
+    <sys:String x:Key="S.sftp.loading">Loading folder…</sys:String>
+    <sys:String x:Key="S.sftp.working">Working…</sys:String>
+    <sys:String x:Key="S.sftp.renaming">Renaming…</sys:String>
+    <sys:String x:Key="S.sftp.cancelling">Cancelling…</sys:String>
+    <sys:String x:Key="S.sftp.aborted">Aborted — connection closed. The next operation will reconnect.</sys:String>
+    <sys:String x:Key="S.sftp.abort.tip">Abort and close the connection</sys:String>
     <sys:String x:Key="S.sftp.uploading">Uploading {0}…</sys:String>
     <sys:String x:Key="S.sftp.downloading">Downloading {0}…</sys:String>
     <sys:String x:Key="S.sftp.done">Done ✓</sys:String>

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace RdpManager
 {
@@ -110,6 +111,9 @@ namespace RdpManager
         private IRemoteFs _fs;
         private string _path = "/";
         private bool _busy;
+        private bool _cancelRequested;      // pierwszy klik „Anuluj" był grzeczny — następny przerywa twardo
+        private bool _aborted;              // operację przerwano zamknięciem połączenia (nie pokazuj błędu gniazda)
+        private DispatcherTimer _stuckWatch;// po tylu sekundach bez końca operacji pokaż wyjście awaryjne
         private CancellationTokenSource _transferCts;
         private TransferState _xferState;   // aktywny transfer — tylko on może aktualizować pasek (odrzuca spóźnione raporty)
         private readonly Stopwatch _progressThrottle = new Stopwatch();
@@ -329,7 +333,10 @@ namespace RdpManager
         {
             if (_busy) return false;
             _busy = true;
+            _cancelRequested = false;
+            _aborted = false;
             bool connecting = false;
+            StartStuckWatch();
             try
             {
                 SetStatus(statusText);
@@ -341,8 +348,12 @@ namespace RdpManager
                         try { _fs?.Dispose(); } catch { }
                         _fs = _factory();
                         connecting = true;
+                        // Łączenie potrafi trwać (DNS, uzgodnienie TLS, tryb pasywny FTP), a etykieta
+                        // operacji („Wczytywanie katalogu…") sugerowałaby wtedy, że dane już płyną.
+                        Status(L("S.sftp.connecting"));
                         _fs.Connect();
                         connecting = false;
+                        Status(statusText);
                         didConnect = true;
                         if (_path == "/") _path = _fs.HomeDirectory ?? "/";   // start w katalogu domowym
                     }
@@ -359,16 +370,25 @@ namespace RdpManager
             }
             catch (Exception ex)
             {
-                SetStatus(ex.Message, error: true);
-                if (connecting)   // błąd łączenia zrywa sesję; błąd operacji zostawia ją żywą
+                // Po przerwaniu gniazdo rzuca własnym błędem („połączenie zamknięte" itp.) — nie ma po co
+                // go pokazywać, użytkownik właśnie sam o to poprosił i widzi już komunikat o przerwaniu.
+                if (!_aborted)
                 {
-                    try { _fs?.Dispose(); } catch { }
-                    _fs = null;
-                    Failed?.Invoke(ex.Message);
+                    SetStatus(ex.Message, error: true);
+                    if (connecting)   // błąd łączenia zrywa sesję; błąd operacji zostawia ją żywą
+                    {
+                        try { _fs?.Dispose(); } catch { }
+                        _fs = null;
+                        Failed?.Invoke(ex.Message);
+                    }
                 }
                 return false;
             }
-            finally { _busy = false; }
+            finally
+            {
+                _busy = false;
+                StopStuckWatch();
+            }
         }
 
         // Jak RunAsync, ale dla transferów drzew: liczy rozmiar CAŁOŚCI z góry (pasek postępu), pokazuje
@@ -391,7 +411,7 @@ namespace RdpManager
             ShowTransferUi(true);
             try
             {
-                return await RunAsync(L("S.sftp.connecting"), fs =>
+                return await RunAsync(L("S.sftp.working"), fs =>
                 {
                     state.TotalBytes = computeTotal(fs);
                     transfer(fs, cts.Token, state);
@@ -413,7 +433,72 @@ namespace RdpManager
             if (!on) TransferProgress.Value = 0;
         }
 
-        private void CancelTransfer_Click(object sender, RoutedEventArgs e) => _transferCts?.Cancel();
+        // Pierwszy klik anuluje GRZECZNIE (pętla transferu sprawdza token między blokami danych). Drugi —
+        // i każdy, gdy nie ma czego anulować grzecznie — przerywa TWARDO, zamykając połączenie.
+        private void CancelTransfer_Click(object sender, RoutedEventArgs e)
+        {
+            if (_transferCts != null && !_cancelRequested)
+            {
+                _cancelRequested = true;
+                _transferCts.Cancel();
+                SetStatus(L("S.sftp.cancelling"));
+                CancelTransferBtn.ToolTip = L("S.sftp.abort.tip");
+                return;
+            }
+            AbortStuckOperation();
+        }
+
+        /// <summary>
+        /// Wyjście awaryjne z zawieszonej operacji.
+        ///
+        /// Operacje IRemoteFs są SYNCHRONICZNE i nie obserwują tokenu — blokujące czytanie z gniazda
+        /// zignoruje CancellationToken choćby na godzinę (zdarza się FTP w trybie pasywnym, gdy serwer
+        /// poda adres kanału danych, do którego nie da się połączyć). Jedyne, co realnie przerywa taką
+        /// operację, to zamknięcie połączenia pod spodem: zablokowany odczyt rzuca wtedy wyjątek, a catch
+        /// w RunAsync sprząta jak przy każdym innym błędzie i zwalnia panel.
+        ///
+        /// Dispose leci na wątku puli, bo sam potrafi się zablokować na zamykaniu sesji — interfejs nie
+        /// może na to czekać. _fs zerujemy od razu, więc następna operacja łączy się od nowa.
+        /// </summary>
+        private void AbortStuckOperation()
+        {
+            var fs = _fs;
+            _fs = null;
+            _aborted = true;
+            SetStatus(L("S.sftp.aborted"), error: true);
+            ShowTransferUi(false);
+            Task.Run(() => { try { fs?.Dispose(); } catch { } });
+        }
+
+        // Czuwak: dopóki operacja idzie sprawnie, nie ma czego pokazywać. Gdy przeciąga się ponad próg,
+        // pojawia się przycisk przerwania — bez niego zawieszony panel zostawał zablokowany przez _busy
+        // aż do restartu aplikacji, ze statusem „Łączenie…", który nigdy się nie kończył.
+        private const int StuckAfterMs = 8000;
+
+        private void StartStuckWatch()
+        {
+            if (_stuckWatch == null)
+            {
+                _stuckWatch = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+                { Interval = TimeSpan.FromMilliseconds(StuckAfterMs) };
+                _stuckWatch.Tick += (s, e) =>
+                {
+                    _stuckWatch.Stop();
+                    if (!_busy) return;
+                    CancelTransferBtn.ToolTip = L("S.sftp.abort.tip");
+                    CancelTransferBtn.Visibility = Visibility.Visible;
+                };
+            }
+            _stuckWatch.Stop();
+            _stuckWatch.Start();
+        }
+
+        private void StopStuckWatch()
+        {
+            _stuckWatch?.Stop();
+            if (_xferState == null) ShowTransferUi(false);   // transfer chowa przycisk sam, po swojej stronie
+            CancelTransferBtn.ToolTip = L("S.sftp.cancel");
+        }
 
         // Throttled (max ~10/s) aktualizacja paska — bez tego szybki lokalny kopiuj wołałby Dispatcher.BeginInvoke
         // tysiące razy na sekundę. `state != _xferState` odrzuca spóźnione raporty po anulowaniu/nowym transferze.
@@ -455,6 +540,9 @@ namespace RdpManager
             return choice == OverwriteChoice.Overwrite;
         }
 
+        // SetStatus wołany z wątku ROBOCZEGO (wnętrze Task.Run w RunAsync) — musi trafić na wątek UI.
+        private void Status(string text) => Dispatcher.BeginInvoke(new Action(() => SetStatus(text)));
+
         private void SetStatus(string text, bool error = false)
         {
             StatusText.Text = text ?? "";
@@ -468,7 +556,7 @@ namespace RdpManager
             var folder = Res("Accent");
             var fileBr = Res("TextSec");
             List<Row> rows = null;
-            bool ok = await RunAsync(L("S.sftp.connecting"), fs =>
+            bool ok = await RunAsync(L("S.sftp.loading"), fs =>
             {
                 rows = fs.List(_path)
                     .Select(f => new Row
@@ -542,11 +630,8 @@ namespace RdpManager
         {
             Breadcrumb.Children.Clear();
             Breadcrumb.Children.Add(MakeCrumb("/", "/"));
-            string acc = "";
-            foreach (var seg in _path.Split('/'))
+            foreach (var (label, target) in BreadcrumbSegments(_path))
             {
-                if (seg.Length == 0) continue;
-                acc += "/" + seg;
                 Breadcrumb.Children.Add(new TextBlock
                 {
                     Text = "›",
@@ -554,8 +639,36 @@ namespace RdpManager
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(1, 0, 1, 0)
                 });
-                Breadcrumb.Children.Add(MakeCrumb(seg, acc));
+                Breadcrumb.Children.Add(MakeCrumb(label, target));
             }
+        }
+
+        /// <summary>
+        /// Okruszki dla ścieżki: etykieta segmentu i ścieżka, do której prowadzi klik.
+        ///
+        /// Cel każdego okruszka to PREFIKS oryginalnej ścieżki, a nie sklejka „/" + segment. Sklejka
+        /// zakładała ścieżkę POSIX-ową, zaczynającą się od „/", i psuła panel lokalny: dla „C:/Apps"
+        /// dawała cele „/C:" i „/C:/Apps", które Windows rozwijał względem katalogu bieżącego dysku —
+        /// stąd komunikat „Nazwa pliku… jest niepoprawna. : 'C:\C:'" po kliknięciu w „C:".
+        /// Prefiks działa dla obu kształtów: „/repository/internal" i „C:/Apps". Gołą literę dysku
+        /// („C:") na katalog główny zamienia LocalFs.Denorm — tu nie ma wiedzy o Windowsie.
+        ///
+        /// Publiczne dla testów.
+        /// </summary>
+        public static List<(string Label, string Target)> BreadcrumbSegments(string path)
+        {
+            var list = new List<(string, string)>();
+            string p = path ?? "";
+            int i = 0;
+            while (i < p.Length)
+            {
+                if (p[i] == '/') { i++; continue; }
+                int end = p.IndexOf('/', i);
+                if (end < 0) end = p.Length;
+                list.Add((p.Substring(i, end - i), p.Substring(0, end)));
+                i = end;
+            }
+            return list;
         }
 
         private System.Windows.Controls.Button MakeCrumb(string label, string target)
@@ -660,7 +773,7 @@ namespace RdpManager
             if (dlg.ShowDialog() != true || dlg.Value.Length == 0) return;
 
             string name = dlg.Value;
-            bool ok = await RunAsync(L("S.sftp.connecting"), fs => fs.CreateDirectory(_path.TrimEnd('/') + "/" + name));
+            bool ok = await RunAsync(L("S.sftp.working"), fs => fs.CreateDirectory(_path.TrimEnd('/') + "/" + name));
             if (ok) RefreshAsync();
         }
 
@@ -766,7 +879,7 @@ namespace RdpManager
             { SetStatus(string.Format(L("S.sftp.rename.exists"), name), error: true); return; }
 
             string target = trimmed.Substring(0, slash + 1) + name;
-            bool ok = await RunAsync(L("S.sftp.connecting"), fs => fs.Rename(r.FullName, target));
+            bool ok = await RunAsync(L("S.sftp.renaming"), fs => fs.Rename(r.FullName, target));
             if (ok) RefreshAsync();
         }
 
