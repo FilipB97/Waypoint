@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Interaktywna makieta wszystkich widoków i modułów Waypointa.">
+<!--
+  Atlas interfejsu Waypoint — statyczna, interaktywna makieta całego okna aplikacji.
+  Otwórz plik bezpośrednio w przeglądarce; nie wymaga serwera ani budowania.
+
+  Kolory pochodzą z palety aplikacji (src/RdpManager/Themes/Palette.{Light,Dark}.xaml).
+  Przy zmianie palety warto zaktualizować blok :root poniżej, żeby makieta nie rozjechała
+  się z produktem. Reszta treści to dane przykładowe.
+-->
+<title>Atlas interfejsu Waypoint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Tokeny = paleta Waypointa (src/RdpManager/Themes/Palette.{Light,Dark}.xaml).
+   Bazowy :root niesie KOMPLETNY wariant jasny; ciemny nadpisuje same tokeny.
+   ───────────────────────────────────────────────────────────────────────── */
+:root{
+  --canvas-a:#EEF0F3; --canvas-b:#DEE2E8;
+  --panel:#FAFBFC; --rail:#F1F2F4; --elevated:rgba(0,0,0,.08);
+  --border:rgba(0,0,0,.13); --hairline:rgba(0,0,0,.08);
+  --prim:#1B1D22; --sec:#565A62; --ter:#6B6F78;
+  --accent:#5B4BD6; --accent-soft:rgba(91,75,214,.13); --accent-strong:rgba(91,75,214,.40);
+  --on-accent:#fff;
+  --online:#12855A; --idle:#9A6512; --offline:#767A83; --danger:#C0281F;
+  --p-rdp:#2F6BE0; --p-ssh:#1EA16C; --p-sftp:#C28029; --p-rest:#1F97A0;
+  --gd-prod:#A32FAE; --gd-stag:#C28029; --gd-client:#1F8B94;
+  --shadow:0 6px 20px rgba(0,0,0,.10);
+  --ui:"Segoe UI",Selawik,system-ui,-apple-system,"Noto Sans",sans-serif;
+  --mono:"JetBrains Mono",Consolas,"Cascadia Mono",monospace;
+  --r-xs:4px; --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:999px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --canvas-a:#0F1014; --canvas-b:#181A22;
+    --panel:#282A36; --rail:#16171F; --elevated:rgba(189,193,219,.18);
+    --border:rgba(255,255,255,.13); --hairline:rgba(255,255,255,.07);
+    --prim:#E7E8EE; --sec:#B1B4C2; --ter:#9396A6;
+    --accent:#6C6DFF; --accent-soft:rgba(108,109,255,.15); --accent-strong:rgba(108,109,255,.40);
+    --online:#3DDC97; --idle:#FFB454; --offline:#747783; --danger:#E8463F;
+    --p-rdp:#7BA6FF; --p-ssh:#4BD6A0; --p-sftp:#F0B45F; --p-rest:#48C6CF;
+    --gd-prod:#D06BD8; --gd-stag:#FFB454; --gd-client:#36B8C4;
+    --shadow:0 6px 22px rgba(0,0,0,.48);
+  }
+}
+:root[data-theme="dark"]{
+  --canvas-a:#0F1014; --canvas-b:#181A22;
+  --panel:#282A36; --rail:#16171F; --elevated:rgba(189,193,219,.18);
+  --border:rgba(255,255,255,.13); --hairline:rgba(255,255,255,.07);
+  --prim:#E7E8EE; --sec:#B1B4C2; --ter:#9396A6;
+  --accent:#6C6DFF; --accent-soft:rgba(108,109,255,.15); --accent-strong:rgba(108,109,255,.40);
+  --online:#3DDC97; --idle:#FFB454; --offline:#747783; --danger:#E8463F;
+  --p-rdp:#7BA6FF; --p-ssh:#4BD6A0; --p-sftp:#F0B45F; --p-rest:#48C6CF;
+  --gd-prod:#D06BD8; --gd-stag:#FFB454; --gd-client:#36B8C4;
+  --shadow:0 6px 22px rgba(0,0,0,.48);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas-a);color:var(--prim);font-family:var(--ui);font-size:14px;line-height:1.45}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-xs)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── Ramka strony ─────────────────────────────────────────────────────── */
+.page{max-width:1440px;margin:0 auto;padding:24px 20px 56px;display:flex;flex-direction:column;gap:18px}
+.intro{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 26px}
+.intro h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.01em;text-wrap:balance}
+.intro p{margin:0;color:var(--ter);font-size:13px;max-width:62ch}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.legend b{font:500 11px/1.6 var(--mono);letter-spacing:.03em;color:var(--sec);
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--r-pill);padding:2px 9px}
+
+/* ── Okno aplikacji ───────────────────────────────────────────────────── */
+.win{border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;
+  background:linear-gradient(135deg,var(--canvas-a),var(--canvas-b));box-shadow:var(--shadow)}
+.titlebar{height:32px;display:flex;align-items:center;gap:8px;padding:0 0 0 10px;
+  border-bottom:1px solid var(--hairline)}
+.titlebar .mark{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#5B8CFF,#7C4DFF);color:#fff;font:700 11px/1 var(--ui)}
+.titlebar .t{font-size:12px;color:var(--sec)}
+.wbtns{margin-left:auto;display:flex}
+.wbtns button{width:44px;height:32px;display:grid;place-items:center;color:var(--ter)}
+.wbtns button:hover{background:var(--elevated);color:var(--prim)}
+.wbtns button.x:hover{background:var(--danger);color:#fff}
+
+.body{display:grid;grid-template-columns:56px 228px minmax(0,1fr);height:660px}
+.win.focus .titlebar,.win.focus .rail,.win.focus .sidebar{display:none}
+.win.focus .body{grid-template-columns:minmax(0,1fr)}
+
+/* ── Szyna ────────────────────────────────────────────────────────────── */
+.rail{background:var(--rail);border-right:1px solid var(--hairline);
+  display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0}
+.rail button{position:relative;width:38px;height:38px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ter)}
+.rail button:hover{background:var(--elevated);color:var(--prim)}
+.rail button[aria-current="true"]{background:var(--accent-soft);color:var(--accent)}
+.rail button[aria-current="true"]::before{content:"";position:absolute;left:-10px;top:9px;
+  width:3px;height:20px;border-radius:var(--r-pill);background:var(--accent)}
+.rail .spacer{flex:1}
+.rail svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Panel boczny ─────────────────────────────────────────────────────── */
+.sidebar{background:var(--rail);border-right:1px solid var(--hairline);
+  display:flex;flex-direction:column;min-height:0}
+.sb-scroll{flex:1;overflow:auto;padding:0 8px 8px}
+.search{margin:10px 8px 8px;display:flex;align-items:center;gap:7px;height:32px;padding:0 10px;
+  border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);color:var(--ter);font-size:12.5px}
+.search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;flex:none}
+.chips{display:flex;gap:5px;padding:0 8px 9px}
+.chip{font:500 10.5px/1 var(--mono);letter-spacing:.04em;padding:4px 8px;border-radius:var(--r-pill);
+  border:1px solid var(--border);color:var(--sec)}
+.chip[data-p="RDP"]{color:var(--p-rdp);border-color:color-mix(in srgb,var(--p-rdp) 45%,transparent)}
+.chip[data-p="SSH"]{color:var(--p-ssh);border-color:color-mix(in srgb,var(--p-ssh) 45%,transparent)}
+.chip[data-p="SFTP"]{color:var(--p-sftp);border-color:color-mix(in srgb,var(--p-sftp) 45%,transparent)}
+.chip[data-p="FTP"]{color:var(--p-sftp);border-color:color-mix(in srgb,var(--p-sftp) 45%,transparent)}
+.group{display:flex;align-items:center;gap:6px;width:100%;padding:7px 6px;color:var(--sec);
+  font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.group .gd{width:7px;height:7px;border-radius:2px;flex:none}
+.group .n{margin-left:auto;font:500 11px/1 var(--mono);color:var(--ter)}
+.group .caret{transition:transform .15s}
+.group[aria-expanded="false"] .caret{transform:rotate(-90deg)}
+.srv{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border-radius:var(--r-sm);
+  color:var(--prim);font-size:13px;text-align:left}
+.srv:hover{background:var(--elevated)}
+.srv[aria-current="true"]{background:var(--accent-soft)}
+.srv .ico{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7}
+.srv .dot{margin-left:auto;width:7px;height:7px;border-radius:50%;flex:none;background:var(--offline)}
+.srv .dot.on{background:var(--online)} .srv .dot.idle{background:var(--idle)}
+.srv .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-foot{padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--hairline)}
+.cta{height:36px;border-radius:var(--r-sm);color:#fff;font-weight:600;font-size:13px;
+  background:linear-gradient(45deg,var(--accent),color-mix(in srgb,var(--accent) 72%,#fff))}
+.ghost{height:32px;border-radius:var(--r-sm);border:1px dashed var(--border);color:var(--sec);font-size:12.5px}
+.ghost:hover{color:var(--prim);border-color:var(--accent)}
+
+/* ── Obszar treści ────────────────────────────────────────────────────── */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.view{display:none;flex:1;min-height:0;overflow:auto}
+.view[data-on]{display:flex;flex-direction:column}
+.pad{padding:20px 22px;display:flex;flex-direction:column;gap:16px}
+h2.vh{margin:0;font-size:19px;font-weight:640;letter-spacing:-.01em}
+p.vs{margin:0;color:var(--ter);font-size:12.5px}
+
+/* ── Pasek kart ───────────────────────────────────────────────────────── */
+.tabstrip{display:flex;align-items:center;gap:2px;padding:5px 6px;background:var(--rail);
+  border-bottom:1px solid var(--hairline);min-height:40px}
+.tab{display:flex;align-items:center;gap:7px;height:28px;padding:0 8px 0 9px;border-radius:var(--r-sm);
+  color:var(--sec);font-size:12.5px;max-width:190px}
+.tab:hover{background:var(--elevated)}
+.tab[aria-current="true"]{background:var(--panel);color:var(--prim);box-shadow:inset 0 0 0 1px var(--border)}
+.tab .pd{width:7px;height:7px;border-radius:2px;flex:none}
+.tab .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab .x{width:16px;height:16px;border-radius:var(--r-xs);display:grid;place-items:center;color:var(--ter);font-size:14px;line-height:1}
+.tab .x:hover{background:var(--danger);color:#fff}
+.actions{margin-left:auto;display:flex;gap:3px}
+.ibtn{width:28px;height:28px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ter)}
+.ibtn:hover{background:var(--elevated);color:var(--prim)}
+.ibtn[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.ibtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Sesje ────────────────────────────────────────────────────────────── */
+.session{display:none;flex:1;min-height:0}
+.session[data-on]{display:flex;flex-direction:column}
+.empty{flex:1;display:grid;place-items:center;padding:24px}
+.empty .box{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;max-width:420px}
+.empty h3{margin:0;font-size:17px;font-weight:620}
+.empty .qc{width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r-sm);
+  background:var(--panel);color:var(--ter);display:flex;align-items:center;padding:0 12px;font-size:12.5px}
+.empty .keys{font:400 11.5px/1.7 var(--mono);color:var(--ter)}
+
+/* pulpit zdalny (RDP) */
+.rdp{flex:1;background:#1b3a5c;position:relative;overflow:hidden;
+  background-image:linear-gradient(135deg,#123049,#22527d 60%,#2d6ea6)}
+.rdp .win95{position:absolute;left:8%;top:14%;width:56%;border-radius:6px;overflow:hidden;
+  background:#e9ecf1;color:#1b1d22;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.rdp .win95 .cap{height:26px;background:#d6dae2;display:flex;align-items:center;padding:0 9px;font-size:11.5px;gap:7px}
+.rdp .win95 .cnt{padding:11px 12px;font:400 11.5px/1.75 var(--mono);white-space:pre;overflow:hidden}
+.rdp .tskbar{position:absolute;left:0;right:0;bottom:0;height:26px;background:rgba(12,16,24,.82);
+  display:flex;align-items:center;gap:8px;padding:0 10px;color:#cdd2de;font-size:11px}
+.stat{display:flex;align-items:center;gap:10px;padding:6px 12px;border-top:1px solid var(--hairline);
+  background:var(--rail);font-size:11.5px;color:var(--ter)}
+.stat .k{font-family:var(--mono);color:var(--sec)}
+
+/* terminal */
+.term{flex:1;background:color-mix(in srgb,var(--canvas-a) 88%,#000);padding:12px 14px;
+  font:400 12.5px/1.65 var(--mono);overflow:auto;white-space:pre-wrap}
+.term .p{color:var(--p-ssh)} .term .d{color:var(--p-rdp)} .term .w{color:var(--idle)} .term .m{color:var(--ter)}
+.term .cur{display:inline-block;width:7px;height:14px;vertical-align:-2px;background:var(--accent);
+  animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* panel plików */
+.dual{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr);min-height:0}
+.pane{background:var(--panel);display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--hairline)}
+.pane:first-child{border-left:0}
+.ptool{display:flex;align-items:center;gap:4px;padding:7px 8px}
+.crumbs{display:flex;align-items:center;gap:2px;flex:1;min-width:0;overflow:hidden}
+.crumbs button{padding:2px 7px;border-radius:var(--r-xs);color:var(--sec);font-size:12px;white-space:nowrap}
+.crumbs button:hover{background:var(--elevated);color:var(--prim)}
+.crumbs span{color:var(--ter);font-size:12px}
+.filter{display:none;margin:0 12px 6px;height:28px;align-items:center;gap:7px;padding:0 9px;
+  border:1px solid var(--accent);border-radius:var(--r-sm);background:var(--canvas-a)}
+.filter[data-on]{display:flex}
+.filter input{flex:1;background:none;border:0;color:var(--prim);font:inherit;font-size:12.5px;outline:none}
+.cols{display:grid;grid-template-columns:24px minmax(0,1fr) 80px 116px;gap:6px;margin:0 14px;
+  padding-bottom:5px;border-bottom:1px solid var(--border);font-size:11px;color:var(--ter)}
+.cols .r{text-align:right}
+.rows{flex:1;overflow:auto;padding:4px 6px}
+.row{display:grid;grid-template-columns:24px minmax(0,1fr) 80px 116px;gap:6px;align-items:center;
+  padding:3px 8px;border-radius:var(--r-xs);font-size:12.5px;width:100%;text-align:left;color:var(--prim)}
+.row:hover{background:var(--elevated)}
+.row[aria-selected="true"]{background:var(--accent-soft)}
+.row svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7}
+.row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sz,.row .md{font:400 11.5px/1 var(--mono);color:var(--ter);font-variant-numeric:tabular-nums}
+.row .sz{text-align:right}
+.row .fo{color:var(--accent)}
+.gutter{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px}
+.gutter button{width:24px;height:22px;border-radius:var(--r-xs);display:grid;place-items:center;
+  border:1px solid var(--border);color:var(--sec)}
+.gutter button:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Pulpit (dashboard) ───────────────────────────────────────────────── */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tile{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 14px;
+  display:flex;flex-direction:column;gap:2px}
+.tile .l{font-size:11.5px;color:var(--ter)}
+.tile .v{font:600 26px/1.15 var(--ui);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tile .d{font:500 11px/1 var(--mono)}
+.charts{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:14px 16px 10px;
+  display:flex;flex-direction:column;gap:10px}
+.card h3{margin:0;font-size:13px;font-weight:620;display:flex;align-items:baseline;gap:8px}
+.card h3 em{margin-left:auto;font:500 11.5px/1 var(--mono);font-style:normal;color:var(--ter)}
+.card svg{width:100%;height:auto;display:block}
+.card text{font:400 9px var(--mono);fill:var(--ter)}
+
+/* ── Ostatnie ─────────────────────────────────────────────────────────── */
+.rlist{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden}
+.rlist .it{display:grid;grid-template-columns:26px minmax(0,1fr) 92px 108px 74px;gap:10px;align-items:center;
+  padding:10px 14px;border-top:1px solid var(--hairline);width:100%;text-align:left;font-size:13px;color:var(--prim)}
+.rlist .it:first-child{border-top:0}
+.rlist .it:hover{background:var(--elevated)}
+.rlist .it .p{font:500 10.5px/1 var(--mono);letter-spacing:.04em}
+.rlist .it .h,.rlist .it .w{font:400 11.5px/1 var(--mono);color:var(--ter);font-variant-numeric:tabular-nums}
+.rlist .it .w{text-align:right}
+
+/* ── REST ─────────────────────────────────────────────────────────────── */
+.rest{flex:1;display:grid;grid-template-rows:auto auto minmax(0,1fr);min-height:0}
+.urlbar{display:flex;gap:8px;padding:14px 16px 10px}
+.method{height:34px;padding:0 12px;border-radius:var(--r-sm);border:1px solid var(--border);
+  font:600 12px/1 var(--mono);letter-spacing:.05em;display:flex;align-items:center;color:var(--p-ssh)}
+.url{flex:1;height:34px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);
+  display:flex;align-items:center;padding:0 12px;font:400 12.5px/1 var(--mono);color:var(--prim);overflow:hidden}
+.url b{font-weight:400;color:var(--accent)}
+.send{height:34px;padding:0 18px;border-radius:var(--r-sm);color:#fff;font-weight:600;font-size:13px;background:var(--accent)}
+.rtabs{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--hairline)}
+.rtabs button{padding:8px 11px 9px;font-size:12.5px;color:var(--ter);border-bottom:2px solid transparent;margin-bottom:-1px}
+.rtabs button[aria-current="true"]{color:var(--prim);border-bottom-color:var(--accent)}
+.rsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0}
+.rpane{padding:12px 16px;overflow:auto;min-height:0}
+.rpane+.rpane{border-left:1px solid var(--hairline)}
+.rlabel{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ter);margin-bottom:8px}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:1px;background:var(--border);
+  border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;font:400 12px/1 var(--mono)}
+.kv div{background:var(--panel);padding:8px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kv div:nth-child(odd){color:var(--sec)}
+.code{font:400 12px/1.7 var(--mono);white-space:pre;overflow:auto;background:var(--panel);
+  border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 13px}
+.code .k{color:var(--p-rdp)} .code .s{color:var(--p-ssh)} .code .n{color:var(--idle)} .code .u{color:var(--ter)}
+.badge{display:inline-flex;align-items:center;gap:6px;font:500 11.5px/1 var(--mono);
+  padding:4px 9px;border-radius:var(--r-pill);background:color-mix(in srgb,var(--online) 18%,transparent);color:var(--online)}
+
+/* ── Ustawienia ───────────────────────────────────────────────────────── */
+.settings{flex:1;display:grid;grid-template-columns:216px minmax(0,1fr);min-height:0}
+.snav{border-right:1px solid var(--hairline);padding:16px 10px;display:flex;flex-direction:column;gap:2px}
+.snav h2{margin:0 8px 12px;font-size:19px;font-weight:640}
+.snav button{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);
+  color:var(--sec);font-size:13px;text-align:left}
+.snav button:hover{background:var(--elevated);color:var(--prim)}
+.snav button[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.snav svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;flex:none}
+.spane{overflow:auto;padding:18px 24px 28px}
+.sec{display:none;flex-direction:column;gap:4px}
+.sec[data-on]{display:flex}
+.sec>h3{margin:0;font-size:18px;font-weight:640}
+.sec>p{margin:0 0 10px;color:var(--ter);font-size:12.5px}
+.subhead{margin:16px 0 2px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ter)}
+.opt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;
+  padding:11px 0;border-top:1px solid var(--hairline)}
+.opt .lab{font-size:13.5px}
+.opt .hint{font-size:11.5px;color:var(--ter)}
+.seg{display:flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.seg button{padding:5px 13px;font-size:12.5px;color:var(--sec)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.num{width:74px;height:30px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);
+  display:grid;place-items:center;font:500 12.5px var(--mono);font-variant-numeric:tabular-nums}
+.sw{width:40px;height:22px;border-radius:var(--r-pill);background:var(--border);position:relative;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
+  background:var(--panel);transition:transform .15s}
+.sw[aria-pressed="true"]{background:var(--accent)}
+.sw[aria-pressed="true"]::after{transform:translateX(18px);background:#fff}
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.pre{border:2px solid var(--border);border-radius:var(--r-md);padding:0;overflow:hidden;text-align:left;background:var(--panel)}
+.pre[aria-pressed="true"]{border-color:var(--accent)}
+.pre .sw3{display:grid;grid-template-columns:1fr 1fr 34px;height:38px}
+.pre .nm{display:flex;align-items:center;gap:7px;padding:7px 10px;font-size:12.5px}
+.pre .nm i{width:8px;height:8px;border-radius:50%;flex:none}
+.accents{display:flex;gap:8px}
+.accents button{width:22px;height:22px;border-radius:50%;border:2px solid transparent}
+.accents button[aria-pressed="true"]{border-color:var(--prim)}
+
+/* ── Podgląd pliku (modal) ────────────────────────────────────────────── */
+.modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.45);padding:24px;z-index:20}
+.modal[data-on]{display:grid}
+.dlg{width:min(760px,100%);max-height:80vh;display:flex;flex-direction:column;background:var(--canvas-a);
+  border:1px solid var(--border);border-radius:var(--r-md);box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}
+.dlg header{display:flex;align-items:center;gap:10px;padding:14px 18px 10px}
+.dlg header h3{margin:0;font-size:16px;font-weight:620}
+.dlg header .m{margin-left:auto;font:400 11.5px/1 var(--mono);color:var(--ter)}
+.dlg .bodyc{margin:0 18px;flex:1;min-height:0;overflow:auto;background:var(--panel);
+  border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;
+  font:400 12px/1.55 var(--mono);white-space:pre;color:var(--prim)}
+.dlg .bodyc .g{color:var(--ter)}
+.dlg footer{display:flex;gap:8px;padding:12px 18px 16px}
+.dlg footer .note{margin-right:auto;font-size:11.5px;color:var(--ter);align-self:center}
+.dlg footer button{height:32px;padding:0 14px;border-radius:var(--r-sm);border:1px solid var(--border);font-size:12.5px;color:var(--sec)}
+.dlg footer button.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+
+.foot{color:var(--ter);font-size:12px;display:flex;flex-wrap:wrap;gap:6px 18px}
+.foot code{font:500 11.5px var(--mono);color:var(--sec)}
+@media (max-width:980px){
+  .body{grid-template-columns:56px minmax(0,1fr);height:auto;min-height:620px}
+  .sidebar{display:none}
+  .tiles{grid-template-columns:repeat(2,1fr)}
+  .charts,.rsplit,.dual{grid-template-columns:minmax(0,1fr)}
+  .dual{grid-template-rows:1fr auto 1fr}
+  .gutter{flex-direction:row;padding:6px 0}
+  .settings{grid-template-columns:minmax(0,1fr)}
+  .snav{border-right:0;border-bottom:1px solid var(--hairline)}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="intro">
+    <div>
+      <h1>Atlas interfejsu Waypoint</h1>
+      <p>Wszystkie widoki i moduły menedżera połączeń w jednym miejscu. Szyna po lewej przełącza widoki, karty u góry — sesje, a sterowanie motywem w Ustawieniach naprawdę przemalowuje tę stronę.</p>
+    </div>
+    <div class="legend">
+      <b>RDP</b><b>SSH</b><b>VNC</b><b>SFTP</b><b>FTP</b><b>Telnet</b><b>Serial</b><b>REST</b>
+    </div>
+  </div>
+
+  <div class="win" id="win">
+    <div class="titlebar">
+      <div class="mark">W</div><div class="t">Waypoint</div>
+      <div class="wbtns">
+        <button title="Minimalizuj">–</button>
+        <button title="Maksymalizuj">▫</button>
+        <button class="x" title="Zamknij">✕</button>
+      </div>
+    </div>
+
+    <div class="body">
+      <!-- ── szyna ── -->
+      <nav class="rail" aria-label="Widoki">
+        <button data-view="dashboard" title="Pulpit" aria-current="false">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        </button>
+        <button data-view="sessions" title="Połączenia" aria-current="true">
+          <svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 20h8M12 17v3"/></svg>
+        </button>
+        <button data-view="recent" title="Ostatnie" aria-current="false">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.5l3.5 2"/></svg>
+        </button>
+        <button data-view="rest" title="Kolekcje REST" aria-current="false">
+          <svg viewBox="0 0 24 24"><path d="M9 4H7.5A2.5 2.5 0 0 0 5 6.5v3A2.5 2.5 0 0 1 2.5 12 2.5 2.5 0 0 1 5 14.5v3A2.5 2.5 0 0 0 7.5 20H9M15 4h1.5A2.5 2.5 0 0 1 19 6.5v3a2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0-2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H15"/></svg>
+        </button>
+        <button data-view="tools" title="Generator haseł" aria-current="false">
+          <svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3.5M15.5 12v2.5"/></svg>
+        </button>
+        <div class="spacer"></div>
+        <button data-view="settings" title="Ustawienia" aria-current="false">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
+        </button>
+      </nav>
+
+      <!-- ── panel boczny ── -->
+      <aside class="sidebar">
+        <div class="search" id="sbSearch">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span>Szukaj serwera…</span>
+        </div>
+        <div class="chips" id="sbChips">
+          <span class="chip" data-p="RDP">RDP</span><span class="chip" data-p="SSH">SSH</span>
+          <span class="chip" data-p="SFTP">SFTP</span><span class="chip" data-p="FTP">FTP</span>
+        </div>
+        <div class="sb-scroll" id="tree"></div>
+        <div class="sb-foot">
+          <button class="cta">Szybkie połączenie</button>
+          <button class="ghost">+ Dodaj serwer</button>
+        </div>
+      </aside>
+
+      <!-- ── treść ── -->
+      <main class="main">
+        <!-- POŁĄCZENIA -->
+        <section class="view" id="v-sessions" data-on>
+          <div class="tabstrip">
+            <div id="tabs" style="display:flex;gap:2px;min-width:0"></div>
+            <div class="actions">
+              <button class="ibtn" title="Szybkie przełączanie sesji"><svg viewBox="0 0 24 24"><path d="M4 8h13m0 0-3-3m3 3-3 3M20 16H7m0 0 3-3m-3 3 3 3"/></svg></button>
+              <button class="ibtn" id="btnFocus" aria-pressed="false" title="Tryb skupienia — chowa pasek tytułu i panel boczny"><svg viewBox="0 0 24 24"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/></svg></button>
+              <button class="ibtn" title="Pełny ekran"><svg viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg></button>
+              <button class="ibtn" title="Rozłącz"><svg viewBox="0 0 24 24"><path d="M18.4 5.6 5.6 18.4M9 5a4.2 4.2 0 0 1 6 0l1 1a4.2 4.2 0 0 1 0 6M15 19a4.2 4.2 0 0 1-6 0l-1-1a4.2 4.2 0 0 1 0-6"/></svg></button>
+            </div>
+          </div>
+
+          <!-- pulpit zdalny -->
+          <div class="session" id="s-rdp">
+            <div class="rdp">
+              <div class="win95">
+                <div class="cap"><span>■</span><span>Wiersz polecenia — MSDEV-B</span></div>
+                <div class="cnt">C:\Users\Administrator&gt;systeminfo | findstr /C:"Czas pracy"
+Czas pracy systemu:        18 dni, 4 godz., 12 min
+
+C:\Users\Administrator&gt;_</div>
+              </div>
+              <div class="tskbar"><span>■</span><span>MSDEV-B — 1920 × 1080 · 32-bit</span><span style="margin-left:auto">14:42</span></div>
+            </div>
+            <div class="stat">
+              <span class="k">MSDEV-B</span><span>·</span><span>RDP 3389</span><span>·</span>
+              <span>Skalowanie 100%</span><span>·</span><span>Schowek i dyski przekierowane</span>
+              <span style="margin-left:auto;color:var(--online)">● Połączono · 21 ms</span>
+            </div>
+          </div>
+
+          <!-- terminal SSH -->
+          <div class="session" id="s-ssh">
+            <div class="term"><span class="p">filip@magnum</span>:<span class="d">~</span>$ systemctl status waypoint-sync
+<span class="m">●</span> waypoint-sync.service - Synchronizacja katalogów OMPro
+     Loaded: loaded (/etc/systemd/system/waypoint-sync.service; enabled)
+     Active: <span class="p">active (running)</span> since Wed 2026-09-02 06:15:03 CEST; 8h ago
+   Main PID: 2417 (sync.sh)
+      Tasks: 3 (limit: 9448)
+     Memory: 41.2M
+
+wrz 02 14:38:11 magnum sync.sh[2417]: <span class="m">pobrano 214 plików (1,4 GB) w 6 min 12 s</span>
+wrz 02 14:38:11 magnum sync.sh[2417]: <span class="w">pominięto 3 pliki zablokowane przez proces</span>
+
+<span class="p">filip@magnum</span>:<span class="d">~</span>$ <span class="cur"></span></div>
+            <div class="stat">
+              <span class="k">Magnum</span><span>·</span><span>SSH 22</span><span>·</span>
+              <span>xterm-256color · 148 × 38</span><span>·</span><span>Ctrl+Shift+F szukaj w buforze</span>
+              <span style="margin-left:auto;color:var(--online)">● Połączono · 9 ms</span>
+            </div>
+          </div>
+
+          <!-- panel plików -->
+          <div class="session" id="s-sftp">
+            <div class="dual">
+              <div class="pane">
+                <div class="ptool">
+                  <button class="ibtn" title="Katalog wyżej"><svg viewBox="0 0 24 24"><path d="M12 19V5m0 0-6 6m6-6 6 6"/></svg></button>
+                  <button class="ibtn" title="Odśwież"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button>
+                  <div class="crumbs" id="crumbsL"></div>
+                  <button class="ibtn" id="btnPreview" title="Podgląd"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg></button>
+                  <button class="ibtn" id="btnFilter" aria-pressed="false" title="Filtruj listę (Ctrl+F)"><svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></button>
+                  <button class="ibtn" title="Zmień nazwę"><svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg></button>
+                  <button class="ibtn" title="Usuń"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                </div>
+                <div class="filter" id="filterRow">
+                  <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:none;stroke:var(--ter);stroke-width:1.8"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
+                  <input id="filterBox" placeholder="Filtruj po nazwie…" aria-label="Filtruj listę plików">
+                </div>
+                <div class="cols"><span></span><span>Nazwa ▲</span><span class="r">Rozmiar</span><span>Zmieniono</span></div>
+                <div class="rows" id="rowsL"></div>
+              </div>
+              <div class="gutter">
+                <button title="Wyślij na serwer">→</button>
+                <button title="Pobierz na dysk">←</button>
+              </div>
+              <div class="pane">
+                <div class="ptool">
+                  <button class="ibtn" title="Katalog wyżej"><svg viewBox="0 0 24 24"><path d="M12 19V5m0 0-6 6m6-6 6 6"/></svg></button>
+                  <button class="ibtn" title="Odśwież"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button>
+                  <div class="crumbs" id="crumbsR"></div>
+                </div>
+                <div class="cols"><span></span><span>Nazwa ▲</span><span class="r">Rozmiar</span><span>Zmieniono</span></div>
+                <div class="rows" id="rowsR"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span class="k">Magnum</span><span>·</span><span>SFTP 22</span><span>·</span>
+              <span id="fsStatus">Gotowe ✓</span>
+              <span style="margin-left:auto">Dwuklik na pliku otwiera podgląd · F2 zmiana nazwy · Delete usuwa</span>
+            </div>
+          </div>
+
+          <!-- stan pusty -->
+          <div class="session" id="s-empty">
+            <div class="empty"><div class="box">
+              <h3>Wybierz połączenie</h3>
+              <p style="margin:0;color:var(--ter);font-size:12.5px">Kliknij serwer na liście po lewej albo wpisz adres poniżej — Waypoint rozpozna protokół po porcie.</p>
+              <div class="qc">host · user@host · host:port</div>
+              <div class="keys">Ctrl+K szukaj · Ctrl+P paleta poleceń · F11 pełny ekran</div>
+            </div></div>
+          </div>
+        </section>
+
+        <!-- PULPIT -->
+        <section class="view" id="v-dashboard">
+          <div class="pad">
+            <div><h2 class="vh">Pulpit</h2><p class="vs">Stan serwerów i historia połączeń z ostatnich dwóch tygodni.</p></div>
+            <div class="tiles">
+              <div class="tile"><span class="l">Serwery</span><span class="v">21</span><span class="d" style="color:var(--ter)">6 RDP · 14 FTP · 1 SSH</span></div>
+              <div class="tile"><span class="l">Osiągalne</span><span class="v">18</span><span class="d" style="color:var(--online)">▲ 2 od wczoraj</span></div>
+              <div class="tile"><span class="l">Otwarte sesje</span><span class="v">4</span><span class="d" style="color:var(--ter)">3 RDP · 1 SFTP</span></div>
+              <div class="tile"><span class="l">Śr. opóźnienie</span><span class="v">24<span style="font-size:15px;color:var(--ter)"> ms</span></span><span class="d" style="color:var(--idle)">▼ 3 ms od wczoraj</span></div>
+            </div>
+            <div class="charts">
+              <div class="card"><h3>Opóźnienie <em>24 h · śr. 24 ms</em></h3>
+                <svg viewBox="0 0 320 96" role="img" aria-label="Opóźnienie w ostatnich 24 godzinach, od 12 do 47 ms">
+                  <line x1="34" y1="12" x2="316" y2="12" stroke="var(--hairline)" stroke-width="1"/>
+                  <line x1="34" y1="43" x2="316" y2="43" stroke="var(--hairline)" stroke-width="1"/>
+                  <line x1="34" y1="74" x2="316" y2="74" stroke="var(--hairline)" stroke-width="1"/>
+                  <text x="30" y="15" text-anchor="end">48</text><text x="30" y="46" text-anchor="end">30</text><text x="30" y="77" text-anchor="end">12</text>
+                  <path d="M34 62 62 55 90 68 118 49 146 57 174 34 202 45 230 27 258 40 286 22 316 33 316 74 34 74Z"
+                        fill="var(--accent-soft)"/>
+                  <path d="M34 62 62 55 90 68 118 49 146 57 174 34 202 45 230 27 258 40 286 22 316 33"
+                        fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+                  <circle cx="316" cy="33" r="3.2" fill="var(--accent)"/>
+                  <text x="34" y="92">00:00</text><text x="175" y="92" text-anchor="middle">12:00</text><text x="316" y="92" text-anchor="end">teraz</text>
+                </svg></div>
+              <div class="card"><h3>Dostępność <em>18/21</em></h3>
+                <svg viewBox="0 0 320 96" role="img" aria-label="18 serwerów online, 2 z ostrzeżeniem, 1 offline">
+                  <rect x="34" y="26" width="242" height="18" rx="9" fill="var(--online)"/>
+                  <rect x="276" y="26" width="26" height="18" rx="9" fill="var(--idle)"/>
+                  <rect x="302" y="26" width="14" height="18" rx="7" fill="var(--offline)"/>
+                  <circle cx="40" cy="66" r="4" fill="var(--online)"/><text x="50" y="69">Online 18</text>
+                  <circle cx="128" cy="66" r="4" fill="var(--idle)"/><text x="138" y="69">Wolne 2</text>
+                  <circle cx="212" cy="66" r="4" fill="var(--offline)"/><text x="222" y="69">Offline 1</text>
+                </svg></div>
+              <div class="card"><h3>Połączenia w tygodniu <em>142</em></h3>
+                <svg viewBox="0 0 320 96" role="img" aria-label="Połączenia według dnia tygodnia, od 6 w niedzielę do 31 we wtorek">
+                  <rect x="34" y="30" width="30" height="46" rx="4" fill="var(--accent)" opacity=".55"/>
+                  <rect x="74" y="18" width="30" height="58" rx="4" fill="var(--accent)"/>
+                  <rect x="114" y="26" width="30" height="50" rx="4" fill="var(--accent)" opacity=".8"/>
+                  <rect x="154" y="34" width="30" height="42" rx="4" fill="var(--accent)" opacity=".7"/>
+                  <rect x="194" y="24" width="30" height="52" rx="4" fill="var(--accent)" opacity=".85"/>
+                  <rect x="234" y="58" width="30" height="18" rx="4" fill="var(--accent)" opacity=".35"/>
+                  <rect x="274" y="65" width="30" height="11" rx="4" fill="var(--accent)" opacity=".3"/>
+                  <text x="49" y="90" text-anchor="middle">Pn</text><text x="89" y="90" text-anchor="middle">Wt</text>
+                  <text x="129" y="90" text-anchor="middle">Śr</text><text x="169" y="90" text-anchor="middle">Cz</text>
+                  <text x="209" y="90" text-anchor="middle">Pt</text><text x="249" y="90" text-anchor="middle">So</text>
+                  <text x="289" y="90" text-anchor="middle">Nd</text>
+                </svg></div>
+              <div class="card"><h3>Protokoły <em>21 serwerów</em></h3>
+                <svg viewBox="0 0 320 96" role="img" aria-label="14 serwerów FTP, 6 RDP, 1 SSH">
+                  <rect x="34" y="16" width="188" height="14" rx="7" fill="var(--p-sftp)"/><text x="230" y="27">FTP 14</text>
+                  <rect x="34" y="40" width="80" height="14" rx="7" fill="var(--p-rdp)"/><text x="122" y="51">RDP 6</text>
+                  <rect x="34" y="64" width="14" height="14" rx="7" fill="var(--p-ssh)"/><text x="56" y="75">SSH 1</text>
+                </svg></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- OSTATNIE -->
+        <section class="view" id="v-recent">
+          <div class="pad">
+            <div><h2 class="vh">Ostatnie</h2><p class="vs">Dwuklik łączy ponownie z zapamiętanymi poświadczeniami.</p></div>
+            <div class="rlist" id="recent"></div>
+          </div>
+        </section>
+
+        <!-- REST -->
+        <section class="view" id="v-rest">
+          <div class="rest">
+            <div class="urlbar">
+              <span class="method">GET</span>
+              <span class="url">{{base_url}}<b>/api/v2/orders</b>?status=pending&amp;limit=50</span>
+              <button class="send">Wyślij</button>
+            </div>
+            <div class="rtabs" id="restTabs">
+              <button aria-current="true">Parametry</button><button>Nagłówki</button>
+              <button>Treść</button><button>Uwierzytelnianie</button><button>Skrypty</button><button>Historia</button>
+            </div>
+            <div class="rsplit">
+              <div class="rpane">
+                <div class="rlabel">Parametry zapytania</div>
+                <div class="kv">
+                  <div>status</div><div>pending</div>
+                  <div>limit</div><div>50</div>
+                  <div>updated_since</div><div>{{last_run}}</div>
+                </div>
+                <div class="rlabel" style="margin-top:16px">Środowisko · OMPro produkcja</div>
+                <div class="kv">
+                  <div>base_url</div><div>https://api.ompro.pl</div>
+                  <div>last_run</div><div>2026-09-02T06:00:00Z</div>
+                  <div>api_key</div><div style="color:var(--ter)">(ukryta — Menedżer poświadczeń)</div>
+                </div>
+              </div>
+              <div class="rpane">
+                <div class="rlabel" style="display:flex;align-items:center;gap:10px">
+                  Odpowiedź <span class="badge">200 OK · 214 ms · 4,1 KB</span>
+                </div>
+                <div class="code">{
+  <span class="k">"count"</span>: <span class="n">3</span>,
+  <span class="k">"orders"</span>: [
+    {
+      <span class="k">"id"</span>: <span class="s">"ORD-2026-004182"</span>,
+      <span class="k">"customer"</span>: <span class="s">"Carlsberg B Power"</span>,
+      <span class="k">"status"</span>: <span class="s">"pending"</span>,
+      <span class="k">"total_net"</span>: <span class="n">18420.50</span>,
+      <span class="k">"updated_at"</span>: <span class="s">"2026-09-02T13:41:08Z"</span>
+    },
+    {
+      <span class="k">"id"</span>: <span class="s">"ORD-2026-004183"</span>,
+      <span class="k">"customer"</span>: <span class="s">"Unilever Polska"</span>,
+      <span class="k">"status"</span>: <span class="s">"pending"</span>,
+      <span class="k">"total_net"</span>: <span class="n">7310.00</span>,
+      <span class="k">"partial"</span>: <span class="u">true</span>
+    }
+  ]
+}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- GENERATOR HASEŁ -->
+        <section class="view" id="v-tools">
+          <div class="pad">
+            <div><h2 class="vh">Generator haseł</h2><p class="vs">Hasła nie są nigdzie zapisywane — trafiają do schowka albo prosto do pola poświadczeń.</p></div>
+            <div class="card" style="max-width:560px">
+              <div class="code" style="font-size:15px;letter-spacing:.04em;text-align:center;padding:16px">tG7#qvLm2$Rk9Xz@</div>
+              <div class="opt" style="border-top:0"><span class="lab">Długość</span><span class="num">16</span></div>
+              <div class="opt"><span class="lab">Wielkie litery <span class="hint">A–Z</span></span><button class="sw" aria-pressed="true" aria-label="Wielkie litery"></button></div>
+              <div class="opt"><span class="lab">Cyfry <span class="hint">0–9</span></span><button class="sw" aria-pressed="true" aria-label="Cyfry"></button></div>
+              <div class="opt"><span class="lab">Znaki specjalne <span class="hint">!@#$%^&amp;*</span></span><button class="sw" aria-pressed="true" aria-label="Znaki specjalne"></button></div>
+              <div class="opt"><span class="lab">Pomiń podobne <span class="hint">0/O, 1/l/I</span></span><button class="sw" aria-pressed="false" aria-label="Pomiń podobne"></button></div>
+              <div style="display:flex;gap:8px;padding-top:6px">
+                <button class="cta" style="flex:1">Generuj</button>
+                <button class="ghost" style="flex:1;border-style:solid">Kopiuj</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- USTAWIENIA -->
+        <section class="view" id="v-settings">
+          <div class="settings">
+            <nav class="snav" id="snav">
+              <h2>Ustawienia</h2>
+              <button data-sec="iface" aria-current="true"><svg viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2.2"/><circle cx="15" cy="16" r="2.2"/></svg>Interfejs</button>
+              <button data-sec="conn"><svg viewBox="0 0 24 24"><path d="M9 5a4.2 4.2 0 0 1 6 0l1 1a4.2 4.2 0 0 1 0 6M15 19a4.2 4.2 0 0 1-6 0l-1-1a4.2 4.2 0 0 1 0-6"/></svg>Połączenie</button>
+              <button data-sec="behavior"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/></svg>Zachowanie</button>
+              <button data-sec="autoconnect"><svg viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 9-12h-7z"/></svg>Połącz na starcie</button>
+              <button data-sec="profiles"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.4 7-5.4S19 16.4 19 20"/></svg>Profile poświadczeń</button>
+              <button data-sec="data"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/></svg>Dane aplikacji</button>
+              <button data-sec="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>O aplikacji</button>
+            </nav>
+            <div class="spane">
+              <div class="sec" data-sec="iface" data-on>
+                <h3>Interfejs</h3><p>Wygląd, motyw i sposób wyświetlania listy serwerów.</p>
+
+                <div class="subhead">Wygląd</div>
+                <div class="opt"><span class="lab">Motyw</span>
+                  <div class="seg" id="themeSeg">
+                    <button data-theme="dark" aria-pressed="false">Ciemny</button>
+                    <button data-theme="light" aria-pressed="false">Jasny</button>
+                    <button data-theme="system" aria-pressed="true">Systemowy</button>
+                  </div>
+                </div>
+                <div class="opt" style="grid-template-columns:1fr">
+                  <div>
+                    <span class="lab">Preset palety</span>
+                    <div class="presets" id="presets"></div>
+                  </div>
+                </div>
+                <div class="opt"><span class="lab">Kolor akcentu</span>
+                  <div class="accents" id="accents"></div>
+                </div>
+                <div class="opt"><span class="lab">Język / Language</span><span class="num" style="width:96px">Polski</span></div>
+                <div class="opt"><span class="lab">Skala interfejsu (%)<span class="hint" style="display:block">Ctrl + kółko myszy</span></span><span class="num">90</span></div>
+
+                <div class="subhead">Lista serwerów</div>
+                <div class="opt"><span class="lab">Styl widoku listy</span>
+                  <div class="seg" id="listSeg"><button aria-pressed="false">Domyślny</button><button aria-pressed="true">Minimalistyczny</button></div>
+                </div>
+                <div class="opt"><span class="lab">Pokazuj opóźnienia (ms) w liście</span><button class="sw" aria-pressed="false" aria-label="Pokazuj opóźnienia"></button></div>
+
+                <div class="subhead">Zaawansowane</div>
+                <div class="opt"><span class="lab">Opóźnienie paska pełnoekranowego (ms)</span><span class="num">450</span></div>
+                <div class="opt"><span class="lab">Krycie panelu w trybie skupienia (%)</span><span class="num">92</span></div>
+              </div>
+
+              <div class="sec" data-sec="conn">
+                <h3>Połączenie</h3><p>Domyślne parametry sesji zdalnego pulpitu i przekierowań.</p>
+                <div class="opt"><span class="lab">Port domyślny RDP</span><span class="num">3389</span></div>
+                <div class="opt"><span class="lab">Głębia kolorów</span><span class="num" style="width:96px">32-bit</span></div>
+                <div class="opt"><span class="lab">Skalowanie pulpitu zdalnego</span>
+                  <div class="seg"><button aria-pressed="true">Dopasuj</button><button aria-pressed="false">100%</button><button aria-pressed="false">Rozciągnij</button></div></div>
+                <div class="opt"><span class="lab">Przekieruj schowek</span><button class="sw" aria-pressed="true" aria-label="Przekieruj schowek"></button></div>
+                <div class="opt"><span class="lab">Przekieruj dyski lokalne</span><button class="sw" aria-pressed="true" aria-label="Przekieruj dyski"></button></div>
+                <div class="opt"><span class="lab">Automatyczne ponowne łączenie <span class="hint" style="display:block">po zerwaniu sesji, do 3 prób</span></span><button class="sw" aria-pressed="true" aria-label="Ponowne łączenie"></button></div>
+                <div class="opt"><span class="lab">Sonda osiągalności <span class="hint" style="display:block">co 60 s, limit czasu 2 s</span></span><button class="sw" aria-pressed="true" aria-label="Sonda osiągalności"></button></div>
+              </div>
+
+              <div class="sec" data-sec="behavior">
+                <h3>Zachowanie</h3><p>Co Waypoint robi przy zamykaniu, minimalizacji i skrótach globalnych.</p>
+                <div class="opt"><span class="lab">Potwierdzaj zamknięcie aktywnej sesji</span><button class="sw" aria-pressed="true" aria-label="Potwierdzaj zamknięcie"></button></div>
+                <div class="opt"><span class="lab">Minimalizuj do zasobnika</span><button class="sw" aria-pressed="true" aria-label="Minimalizuj do zasobnika"></button></div>
+                <div class="opt"><span class="lab">Tryb skupienia po zmaksymalizowaniu</span><button class="sw" aria-pressed="true" aria-label="Tryb skupienia"></button></div>
+                <div class="opt"><span class="lab">Skrót globalny <span class="hint" style="display:block">Ctrl+Alt+Q — szybkie połączenie</span></span><button class="sw" aria-pressed="true" aria-label="Skrót globalny"></button></div>
+                <div class="opt"><span class="lab">Dziennik połączeń</span><button class="sw" aria-pressed="true" aria-label="Dziennik połączeń"></button></div>
+                <div class="opt"><span class="lab">Sprawdzaj aktualizacje</span><button class="sw" aria-pressed="true" aria-label="Sprawdzaj aktualizacje"></button></div>
+              </div>
+
+              <div class="sec" data-sec="autoconnect">
+                <h3>Połącz na starcie</h3><p>Zaznaczone serwery łączą się automatycznie po uruchomieniu Waypointa.</p>
+                <div class="opt"><span class="lab">MSDEV-B <span class="hint" style="display:block">ABSYSCO | RDP · 10.20.1.14</span></span><button class="sw" aria-pressed="true" aria-label="MSDEV-B na starcie"></button></div>
+                <div class="opt"><span class="lab">MMAPP <span class="hint" style="display:block">ABSYSCO | RDP · 10.20.1.21</span></span><button class="sw" aria-pressed="true" aria-label="MMAPP na starcie"></button></div>
+                <div class="opt"><span class="lab">Magnum <span class="hint" style="display:block">ABSYSCO | SSH · magnum.absysco.pl</span></span><button class="sw" aria-pressed="false" aria-label="Magnum na starcie"></button></div>
+                <div class="opt"><span class="lab">Bazy <span class="hint" style="display:block">FTP · ftp.bazy.absysco.pl</span></span><button class="sw" aria-pressed="false" aria-label="Bazy na starcie"></button></div>
+              </div>
+
+              <div class="sec" data-sec="profiles">
+                <h3>Profile poświadczeń</h3>
+                <p>Hasła trafiają do Menedżera poświadczeń Windows (DPAPI) — nigdy do plików aplikacji.</p>
+                <div class="rlist" style="margin-top:8px">
+                  <div class="it" style="grid-template-columns:26px 1fr 150px 90px">
+                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:var(--accent);stroke-width:1.7"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.4 7-5.4S19 16.4 19 20"/></svg>
+                    <span>Domena ABSYSCO</span><span class="h">ABSYSCO\filip.b</span><span class="w" style="color:var(--online)">6 serwerów</span>
+                  </div>
+                  <div class="it" style="grid-template-columns:26px 1fr 150px 90px">
+                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:var(--p-ssh);stroke-width:1.7"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.4 7-5.4S19 16.4 19 20"/></svg>
+                    <span>Klucz SSH — Magnum</span><span class="h">id_ed25519</span><span class="w" style="color:var(--online)">1 serwer</span>
+                  </div>
+                  <div class="it" style="grid-template-columns:26px 1fr 150px 90px">
+                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:var(--p-sftp);stroke-width:1.7"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.4 7-5.4S19 16.4 19 20"/></svg>
+                    <span>FTP klienci</span><span class="h">wymiana@absysco</span><span class="w" style="color:var(--online)">14 serwerów</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sec" data-sec="data">
+                <h3>Dane aplikacji</h3>
+                <p>Ustawienia i lista serwerów leżą w <code style="font-family:var(--mono);font-size:12px">%APPDATA%\RdpManager</code>. Kopia zapasowa powstaje przed każdym zapisem.</p>
+                <div class="opt"><span class="lab">Otwórz katalog danych</span><button class="ghost" style="border-style:solid;padding:0 14px">Otwórz</button></div>
+                <div class="opt"><span class="lab">Eksportuj profil <span class="hint" style="display:block">serwery, grupy i ustawienia — bez haseł</span></span><button class="ghost" style="border-style:solid;padding:0 14px">Eksportuj…</button></div>
+                <div class="opt"><span class="lab">Importuj profil</span><button class="ghost" style="border-style:solid;padding:0 14px">Importuj…</button></div>
+                <div class="opt"><span class="lab">Dziennik połączeń <span class="hint" style="display:block">1 284 wpisy · 412 KB</span></span><button class="ghost" style="border-style:solid;padding:0 14px;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent)">Wyczyść</button></div>
+              </div>
+
+              <div class="sec" data-sec="about">
+                <h3>O aplikacji</h3><p>Waypoint — menedżer połączeń zdalnych.</p>
+                <div class="opt"><span class="lab">Wersja</span><span class="num" style="width:96px">1.14.0</span></div>
+                <div class="opt"><span class="lab">Platforma</span><span class="num" style="width:140px">.NET 8 · WPF</span></div>
+                <div class="opt"><span class="lab">Protokoły</span><span class="hint">RDP · SSH · VNC · SFTP · FTP/FTPS · Telnet · Serial · REST</span></div>
+                <div class="opt"><span class="lab">Aktualizacje</span><span class="badge">Masz najnowszą wersję</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Szyna po lewej przełącza widoki.</span>
+    <span>Karty u góry — sesje; <code>×</code> zamyka i odsłania stan pusty.</span>
+    <span>Ustawienia → Interfejs przemalowują tę stronę na żywo.</span>
+    <span>W panelu plików: okruszki nawigują, lejek filtruje, dwuklik otwiera podgląd.</span>
+  </div>
+</div>
+
+<!-- podgląd pliku -->
+<div class="modal" id="preview" role="dialog" aria-modal="true" aria-labelledby="pvName">
+  <div class="dlg">
+    <header>
+      <h3 id="pvName">SendABVPhotosToFtp.sql</h3>
+      <span class="m">Rozmiar: 8,4 KB · UTF-8</span>
+    </header>
+    <div class="bodyc" id="pvBody"></div>
+    <footer>
+      <span class="note">Pobrane do pamięci — nic nie trafiło na dysk.</span>
+      <button>Kopiuj</button><button>Zapisz jako…</button>
+      <button class="pri" id="pvClose">Zamknij</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+
+  /* ── dane ───────────────────────────────────────────────────────────── */
+  var GROUPS=[
+    {name:"ABSYSCO | RDP",color:"var(--gd-prod)",proto:"rdp",servers:[
+      ["MSDEV-B","on"],["MMAPP","on"],["ITS-SRV-MSAPP","on"],["MMSQL002","on"],["MMTST006","on"],["ABS-SQL-2022","on"]]},
+    {name:"FTP",color:"var(--gd-stag)",proto:"sftp",servers:[
+      ["Bazy","on"],["CarlsbergBPower","on"],["DanoneExportOSA","on"],["EmploexExport","on"],["IQS","on"],
+      ["Karcher","on"],["MerService","on"],["MerService_RedBull","on"],["Option1","off"],["Unilever","off"],
+      ["XBS_RedBull","off"],["ZdjeciaBAT","on"],["ZZZOLD_FTPRed","off"],["Ciech","idle"]]},
+    {name:"ABSYSCO | SSH",color:"var(--gd-client)",proto:"ssh",servers:[["Magnum","on"]]}
+  ];
+  var TABS=[
+    {id:"s-rdp",name:"MSDEV-B",color:"var(--p-rdp)"},
+    {id:"s-ssh",name:"Magnum",color:"var(--p-ssh)"},
+    {id:"s-sftp",name:"Magnum — pliki",color:"var(--p-sftp)"}
+  ];
+  var RECENT=[
+    ["MSDEV-B","RDP","var(--p-rdp)","10.20.1.14","dziś 14:42","41 min"],
+    ["Magnum","SSH","var(--p-ssh)","magnum.absysco.pl","dziś 13:58","1 godz. 24 min"],
+    ["OMPro","SFTP","var(--p-sftp)","repo.absysco.pl","dziś 11:07","12 min"],
+    ["CarlsbergBPower","FTP","var(--p-sftp)","ftp.cbpower.pl","wczoraj 16:20","6 min"],
+    ["MMSQL002","RDP","var(--p-rdp)","10.20.1.33","wczoraj 09:14","2 godz. 3 min"],
+    ["api.ompro.pl","REST","var(--p-rest)","/api/v2/orders","wczoraj 08:02","—"]
+  ];
+  /* drzewa panelu plików — klik w okruszek naprawdę zmienia listing */
+  var LOCAL={
+    "C:":[["Apps",1,"","2026-09-02 12:18"],["Users",1,"","2026-08-28 11:47"],["Windows",1,"","2026-07-30 16:31"],["pagefile.sys",0,"8,0 GB","2026-09-02 06:15"]],
+    "C:/Apps":[["AI_Compliance",1,"","2026-04-15 23:34"],["BAT_Contracts",1,"","2026-08-19 14:22"],["BetterSQL",1,"","2026-08-01 20:57"],
+      ["DBMigrationTool",1,"","2026-07-30 16:31"],["DocFlow",1,"","2026-04-16 00:23"],["FaceBlur",1,"","2025-11-24 23:24"],
+      ["NoteStudio",1,"","2026-08-28 11:47"],["OneMobilePro",1,"","2026-09-02 10:41"],["Postman",1,"","2026-07-08 19:21"],
+      ["RemoteDesktopManager",1,"","2026-09-02 18:01"],["SQL",1,"","2026-08-28 15:39"],["n8n_docker",1,"","2026-09-02 12:18"]],
+    "C:/Users":[["Filip Benklewski",1,"","2026-09-02 16:49"],["Public",1,"","2025-04-26 12:04"]]
+  };
+  var REMOTE={
+    "/":[["repository",1,"","2026-07-17 11:41"]],
+    "/repository":[["internal",1,"","2026-07-17 11:41"],["public",1,"","2026-06-02 09:12"]],
+    "/repository/internal":[["pl",1,"","2026-07-17 11:41"],["en",1,"","2026-05-14 10:03"]],
+    "/repository/internal/pl":[["OMPro",1,"","2026-07-21 13:49"],["Magnum",1,"","2026-07-19 08:11"]],
+    "/repository/internal/pl/OMPro":[
+      ["imported order",1,"","2026-07-17 11:41"],["priclist",1,"","2026-07-17 11:49"],
+      ["Export_to_Azure_current_queries.zip",0,"4,1 KB","2026-07-17 08:44"],
+      ["FridgeOrders_email_Export.zip",0,"1,5 MB","2026-07-21 13:14"],
+      ["Magnum_ABV_Export.zip",0,"60,6 MB","2026-07-21 12:58"],
+      ["md_CIA_uOne_202602191051.zip",0,"1,4 MB","2026-07-17 09:15"],
+      ["OMPro_Codmap.zip",0,"2,6 MB","2026-07-16 09:24"],
+      ["OMPro_DwQmc.zip",0,"29,8 MB","2026-07-15 14:29"],
+      ["OMPro_Klient_welcome_window_sellout.xlsx",0,"213,2 KB","2026-07-17 09:24"],
+      ["OM_PromoTasks.xlsx",0,"11,3 KB","2026-07-17 11:40"],
+      ["SendABVPhotosToFtp.sql",0,"8,4 KB","2026-07-21 13:23"],
+      ["SendUniversal_Export.zip",0,"2,4 MB","2026-07-21 13:43"],
+      ["Users_20260717_0700.zip.old",0,"5,4 KB","2026-07-17 09:18"]]
+  };
+  var PRESETS=[
+    {id:"Waypoint",name:"Waypoint",canvas:"#14151B",panel:"#282A36",rail:"#16171F",border:"rgba(255,255,255,.13)",
+     prim:"#E7E8EE",sec:"#B1B4C2",ter:"#9396A6",accent:"#6C6DFF"},
+    {id:"AtomOne",name:"Atom One Dark",canvas:"#282C34",panel:"#2F343D",rail:"#21252B",border:"#3B414D",
+     prim:"#ABB2BF",sec:"#828997",ter:"#7A8393",accent:"#61AFEF"},
+    {id:"GitHubDark",name:"GitHub Dark",canvas:"#0D1117",panel:"#161B22",rail:"#010409",border:"#30363D",
+     prim:"#C9D1D9",sec:"#8B949E",ter:"#8A939D",accent:"#58A6FF"},
+    {id:"ClaudeDark",name:"Claude Dark",canvas:"#262624",panel:"#30302E",rail:"#1F1E1D",border:"#45443F",
+     prim:"#ECEBE6",sec:"#A3A196",ter:"#9A9891",accent:"#D97757"},
+    {id:"TokyoNight",name:"Tokyo Night",canvas:"#1A1B26",panel:"#24283B",rail:"#16161E",border:"#3B4261",
+     prim:"#C0CAF5",sec:"#9AA5CE",ter:"#8189B3",accent:"#7AA2F7"},
+    {id:"Nord",name:"Nord",canvas:"#2E3440",panel:"#3B4252",rail:"#292E39",border:"#4C566A",
+     prim:"#ECEFF4",sec:"#D8DEE9",ter:"#A7B0C0",accent:"#88C0D0"}
+  ];
+  var ACCENTS=["#6C6DFF","#2F6BE0","#3DDC97","#FFB454","#E8567F"];
+  var SQL="-- Wysyłka zdjęć ABV na FTP klienta (uruchamiane z Agenta SQL co 30 min)\n"+
+    "DECLARE @batch INT = 200;\n\n"+
+    "SELECT TOP (@batch)\n"+
+    "       p.PhotoId,\n"+
+    "       p.ProductEan,\n"+
+    "       p.CapturedAt,\n"+
+    "       c.FtpPath\n"+
+    "  FROM dbo.AbvPhotos AS p\n"+
+    "  JOIN dbo.Customers  AS c ON c.CustomerId = p.CustomerId\n"+
+    " WHERE p.SentAt IS NULL\n"+
+    "   AND p.CapturedAt >= DATEADD(DAY, -7, SYSUTCDATETIME())\n"+
+    " ORDER BY p.CapturedAt;\n";
+
+  /* ── panel boczny ────────────────────────────────────────────────────── */
+  var ICON={rdp:'<svg class="ico" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 20h8"/></svg>',
+            ssh:'<svg class="ico" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg>',
+            sftp:'<svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'};
+  var tree=$("#tree");
+  GROUPS.forEach(function(g,gi){
+    var head=document.createElement("button");
+    head.className="group"; head.setAttribute("aria-expanded","true");
+    head.innerHTML='<svg class="caret" viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.4"><path d="m6 9 6 6 6-6"/></svg>'+
+      '<i class="gd" style="background:'+g.color+'"></i><span>'+g.name+'</span><span class="n">'+g.servers.length+'</span>';
+    var box=document.createElement("div");
+    g.servers.forEach(function(s,si){
+      var b=document.createElement("button");
+      b.className="srv"; b.setAttribute("aria-current", (gi===2&&si===0)?"true":"false");
+      b.innerHTML=ICON[g.proto]+'<span class="nm">'+s[0]+'</span><span class="dot '+(s[1]==="on"?"on":s[1]==="idle"?"idle":"")+'"></span>';
+      b.addEventListener("click",function(){
+        $$(".srv").forEach(function(x){x.setAttribute("aria-current","false")});
+        b.setAttribute("aria-current","true");
+        showView("sessions");
+        showSession(g.proto==="rdp"?"s-rdp":g.proto==="ssh"?"s-ssh":"s-sftp");
+      });
+      box.appendChild(b);
+    });
+    head.addEventListener("click",function(){
+      var open=head.getAttribute("aria-expanded")==="true";
+      head.setAttribute("aria-expanded",String(!open));
+      box.style.display=open?"none":"block";
+    });
+    tree.appendChild(head); tree.appendChild(box);
+  });
+
+  /* ── karty sesji ─────────────────────────────────────────────────────── */
+  var tabsBox=$("#tabs");
+  function renderTabs(){
+    tabsBox.innerHTML="";
+    if(!TABS.length){ showSession("s-empty"); return; }
+    TABS.forEach(function(t){
+      var b=document.createElement("button");
+      b.className="tab"; b.setAttribute("aria-current", $("#"+t.id).hasAttribute("data-on")?"true":"false");
+      b.innerHTML='<i class="pd" style="background:'+t.color+'"></i><span class="nm">'+t.name+'</span>';
+      b.addEventListener("click",function(){showSession(t.id)});
+      var x=document.createElement("span");
+      x.className="x"; x.textContent="×"; x.setAttribute("role","button"); x.title="Zamknij kartę";
+      x.addEventListener("click",function(e){
+        e.stopPropagation();
+        TABS=TABS.filter(function(o){return o.id!==t.id});
+        var wasOn=$("#"+t.id).hasAttribute("data-on");
+        $("#"+t.id).removeAttribute("data-on");
+        if(TABS.length){ if(wasOn) showSession(TABS[0].id); else renderTabs(); }
+        else showSession("s-empty");
+      });
+      b.appendChild(x); tabsBox.appendChild(b);
+    });
+  }
+  function showSession(id){
+    $$(".session").forEach(function(s){s.removeAttribute("data-on")});
+    var el=$("#"+id); if(el) el.setAttribute("data-on","");
+    renderTabs();
+  }
+
+  /* ── widoki ──────────────────────────────────────────────────────────── */
+  function showView(v){
+    $$(".rail button").forEach(function(b){b.setAttribute("aria-current",String(b.dataset.view===v))});
+    $$(".view").forEach(function(s){s.removeAttribute("data-on")});
+    $("#v-"+v).setAttribute("data-on","");
+    var rest=v==="rest";
+    $("#sbSearch").style.display=rest?"none":"flex";
+    $("#sbChips").style.display=rest?"none":"flex";
+    tree.style.display=rest?"none":"block";
+    restTree.style.display=rest?"block":"none";
+  }
+  $$(".rail button").forEach(function(b){b.addEventListener("click",function(){showView(b.dataset.view)})});
+
+  /* kolekcje REST w panelu bocznym (moduł podmienia drzewo serwerów) */
+  var restTree=document.createElement("div");
+  restTree.style.cssText="display:none;padding:0 8px";
+  restTree.innerHTML=
+    '<div class="group" style="cursor:default"><i class="gd" style="background:var(--p-rest)"></i>'+
+    '<span>OMPro API</span><span class="n">4</span></div>'+
+    [["GET","/api/v2/orders","var(--p-ssh)",1],["POST","/api/v2/orders","var(--p-rdp)",0],
+     ["GET","/api/v2/pricelist","var(--p-ssh)",0],["PUT","/api/v2/orders/{id}","var(--p-sftp)",0]]
+    .map(function(r){return '<button class="srv" aria-current="'+(r[3]?"true":"false")+'">'+
+      '<b style="font:600 9.5px/1 var(--mono);letter-spacing:.05em;color:'+r[2]+';width:30px;flex:none">'+r[0]+'</b>'+
+      '<span class="nm" style="font-size:12px;font-family:var(--mono)">'+r[1]+'</span></button>'}).join("")+
+    '<div class="group" style="cursor:default;margin-top:6px"><i class="gd" style="background:var(--gd-client)"></i>'+
+    '<span>Środowisko</span></div>'+
+    '<div class="srv" style="cursor:default"><span class="nm">OMPro produkcja</span><span class="dot on"></span></div>';
+  tree.parentNode.insertBefore(restTree,tree.nextSibling);
+
+  $$("#restTabs button").forEach(function(b){
+    b.addEventListener("click",function(){
+      $$("#restTabs button").forEach(function(x){x.setAttribute("aria-current","false")});
+      b.setAttribute("aria-current","true");
+    });
+  });
+
+  /* ── ostatnie ────────────────────────────────────────────────────────── */
+  $("#recent").innerHTML=RECENT.map(function(r){
+    return '<button class="it"><span class="p" style="color:'+r[2]+'">'+r[1]+'</span>'+
+      '<span>'+r[0]+'</span><span class="h">'+r[3]+'</span><span class="h">'+r[4]+'</span><span class="w">'+r[5]+'</span></button>';
+  }).join("");
+
+  /* ── ustawienia: sekcje ──────────────────────────────────────────────── */
+  $$("#snav button").forEach(function(b){
+    b.addEventListener("click",function(){
+      $$("#snav button").forEach(function(x){x.setAttribute("aria-current","false")});
+      b.setAttribute("aria-current","true");
+      $$(".sec").forEach(function(s){s.removeAttribute("data-on")});
+      $('.sec[data-sec="'+b.dataset.sec+'"]').setAttribute("data-on","");
+    });
+  });
+  $$(".sw").forEach(function(s){
+    s.addEventListener("click",function(){s.setAttribute("aria-pressed",String(s.getAttribute("aria-pressed")!=="true"))});
+  });
+  $$(".seg").forEach(function(seg){
+    $$("button",seg).forEach(function(b){
+      b.addEventListener("click",function(){
+        $$("button",seg).forEach(function(x){x.setAttribute("aria-pressed","false")});
+        b.setAttribute("aria-pressed","true");
+        if(b.dataset.theme){ clearPreset(); setTheme(b.dataset.theme); }
+      });
+    });
+  });
+
+  /* ── motyw, presety, akcent ──────────────────────────────────────────── */
+  var root=document.documentElement;
+  var PRESET_VARS=["--canvas-a","--canvas-b","--panel","--rail","--border","--hairline",
+                   "--prim","--sec","--ter","--accent","--accent-soft","--accent-strong"];
+  function clearPreset(){
+    PRESET_VARS.forEach(function(v){root.style.removeProperty(v)});
+    $$(".pre").forEach(function(x,i){x.setAttribute("aria-pressed",String(i===0))});
+    $$("#accents button").forEach(function(x,i){x.setAttribute("aria-pressed",String(i===0))});
+  }
+  function setTheme(t){
+    if(t==="system") root.removeAttribute("data-theme"); else root.setAttribute("data-theme",t);
+  }
+  var presetBox=$("#presets");
+  PRESETS.forEach(function(p,i){
+    var b=document.createElement("button");
+    b.className="pre"; b.setAttribute("aria-pressed",String(i===0)); b.type="button";
+    b.innerHTML='<div class="sw3"><i style="background:'+p.canvas+'"></i><i style="background:'+p.panel+'"></i>'+
+      '<i style="background:'+p.accent+'"></i></div><div class="nm"><i style="background:'+p.accent+'"></i>'+p.name+'</div>';
+    b.addEventListener("click",function(){
+      $$(".pre").forEach(function(x){x.setAttribute("aria-pressed","false")});
+      b.setAttribute("aria-pressed","true");
+      applyPreset(p);
+    });
+    presetBox.appendChild(b);
+  });
+  function applyPreset(p){
+    setTheme("dark");
+    $$("#themeSeg button").forEach(function(x){x.setAttribute("aria-pressed",String(x.dataset.theme==="dark"))});
+    if(p.id==="Waypoint"){ root.style.setProperty("--canvas-a","#0F1014"); root.style.setProperty("--canvas-b","#181A22"); }
+    else { root.style.setProperty("--canvas-a",p.canvas); root.style.setProperty("--canvas-b",p.canvas); }
+    root.style.setProperty("--panel",p.panel);
+    root.style.setProperty("--rail",p.rail);
+    root.style.setProperty("--border",p.border);
+    root.style.setProperty("--hairline",p.border);
+    root.style.setProperty("--prim",p.prim);
+    root.style.setProperty("--sec",p.sec);
+    root.style.setProperty("--ter",p.ter);
+    setAccent(p.accent);
+  }
+  function setAccent(hex){
+    root.style.setProperty("--accent",hex);
+    root.style.setProperty("--accent-soft",hex+"26");
+    root.style.setProperty("--accent-strong",hex+"66");
+    $$("#accents button").forEach(function(x){x.setAttribute("aria-pressed",String(x.dataset.hex===hex))});
+  }
+  var accBox=$("#accents");
+  ACCENTS.forEach(function(h,i){
+    var b=document.createElement("button");
+    b.type="button"; b.dataset.hex=h; b.style.background=h; b.title="Akcent "+h;
+    b.setAttribute("aria-label","Kolor akcentu "+h); b.setAttribute("aria-pressed",String(i===0));
+    b.addEventListener("click",function(){setAccent(h)});
+    accBox.appendChild(b);
+  });
+
+  /* ── tryb skupienia ──────────────────────────────────────────────────── */
+  $("#btnFocus").addEventListener("click",function(){
+    var on=$("#win").classList.toggle("focus");
+    this.setAttribute("aria-pressed",String(on));
+  });
+
+  /* ── panel plików ────────────────────────────────────────────────────── */
+  var FOLDER='<svg viewBox="0 0 24 24" class="fo"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+  var FILE='<svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>';
+  var stateL={tree:LOCAL,path:"C:/Apps",rows:"#rowsL",crumbs:"#crumbsL",filter:true};
+  var stateR={tree:REMOTE,path:"/repository/internal/pl/OMPro",rows:"#rowsR",crumbs:"#crumbsR",filter:false};
+
+  /* Ta sama zasada co w aplikacji: cel okruszka to PREFIKS ścieżki, nie sklejka "/" + segment. */
+  function segments(p){
+    var out=[],i=0;
+    while(i<p.length){
+      if(p[i]==="/"){i++;continue}
+      var end=p.indexOf("/",i); if(end<0) end=p.length;
+      out.push([p.slice(i,end),p.slice(0,end)]); i=end;
+    }
+    return out;
+  }
+  function draw(st){
+    var cb=$(st.crumbs); cb.innerHTML="";
+    var root0=document.createElement("button"); root0.textContent="/";
+    root0.addEventListener("click",function(){go(st,st===stateL?"C:":"/")});
+    cb.appendChild(root0);
+    segments(st.path).forEach(function(s){
+      var sep=document.createElement("span"); sep.textContent="›"; cb.appendChild(sep);
+      var b=document.createElement("button"); b.textContent=s[0];
+      b.addEventListener("click",function(){go(st,s[1])});
+      cb.appendChild(b);
+    });
+    var q=st.filter&&$("#filterRow").hasAttribute("data-on") ? ($("#filterBox").value||"").trim().toLowerCase() : "";
+    var items=(st.tree[st.path]||[]).filter(function(r){return !q||r[0].toLowerCase().indexOf(q)>=0});
+    $(st.rows).innerHTML=items.map(function(r){
+      return '<button class="row" data-name="'+r[0]+'" data-dir="'+r[1]+'">'+(r[1]?FOLDER:FILE)+
+        '<span class="nm">'+r[0]+'</span><span class="sz">'+r[2]+'</span><span class="md">'+r[3]+'</span></button>';
+    }).join("") || '<div style="padding:14px;color:var(--ter);font-size:12.5px">Brak wpisów pasujących do filtra.</div>';
+    $$(".row",$(st.rows)).forEach(function(b){
+      b.addEventListener("click",function(){
+        $$(".row",$(st.rows)).forEach(function(x){x.setAttribute("aria-selected","false")});
+        b.setAttribute("aria-selected","true");
+      });
+      b.addEventListener("dblclick",function(){
+        if(b.dataset.dir==="1"){ go(st,(st.path==="C:"||st.path==="/"?st.path.replace(/\/$/,""):st.path)+"/"+b.dataset.name); }
+        else openPreview(b.dataset.name);
+      });
+    });
+  }
+  function go(st,path){
+    if(!st.tree[path]){ $("#fsStatus").textContent='Brak katalogu „'+path+'"'; return; }
+    st.path=path; $("#fsStatus").textContent="Gotowe ✓"; draw(st);
+  }
+  draw(stateL); draw(stateR);
+
+  $("#btnFilter").addEventListener("click",function(){
+    var row=$("#filterRow"), on=row.hasAttribute("data-on");
+    if(on){ row.removeAttribute("data-on"); $("#filterBox").value=""; }
+    else { row.setAttribute("data-on",""); $("#filterBox").focus(); }
+    this.setAttribute("aria-pressed",String(!on));
+    draw(stateL);
+  });
+  $("#filterBox").addEventListener("input",function(){draw(stateL)});
+  $("#filterBox").addEventListener("keydown",function(e){ if(e.key==="Escape") $("#btnFilter").click(); });
+
+  /* ── podgląd pliku ───────────────────────────────────────────────────── */
+  function openPreview(name){
+    $("#pvName").textContent=name;
+    var lines=SQL.split("\n"), w=String(lines.length).length;
+    $("#pvBody").innerHTML=lines.map(function(l,i){
+      var n=String(i+1); while(n.length<w) n=" "+n;
+      return '<span class="g">'+n+'  </span>'+l.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+    }).join("\n");
+    $("#preview").setAttribute("data-on","");
+    $("#pvClose").focus();
+  }
+  $("#btnPreview").addEventListener("click",function(){openPreview("SendABVPhotosToFtp.sql")});
+  $("#pvClose").addEventListener("click",function(){$("#preview").removeAttribute("data-on")});
+  $("#preview").addEventListener("click",function(e){ if(e.target===this) this.removeAttribute("data-on"); });
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape") $("#preview").removeAttribute("data-on");
+  });
+
+  showSession("s-sftp");
+})();
+</script>
+</body>
+</html>
