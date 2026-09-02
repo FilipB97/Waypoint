@@ -134,8 +134,8 @@ namespace RdpManager
 
             InitTray();
             ApplyHotkey();   // hook WndProc instalujemy już w OnSourceInitialized (patrz niżej) — przed pierwszą klatką
-            // Podświetlanie ikon paska kart w trybie skupienia (patrz StartTabStripRepaintPulse): przy ruchu
-            // myszy nad paskiem wymuszamy przerysowanie, bo WPF sam go w tym trybie nie maluje.
+            // Podświetlanie ikon paska kart (patrz StartTabStripRepaintPulse): przy ruchu
+            // myszy nad paskiem wymuszamy przerysowanie, bo WPF sam go tam nie maluje.
             TabStripHost.MouseMove += (_, __) => _fs.StartTabStripRepaintPulse();
             // Strefa upuszczenia podziału ekranu (pokazywana przy przeciąganiu karty w obszar sesji).
             SplitDropBorder.DragOver += (s, e) => { e.Effects = DragDropEffects.Move; e.Handled = true; };
@@ -434,7 +434,10 @@ namespace RdpManager
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
             _fs.SetPeekPolling(immersive);   // wł/wył polling krawędzi peeku wg trybu skupienia
             UpdateToolbarMode();
-            if (immersive) _fs.StartTabStripRepaintPulse();   // od razu po wejściu (mysz może już być nad paskiem)
+            // Puls od razu po PRZEŁĄCZENIU w obie strony: przycisk trybu skupienia sam siedzi na pasku kart,
+            // więc po kliknięciu mysz jest już nad nim — i to właśnie wtedy podświetlenie musi się namalować.
+            // Wcześniej puls startował tylko przy wejściu w skupienie, więc droga powrotna zostawała bez niego.
+            _fs.StartTabStripRepaintPulse();
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku) — logika w FullscreenController (PR 5).
@@ -892,13 +895,23 @@ namespace RdpManager
             }
         }
 
-        // Akcent obowiązujący przy „Domyślnym" wyborze: z aktywnego presetu, a jak brak — domyślny Compass per motyw.
+        // Akcent obowiązujący przy „Domyślnym" wyborze — czyli ten, który zobaczysz po wyczyszczeniu
+        // własnego koloru. Źródłem jest ŻYWY zasób „Accent”: to on faktycznie maluje interfejs, więc próbka
+        // nie może go zgadywać z drugiego miejsca.
+        //
+        // Stały tu wpisane #2657D6 / #4C86FF — akcenty SPRZED rebrandingu. I nie był to martwy kod:
+        // ThemePresets.Find zwraca null dla presetu domyślnego („Waypoint”/pusty), czyli w zwykłym
+        // przypadku, więc próbka „Domyślny” w Ustawieniach pokazywała stary kobalt obok interfejsu
+        // pomalowanego na nowe indygo. Fallback zostaje wyłącznie na wypadek braku zasobu (projektant,
+        // testy) i trzyma te same wartości co Palette.*.
         private System.Windows.Media.Color DefaultAccentColor()
         {
             bool light = ThemeManager.IsLight;
             var p = ThemePresets.Find(light ? _settings.ThemeVariantLight : _settings.ThemeVariantDark, light);
-            return p?.Accent ?? (light ? System.Windows.Media.Color.FromRgb(0x26, 0x57, 0xD6)
-                                       : System.Windows.Media.Color.FromRgb(0x4C, 0x86, 0xFF));
+            if (p != null) return p.Accent;
+            if (TryFindResource("Accent") is SolidColorBrush b) return b.Color;
+            return light ? System.Windows.Media.Color.FromRgb(0x5B, 0x4B, 0xD6)
+                         : System.Windows.Media.Color.FromRgb(0x6C, 0x6D, 0xFF);
         }
 
         // Siatka presetów motywu (Compass §4.9) — karty z podglądem palety, dla bieżącego trybu (ciemny/jasny).

@@ -53,7 +53,10 @@ namespace RdpManager
             // — Jasne —
             new ThemePreset { Id = "Waypoint", Name = "Waypoint", Light = true,
                 Canvas = C("#EEF0F3"), Panel = C("#FFFFFF"), Border = C("#DDE1E7"), RailBg = C("#F2F3F5"),
-                TextPrim = C("#1B1D22"), TextSec = C("#565A62"), TextTer = C("#888B93"), Accent = C("#5B4BD6") },
+                // Jak wariant ciemny: preset „Waypoint” ma być PODGLĄDEM BAZY, więc stopnie tekstu muszą
+                // zgadzać się z Palette.Light. TextTer został tu na starej wartości (#888B93) przy poprawce
+                // kontrastu — poprawiłem wtedy tylko wariant ciemny.
+                TextPrim = C("#1B1D22"), TextSec = C("#565A62"), TextTer = C("#6B6F78"), Accent = C("#5B4BD6") },
             new ThemePreset { Id = "GitHubLight", Name = "GitHub Light", Light = true,
                 Canvas = C("#FFFFFF"), Panel = C("#F6F8FA"), Border = C("#D0D7DE"), RailBg = C("#F6F8FA"),
                 TextPrim = C("#1F2328"), TextSec = C("#656D76"), TextTer = C("#8C959F"), Accent = C("#0969DA") },
