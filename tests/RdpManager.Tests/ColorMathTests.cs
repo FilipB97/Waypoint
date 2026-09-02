@@ -84,13 +84,13 @@ namespace RdpManager.Tests
         // Trzeci stopień tekstu z każdego presetu wobec panelu TEGO presetu. Wszystkie wypadały
         // między 2.07 a 3.77, więc każdy z nich musi zostać dociągnięty.
         [Theory]
-        [InlineData("#5A5C66", "#17181D")]   // Waypoint ciemny
+        [InlineData("#5A5C66", "#282A36")]   // Waypoint ciemny
         [InlineData("#5C6370", "#2F343D")]   // Atom One Dark
         [InlineData("#6E7681", "#161B22")]   // GitHub Dark
         [InlineData("#6F6E66", "#30302E")]   // Claude Dark
         [InlineData("#565F89", "#24283B")]   // Tokyo Night
         [InlineData("#7B88A1", "#3B4252")]   // Nord
-        [InlineData("#888B93", "#FFFFFF")]   // Waypoint jasny
+        [InlineData("#888B93", "#FAFBFC")]   // Waypoint jasny
         [InlineData("#8C959F", "#F6F8FA")]   // GitHub Light
         [InlineData("#93A1A1", "#EEE8D5")]   // Solarized Light
         [InlineData("#97968B", "#FFFFFF")]   // Claude Light

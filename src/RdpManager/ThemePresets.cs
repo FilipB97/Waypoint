@@ -29,7 +29,11 @@ namespace RdpManager
         {
             // — Ciemne — (Waypoint = podgląd bazy; reszta wg kanonicznych kolorów motywów)
             new ThemePreset { Id = "Waypoint", Name = "Waypoint", Light = false,
-                Canvas = C("#0C0D11"), Panel = C("#17181D"), Border = C("#2A2B31"), RailBg = C("#121319"),
+                // Kolory RENDEROWANE przez bazę, nie surowe klucze: kanwa i szyna są gradientem albo
+                // barwą przezroczystą, więc podgląd musi pokazywać to, co faktycznie widać na ekranie.
+                // Wcześniej próbka mówiła #17181D, podczas gdy panel wychodził #2C2D32 — sam podgląd
+                // bazy pokazywał więc inny kolor niż baza.
+                Canvas = C("#14151B"), Panel = C("#282A36"), Border = C("#454751"), RailBg = C("#16171F"),
                 // Ten preset ma być PODGLĄDEM BAZY, więc stopnie tekstu muszą się zgadzać z Palette.Dark.
                 // Zostały tu stare wartości sprzed poprawki kontrastu (#8A8C97 / #5A5C66) i „Waypoint"
                 // pokazywał coś innego niż to, co widać po wyłączeniu presetów.
@@ -52,7 +56,8 @@ namespace RdpManager
 
             // — Jasne —
             new ThemePreset { Id = "Waypoint", Name = "Waypoint", Light = true,
-                Canvas = C("#EEF0F3"), Panel = C("#FFFFFF"), Border = C("#DDE1E7"), RailBg = C("#F2F3F5"),
+                // Jak wyżej: wartości renderowane przez Palette.Light, nie surowe klucze.
+                Canvas = C("#E6E9EE"), Panel = C("#FAFBFC"), Border = C("#C8CACD"), RailBg = C("#F1F2F4"),
                 // Jak wariant ciemny: preset „Waypoint” ma być PODGLĄDEM BAZY, więc stopnie tekstu muszą
                 // zgadzać się z Palette.Light. TextTer został tu na starej wartości (#888B93) przy poprawce
                 // kontrastu — poprawiłem wtedy tylko wariant ciemny.
