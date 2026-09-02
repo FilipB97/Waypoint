@@ -85,13 +85,17 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
+                            <!-- Hover przez SETTER, nie Storyboard. Na tym samym elemencie stan wciśnięcia
+                                 (Setter) malował się poprawnie, a hover (animacja) nie — przy pasku kart
+                                 siedzącym pod LayoutTransform obok airspace'u WindowsFormsHost animacja
+                                 potrafi zostać z zegarem, który po ukryciu i ponownym pokazaniu panelu
+                                 (przełączenie trybu skupienia) już nie rusza wartości. Setter nie ma zegara
+                                 ani zachowania „przytrzymaj koniec": ustawia wartość i tyle.
+                                 Utrata: 110 ms wygaszania na przycisku 28 px. Wciśnięcie i tak jest
+                                 natychmiastowe, więc hover bez animacji jest z nim spójny. Szyna nawigacji
+                                 (RailBtn) ZOSTAJE animowana — leży z dala od HWND-a i działa poprawnie. -->
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.11" EasingFunction="{StaticResource EaseStandard}"/></Storyboard></BeginStoryboard>
-                                </Trigger.ExitActions>
+                                <Setter TargetName="HoverFill" Property="Opacity" Value="1"/>
                             </Trigger>
                             <!-- Wciśnięcie: warstwa hoveru na pełne krycie, BEZ animacji — potwierdzenie
                                  kliknięcia ma być natychmiastowe, inaczej interfejs sprawia wrażenie ospałego. -->
