@@ -32,6 +32,7 @@ namespace RdpManager.Controllers
         // zmianie statusu, a pozycja kolumny musi zostać ta sama — patrz Core/StatusGlyph.
         private readonly Dictionary<ServerInfo, Grid> _serverStatusDot = new Dictionary<ServerInfo, Grid>();
         private readonly Dictionary<ServerInfo, TextBlock> _serverLatency = new Dictionary<ServerInfo, TextBlock>();
+        private readonly Dictionary<ServerInfo, TextBlock> _serverActions = new Dictionary<ServerInfo, TextBlock>();   // „⋯" pod kursorem (A10)
 
         // Aktywny filtr protokołu z paska chipów (null = „Wszystkie"). Stan sesyjny.
         private RemoteProtocol? _protocolFilter;
@@ -137,6 +138,7 @@ namespace RdpManager.Controllers
             _serverActivate.Clear();
             _serverStatusDot.Clear();
             _serverLatency.Clear();
+            _serverActions.Clear();
             _multiSelect.Clear();
             _selectAnchor = null;
             _visibleOrder.Clear();
@@ -156,7 +158,7 @@ namespace RdpManager.Controllers
             if (pinned.Count > 0)
             {
                 bool pinCollapsed = _owner._settings.CollapsedGroups.Contains(PinnedGroupKey);
-                _owner.ServerTree.Children.Add(BuildGroupHeader(PinnedGroupKey, pinned.Count, pinCollapsed, isPinned: true));
+                _owner.ServerTree.Children.Add(BuildGroupHeader(PinnedGroupKey, pinned, pinCollapsed, isPinned: true));
                 if (!pinCollapsed)
                     foreach (var s in pinned) { _owner.ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
             }
@@ -177,7 +179,7 @@ namespace RdpManager.Controllers
             foreach (var g in order)
             {
                 bool collapsed = _owner._settings.CollapsedGroups.Contains(g);
-                _owner.ServerTree.Children.Add(BuildGroupHeader(g, byGroup[g].Count, collapsed, isPinned: false));
+                _owner.ServerTree.Children.Add(BuildGroupHeader(g, byGroup[g], collapsed, isPinned: false));
                 if (!collapsed)
                     foreach (var s in byGroup[g])
                     { _owner.ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
@@ -200,7 +202,7 @@ namespace RdpManager.Controllers
             else _owner.TreeEmptyHint.Visibility = Visibility.Collapsed;
         }
 
-        private FrameworkElement BuildGroupHeader(string name, int count, bool collapsed, bool isPinned)
+        private FrameworkElement BuildGroupHeader(string name, List<ServerInfo> servers, bool collapsed, bool isPinned)
         {
             // Włosowa kreska nad każdą grupą POZA pierwszą — rozdziela sekcje bez dokładania pustej
             // przestrzeni. Pierwszy nagłówek jej nie dostaje, bo nad nim jest już pasek chipów.
@@ -208,11 +210,16 @@ namespace RdpManager.Controllers
             var row = new Border
             {
                 // Minimal: ciaśniejszy padding niż domyślny (lżejsze nagłówki grup i sekcja przypiętych).
-                Padding = IsMinimalList ? new Thickness(6, 5, 6, 2) : new Thickness(6, 10, 6, 4),
+                // Padding 12 od lewej stawia tytuł grupy w tej samej kolumnie co kafelki wierszy, a 8
+                // od prawej kończy licznik równo z kolumną statusu. Dotąd tytuł zaczynał się 18 px od
+                // brzegu, a licznik kończył 6 px — obie krawędzie mijały się z wierszami pod spodem.
+                Padding = IsMinimalList ? new Thickness(12, 5, 8, 3) : new Thickness(12, 7, 8, 3),
                 Background = Brushes.Transparent,
                 BorderBrush = _owner.Res("Border"),
                 BorderThickness = first ? new Thickness(0) : new Thickness(0, 1, 0, 0),
-                Margin = first ? new Thickness(0) : new Thickness(0, 6, 0, 0),
+                // Bez dodatkowego marginesu: kreska włosowa JUŻ rozdziela sekcje. Dotąd działały oba
+                // naraz, więc odstęp nad grupą był dwa razy większy, niż wynikało z drabiny odstępów.
+                Margin = new Thickness(0),
                 Cursor = Cursors.Hand
             };
 
@@ -236,21 +243,21 @@ namespace RdpManager.Controllers
             Grid.SetColumn(arrow, 0);
             sp.Children.Add(arrow);
 
-            FrameworkElement badge = isPinned
-                ? new TextBlock
+            // Kropka koloru grupy zniknęła: kolor niesie teraz kafelek W KAŻDYM wierszu grupy, więc
+            // powtarzanie go w nagłówku dokładało trzeci znacznik do i tak gęstej linii. Gwiazdka
+            // sekcji przypiętych zostaje — ona nie ma odpowiednika w wierszu.
+            if (isPinned)
+            {
+                var star = new TextBlock
                 {
                     // TextTer, nie Idle: „Idle" to kolor STATUSU (wolna odpowiedź serwera). Ten sam
                     // odcień raz znaczyłby stan, a raz nic — to uczy błędnego kodu barwnego.
                     Text = "★", Foreground = _owner.Res("TextTer"), FontSize = (double)_owner.TryFindResource("FontCaption"),
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
-                }
-                : (FrameworkElement)new Ellipse
-                {
-                    Width = 6, Height = 6, Fill = _owner.GroupDotBrush(name),
-                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
                 };
-            Grid.SetColumn(badge, 1);
-            sp.Children.Add(badge);
+                Grid.SetColumn(star, 1);
+                sp.Children.Add(star);
+            }
 
             // Nazwa: mniejsza i wersalikami — nagłówek ma organizować listę, a nie z nią konkurować.
             var title = new TextBlock
@@ -264,16 +271,7 @@ namespace RdpManager.Controllers
             Grid.SetColumn(title, 2);
             sp.Children.Add(title);
 
-            var counter = new TextBlock
-            {
-                Text = count.ToString(),
-                // Był 10.5px w TextTer, gdy TextTer miał 2.71 kontrastu — mały i blady naraz. Sam TextTer
-                // jest już poprawiony (4.52), więc zostaje: trzyma hierarchię wobec nazwy grupy (TextSec,
-                // bold). Zmienia się tylko rozmiar, na FontCaption.
-                Foreground = _owner.Res("TextTer"),
-                FontSize = (double)_owner.TryFindResource("FontCaption"), VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(8, 0, 2, 0)
-            };
+            var counter = BuildGroupCounter(servers, collapsed);
             Grid.SetColumn(counter, 3);
             sp.Children.Add(counter);
 
@@ -291,6 +289,50 @@ namespace RdpManager.Controllers
                 row.ContextMenu = menu;
             }
             return row;
+        }
+
+
+        /// <summary>
+        /// Licznik grupy. Rozwinięta grupa pokazuje samą liczbę; ZWINIĘTA, w której coś jest
+        /// niedostępne, pokazuje „N/M" z N w kolorze Offline.
+        ///
+        /// Zwinięcie nie może ukryć informacji, że część serwerów nie odpowiada — inaczej jedyny sposób,
+        /// żeby się o tym dowiedzieć, to rozwinąć każdą grupę po kolei. Gdy wszystko odpowiada, licznik
+        /// zostaje pojedynczy: znacznik należy się stanowi wymagającemu uwagi, nie normie.
+        ///
+        /// Cyfry tabelaryczne, bo liczniki stoją jedna pod drugą w kolumnie przy prawej krawędzi.
+        /// </summary>
+        private TextBlock BuildGroupCounter(List<ServerInfo> servers, bool collapsed)
+        {
+            var model = Core.GroupCounter.For(servers, collapsed);
+
+            var counter = new TextBlock
+            {
+                // Był 10.5px w TextTer, gdy TextTer miał 2.71 kontrastu — mały i blady naraz. Sam TextTer
+                // jest już poprawiony, więc zostaje: trzyma hierarchię wobec nazwy grupy (TextSec, bold).
+                Foreground = _owner.Res("TextTer"),
+                FontSize = (double)_owner.TryFindResource("FontCaption"),
+                FontFamily = (FontFamily)_owner.TryFindResource("Mono"),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(8, 0, 0, 0)
+            };
+            System.Windows.Documents.Typography.SetNumeralAlignment(counter, FontNumeralAlignment.Tabular);
+
+            if (model.ShowsOffline)
+            {
+                counter.Inlines.Add(new System.Windows.Documents.Run(model.Offline.ToString()) { Foreground = _owner.Res("Offline") });
+                // Separator przygaszony przez SAM PĘDZEL (Run nie ma Opacity): ma rozdzielać liczby,
+                // nie konkurować z nimi.
+                counter.Inlines.Add(new System.Windows.Documents.Run("/") { Foreground = TintBrush(_owner.Res("TextTer"), 0.55) });
+                counter.Inlines.Add(new System.Windows.Documents.Run(model.Total.ToString()));
+                System.Windows.Automation.AutomationProperties.SetName(counter,
+                    string.Format(L("S.group.offlinecount"), model.Offline, model.Total));
+            }
+            else
+            {
+                counter.Text = model.Total.ToString();
+            }
+            return counter;
         }
 
         // Zwija/rozwija grupę i zapamiętuje stan w ustawieniach.
@@ -352,10 +394,12 @@ namespace RdpManager.Controllers
             };
 
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });                     // pasek aktywności
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // kafelek
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });  // nazwa
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // etykieta protokołu
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // opóźnienie / „⋯"
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(StatusGlyph.Field) });     // status
 
             var accent = new Rectangle
             {
@@ -388,16 +432,13 @@ namespace RdpManager.Controllers
             Grid.SetColumn(meta, 2);
             grid.Children.Add(meta);
 
+            AddRowRightColumns(grid, server, tagColumn: 3, withTag: true);
+
             var status = StatusGlyph.Host();
             ApplyRowStatusGlyph(status, server.Status);
             _serverStatusDot[server] = status;
-
-            var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            if (ShowProtocolTag) right.Children.Add(BuildProtocolTag(server));
-            AddLatencyLabel(right, server);
-            right.Children.Add(status);
-            Grid.SetColumn(right, 3);
-            grid.Children.Add(right);
+            Grid.SetColumn(status, 5);
+            grid.Children.Add(status);
 
             row.Child = grid;
 
@@ -435,9 +476,11 @@ namespace RdpManager.Controllers
             };
 
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                      // glif protokołu
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // nazwa
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                      // prawa strona
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // glif protokołu
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });  // nazwa
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // etykieta protokołu
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // opóźnienie / „⋯"
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(StatusGlyph.Field) });     // status
 
             // Jeden element po lewej zamiast dwóch: kafelek niesie ORAZ kolor serwera (tożsamość), ORAZ ikonę
             // protokołu (co to za połączenie). Wcześniej stały tu obok siebie pasek koloru i kropka statusu —
@@ -469,21 +512,15 @@ namespace RdpManager.Controllers
             Grid.SetColumn(name, 1);
             grid.Children.Add(name);
 
+            // Bez etykiety protokołu: niesie ją glif po lewej. Kolumna 2 zostaje pusta, kolumnę 3
+            // wypełnia opóźnienie/„⋯" — te same indeksy w obu gęstościach, więc jedna metoda.
+            AddRowRightColumns(grid, server, tagColumn: 2, withTag: false);
+
             var status = StatusGlyph.Host();
             ApplyRowStatusGlyph(status, server.Status);
             _serverStatusDot[server] = status;
-
-            // Po prawej: opóźnienie, gwiazdka przypięcia i kropka statusu. Adres (DisplayHost) zdjęty
-            // z wiersza — nazwa nie mieściła się z adresem; adres jest w tooltipie (WireServerRow).
-            var rightPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center
-            };
-            // Etykieta tekstowa protokołu jest tu już zbędna — niesie ją glif po lewej.
-            AddLatencyLabel(rightPanel, server);
-            rightPanel.Children.Add(status);
-            Grid.SetColumn(rightPanel, 2);
-            grid.Children.Add(rightPanel);
+            Grid.SetColumn(status, 4);
+            grid.Children.Add(status);
 
             row.Child = grid;
 
@@ -525,20 +562,90 @@ namespace RdpManager.Controllers
             Margin = new Thickness(0, 0, 6, 0)
         };
 
-        // Etykieta opóźnienia (ms) — tylko gdy włączone „Pokazuj opóźnienia"; rejestrowana do aktualizacji na żywo.
-        private void AddLatencyLabel(Panel host, ServerInfo server)
+
+        /// <summary>
+        /// Prawa strona wiersza jako stałe kolumny, nie <c>StackPanel</c>. Panel układał elementy jeden
+        /// za drugim, więc kolumna statusu wędrowała w poziomie zależnie od tego, czy wiersz ma etykietę
+        /// protokołu i ile cyfr ma opóźnienie — a oko skanuje tę kolumnę pionowo i potrzebuje jej w tym
+        /// samym miejscu w każdym wierszu.
+        ///
+        /// Znacznik statusu siedzi w OSTATNIEJ kolumnie o stałej szerokości, więc jest zakotwiczony do
+        /// prawej krawędzi niezależnie od reszty. Opóźnienie dostaje cyfry tabelaryczne i wyrównanie do
+        /// prawej — inaczej „9 ms" i „128 ms" nie stoją w jednej kolumnie liczb.
+        ///
+        /// Ta sama komórka niesie akcje wiersza (A10): pod kursorem opóźnienie ustępuje „⋯" DOKŁADNIE
+        /// w swoim miejscu, więc nic nie skacze. Menu wiersza wymagało dotąd prawego klawisza, czyli
+        /// było niewidoczne dla kogoś, kto go nie spróbuje.
+        /// </summary>
+        private void AddRowRightColumns(Grid grid, ServerInfo server, int tagColumn, bool withTag)
         {
-            if (_owner._settings == null || !_owner._settings.ShowLatency) return;
-            var lat = new TextBlock
+            if (withTag && ShowProtocolTag)
             {
-                Text = RdpUtils.FormatLatency(server.LatencyMs),
-                Foreground = _owner.Res("TextTer"),
-                FontSize = (double)_owner.TryFindResource("FontCaption"),
+                var tag = BuildProtocolTag(server);
+                Grid.SetColumn(tag, tagColumn);
+                grid.Children.Add(tag);
+            }
+
+            bool showLatency = _owner._settings != null && _owner._settings.ShowLatency;
+            var meta = new Grid
+            {
+                // 46 px mieści „<1 ms" i „1234 ms"; bez opóźnień wystarczy miejsce na samo „⋯".
+                MinWidth = showLatency ? 46 : 26,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 6, 0)
             };
-            _serverLatency[server] = lat;
-            host.Children.Add(lat);
+            Grid.SetColumn(meta, tagColumn + 1);
+            grid.Children.Add(meta);
+
+            if (showLatency)
+            {
+                var lat = new TextBlock
+                {
+                    Text = RdpUtils.FormatLatency(server.LatencyMs),
+                    Foreground = _owner.Res("TextTer"),
+                    FontSize = (double)_owner.TryFindResource("FontCaption"),
+                    FontFamily = (FontFamily)_owner.TryFindResource("Mono"),
+                    TextAlignment = TextAlignment.Right,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                System.Windows.Documents.Typography.SetNumeralAlignment(lat, FontNumeralAlignment.Tabular);
+                _serverLatency[server] = lat;
+                meta.Children.Add(lat);
+            }
+
+            var more = new TextBlock
+            {
+                Text = "⋯",
+                Foreground = _owner.Res("TextSec"),
+                FontSize = (double)_owner.TryFindResource("FontBody"),
+                TextAlignment = TextAlignment.Right,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Center,
+                Visibility = Visibility.Collapsed,
+                Cursor = Cursors.Hand,
+                ToolTip = L("S.row.actions")
+            };
+            System.Windows.Automation.AutomationProperties.SetName(more, L("S.row.actions"));
+            more.MouseLeftButtonUp += (s, e) =>
+            {
+                e.Handled = true;   // bez tego klik w „⋯" wpadłby w handler wiersza i połączył sesję
+                var menu = BuildServerContextMenu(server);
+                menu.PlacementTarget = more;
+                menu.IsOpen = true;
+            };
+            meta.Children.Add(more);
+            _serverActions[server] = more;
+        }
+
+        // Pod kursorem: opóźnienie ustępuje „⋯". Hidden, nie Collapsed — komórka ma trzymać szerokość,
+        // żeby wiersz nie drgnął w chwili, gdy użytkownik celuje w niego myszą.
+        private void ToggleRowActions(ServerInfo server, bool hovering)
+        {
+            if (!_serverActions.TryGetValue(server, out var more)) return;
+            more.Visibility = hovering ? Visibility.Visible : Visibility.Collapsed;
+            if (_serverLatency.TryGetValue(server, out var lat))
+                lat.Visibility = hovering ? Visibility.Hidden : Visibility.Visible;
         }
 
         // Wspólne zachowanie wiersza (hover / przeciąganie-zmiana kolejności / klik / menu) — jednakowe w obu stylach.
@@ -564,8 +671,16 @@ namespace RdpManager.Controllers
             // Tabem z myszą leżącą nad innym wierszem nie dało się powiedzieć, który jest który. Fokus
             // dostaje własny znak — obwódkę akcentu — i jest niezależny od tła: może wystąpić razem
             // z hoverem i z zaznaczeniem, i wtedy widać wszystkie trzy stany naraz.
-            row.MouseEnter += (s, e) => { if (_owner._active?.Server != server) row.Background = RowHoverBackground(server); };
-            row.MouseLeave += (s, e) => { if (_owner._active?.Server != server) row.Background = RowRestBackground(server); };
+            row.MouseEnter += (s, e) =>
+            {
+                if (_owner._active?.Server != server) row.Background = RowHoverBackground(server);
+                ToggleRowActions(server, true);
+            };
+            row.MouseLeave += (s, e) =>
+            {
+                if (_owner._active?.Server != server) row.Background = RowRestBackground(server);
+                ToggleRowActions(server, false);
+            };
             row.GotKeyboardFocus += (s, e) => row.BorderBrush = _owner.Res("Accent");
             row.LostKeyboardFocus += (s, e) => row.BorderBrush = Brushes.Transparent;
             row.KeyDown += (s, e) =>
