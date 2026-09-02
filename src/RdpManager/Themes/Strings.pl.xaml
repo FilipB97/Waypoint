@@ -529,7 +529,13 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.delete.confirmmany">Usunąć zaznaczone ({0})? Tego nie da się cofnąć.</sys:String>
     <sys:String x:Key="S.sftp.unsafename">Serwer zwrócił niebezpieczną nazwę pliku: „{0}” — pobieranie odrzucone.</sys:String>
     <sys:String x:Key="S.sftp.toodeep">Drzewo folderów jest zbyt głębokie (ponad {0} poziomów) — transfer przerwany (możliwa pętla dowiązań).</sys:String>
-    <sys:String x:Key="S.sftp.connecting">Łączenie SFTP…</sys:String>
+    <sys:String x:Key="S.sftp.connecting">Łączenie…</sys:String>
+    <sys:String x:Key="S.sftp.loading">Wczytywanie katalogu…</sys:String>
+    <sys:String x:Key="S.sftp.working">Pracuję…</sys:String>
+    <sys:String x:Key="S.sftp.renaming">Zmiana nazwy…</sys:String>
+    <sys:String x:Key="S.sftp.cancelling">Anulowanie…</sys:String>
+    <sys:String x:Key="S.sftp.aborted">Przerwano — połączenie zamknięte. Kolejna operacja połączy się od nowa.</sys:String>
+    <sys:String x:Key="S.sftp.abort.tip">Przerwij i zamknij połączenie</sys:String>
     <sys:String x:Key="S.sftp.uploading">Wysyłanie {0}…</sys:String>
     <sys:String x:Key="S.sftp.downloading">Pobieranie {0}…</sys:String>
     <sys:String x:Key="S.sftp.done">Gotowe ✓</sys:String>
