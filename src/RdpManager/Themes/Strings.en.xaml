@@ -394,6 +394,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.status.online">online</sys:String>
     <sys:String x:Key="S.status.idle">idle</sys:String>
     <sys:String x:Key="S.status.offline">offline</sys:String>
+    <sys:String x:Key="S.row.actions">Server actions</sys:String>
+    <sys:String x:Key="S.group.offlinecount">{0} of {1} unreachable</sys:String>
     <sys:String x:Key="S.sess.connecting">Connecting…</sys:String>
     <sys:String x:Key="S.sess.connected">Connected</sys:String>
     <sys:String x:Key="S.sess.disconnected">Disconnected</sys:String>
