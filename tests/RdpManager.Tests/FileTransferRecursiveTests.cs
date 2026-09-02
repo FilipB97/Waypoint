@@ -190,6 +190,7 @@ namespace RdpManager.Tests
             public void Download(string remotePath, Stream local) => local.Write(new byte[] { 1, 2, 3 }, 0, 3);
             public void CreateDirectory(string path) { }
             public void Delete(string fullPath, bool isDir) { }
+            public void Rename(string fullPath, string newFullPath) => throw new NotSupportedException();
             public void Dispose() { }
         }
     }

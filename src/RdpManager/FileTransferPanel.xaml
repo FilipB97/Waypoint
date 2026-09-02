@@ -168,6 +168,7 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>   <!-- pasek: breadcrumb + akcje -->
+                <RowDefinition Height="Auto"/>   <!-- filtr (zwinięty, dopóki niepotrzebny) -->
                 <RowDefinition Height="Auto"/>   <!-- nagłówek kolumn -->
                 <RowDefinition Height="*"/>      <!-- lista -->
                 <RowDefinition Height="Auto"/>   <!-- status -->
@@ -202,7 +203,16 @@
                     <Button x:Name="DownloadBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.download}" AutomationProperties.Name="{DynamicResource S.sftp.download}" Click="Download_Click">
                         <ui:SymbolIcon Symbol="ArrowDownload24"/>
                     </Button>
+                    <Button x:Name="PreviewBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.preview}" AutomationProperties.Name="{DynamicResource S.sftp.preview}" Click="Preview_Click">
+                        <ui:SymbolIcon Symbol="Eye24"/>
+                    </Button>
                     <Border Width="1" Margin="4,4" Background="{DynamicResource Border}"/>
+                    <Button x:Name="FilterBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.filter}" AutomationProperties.Name="{DynamicResource S.sftp.filter}" Click="FilterToggle_Click">
+                        <ui:SymbolIcon Symbol="Filter24"/>
+                    </Button>
+                    <Button x:Name="RenameBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.rename}" AutomationProperties.Name="{DynamicResource S.sftp.rename}" Click="Rename_Click">
+                        <ui:SymbolIcon Symbol="Rename24"/>
+                    </Button>
                     <Button Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.newfolder}" AutomationProperties.Name="{DynamicResource S.sftp.newfolder}" Click="NewFolder_Click">
                         <ui:SymbolIcon Symbol="FolderAdd24"/>
                     </Button>
@@ -212,8 +222,16 @@
                 </StackPanel>
             </Grid>
 
+            <!-- Filtr listy: zwinięty, dopóki nieużywany (Ctrl+F albo ikona lejka) — nie zabiera miejsca
+                 przy normalnej pracy, a Esc czyści go i chowa razem z zaznaczeniem. -->
+            <Grid x:Name="FilterRow" Grid.Row="1" Visibility="Collapsed" Margin="12,0,14,6">
+                <ui:TextBox x:Name="FilterBox" TextChanged="FilterBox_TextChanged" KeyDown="FilterBox_KeyDown"
+                            PlaceholderText="{DynamicResource S.sftp.filter.hint}"
+                            Icon="{ui:SymbolIcon Filter24}" ClearButtonEnabled="True"/>
+            </Grid>
+
             <!-- Nagłówek kolumn -->
-            <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Margin="12,0,14,0" Padding="0,0,0,6">
+            <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Margin="12,0,14,0" Padding="0,0,0,6">
                 <Grid Margin="12,0,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="24"/>
@@ -244,14 +262,29 @@
             </Border>
 
             <!-- Lista + nakładka „upuść, aby wysłać" -->
-            <Grid Grid.Row="2">
+            <Grid Grid.Row="3">
                 <ListView x:Name="FileList" BorderThickness="0" Background="Transparent" Margin="4,4,6,2"
                           SelectionMode="Extended"
                           ItemContainerStyle="{StaticResource FtRow}" ItemTemplate="{StaticResource FtRowTemplate}"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          MouseDoubleClick="List_DoubleClick"
+                          MouseDoubleClick="List_DoubleClick" KeyDown="List_KeyDown"
                           PreviewMouseLeftButtonDown="List_PreviewDown" PreviewMouseMove="List_PreviewMove"
-                          PreviewMouseLeftButtonUp="List_PreviewUp"/>
+                          PreviewMouseLeftButtonUp="List_PreviewUp">
+                    <ListView.ContextMenu>
+                        <ContextMenu Opened="RowMenu_Opened">
+                            <MenuItem x:Name="MenuOpen"     Click="MenuOpen_Click"   Header="{DynamicResource S.sftp.menu.open}"   InputGestureText="Enter"/>
+                            <MenuItem x:Name="MenuPreview"  Click="Preview_Click"    Header="{DynamicResource S.sftp.preview}"     InputGestureText="Space"/>
+                            <Separator/>
+                            <MenuItem x:Name="MenuDownload" Click="Download_Click"   Header="{DynamicResource S.sftp.download}"/>
+                            <MenuItem x:Name="MenuRename"   Click="Rename_Click"     Header="{DynamicResource S.sftp.rename}"      InputGestureText="F2"/>
+                            <MenuItem x:Name="MenuDelete"   Click="Delete_Click"     Header="{DynamicResource S.sftp.delete}"      InputGestureText="Delete"/>
+                            <Separator/>
+                            <MenuItem Click="MenuCopyPath_Click" Header="{DynamicResource S.sftp.menu.copypath}"/>
+                            <MenuItem Click="NewFolder_Click"    Header="{DynamicResource S.sftp.newfolder}"/>
+                            <MenuItem Click="Refresh_Click"      Header="{DynamicResource S.sftp.refresh}"     InputGestureText="F5"/>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                </ListView>
                 <!-- Prostokąt zaznaczenia (rubber-band); nie łapie myszy, żeby nie blokować listy. -->
                 <Canvas x:Name="MarqueeCanvas" IsHitTestVisible="False" Margin="4,4,6,2">
                     <Rectangle x:Name="MarqueeRect" Visibility="Collapsed"
@@ -267,7 +300,7 @@
             </Grid>
 
             <!-- Status + postęp transferu -->
-            <Grid Grid.Row="3" Margin="14,4,14,8">
+            <Grid Grid.Row="4" Margin="14,4,14,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>

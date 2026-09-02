@@ -525,8 +525,8 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.newfolder">New folder</sys:String>
     <sys:String x:Key="S.sftp.newfolder.label">New folder name:</sys:String>
     <sys:String x:Key="S.sftp.delete">Delete</sys:String>
-    <sys:String x:Key="S.sftp.delete.confirm">Delete "{0}"? (directories must be empty)</sys:String>
-    <sys:String x:Key="S.sftp.delete.confirmmany">Delete selected ({0})? (directories must be empty)</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirm">Delete "{0}"? This cannot be undone.</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirmmany">Delete selected ({0})? This cannot be undone.</sys:String>
     <sys:String x:Key="S.sftp.unsafename">The server returned an unsafe file name: "{0}" — download refused.</sys:String>
     <sys:String x:Key="S.sftp.toodeep">The folder tree is too deep (over {0} levels) — transfer stopped (possible symlink loop).</sys:String>
     <sys:String x:Key="S.sftp.connecting">Connecting SFTP…</sys:String>
@@ -538,6 +538,30 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.exists.confirm">"{0}" already exists at the destination. Overwrite? (Yes = overwrite, No = skip, Cancel = abort)</sys:String>
     <sys:String x:Key="S.sftp.cancel">Cancel transfer</sys:String>
     <sys:String x:Key="S.sftp.drophint">Drop files here to upload</sys:String>
+    <sys:String x:Key="S.sftp.rename">Rename</sys:String>
+    <sys:String x:Key="S.sftp.rename.label">New name:</sys:String>
+    <sys:String x:Key="S.sftp.rename.exists">"{0}" already exists in this folder.</sys:String>
+    <sys:String x:Key="S.sftp.rename.noparent">This entry cannot be renamed — it has no parent folder.</sys:String>
+    <sys:String x:Key="S.sftp.preview">Preview</sys:String>
+    <sys:String x:Key="S.sftp.filter">Filter list (Ctrl+F)</sys:String>
+    <sys:String x:Key="S.sftp.filter.hint">Filter by name…</sys:String>
+    <sys:String x:Key="S.sftp.counting">Counting contents…</sys:String>
+    <sys:String x:Key="S.sftp.deleting">Deleting…</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirmtree">Delete {0} including its contents? Files: {1}, size: {2}. This cannot be undone.</sys:String>
+    <sys:String x:Key="S.sftp.menu.open">Open</sys:String>
+    <sys:String x:Key="S.sftp.menu.copypath">Copy path</sys:String>
+    <sys:String x:Key="S.preview.title">File preview</sys:String>
+    <sys:String x:Key="S.preview.copy">Copy</sys:String>
+    <sys:String x:Key="S.preview.saveas">Save as…</sys:String>
+    <sys:String x:Key="S.preview.close">Close</sys:String>
+    <sys:String x:Key="S.preview.copied">Copied to clipboard</sys:String>
+    <sys:String x:Key="S.preview.truncated">Showing the first {0} lines — the rest of the file was skipped.</sys:String>
+    <sys:String x:Key="S.preview.hex">Binary content — hex dump.</sys:String>
+    <sys:String x:Key="S.preview.toobig">File is too large to preview (limit {0}).</sys:String>
+    <sys:String x:Key="S.preview.large">"{0}" is {1}. Download it in full to preview?</sys:String>
+    <sys:String x:Key="S.preview.meta.size">Size: {0}</sys:String>
+    <sys:String x:Key="S.preview.meta.binary">binary data</sys:String>
+    <sys:String x:Key="S.preview.meta.image">image {0}×{1} px</sys:String>
     <sys:String x:Key="S.dual.push">Send the selected file to the server →</sys:String>
     <sys:String x:Key="S.dual.pull">← Download the selected file to disk</sys:String>
 

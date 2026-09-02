@@ -1,0 +1,70 @@
+<ui:FluentWindow x:Class="RdpManager.FilePreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="{DynamicResource S.preview.title}" Width="900" Height="640" MinWidth="480" MinHeight="320"
+        Icon="pack://application:,,,/Assets/app.ico"
+        UseLayoutRounding="True"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+
+    <Grid Background="{DynamicResource CanvasBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar x:Name="Bar" Grid.Row="0" Title="{DynamicResource S.preview.title}"/>
+
+        <!-- Nagłówek: nazwa pliku + metryki (rozmiar, rodzaj, kodowanie). -->
+        <StackPanel Grid.Row="1" Margin="20,4,20,10">
+            <TextBlock x:Name="NameText" FontSize="{StaticResource FontTitle}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrim}" TextTrimming="CharacterEllipsis"/>
+            <TextBlock x:Name="MetaText" Margin="0,2,0,0" FontSize="{StaticResource FontSmall}"
+                       Foreground="{DynamicResource TextTer}" TextTrimming="CharacterEllipsis"/>
+        </StackPanel>
+
+        <!-- Treść: dokładnie jeden z trzech hostów jest widoczny (patrz FilePreviewWindow.xaml.cs). -->
+        <Border Grid.Row="2" Margin="20,0,20,12" CornerRadius="{StaticResource RadiusMd}"
+                Background="{DynamicResource Panel}" BorderThickness="1" BorderBrush="{DynamicResource Border}">
+            <Grid>
+                <!-- Tekst / JSON / zrzut szesnastkowy: RichTextBox daje zaznaczanie i Ctrl+C. -->
+                <RichTextBox x:Name="CodeHost" Visibility="Collapsed" IsReadOnly="True" BorderThickness="0"
+                             Background="Transparent" Foreground="{DynamicResource TextPrim}"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                             Padding="10,8"/>
+
+                <!-- Markdown: ten sam renderer co notatki wydania. -->
+                <FlowDocumentScrollViewer x:Name="DocHost" Visibility="Collapsed" Padding="10,8"
+                                          VerticalScrollBarVisibility="Auto" Background="Transparent"
+                                          IsSelectionEnabled="True"/>
+
+                <!-- Obraz: bez skalowania w górę, z przewijaniem gdy większy niż okno. -->
+                <ScrollViewer x:Name="ImageHost" Visibility="Collapsed"
+                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <Image x:Name="ImageView" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Stopka: informacja o obcięciu/kodowaniu + akcje. -->
+        <Grid Grid.Row="3" Margin="20,0,20,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="NoteText" VerticalAlignment="Center" TextWrapping="Wrap"
+                       FontSize="{StaticResource FontSmall}" Foreground="{DynamicResource TextTer}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ui:Button x:Name="CopyBtn" Appearance="Secondary" Click="Copy_Click"
+                           Content="{DynamicResource S.preview.copy}" Margin="8,0,0,0"/>
+                <ui:Button x:Name="SaveBtn" Appearance="Secondary" Click="Save_Click"
+                           Content="{DynamicResource S.preview.saveas}" Margin="8,0,0,0"/>
+                <ui:Button Appearance="Primary" IsCancel="True" Click="Close_Click"
+                           Content="{DynamicResource S.preview.close}" Margin="8,0,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>
