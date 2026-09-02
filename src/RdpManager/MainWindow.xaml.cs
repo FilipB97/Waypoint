@@ -3149,14 +3149,9 @@ namespace RdpManager
             else if (background is SolidColorBrush sb) c = sb.Color;
             else return AvatarInkLight;
 
-            // Nie „lepszy kontrast wygrywa", tylko „biel, chyba że ciemny jest WYRAŹNIE lepszy" (1.3x).
-            // Reguła bez progu dawałaby ciemne inicjały na awatarze w kolorze akcentu (4.52 vs 3.99) —
-            // tuż obok przycisku „Połącz", który ma biały tekst na dokładnie tym samym tle. Próg zostawia
-            // biel tam, gdzie i tak jest wystarczająca (błękity, fiolety), a przełącza na ciemny inkaust
-            // tylko na kolorach jasnych, gdzie biel naprawdę ginie: bursztyn 2.16, zieleń 2.41, turkus 2.89.
-            double white = RdpManager.Core.ColorMath.Contrast(c, Colors.White);
-            double dark = RdpManager.Core.ColorMath.Contrast(c, Color.FromRgb(0x14, 0x16, 0x20));
-            return dark >= white * 1.3 ? AvatarInkDark : AvatarInkLight;
+            // Reguła („biel, chyba że ciemny jest wyraźnie lepszy") siedzi w ColorMath.PrefersDarkInk —
+            // dzielimy ją z tekstem na przycisku w kolorze akcentu, bo to jedno i to samo pytanie.
+            return RdpManager.Core.ColorMath.PrefersDarkInk(c) ? AvatarInkDark : AvatarInkLight;
         }
 
         internal void CopyToClipboard(string text)

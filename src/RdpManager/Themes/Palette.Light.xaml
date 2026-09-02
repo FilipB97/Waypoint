@@ -93,6 +93,14 @@
 
     <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
 
+    <!-- Gradient akcji głównej. Wartość awaryjna: w runtime ThemeManager nadpisuje go gradientem
+         zbudowanym Z BIEŻĄCEGO AKCENTU (także z presetu i z własnego koloru użytkownika), więc przycisk
+         „Szybkie połączenie" podąża za wyborem. Ten wpis istnieje po to, żeby klucz rozwiązywał się
+         w projektancie i przed pierwszym Apply. -->
+    <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#5B4BD6" Offset="0"/><GradientStop Color="#7C6DE0" Offset="1"/>
+    </LinearGradientBrush>
+
     <FontFamily x:Key="Mono">Cascadia Code, Consolas, monospace</FontFamily>
 
     <LinearGradientBrush x:Key="AvProd" StartPoint="0,0" EndPoint="1,1">

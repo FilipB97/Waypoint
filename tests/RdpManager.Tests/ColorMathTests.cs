@@ -37,6 +37,43 @@ namespace RdpManager.Tests
             => Assert.True(ColorMath.Contrast(C(fg), C(bg)) >= min,
                            $"{fg} na {bg} = {ColorMath.Contrast(C(fg), C(bg)):F2}, oczekiwano >= {min}");
 
+        // ----- wybór inkaustu na kolorowym tle (awatary, przyciski w kolorze akcentu) -----
+
+        // Akcenty, na których BIEL ginie — reguła musi przełączyć na ciemny inkaust.
+        [Theory]
+        [InlineData("#88C0D0")]   // Nord: biel 2.00
+        [InlineData("#61AFEF")]   // Atom One Dark: 2.36
+        [InlineData("#58A6FF")]   // GitHub Dark: 2.53
+        [InlineData("#D97757")]   // Claude Dark: 3.12
+        [InlineData("#E0872E")]   // próbnik „bursztyn": 2.74
+        [InlineData("#22B07D")]   // próbnik „zieleń": 2.77
+        [InlineData("#FFB454")]   // kolor grupy „staging": 1.76
+        public void PrefersDarkInk_OnLightBackgrounds_ChoosesDark(string hex)
+            => Assert.True(ColorMath.PrefersDarkInk(C(hex)));
+
+        // Akcenty, na których biel jest wystarczająca — próg ma jej NIE ruszać, żeby domyślny motyw
+        // nie zmienił wyglądu przy różnicy nie do zauważenia (indygo: ciemny 4.52 vs biel 3.99).
+        [Theory]
+        [InlineData("#6C6DFF")]   // akcent Waypointa, ciemny
+        [InlineData("#5B4BD6")]   // akcent Waypointa, jasny
+        [InlineData("#2F6BE0")]   // próbnik „kobalt"
+        [InlineData("#1E66F5")]   // Catppuccin Latte
+        public void PrefersDarkInk_WhenWhiteIsAdequate_KeepsWhite(string hex)
+            => Assert.False(ColorMath.PrefersDarkInk(C(hex)));
+
+        [Fact]
+        public void PrefersDarkInk_ChosenInk_AlwaysBeatsWhiteOnLightAccents()
+        {
+            // Sedno reguły: po wyborze inkaustu napis ma być czytelniejszy, niż byłby na samej bieli.
+            foreach (string hex in new[] { "#88C0D0", "#61AFEF", "#D97757", "#E0872E", "#FFB454" })
+            {
+                Color bg = C(hex);
+                Color ink = ColorMath.PrefersDarkInk(bg) ? ColorMath.InkDark : Colors.White;
+                Assert.True(ColorMath.Contrast(bg, ink) > ColorMath.Contrast(bg, Colors.White),
+                            $"{hex}: wybrany inkaust {ColorMath.Contrast(bg, ink):F2} nie bije bieli {ColorMath.Contrast(bg, Colors.White):F2}");
+            }
+        }
+
         [Fact]
         public void EnsureContrast_AlreadyPassing_ReturnsColorUnchanged()
         {

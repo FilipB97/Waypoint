@@ -5,12 +5,10 @@
          „W" w gradiencie, pierścienie na końcach trasy, biała kropka w punkcie docelowym. Wektor, a nie
          app.ico, bo skaluje się ostro przy każdym DPI i zoomie interfejsu. Motyw go NIE przebarwia. -->
 
-    <!-- Gradient marki — ten sam, co w znaku. Do JEDNEJ, głównej akcji („Szybkie połączenie"): rozlany
-         po wszystkich przyciskach zrobiłby jarmark, na pojedynczym CTA wiąże interfejs z logo. -->
-    <LinearGradientBrush x:Key="BrandGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#5B8CFF" Offset="0"/>
-        <GradientStop Color="#7C4DFF" Offset="1"/>
-    </LinearGradientBrush>
+    <!-- Gradientu marki NIE ma tu już jako osobnego klucza. Malował „Szybkie połączenie" barwami znaku,
+         przez co przycisk jako jedyny nie słuchał wyboru akcentu: po włączeniu presetu z pomarańczowym
+         akcentem zostawał niebieski. Zastąpił go AccentGradient budowany w ThemeManager z bieżącego
+         akcentu. Sam ZNAK zachowuje własne barwy — logo nie zmienia się z motywem, i o to chodzi. -->
 
     <!-- Sam znak (bez kafla). Granice rysunku = jego własny bounding box, więc wypełnia przydzielone
          miejsce — dlatego nadaje się na małe ikony (pasek tytułu), gdzie kafel byłby ciemnym kwadracikiem

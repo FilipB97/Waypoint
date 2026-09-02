@@ -48,6 +48,24 @@ namespace RdpManager.Core
                 (byte)Math.Round(from.B + (to.B - from.B) * t));
         }
 
+        /// <summary>Domyślny ciemny inkaust aplikacji — ten sam odcień, co kanwa motywu ciemnego.</summary>
+        public static readonly Color InkDark = Color.FromRgb(0x14, 0x16, 0x20);
+
+        /// <summary>
+        /// Czy na danym tle czytelniej wypadnie CIEMNY inkaust niż biel. Reguła nie brzmi „lepszy kontrast
+        /// wygrywa", tylko „biel, chyba że ciemny jest WYRAŹNIE lepszy" (domyślnie 1.3x) — i to jest
+        /// świadome. Bez progu ciemny wygrywałby minimalnie na kolorach takich jak akcent Waypointa
+        /// (4.52 vs 3.99), przez co napis na przycisku akcji zmieniłby się z białego na czarny przy
+        /// różnicy nie do zauważenia, a obok stałyby elementy z bielą na tym samym tle. Próg przełącza
+        /// inkaust dopiero tam, gdzie biel naprawdę ginie: na jasnych akcentach i kolorach grup
+        /// (bursztyn, zieleń, turkus, pomarańcz presetu „Claude") kontrast bieli spada do 2.0-2.8.
+        ///
+        /// Używane w dwóch miejscach o tym samym problemie: inicjały na kolorowym awatarze i tekst na
+        /// przycisku w kolorze akcentu. Jedna reguła, bo to jedno pytanie.
+        /// </summary>
+        public static bool PrefersDarkInk(Color background, double threshold = 1.3)
+            => Contrast(background, InkDark) >= Contrast(background, Colors.White) * threshold;
+
         /// <summary>
         /// Dociąga <paramref name="foreground"/> do progu kontrastu wobec <paramref name="background"/>,
         /// mieszając go z bielą (na ciemnym tle) albo z czernią (na jasnym). Kolor, który już przechodzi,
