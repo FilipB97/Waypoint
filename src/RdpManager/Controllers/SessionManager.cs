@@ -802,6 +802,11 @@ namespace RdpManager.Controllers
                 SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
                 if (s == _owner._active) { UpdateToolbarMode(); UpdateCanvas(); s.Term.FocusTerminal(); }
             }));
+            // Snippety: skróty w terminalu łapie jego strona (WebView2 to osobne okno — klawisze nie
+            // docierają do WPF) i odsyła je tutaj jako zdarzenia.
+            s.Term.SnippetPickerRequested += () => _owner.OpenSnippets(s);
+            s.Term.SnippetRequested += n => _owner.SendSnippetByNumber(n, s);
+
             if (s.Ssh != null)
                 s.Ssh.TunnelStatus += (spec, ok, err) => _owner.Dispatcher.BeginInvoke(new Action(() =>
                     s.Term.WriteLocal(ok

@@ -1273,6 +1273,10 @@
                         <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+Alt+Q" Style="{StaticResource KeyCapText}"/></Border>
                         <TextBlock Text="{DynamicResource S.keys.quick}" Style="{StaticResource KeyDesc}"/>
                     </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+Shift+K" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.snippets}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
                     <StackPanel Style="{StaticResource KeyRow}" Margin="0,0,0,0">
                         <Border Style="{StaticResource KeyCap}"><TextBlock Text="F1" Style="{StaticResource KeyCapText}"/></Border>
                         <TextBlock Text="{DynamicResource S.keys.help}" Style="{StaticResource KeyDesc}"/>
@@ -1304,6 +1308,31 @@
                             <StackPanel x:Name="QsActions"/>
                         </StackPanel>
                     </ScrollViewer>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Snippety komend (Ctrl+Shift+K). Osobno od palety poleceń, bo to inna operacja: paleta
+             NAWIGUJE, a to WYSYŁA tekst do zdalnej maszyny — pomyłka kosztuje tam więcej niż złe przejście. -->
+        <Popup x:Name="SnippetPopup" Placement="Center" PlacementTarget="{Binding ElementName=BodyGrid}"
+               StaysOpen="False" AllowsTransparency="True">
+            <Border Background="{DynamicResource RailBg}" CornerRadius="{StaticResource RadiusLg}" Padding="8"
+                    BorderBrush="{DynamicResource Border}" BorderThickness="1" Width="520"
+                    Effect="{DynamicResource ShadowMd}">
+                <StackPanel>
+                    <!-- Nagłówek mówi, DOKĄD poleci komenda. Bez tego przy kilku otwartych sesjach
+                         wysyłka „w aktywną kartę" jest zgadywanką. -->
+                    <TextBlock x:Name="SnipTarget" Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontCaption}"
+                               Margin="6,2,6,6" TextTrimming="CharacterEllipsis"/>
+                    <ui:TextBox x:Name="SnippetSearch" PlaceholderText="{DynamicResource S.snip.search}"
+                                Margin="0,0,0,6" TextChanged="SnippetSearch_TextChanged" KeyDown="SnippetSearch_KeyDown">
+                        <ui:TextBox.Icon><ui:SymbolIcon Symbol="Search24"/></ui:TextBox.Icon>
+                    </ui:TextBox>
+                    <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="SnipList"/>
+                    </ScrollViewer>
+                    <Border Height="1" Background="{DynamicResource Border}" Margin="0,6,0,6"/>
+                    <StackPanel x:Name="SnipManageHost"/>
                 </StackPanel>
             </Border>
         </Popup>

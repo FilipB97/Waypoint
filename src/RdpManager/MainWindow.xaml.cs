@@ -2107,7 +2107,12 @@ namespace RdpManager
                 (L("S.addServer"),       () => AddServer_Click(this, null)),
                 (L("S.importRdp"),       () => ImportRdp_Click(this, null)),
                 (L("S.cmd.toggletheme"), ToggleTheme),
+                (L("S.snip.manage"),     ManageSnippets),
             };
+
+            // „Snippety…" (wysyłka) tylko wtedy, gdy jest DOKĄD wysłać — inaczej pozycja w palecie
+            // obiecywałaby akcję kończącą się komunikatem „brak terminala".
+            if (SnippetTarget() != null) all.Add((L("S.m.snippets"), () => OpenSnippets()));
 
             var srv = _active?.Server;
             if (srv != null)
@@ -2167,6 +2172,202 @@ namespace RdpManager
             row.MouseLeave += (s, e) => row.Background = Brushes.Transparent;
             row.MouseLeftButtonUp += (s, e) => { e.Handled = true; onClick(); };
             return row;
+        }
+
+        // ---------- Snippety komend ----------
+
+        // Zapisana komenda wysyłana do terminala kliknięciem albo skrótem. Treść przechodzi przez
+        // podstawienie zmiennych serwera, więc jeden wpis („ssh {user}@{host}", „tail -f /var/log/…")
+        // działa na wszystkich maszynach zamiast kopii per serwer.
+
+        private readonly List<(Border row, Brush rest, Action go)> _snipFlat = new List<(Border, Brush, Action)>();
+        private int _snipSel = -1;
+        private Action _snipFirstAction;
+        // Lista wczytana raz na otwarcie popupu. Filtrowanie przebudowuje wiersze przy KAŻDYM znaku,
+        // więc czytanie pliku w BuildSnippetList byłoby odczytem z dysku na literę.
+        private List<Models.CommandSnippet> _snips = new List<Models.CommandSnippet>();
+        // Sesja, z której otwarto listę — wybór z popupu ma trafić tam, gdzie naciśnięto skrót, nawet
+        // jeśli w międzyczasie aktywna stała się inna karta.
+        private Session _snipFrom;
+
+        // Cel wysyłki. Skrót naciśnięty W TERMINALU wskazuje swoją sesję wprost — i to ona wygrywa, bo
+        // przy widoku dzielonym klawiatura może być w karcie, która nie jest aktywna. Bez wskazania
+        // bierzemy aktywną kartę. Sesje w oderwanych oknach (SessionWindow) to wyłącznie RDP — nie mają
+        // terminala, więc nie ma czego tam szukać.
+        private Session SnippetTarget(Session from = null)
+        {
+            if (from != null && from.IsTerm && from.Connected) return from;
+            return (_active != null && _active.IsTerm && _active.Connected) ? _active : null;
+        }
+
+        internal void OpenSnippets(Session from = null)
+        {
+            var target = SnippetTarget(from);
+            _snipFrom = target;
+            if (target == null) { SetStatus(L("S.snip.noterm"), StatusKind.Info); return; }
+
+            _snips = SnippetStore.Load();
+            SnipTarget.Text = string.Format(L("S.snip.target"), target.Server?.Name ?? "");
+            SnippetSearch.Text = "";
+            BuildSnippetList("");
+            SnippetPopup.IsOpen = true;
+            SnippetSearch.Dispatcher.BeginInvoke(new Action(() => SnippetSearch.Focus()), DispatcherPriority.Input);
+        }
+
+        private void SnippetSearch_TextChanged(object sender, TextChangedEventArgs e) => BuildSnippetList(SnippetSearch.Text);
+
+        private void SnippetSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Down) { MoveSnipSel(1); e.Handled = true; }
+            else if (e.Key == Key.Up) { MoveSnipSel(-1); e.Handled = true; }
+            else if (e.Key == Key.Enter)
+            {
+                var go = (_snipSel >= 0 && _snipSel < _snipFlat.Count) ? _snipFlat[_snipSel].go : _snipFirstAction;
+                if (go != null) { go(); e.Handled = true; }
+            }
+            else if (e.Key == Key.Escape) { SnippetPopup.IsOpen = false; e.Handled = true; }
+        }
+
+        private void BuildSnippetList(string filter)
+        {
+            SnipList.Children.Clear();
+            SnipManageHost.Children.Clear();
+            _snipFlat.Clear();
+            _snipSel = -1;
+            _snipFirstAction = null;
+
+            var all = _snips;
+            string f = (filter ?? "").Trim();
+
+            // Ranking ten sam co w palecie poleceń: dokładne > prefiks > granica słowa > podciąg.
+            // Szukamy i po nazwie, i po treści — komendę pamięta się częściej niż nadaną jej nazwę.
+            var matched = all
+                .Select(x => new { x, score = Math.Max(Core.CommandPalette.Score(x.Name ?? "", f),
+                                                       Core.CommandPalette.Score(x.Command ?? "", f)) })
+                .Where(x => x.score >= 0)
+                .OrderByDescending(x => x.score)
+                .ToList();
+
+            if (all.Count == 0) SnipList.Children.Add(SnippetHint(L("S.snip.empty")));
+            else if (matched.Count == 0) SnipList.Children.Add(SnippetHint(L("S.snip.nomatch")));
+
+            foreach (var m in matched)
+            {
+                var snip = m.x;
+                // Numer skrótu bierze się z pozycji w PEŁNEJ liście, nie w przefiltrowanej — inaczej
+                // filtrowanie zmieniałoby przypisanie klawiszy w trakcie patrzenia na nie.
+                int number = all.IndexOf(snip) + 1;
+                var from = _snipFrom;
+                Action go = () => { SnippetPopup.IsOpen = false; SendSnippet(snip, from); };
+                if (_snipFirstAction == null) _snipFirstAction = go;
+                var row = (Border)BuildSnippetRow(snip, number <= 9 ? number.ToString() : "", go);
+                SnipList.Children.Add(row);
+                _snipFlat.Add((row, row.Background, go));
+            }
+
+            SnipManageHost.Children.Add(BuildActionRow(L("S.snip.manage"),
+                () => { SnippetPopup.IsOpen = false; ManageSnippets(); }));
+        }
+
+        private FrameworkElement SnippetHint(string text) => new TextBlock
+        {
+            Text = text,
+            Foreground = Res("TextTer"),
+            FontSize = (double)TryFindResource("FontSmall"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(8, 6, 8, 8)
+        };
+
+        // Wiersz: numer skrótu, nazwa i podgląd komendy. Komenda monospace i w JEDNYM wierszu — to ona
+        // decyduje, czy wysyłamy to, co trzeba, a nazwa bywa myląca (np. dwa warianty tego samego).
+        private FrameworkElement BuildSnippetRow(Models.CommandSnippet snip, string hotkey, Action onClick)
+        {
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var num = new TextBlock
+            {
+                Text = hotkey,
+                Foreground = Res("TextTer"),
+                FontFamily = TryFindResource("Mono") as System.Windows.Media.FontFamily,
+                FontSize = (double)TryFindResource("FontCaption"),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(num, 0);
+            grid.Children.Add(num);
+
+            var text = new StackPanel();
+            text.Children.Add(new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(snip.Name) ? SnippetStore.FirstLine(snip.Command) : snip.Name,
+                Foreground = Res("TextPrim"),
+                FontSize = (double)TryFindResource("FontSmall"),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            text.Children.Add(new TextBlock
+            {
+                Text = SnippetStore.FirstLine(snip.Command),
+                Foreground = Res("TextTer"),
+                FontFamily = TryFindResource("Mono") as System.Windows.Media.FontFamily,
+                FontSize = (double)TryFindResource("FontCaption"),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(0, 1, 0, 0)
+            });
+            Grid.SetColumn(text, 1);
+            grid.Children.Add(text);
+
+            var row = new Border
+            {
+                Padding = new Thickness(7, 6, 7, 6),
+                CornerRadius = Radii.Sm,
+                Background = Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                Margin = new Thickness(0, 1, 0, 1),
+                Child = grid
+            };
+            row.MouseEnter += (s, e) => row.Background = Res("Elevated");
+            row.MouseLeave += (s, e) => row.Background = Brushes.Transparent;
+            row.MouseLeftButtonUp += (s, e) => { e.Handled = true; onClick(); };
+            return row;
+        }
+
+        private void MoveSnipSel(int dir)
+        {
+            if (_snipFlat.Count == 0) return;
+            if (_snipSel >= 0 && _snipSel < _snipFlat.Count)
+                _snipFlat[_snipSel].row.Background = _snipFlat[_snipSel].rest;
+            _snipSel = ((_snipSel < 0 ? (dir > 0 ? -1 : 0) : _snipSel) + dir + _snipFlat.Count) % _snipFlat.Count;
+            _snipFlat[_snipSel].row.Background = Res("Elevated");
+        }
+
+        /// <summary>Ctrl+Shift+1..9 w terminalu — snippet o tym numerze (pozycja na liście).</summary>
+        internal void SendSnippetByNumber(int number, Session from = null)
+        {
+            var all = SnippetStore.Load();
+            if (number < 1 || number > all.Count) { SetStatus(string.Format(L("S.snip.nonumber"), number), StatusKind.Info); return; }
+            SendSnippet(all[number - 1], from);
+        }
+
+        // Wysyłka: podstaw zmienne serwera, zamień na strumień klawiszy i wpuść do transportu tak,
+        // jakby użytkownik to wpisał (serwer odbije echo, komenda wejdzie do historii powłoki).
+        private void SendSnippet(Models.CommandSnippet snip, Session from = null)
+        {
+            var target = SnippetTarget(from);
+            if (target == null) { SetStatus(L("S.snip.noterm"), StatusKind.Info); return; }
+
+            string expanded = Core.SnippetVars.Expand(snip.Command, target.Server);
+            target.Term.SendText(Core.SnippetVars.ToKeystrokes(expanded, snip.SendEnter));
+            target.Term.FocusTerminal();
+            SetStatus(string.Format(L("S.snip.sent"),
+                string.IsNullOrWhiteSpace(snip.Name) ? SnippetStore.FirstLine(snip.Command) : snip.Name), StatusKind.Ok);
+        }
+
+        internal void ManageSnippets()
+        {
+            var win = new SnippetWindow { Owner = this };
+            win.ShowDialog();
+            _snips = SnippetStore.Load();   // popup mógł zostać otwarty ponownie z tej samej listy
         }
 
         // Przełącz motyw Ciemny <-> Jasny z palety (System też ląduje w Ciemny/Jasny). Bez round-tripu przez combo
@@ -2288,6 +2489,9 @@ namespace RdpManager
             // Szczegóły i sposób odczytu: Diagnostics/HoverProbe.cs.
             if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == (ModifierKeys.Control | ModifierKeys.Shift))
             {
+                // Ten sam skrót co w terminalu (tam łapie go strona, bo WebView2 nie przepuszcza klawiszy
+                // do WPF) — żeby lista snippetów otwierała się identycznie z karty i z samego terminala.
+                if (e.Key == Key.K) { OpenSnippets(); e.Handled = true; return; }
                 if (e.Key == Key.F12) { Diagnostics.HoverProbe.Toggle(this); e.Handled = true; return; }
                 if (e.Key == Key.F11) { Diagnostics.HoverProbe.ToggleForcedHover(this); e.Handled = true; return; }
                 if (e.Key == Key.F10)

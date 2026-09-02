@@ -287,6 +287,10 @@ namespace RdpManager.Controllers
                 transcriptItem.Click += (s, e) => session.Term?.SaveTranscript();
                 tabMenu.Items.Add(transcriptItem);
 
+                var snippetsItem = new MenuItem { Header = L("S.m.snippets") };
+                snippetsItem.Click += (s, e) => _owner.OpenSnippets();
+                tabMenu.Items.Add(snippetsItem);
+
                 if (session.IsSsh)
                 {
                     var broadcastItem = new MenuItem { Header = L("S.m.broadcast") };
