@@ -193,7 +193,7 @@ namespace RdpManager.Controllers
             session.TabButton = _owner._tabs.BuildTab(session);
             if (_owner._tabs.GroupOf(session) != null) _owner.RebuildTabStrip();   // serwer w grupie → renderuj w jej kontenerze
             else { _owner.TabStrip.Children.Add(session.TabButton); _owner.RefreshTabTitles(); }
-            if (session.IsRest) _owner.SetTabStatus(session, ServerStatus.Online);   // narzędzie: gotowe od razu
+            if (session.IsRest) _owner.SetTabStatus(session, SessionState.Connected);   // narzędzie: gotowe od razu
 
             Activate(session);
             if (autoConnect) BeginConnect(session);
@@ -639,7 +639,7 @@ namespace RdpManager.Controllers
                 var opts = new RemoteViewing.Vnc.VncClientConnectOptions { ShareDesktop = true, Password = pw };
                 opts.PasswordRequiredCallback = c => pw;   // gdy serwer poprosi — to samo hasło (puste => auth padnie)
 
-                _owner.SetTabStatus(s, ServerStatus.Idle);
+                _owner.SetTabStatus(s, SessionState.Connecting);
                 SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
                 if (s == _owner._active) UpdateCanvas();
 
@@ -670,7 +670,7 @@ namespace RdpManager.Controllers
             s.LoggedIn = true;
             _owner.RecordRecent(s.Server);
             ConnectionLog.Append("CONNECTED", s.Server);
-            _owner.SetTabStatus(s, ServerStatus.Online);
+            _owner.SetTabStatus(s, SessionState.Connected);
             SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
             if (s == _owner._active) { UpdateToolbarMode(); UpdateCanvas(); try { s.Vnc.Focus(); } catch { } }
         }
@@ -682,7 +682,7 @@ namespace RdpManager.Controllers
             s.Vnc.Client = null;
             bool was = s.Connected;
             s.Connected = false;
-            _owner.SetTabStatus(s, ServerStatus.Offline);
+            _owner.SetTabStatus(s, was ? SessionState.Disconnected : SessionState.Failed);
             ConnectionLog.Append(was ? "DISCONNECTED" : "FAILED", s.Server);
             if (!s.Server.SavePassword) s.Password = "";
             if (was) SetSessionStatus(s, string.Format(L("S.st.disconnected"), "VNC"), StatusKind.Error);
@@ -746,7 +746,7 @@ namespace RdpManager.Controllers
             if (s.Server.Protocol == RemoteProtocol.Telnet) WarnUnencrypted(RemoteProtocol.Telnet);
             try
             {
-                _owner.SetTabStatus(s, ServerStatus.Idle);
+                _owner.SetTabStatus(s, SessionState.Connecting);
                 SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
                 if (s == _owner._active) UpdateCanvas();
 
@@ -771,20 +771,20 @@ namespace RdpManager.Controllers
             }
             catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException)
             {
-                _owner.SetTabStatus(s, ServerStatus.Offline);
+                _owner.SetTabStatus(s, SessionState.Failed);
                 SetSessionStatus(s, L("S.ssh.nowebview"), StatusKind.Error);
                 RefreshIfActive(s);
             }
             catch (Renci.SshNet.Common.SshAuthenticationException ex)
             {
-                _owner.SetTabStatus(s, ServerStatus.Offline);
+                _owner.SetTabStatus(s, SessionState.Failed);
                 s.Term.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
                 SetSessionStatus(s, ex.Message + "  " + L("S.st.hint.creds"), StatusKind.Error);
                 RefreshIfActive(s);
             }
             catch (Exception ex)
             {
-                _owner.SetTabStatus(s, ServerStatus.Offline);
+                _owner.SetTabStatus(s, SessionState.Failed);
                 s.Term.WriteLocal("\r\n\x1b[91m" + ex.Message + "\x1b[0m\r\n");
                 SetSessionStatus(s, string.Format(L("S.st.exception"), ex.Message), StatusKind.Error);
                 RefreshIfActive(s);
@@ -798,7 +798,7 @@ namespace RdpManager.Controllers
             {
                 s.MarkConnected();   // Connected = true + wpis „CONNECTED" (dedup B3/B4)
                 _owner.RecordRecent(s.Server);
-                _owner.SetTabStatus(s, ServerStatus.Online);
+                _owner.SetTabStatus(s, SessionState.Connected);
                 SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
                 if (s == _owner._active) { UpdateToolbarMode(); UpdateCanvas(); s.Term.FocusTerminal(); }
             }));
@@ -811,7 +811,7 @@ namespace RdpManager.Controllers
             {
                 bool was = s.Connected;
                 s.MarkDisconnected(was);   // Connected/LoggedIn=false + log + wyczyść hasło (dedup B3/B4)
-                _owner.SetTabStatus(s, ServerStatus.Offline);
+                _owner.SetTabStatus(s, was ? SessionState.Disconnected : SessionState.Failed);
 
                 string msg = string.Format(L("S.st.disconnected"),
                     string.IsNullOrWhiteSpace(reason) ? s.Server.Protocol.ToString().ToLowerInvariant() : reason);
@@ -851,7 +851,7 @@ namespace RdpManager.Controllers
             bool anon = s.Server.Protocol == RemoteProtocol.Ftp && s.Server.FtpAnonymous;
             if (!anon && string.IsNullOrWhiteSpace(_owner.EffUser(s.Server))) { PromptAndConnect(s, null); return; }
             if (s.Server.Protocol == RemoteProtocol.Ftp && s.Server.FtpEncryption == 2) WarnUnencrypted(RemoteProtocol.Ftp);
-            _owner.SetTabStatus(s, ServerStatus.Idle);
+            _owner.SetTabStatus(s, SessionState.Connecting);
             SetSessionStatus(s, string.Format(L("S.st.connecting"), s.Server.Host), StatusKind.Connecting);
             if (s == _owner._active) UpdateCanvas();
             s.FilesConn.SetIdentity(_owner.ConnectIdentity(s.Server), s.Password);
@@ -865,7 +865,7 @@ namespace RdpManager.Controllers
             {
                 s.MarkConnected();   // Connected = true + wpis „CONNECTED" (dedup B3/B4)
                 _owner.RecordRecent(s.Server);
-                _owner.SetTabStatus(s, ServerStatus.Online);
+                _owner.SetTabStatus(s, SessionState.Connected);
                 SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
                 RefreshIfActive(s);
             }));
@@ -873,7 +873,7 @@ namespace RdpManager.Controllers
             {
                 bool was = s.Connected;
                 s.MarkDisconnected(was);   // Connected/LoggedIn=false + log + wyczyść hasło (dedup B3/B4)
-                _owner.SetTabStatus(s, ServerStatus.Offline);
+                _owner.SetTabStatus(s, was ? SessionState.Disconnected : SessionState.Failed);
                 SetSessionStatus(s, string.Format(L("S.st.disconnected"),
                     string.IsNullOrWhiteSpace(reason) ? "sftp" : reason), StatusKind.Error);
                 RefreshIfActive(s);
@@ -885,14 +885,14 @@ namespace RdpManager.Controllers
             s.Rdp.OnConnecting += (o, a) =>
             {
                 SetSessionStatus(s, L("S.st.connectingShort"), StatusKind.Connecting);
-                _owner.SetTabStatus(s, ServerStatus.Idle);
+                _owner.SetTabStatus(s, SessionState.Connecting);
                 if (s == _owner._active) UpdateCanvas();
             };
             s.Rdp.OnConnected += (o, a) =>
             {
                 s.MarkConnected();   // Connected = true + wpis „CONNECTED" (dedup B3/B4)
                 _owner.RecordRecent(s.Server);
-                _owner.SetTabStatus(s, ServerStatus.Online);
+                _owner.SetTabStatus(s, SessionState.Connected);
                 SetSessionStatus(s, L("S.connected"), StatusKind.Ok);
                 RefreshIfActive(s);
             };
@@ -908,7 +908,7 @@ namespace RdpManager.Controllers
                 bool wasLoggedIn = s.LoggedIn;
                 // dedup B3/B4: Connected/LoggedIn=false + log DISCONNECTED/FAILED + wyczyść hasło (gdy nie zapisane w CredMan)
                 s.MarkDisconnected(wasLoggedIn);
-                _owner.SetTabStatus(s, ServerStatus.Offline);
+                _owner.SetTabStatus(s, wasLoggedIn ? SessionState.Disconnected : SessionState.Failed);
 
                 string msg = string.Format(L("S.st.disconnected"), DescribeDisconnect(s.Rdp, a.discReason));
                 if (!wasLoggedIn)
@@ -923,7 +923,7 @@ namespace RdpManager.Controllers
             s.Rdp.OnFatalError += (o, a) =>
             {
                 s.Connected = false;
-                _owner.SetTabStatus(s, ServerStatus.Offline);
+                _owner.SetTabStatus(s, SessionState.Failed);
                 SetSessionStatus(s, string.Format(L("S.st.fatal"), a.errorCode), StatusKind.Error);
                 RefreshIfActive(s);
             };
