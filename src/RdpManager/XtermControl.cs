@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -8,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+using RdpManager.Core;
 
 namespace RdpManager
 {
@@ -39,9 +42,7 @@ namespace RdpManager
         {
             Child = Web;
             // Tło od pierwszej klatki dopasowane do motywu apki (bez błysku złego koloru przy starcie WebView2).
-            Web.DefaultBackgroundColor = ThemeManager.IsLight
-                ? System.Drawing.Color.FromArgb(255, 255, 255)
-                : System.Drawing.Color.FromArgb(16, 18, 22);
+            SetBackdrop(CurrentTheme());
         }
 
         /// <summary>Klawisze z xterm (wątek UI). Pochodna pisze do swojego transportu.</summary>
@@ -223,13 +224,67 @@ namespace RdpManager
         /// JsonSerializer robi dokładnie to, czego trzeba, i ucieka też znaki spoza ASCII.
         /// </summary>
         /// <summary>Kolory podświetleń wyszukiwania — akcent na trafieniu aktywnym, przygaszony wariant
-        /// na pozostałych. Osobno dla motywów, jak reszta palety.</summary>
-        private static string SearchDecorations(bool light)
+        /// na pozostałych. Z palety, więc idą za presetem i własnym akcentem.</summary>
+        private static Dictionary<string, string> SearchDecorationMap(TerminalTheme t)
         {
-            string act = light ? "#5B4BD6" : "#6C6DFF";
-            string rest = light ? "#C7C1F2" : "#3A3B63";
-            return "{ activeMatchBackground: '" + act + "', activeMatchColorOverviewRuler: '" + act +
-                   "', matchBackground: '" + rest + "', matchOverviewRuler: '" + rest + "' }";
+            // Trafienie aktywne pełnym akcentem, pozostałe tym samym akcentem przygaszonym — jeden
+            // kolor w dwóch natężeniach, więc podąża za presetem i własnym akcentem użytkownika.
+            return new Dictionary<string, string>
+            {
+                ["activeMatchBackground"] = t.Accent,
+                ["activeMatchColorOverviewRuler"] = t.Accent,
+                ["matchBackground"] = t.Selection,
+                ["matchOverviewRuler"] = t.Selection
+            };
+        }
+
+        // Ta sama mapa raz wstrzykiwana do strony, raz wysyłana przy przemalowaniu — żeby podświetlenia
+        // wyszukiwania nie zostały na akcencie sprzed zmiany motywu.
+        private static string SearchDecorations(TerminalTheme t)
+            => JsonSerializer.Serialize(SearchDecorationMap(t));
+
+        /// <summary>Motyw z ŻYWEJ palety — patrz Core/TerminalTheme (terminal nie widzi DynamicResource).</summary>
+        private static TerminalTheme CurrentTheme()
+            => TerminalTheme.From(Core.PaletteColors.Of, ThemeManager.IsLight);
+
+        /// <summary>
+        /// Przemalowuje OTWARTY terminal po zmianie motywu, presetu albo akcentu. Bez tego zmiana
+        /// dotyczyła tylko nowo otwieranych sesji, bo strona wstrzykuje motyw przy budowie.
+        /// </summary>
+        public void ApplyTheme()
+        {
+            if (_disposed) return;
+            var t = CurrentTheme();
+            var msg = new Dictionary<string, object>
+            {
+                ["t"] = "theme",
+                ["xterm"] = new Dictionary<string, string>
+                {
+                    ["background"] = t.Background,
+                    ["foreground"] = t.Foreground,
+                    ["cursor"] = t.Cursor,
+                    ["selectionBackground"] = t.Selection
+                },
+                ["vars"] = t.CssVars(),
+                ["deco"] = SearchDecorationMap(t)
+            };
+            try
+            {
+                SetBackdrop(t);
+                Web.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(msg));
+            }
+            catch { /* strona jeszcze nie żyje albo już zamknięta */ }
+        }
+
+        /// <summary>
+        /// Tło samego okna WebView2 — widać je przez ułamek sekundy przed wczytaniem strony i podczas
+        /// zmiany rozmiaru, zanim strona się przerysuje. Bierzemy je z tego samego motywu co tło terminala,
+        /// więc przy starcie i przy przełączeniu motywu nie mruga kolorem poprzedniej palety.
+        /// </summary>
+        private void SetBackdrop(TerminalTheme t)
+        {
+            var c = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(t.Background);
+            Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(c.R, c.G, c.B);
         }
 
         private static string JsStr(string value) => JsonSerializer.Serialize(value ?? "");
@@ -302,27 +357,21 @@ namespace RdpManager
 
         /// <summary>Style paska szukania — dopasowane do palety Waypointa (promienie z drabiny 8/12,
         /// akcent marki, tekst na progu czytelności).</summary>
-        private static string SearchBarCss(bool light)
-        {
-            string bg = light ? "#FAFBFC" : "#2C2E37";
-            string line = light ? "rgba(0,0,0,.13)" : "rgba(255,255,255,.15)";
-            string tx = light ? "#1B1D22" : "#E7E8EE";
-            string tx3 = light ? "#6B6F78" : "#9396A6";
-            string acc = light ? "#5B4BD6" : "#6C6DFF";
-            return
+        // Wyłącznie ZMIENNE CSS — żadnych kolorów wprost. Wartości ustawia skrypt strony przy starcie
+        // i przy każdym przemalowaniu (ApplyTheme), więc zmiana motywu nie wymaga przeładowania.
+        private static string SearchBarCss() =>
                 "#sb{position:fixed;top:8px;right:14px;display:flex;align-items:center;gap:6px;padding:6px 8px;" +
-                "border-radius:12px;background:" + bg + ";border:1px solid " + line + ";" +
+                "border-radius:12px;background:var(--wp-panel);border:1px solid var(--wp-border);" +
                 "box-shadow:0 6px 24px rgba(0,0,0,.35);font-family:'Segoe UI',system-ui,sans-serif;z-index:9}" +
                 "#sb[hidden]{display:none}" +
-                "#sq{width:190px;height:26px;border-radius:8px;border:2px solid transparent;background:" +
-                (light ? "#FFFFFF" : "rgba(255,255,255,.08)") + ";color:" + tx + ";padding:0 8px;font-size:12px;outline:none}" +
-                "#sq:focus{border-color:" + acc + "}" +
-                "#sq::placeholder{color:" + tx3 + "}" +
-                "#sn{font-size:11px;color:" + tx3 + ";min-width:52px;text-align:center;font-variant-numeric:tabular-nums}" +
-                "#sb button{width:24px;height:24px;border:0;border-radius:8px;background:transparent;color:" + tx3 + ";" +
+                "#sq{width:190px;height:26px;border-radius:8px;border:2px solid transparent;" +
+                "background:var(--wp-input);color:var(--wp-tx);padding:0 8px;font-size:12px;outline:none}" +
+                "#sq:focus{border-color:var(--wp-accent)}" +
+                "#sq::placeholder{color:var(--wp-tx3)}" +
+                "#sn{font-size:11px;color:var(--wp-tx3);min-width:52px;text-align:center;font-variant-numeric:tabular-nums}" +
+                "#sb button{width:24px;height:24px;border:0;border-radius:8px;background:transparent;color:var(--wp-tx3);" +
                 "cursor:pointer;font-size:12px;line-height:1}" +
-                "#sb button:hover{background:" + (light ? "rgba(0,0,0,.06)" : "rgba(255,255,255,.10)") + ";color:" + tx + "}";
-        }
+                "#sb button:hover{background:var(--wp-hover);color:var(--wp-tx)}";
 
         private static string BuildHtml()
         {
@@ -339,21 +388,18 @@ namespace RdpManager
             string serial = ReadAsset("addon-serialize.js").Replace("</script>", "<\\/script>");
 
             // Terminal (WebView2/xterm.js) żyje poza drzewem zasobów WPF — nie widzi DynamicResource,
-            // więc motyw i rozmiar czcionki trzeba wstrzyknąć raz, przy budowie strony (D5 z przeglądu).
-            bool light = ThemeManager.IsLight;
-            string pageBg = light ? "#FFFFFF" : "#101216";
-            // Kursor w kolorze akcentu marki. Stał tu kobalt #2657D6 sprzed rebrandingu — kolor,
-            // którego aplikacja nigdzie indziej już nie używa.
-            string xtermTheme = light
-                ? "{ background:'#FFFFFF', foreground:'#1B1D22', cursor:'#5B4BD6', selectionBackground:'#C7C1F2' }"
-                : "{ background:'#101216', foreground:'#D6D8DC', cursor:'#6C6DFF', selectionBackground:'#2E2F63' }";
+            // więc motyw wstrzykujemy przy budowie strony, a późniejsze zmiany dosyłamy wiadomością
+            // (ApplyTheme). Rozmiar czcionki zostaje przy budowie: xterm musi wtedy przeliczyć siatkę.
+            var theme = CurrentTheme();
+            string xtermTheme = theme.ToXtermObject();
             int fontSize = Math.Min(24, Math.Max(8, SettingsStore.Load().TerminalFontSize));
 
             var sb = new StringBuilder(400_000);
             sb.Append("<!doctype html><html><head><meta charset='utf-8'><style>")
               .Append(css)
-              .Append("html,body{margin:0;padding:0;height:100%;background:").Append(pageBg).Append(";overflow:hidden}#t{height:100%}")
-              .Append(SearchBarCss(light))
+              .Append(":root{").Append(string.Join(";", theme.CssVars().Select(kv => kv.Key + ":" + kv.Value))).Append("}")
+              .Append("html,body{margin:0;padding:0;height:100%;background:var(--wp-bg);overflow:hidden}#t{height:100%}")
+              .Append(SearchBarCss())
               .Append("</style><script>").Append(js)
               .Append("</script><script>").Append(fit)
               .Append("</script><script>").Append(search)
@@ -396,7 +442,18 @@ window.chrome.webview.addEventListener('message', e => {
   else if (e.data && e.data.t === 'paste') term.paste(e.data.d || '');
   else if (e.data && e.data.t === 'serialize') window.dispatchEvent(new Event('wp-serialize'));
   else if (e.data && e.data.t === 'find') openSearch();
+  else if (e.data && e.data.t === 'theme') applyTheme(e.data);
 });
+// Przemalowanie bez przeładowania: xterm przyjmuje motyw w locie, a pasek szukania stoi na
+// zmiennych CSS, więc wystarczy je podmienić na elemencie głównym.
+function applyTheme(m){
+  try{
+    if(m.xterm) term.options.theme = m.xterm;
+    if(m.vars){ var r=document.documentElement.style;
+      Object.keys(m.vars).forEach(function(k){ r.setProperty(k, m.vars[k]) }); }
+    if(m.deco) opts.decorations = m.deco;
+  }catch(err){}
+}
 // Ctrl+Shift+C/V = kopiuj/wklej (zwykłe Ctrl+C musi zostać SIGINT-em).
 term.attachCustomKeyEventHandler(ev => {
   if (ev.type !== 'keydown') return true;
@@ -444,7 +501,7 @@ const NO_MATCH = ").Append(JsStr(LocalizationManager.S("S.term.find.none"))).App
 const OF_SEP = ").Append(JsStr(" " + LocalizationManager.S("S.term.find.of") + " ")).Append(@";
 const sb = document.getElementById('sb'), sq = document.getElementById('sq'), sn = document.getElementById('sn');
 // Podświetlenia trafień muszą iść za motywem — na jasnym tle ciemnoszare tło trafienia byłoby plamą.
-const opts = { decorations: ").Append(SearchDecorations(light)).Append(@" };
+const opts = { decorations: ").Append(SearchDecorations(theme)).Append(@" };
 let lastCount = null;
 // Licznik trafień jest zdarzeniem, nie wartością zwracaną — addon zgłasza go po każdym wyszukaniu.
 if (searchAddon.onDidChangeResults) searchAddon.onDidChangeResults(r => {

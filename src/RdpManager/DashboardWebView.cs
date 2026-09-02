@@ -140,22 +140,13 @@ namespace RdpManager
             }
         };
 
-        private static Color ColorOf(string key)
-            => (Application.Current?.TryFindResource(key) as SolidColorBrush)?.Color ?? Colors.Gray;
-
-        private static string Hex(string key)
-        {
-            var c = ColorOf(key);
-            return $"#{c.R:X2}{c.G:X2}{c.B:X2}";
-        }
+        // Odczyt palety jest wspólny z terminalem (Core/PaletteColors) — obie powierzchnie żyją poza
+        // drzewem zasobów WPF i miały własną, rozjeżdżającą się kopię tej samej logiki.
+        private static string Hex(string key) => PaletteColors.Hex(key, "#808080");
 
         // Klucze półprzezroczyste (obramowanie, tinty) muszą zachować kanał alfa — inaczej hairline
         // zrobiłby się pełną, jasną kreską na ciemnym panelu.
-        private static string Rgba(string key)
-        {
-            var c = ColorOf(key);
-            return $"rgba({c.R},{c.G},{c.B},{(c.A / 255.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)})";
-        }
+        private static string Rgba(string key) => PaletteColors.Rgba(key, "rgba(128,128,128,1)");
 
         private static Brush Res(string key)
             => Application.Current?.TryFindResource(key) as Brush ?? Brushes.Gray;
