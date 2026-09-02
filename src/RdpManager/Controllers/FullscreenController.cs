@@ -13,7 +13,8 @@ namespace RdpManager.Controllers
     /// <summary>
     /// Dwie powiązane maszyny stanu „ukrywania chrome": PEŁNY EKRAN (styl/stan/granice okna przez P/Invoke,
     /// pasek pełnoekranowy z auto-chowaniem + przypinaniem, rozdzielczość 1:1 na monitorze) oraz TRYB SKUPIENIA
-    /// (peek panelu bocznego wysuwany z lewej krawędzi, puls przerysowania paska kart — obejście quirku WPF).
+    /// (peek panelu bocznego wysuwany z lewej krawędzi). Trzyma też puls przerysowania paska kart — obejście
+    /// quirku WPF, niezależne od trybu skupienia.
     /// Wyniesione 1:1 z MainWindow (PR 5 planu docs/REFACTOR-MAINWINDOW.md, wzorzec „back-reference move-method")
     /// — bez zmian logiki. Zgodnie z planem w MainWindow ZOSTAJĄ: deklaracje P/Invoke + struktury (poszerzone do
     /// internal, tu wołane jako <c>MainWindow.*</c>), <c>UpdateImmersive</c>/<c>IsImmersive</c> (rdzeń trybu
@@ -44,7 +45,7 @@ namespace RdpManager.Controllers
         private bool _focusPeeking;                // panel boczny chwilowo wysunięty w trybie skupienia
         private bool? _focusOverride;              // ręczne wł/wył skupienia (null = wg ustawienia); reset po un-maximize
 
-        // Puls przerysowania paska kart w trybie skupienia (obejście quirku WPF — patrz StartTabStripRepaintPulse).
+        // Puls przerysowania paska kart (obejście quirku WPF — patrz StartTabStripRepaintPulse).
         private bool _tabPulseOn;
         private int _tabPulseCooldown;
 
@@ -223,14 +224,20 @@ namespace RdpManager.Controllers
             }
         }
 
-        // Obejście quirku WPF: w trybie skupienia (pasek kart pod LayoutTransform, obok airspace WindowsFormsHost)
-        // zmiana tła podświetlenia ikon (IsMouseOver) jest USTAWIANA, ale WPF jej nie MALUJE — dopóki pętla renderu
-        // nie zostanie „obudzona" (robił to dopiero realny resize okna). Gdy mysz jest nad paskiem kart, trzymamy
-        // pętlę renderu aktywną (CompositionTarget.Rendering) i znaczymy przyciski „brudne", więc hover maluje się
-        // od razu. Po zejściu myszy dogaszamy kilka klatek i odpinamy — brak stałego kosztu renderowania.
+        // Obejście quirku WPF: pasek kart siedzi pod LayoutTransform i tuż obok airspace'u WindowsFormsHost.
+        // W takim sąsiedztwie zmiana tła podświetlenia ikon (IsMouseOver) jest USTAWIANA, ale WPF jej nie
+        // MALUJE — dopóki pętla renderu nie zostanie „obudzona” (robił to dopiero realny resize okna).
+        // Gdy mysz jest nad paskiem kart, trzymamy pętlę aktywną (CompositionTarget.Rendering) i znaczymy
+        // przyciski „brudne”, więc hover maluje się od razu. Po zejściu myszy dogaszamy kilka klatek
+        // i odpinamy — brak stałego kosztu renderowania.
+        //
+        // Obejście było bramkowane trybem SKUPIENIA (IsImmersive), ale sam quirk nie ma z nim nic wspólnego:
+        // wynika z LayoutTransform obok HWND-a, a to zachodzi zawsze, gdy na pasku kart są akcje sesji.
+        // Poza skupieniem widoczny jest drugi panel (SessionActions) i on nie dostawał pulsu W OGÓLE —
+        // stąd zgłoszenie, że po wyjściu ze skupienia i powrocie podświetlenie ikon przestaje się pokazywać,
+        // dopóki nie zmieni się rozmiaru okna. Bramka znika; puls i tak sam się odpina, gdy mysz zejdzie.
         internal void StartTabStripRepaintPulse()
         {
-            if (!_owner.IsImmersive()) return;
             _tabPulseCooldown = 15;
             if (_tabPulseOn) return;
             _tabPulseOn = true;
@@ -239,16 +246,25 @@ namespace RdpManager.Controllers
 
         private void TabStripRepaintPulse(object sender, EventArgs e)
         {
-            if (_owner.TabStripHost.IsMouseOver && _owner.IsImmersive())
+            if (_owner.TabStripHost.IsMouseOver)
             {
                 _tabPulseCooldown = 15;
-                foreach (System.Windows.UIElement c in _owner.FocusControls.Children) c.InvalidateVisual();
+                // Który panel akcji jest widoczny, zależy od trybu: FocusControls w skupieniu,
+                // SessionActions poza nim. Znaczymy ten, który faktycznie jest na ekranie.
+                InvalidatePanel(_owner.FocusControls);
+                InvalidatePanel(_owner.SessionActions);
             }
             else if (--_tabPulseCooldown <= 0)
             {
                 System.Windows.Media.CompositionTarget.Rendering -= TabStripRepaintPulse;
                 _tabPulseOn = false;
             }
+        }
+
+        private static void InvalidatePanel(System.Windows.Controls.Panel panel)
+        {
+            if (panel == null || panel.Visibility != Visibility.Visible) return;
+            foreach (System.Windows.UIElement c in panel.Children) c.InvalidateVisual();
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku): wł/wył dla bieżącego zmaksymalizowanego okna.
