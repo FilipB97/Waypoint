@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+        xmlns:local="clr-namespace:RdpManager"
         Title="Waypoint" Width="1180" Height="720" MinWidth="900" MinHeight="560"
         Icon="pack://application:,,,/Assets/app.ico"
         WindowStartupLocation="CenterScreen"
@@ -637,12 +638,18 @@
             <!-- /SessionsView -->
 
             <!-- Pulpit -->
-            <ScrollViewer x:Name="DashboardView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">
-                <StackPanel Margin="28,24">
-                    <TextBlock Text="{DynamicResource S.nav.dashboard}" Foreground="{DynamicResource TextPrim}" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" Margin="0,0,0,18"/>
-                    <StackPanel x:Name="DashboardPanel"/>
-                </StackPanel>
-            </ScrollViewer>
+            <!-- Pulpit rysuje się w WebView2 (patrz DashboardHtml). Kontrolka przewija się sama, więc
+                 NIE opakowujemy jej w ScrollViewer — dwa paski przewijania jeden w drugim to klasyczna
+                 pułapka hostowania strony w WPF. -->
+            <Grid x:Name="DashboardView" Visibility="Collapsed" Background="{DynamicResource CanvasBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="{DynamicResource S.nav.dashboard}" Foreground="{DynamicResource TextPrim}"
+                           FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" Margin="28,24,28,14"/>
+                <local:DashboardWebView x:Name="DashboardPanel" Grid.Row="1" Margin="26,0,20,0"/>
+            </Grid>
 
             <!-- Ostatnie -->
             <ScrollViewer x:Name="RecentView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Background="{DynamicResource CanvasBrush}">

@@ -419,6 +419,11 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.dash.nodata">No data in the connection log yet.</sys:String>
     <sys:String x:Key="S.dash.nohistory">No history.</sys:String>
     <sys:String x:Key="S.dash.norecent">No recent connections.</sys:String>
+    <sys:String x:Key="S.dash.avg">avg</sys:String>
+    <sys:String x:Key="S.dash.table">Show data as a table</sys:String>
+    <sys:String x:Key="S.dash.metric">Metric</sys:String>
+    <sys:String x:Key="S.dash.value">Value</sys:String>
+    <sys:String x:Key="S.dash.nowebview">The dashboard needs the WebView2 runtime, which failed to start: {0}</sys:String>
 
     <sys:String x:Key="S.group.pinned">PINNED</sys:String>
 

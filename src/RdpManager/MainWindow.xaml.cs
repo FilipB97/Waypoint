@@ -1619,262 +1619,44 @@ namespace RdpManager
 
         private void BuildDashboard()
         {
-            DashboardPanel.Children.Clear();
-
             var stats = LoadConnectionStats(14);
-            int open = _sessions.Count + _sessionWindows.Count;
-            // KPI „serwerowe" liczone BEZ wpisów REST: kolekcje nie są sondowane (zawsze „offline"),
-            // więc zawyżały segment offline pierścienia; REST ma własny moduł, a nie miejsce na liście.
-            var srvs = _vm.Servers.Where(s => s.Protocol != RemoteProtocol.Rest).ToList();
-            int online = srvs.Count(s => s.Status == ServerStatus.Online);
-            int idle = srvs.Count(s => s.Status == ServerStatus.Idle);
-            int offline = srvs.Count(s => s.Status == ServerStatus.Offline);
-            int groups = srvs
-                .Select(s => string.IsNullOrWhiteSpace(s.Group) ? L("S.group.serversdefault") : s.Group)
-                .Distinct(StringComparer.OrdinalIgnoreCase).Count();
-            var lats = srvs.Where(s => s.LatencyMs >= 0).Select(s => s.LatencyMs).ToList();
-            string avgLat = lats.Count > 0 ? ((int)Math.Round(lats.Average())).ToString() : "—";
+            var model = Core.DashboardModel.Build(
+                _vm.Servers,
+                (_reach?.LatencySamples ?? new List<double>()).Select(v => (int)Math.Round(v)),
+                stats.PerWeekday,
+                _sessions.Count + _sessionWindows.Count,
+                L("S.group.serversdefault"));
 
-            // KPI — dzielniki pionowe, bez ramek (Compass §4.8).
-            var kpi = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 4, 0, 20) };
-            kpi.Children.Add(KpiCell(srvs.Count.ToString(), "", L("S.dash.servers"), Res("TextPrim"), false));
-            kpi.Children.Add(KpiCell(online.ToString(), "", L("S.dash.online"), Res("Online"), false));
-            kpi.Children.Add(KpiCell(open.ToString(), "", L("S.dash.sessions"), Res("TextPrim"), false));
-            kpi.Children.Add(KpiCell(avgLat, avgLat == "—" ? "" : " ms", L("S.dash.avglatency"), Res("TextPrim"), false));
-            kpi.Children.Add(KpiCell(groups.ToString(), "", L("S.dash.groups"), Res("TextPrim"), true));
-            DashboardPanel.Children.Add(kpi);
+            DashboardPanel.Render(model, DashboardStrings());
+        }
 
-            // Siatka 2×2 kart hairline — rozciągnięta na szerokość pulpitu (górny limit, by nie urosła absurdalnie).
-            var grid = new Grid { MaxWidth = 1500, HorizontalAlignment = HorizontalAlignment.Stretch };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.55, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-            void Place(FrameworkElement card, int col, int row)
+        // Teksty pulpitu w jednym miejscu: strona jest bezjęzykowa, wszystkie napisy przychodzą stąd.
+        private Dictionary<string, object> DashboardStrings() => new Dictionary<string, object>
+        {
+            ["servers"] = L("S.dash.servers"),
+            ["online"] = L("S.dash.online"),
+            ["idle"] = L("S.status.idle"),
+            ["offline"] = L("S.status.offline"),
+            ["sessions"] = L("S.dash.sessions"),
+            ["avgLatency"] = L("S.dash.avglatency"),
+            ["groups"] = L("S.dash.groups"),
+            ["latency"] = L("S.dash.latency24h"),
+            ["availability"] = L("S.dash.availability"),
+            ["week"] = L("S.dash.connweek"),
+            ["protocols"] = L("S.dash.protocols"),
+            ["noLatency"] = L("S.dash.nolatency"),
+            ["noData"] = L("S.dash.nodata"),
+            ["avg"] = L("S.dash.avg"),
+            ["tableView"] = L("S.dash.table"),
+            ["metric"] = L("S.dash.metric"),
+            ["value"] = L("S.dash.value"),
+            ["weekdays"] = L("S.dash.weekdays").Split(','),
+            ["aria"] = new Dictionary<string, string>
             {
-                card.Margin = new Thickness(col == 0 ? 0 : 9, row == 0 ? 0 : 18, col == 0 ? 9 : 0, 0);
-                Grid.SetColumn(card, col); Grid.SetRow(card, row); grid.Children.Add(card);
+                ["lat"] = L("S.dash.latency24h"),
+                ["week"] = L("S.dash.connweek")
             }
-            Place(ChartCard(L("S.dash.latency24h"), avgLat == "—" ? "" : "śr. " + avgLat + " ms", MakeLatencyChart()), 0, 0);
-            Place(ChartCard(L("S.dash.availability"), online + "/" + srvs.Count, MakeAvailabilityChart(online, idle, offline)), 1, 0);
-            Place(ChartCard(L("S.dash.connweek"), stats.PerWeekday.Sum().ToString(), MakeWeekdayChart(stats.PerWeekday)), 0, 1);
-            Place(ChartCard(L("S.dash.protocols"), _vm.Total.ToString(), MakeProtocolBar()), 1, 1);
-            DashboardPanel.Children.Add(grid);
-        }
-
-        // Kafelek KPI: duża wartość (+ jednostka) nad etykietą; pionowy dzielnik po prawej (poza ostatnim).
-        private FrameworkElement KpiCell(string value, string unit, string label, Brush valueBrush, bool last)
-        {
-            var val = new TextBlock { FontSize = (double)TryFindResource("FontStat"), FontWeight = FontWeights.Bold };
-            val.Inlines.Add(new Run(value) { Foreground = valueBrush });
-            if (!string.IsNullOrEmpty(unit))
-                val.Inlines.Add(new Run(unit) { Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontBodyLg"), FontWeight = FontWeights.SemiBold });
-            var sp = new StackPanel();
-            sp.Children.Add(val);
-            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontCaption"), Margin = new Thickness(0, 4, 0, 0) });
-            return new Border
-            {
-                Child = sp,
-                Padding = new Thickness(0, 0, last ? 0 : 28, 0),
-                Margin = new Thickness(0, 0, last ? 0 : 28, 0),
-                BorderBrush = Res("Border"),
-                BorderThickness = new Thickness(0, 0, last ? 0 : 1, 0)
-            };
-        }
-
-        // Karta wykresu (hairline, radius 14) z nagłówkiem: tytuł + prawy podpis (mono).
-        private FrameworkElement ChartCard(string title, string sub, FrameworkElement body)
-        {
-            var head = new Grid { Margin = new Thickness(0, 0, 0, 12) };
-            head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            head.Children.Add(new TextBlock { Text = title, Foreground = Res("TextPrim"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontBody") });
-            var subTb = new TextBlock { Text = sub, Foreground = Res("TextTer"), FontFamily = (FontFamily)TryFindResource("Mono"), FontSize = (double)TryFindResource("FontCaption"), VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetColumn(subTb, 1); head.Children.Add(subTb);
-            var panel = new StackPanel();
-            panel.Children.Add(head);
-            panel.Children.Add(body);
-            return new Border
-            {
-                Background = Res("Panel"), BorderBrush = Res("Border"), BorderThickness = new Thickness(1),
-                CornerRadius = Radii.Lg, Padding = new Thickness(15, 13, 17, 13), Child = panel
-            };
-        }
-
-        // Kolor z zasobu pędzla (fallback, gdy zasób nie jest SolidColorBrush).
-        private Color Col(string key, Color fallback) => (Res(key) as SolidColorBrush)?.Color ?? fallback;
-
-        private FrameworkElement ChartHint(string text) => new TextBlock
-        {
-            Text = text, Foreground = Res("TextTer"), Height = 210, TextAlignment = TextAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
         };
-
-        // Opóźnienie: sparkline z wypełnieniem (linia + area + kropka na końcu) — natywne kształty WPF,
-        // rysowane na Canvasie przy każdej zmianie rozmiaru (rozciąga się na szerokość karty jak w mockupie).
-        private FrameworkElement MakeLatencyChart()
-        {
-            var latencySamples = _reach?.LatencySamples;
-            if (latencySamples == null || latencySamples.Count < 2) return ChartHint(L("S.dash.nolatency"));
-            var samples = latencySamples.ToArray();
-            var acc = Col("Accent", Color.FromRgb(0x4C, 0x86, 0xFF));
-
-            var area = new Polygon { Fill = new SolidColorBrush(Color.FromArgb(38, acc.R, acc.G, acc.B)) };
-            var line = new Polyline { Stroke = new SolidColorBrush(acc), StrokeThickness = 2, StrokeLineJoin = PenLineJoin.Round };
-            var dot = new Ellipse { Width = 7, Height = 7, Fill = new SolidColorBrush(acc) };
-            var canvas = new Canvas { Height = 210, ClipToBounds = true };
-            canvas.Children.Add(area);
-            canvas.Children.Add(line);
-            canvas.Children.Add(dot);
-
-            double min = samples.Min(), span = Math.Max(1, samples.Max() - min);
-            void Redraw()
-            {
-                double w = canvas.ActualWidth, h = canvas.ActualHeight;
-                if (w <= 0 || h <= 0) return;
-                const double pad = 8;   // margines od góry/dołu, żeby linia nie dotykała krawędzi
-                var pts = new PointCollection();
-                for (int i = 0; i < samples.Length; i++)
-                {
-                    double x = samples.Length == 1 ? w : w * i / (samples.Length - 1);
-                    double y = pad + (h - 2 * pad) * (1 - (samples[i] - min) / span);
-                    pts.Add(new Point(x, y));
-                }
-                line.Points = pts;
-                var poly = new PointCollection(pts);
-                poly.Add(new Point(pts[pts.Count - 1].X, h));
-                poly.Add(new Point(pts[0].X, h));
-                area.Points = poly;
-                var last = pts[pts.Count - 1];
-                Canvas.SetLeft(dot, last.X - dot.Width / 2);
-                Canvas.SetTop(dot, last.Y - dot.Height / 2);
-            }
-            canvas.SizeChanged += (s, e) => Redraw();
-            canvas.Loaded += (s, e) => Redraw();
-            return canvas;
-        }
-
-        // Dostępność: pierścień (online/idle/offline) + legenda z licznikami — natywny donut
-        // (tor + łuki rysowane Path/ArcSegment, grubym obrysem; zgodnie z mockupem).
-        private FrameworkElement MakeAvailabilityChart(int online, int idle, int offline)
-        {
-            int total = online + idle + offline;
-            if (total == 0) return ChartHint(L("S.dash.nodata"));
-
-            const double size = 158, r = 65, thick = 11, cx = size / 2, cy = size / 2;
-            var canvas = new Canvas { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
-
-            // Tor pierścienia (pełny okrąg).
-            var track = new Ellipse { Width = 2 * r, Height = 2 * r, Stroke = Res("Elevated"), StrokeThickness = thick };
-            Canvas.SetLeft(track, cx - r); Canvas.SetTop(track, cy - r);
-            canvas.Children.Add(track);
-
-            Point P(double frac) { double a = frac * 2 * Math.PI - Math.PI / 2; return new Point(cx + r * Math.Cos(a), cy + r * Math.Sin(a)); }
-            double cursor = 0;
-            void Arc(int count, Brush color)
-            {
-                if (count <= 0) return;
-                double frac = (double)count / total;
-                if (frac >= 0.999)   // jeden segment na pełen okrąg — ArcSegment byłby zdegenerowany
-                {
-                    var full = new Ellipse { Width = 2 * r, Height = 2 * r, Stroke = color, StrokeThickness = thick };
-                    Canvas.SetLeft(full, cx - r); Canvas.SetTop(full, cy - r);
-                    canvas.Children.Add(full); cursor += frac; return;
-                }
-                var fig = new PathFigure { StartPoint = P(cursor), IsClosed = false };
-                fig.Segments.Add(new ArcSegment { Point = P(cursor + frac), Size = new Size(r, r), SweepDirection = SweepDirection.Clockwise, IsLargeArc = frac > 0.5 });
-                var geo = new PathGeometry(); geo.Figures.Add(fig);
-                canvas.Children.Add(new Path { Data = geo, Stroke = color, StrokeThickness = thick, StrokeStartLineCap = PenLineCap.Flat, StrokeEndLineCap = PenLineCap.Flat });
-                cursor += frac;
-            }
-            Arc(online, Res("Online")); Arc(idle, Res("Idle")); Arc(offline, Res("Offline"));
-
-            var legend = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(26, 0, 0, 0) };
-            legend.Children.Add(LegendRow(Res("Online"), L("S.status.online"), online));
-            legend.Children.Add(LegendRow(Res("Idle"), L("S.status.idle"), idle));
-            legend.Children.Add(LegendRow(Res("Offline"), L("S.status.offline"), offline));
-            // Wyśrodkowane w karcie (donut + legenda), żeby nie zostawiać pustej prawej strony po rozciągnięciu.
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Height = 210, HorizontalAlignment = HorizontalAlignment.Center };
-            row.Children.Add(canvas);
-            row.Children.Add(legend);
-            return row;
-        }
-
-        private FrameworkElement LegendRow(Brush color, string label, int count)
-        {
-            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 3) };
-            sp.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = Radii.Xxs, Background = color, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
-            sp.Children.Add(new TextBlock { Text = label, Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center });
-            sp.Children.Add(new TextBlock { Text = count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
-            return sp;
-        }
-
-        // Połączenia w tygodniu: słupki (Pn–Nd) z dziennika audytu — natywne prostokąty z etykietami.
-        private FrameworkElement MakeWeekdayChart(int[] weekday)
-        {
-            if (weekday == null || weekday.Sum() == 0) return ChartHint(L("S.dash.nodata"));
-            var labels = L("S.dash.weekdays").Split(',').Select(x => x.Trim()).ToArray();
-            int max = Math.Max(1, weekday.Max());
-            var acc = Col("Accent", Color.FromRgb(0x4C, 0x86, 0xFF));
-            var fill = new SolidColorBrush(Color.FromArgb(215, acc.R, acc.G, acc.B));
-
-            var bars = new UniformGrid { Rows = 1, Columns = weekday.Length, Height = 178, VerticalAlignment = VerticalAlignment.Bottom };
-            var lbls = new UniformGrid { Rows = 1, Columns = weekday.Length, Margin = new Thickness(0, 6, 0, 0) };
-            for (int i = 0; i < weekday.Length; i++)
-            {
-                bars.Children.Add(new Border
-                {
-                    Height = Math.Max(3, 164.0 * weekday[i] / max),
-                    VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 6, 0),
-                    CornerRadius = new CornerRadius(4, 4, 0, 0),
-                    Background = weekday[i] > 0 ? (Brush)fill : Res("Elevated"),
-                    ToolTip = (i < labels.Length ? labels[i] : "") + " — " + weekday[i]
-                });
-                lbls.Children.Add(new TextBlock
-                {
-                    Text = i < labels.Length ? labels[i] : "",
-                    Foreground = Res("TextTer"), FontSize = (double)TryFindResource("FontCaption"), TextAlignment = TextAlignment.Center
-                });
-            }
-            var host = new StackPanel { Height = 210 };
-            host.Children.Add(bars);
-            host.Children.Add(lbls);
-            return host;
-        }
-
-        // Protokoły: poziomy pasek udziału (segmenty w kolorach protokołów) + legenda z licznikami.
-        private FrameworkElement MakeProtocolBar()
-        {
-            var protos = _vm.Servers.GroupBy(s => s.Protocol)
-                .Select(g => new { g.Key, Count = g.Count() })
-                .OrderByDescending(x => x.Count).ThenBy(x => x.Key.ToString()).ToList();
-            int total = protos.Sum(p => p.Count);
-            if (total == 0) return ChartHint(L("S.dash.nodata"));
-
-            var barGrid = new Grid();
-            for (int i = 0; i < protos.Count; i++)
-            {
-                barGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(protos[i].Count, GridUnitType.Star) });
-                var seg = new Border { Background = ProtocolBrush(protos[i].Key), Margin = new Thickness(0, 0, i < protos.Count - 1 ? 2 : 0, 0) };
-                Grid.SetColumn(seg, i); barGrid.Children.Add(seg);
-            }
-            var bar = new Border { Height = 11, CornerRadius = Radii.Sm, ClipToBounds = true, Child = barGrid, Margin = new Thickness(0, 6, 0, 14) };
-
-            var legend = new WrapPanel();
-            foreach (var p in protos)
-            {
-                var item = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 16, 8) };
-                item.Children.Add(new Border { Width = 9, Height = 9, CornerRadius = Radii.Xxs, Background = ProtocolBrush(p.Key), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
-                item.Children.Add(new TextBlock { Text = ProtocolLabel(p.Key), Foreground = Res("TextSec"), FontSize = (double)TryFindResource("FontSmall"), VerticalAlignment = VerticalAlignment.Center });
-                item.Children.Add(new TextBlock { Text = p.Count.ToString(), Foreground = Res("TextPrim"), FontFamily = (FontFamily)TryFindResource("Mono"), FontWeight = FontWeights.SemiBold, FontSize = (double)TryFindResource("FontSmall"), Margin = new Thickness(7, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
-                legend.Children.Add(item);
-            }
-            var host = new StackPanel { Height = 210 };
-            host.Children.Add(bar);
-            host.Children.Add(legend);
-            return host;
-        }
 
         private Core.ConnectionStats LoadConnectionStats(int days)
         {
