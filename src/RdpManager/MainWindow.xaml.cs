@@ -415,6 +415,9 @@ namespace RdpManager
                    && SessionsView.Visibility == Visibility.Visible;
         }
 
+        /// <summary>Czy panel boczny jest chwilowo wysunięty (peek) — dla sondy diagnostycznej.</summary>
+        internal bool IsFocusPeeking => _fs != null && _fs.Peeking;
+
         // Tryb skupienia: po zmaksymalizowaniu chowa titlebar + panel boczny — zostają tylko karty
         // + pulpit. Przywrócenie okna (un-maximize) = pełny UI. W pełnym ekranie nie działa.
         // UWAGA: widocznością SessionToolbar rządzi WYŁĄCZNIE UpdateToolbarMode (stan pusty +
@@ -438,6 +441,16 @@ namespace RdpManager
             // więc po kliknięciu mysz jest już nad nim — i to właśnie wtedy podświetlenie musi się namalować.
             // Wcześniej puls startował tylko przy wejściu w skupienie, więc droga powrotna zostawała bez niego.
             _fs.StartTabStripRepaintPulse();
+
+            // Panele akcji znikają i pojawiają się POD NIERUCHOMYM KURSOREM: przycisk trybu skupienia
+            // stoi na pasku kart, więc po kliknięciu mysz zostaje dokładnie tam, gdzie element właśnie
+            // został ukryty (FocusControls ⇄ SessionActions). WPF nie powtarza hit-testu, gdy drzewo
+            // wizualne zmieni się bez ruchu myszy — IsMouseOver zostaje nieaktualne i kolejne najechania
+            // nie zmieniają stanu, dopóki czegoś nie wymusi (dotąd: realna zmiana rozmiaru okna).
+            // Mouse.Synchronize() jest właśnie tym wymuszeniem. Poprzednie podejścia ruszały MALOWANIE
+            // (puls przerysowania, hover Setterem zamiast animacji) — to pierwsze rusza WEJŚCIE.
+            // Priorytet Loaded: po przeliczeniu layoutu, inaczej trafiłoby w stary układ.
+            Dispatcher.BeginInvoke(new Action(() => Mouse.Synchronize()), DispatcherPriority.Loaded);
         }
 
         // Przełącznik trybu skupienia (przycisk na pasku) — logika w FullscreenController (PR 5).
@@ -2430,6 +2443,22 @@ namespace RdpManager
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
+            // Sonda diagnostyczna podświetlenia ikon paska kart — PRZED F1/F11, bo te nie patrzą na
+            // modyfikatory. Ctrl+Shift jest wymagane, więc zwykła praca aplikacji nie jest ruszona.
+            // Szczegóły i sposób odczytu: Diagnostics/HoverProbe.cs.
+            if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == (ModifierKeys.Control | ModifierKeys.Shift))
+            {
+                if (e.Key == Key.F12) { Diagnostics.HoverProbe.Toggle(this); e.Handled = true; return; }
+                if (e.Key == Key.F11) { Diagnostics.HoverProbe.ToggleForcedHover(this); e.Handled = true; return; }
+                if (e.Key == Key.F10)
+                {
+                    // Diagnostyka (nie ścieżka użytkownika) — bez klucza tłumaczeń, surowy MessageBox.
+                    MessageBox.Show(this, "Zapisano próbkę:\n" + Diagnostics.HoverProbe.Dump(this),
+                                    "Sonda hover", MessageBoxButton.OK, MessageBoxImage.Information);
+                    e.Handled = true; return;
+                }
+            }
+
             // F1 = ściąga ze skrótami; Esc zamyka ją, zanim zajmie się nim pełny ekran.
             if (e.Key == Key.F1) { ShortcutsPopup.IsOpen = !ShortcutsPopup.IsOpen; e.Handled = true; return; }
             if (e.Key == Key.Escape && ShortcutsPopup.IsOpen) { ShortcutsPopup.IsOpen = false; e.Handled = true; return; }
