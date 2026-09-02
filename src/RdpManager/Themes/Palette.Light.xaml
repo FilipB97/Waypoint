@@ -2,7 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- Jasna paleta Waypoint. Te same klucze co Palette.Dark; akcenty/statusy/awatary bez zmian
          (czytelne na obu tłach), zmienione tło/tekst/obramowania i kanwa. -->
-    <SolidColorBrush x:Key="Panel"      Color="#D0FFFFFF"/>
+    <!-- Nieprzezroczysty z tego samego powodu co w palecie ciemnej: nakładki się sumują, a panel
+         plików malował Panel dwa razy. #FAFBFC to dokładnie ten kolor, który #D0FFFFFF dawał nad
+         kanwą — czyli zmiana bez różnicy w wyglądzie, za to bez efektu warstwowania. -->
+    <SolidColorBrush x:Key="Panel"      Color="#FAFBFC"/>
     <SolidColorBrush x:Key="RailBg"     Color="#E6F2F3F5"/>
     <SolidColorBrush x:Key="Elevated"   Color="#14000000"/>
     <SolidColorBrush x:Key="Border"     Color="#22000000"/>

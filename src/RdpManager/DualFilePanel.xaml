@@ -2,7 +2,10 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
-    <Grid Background="{DynamicResource Panel}">
+    <!-- BEZ tła: oba panele malują już Panel same. Siatka robiła to po raz drugi, więc panel plików
+         wychodził o warstwę jaśniejszy niż reszta okna. Przerwa między panelami zostaje kanwą, co
+         czyta się jako dwie osobne karty — czyli tak, jak działają. -->
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MinWidth="220"/>
             <ColumnDefinition Width="Auto"/>

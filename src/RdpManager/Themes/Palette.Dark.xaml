@@ -3,12 +3,26 @@
     <!-- Ciemna paleta Waypoint — kierunek „Compass" (chłodna czerń, hairline, jeden akcent), ale z
          WIDOCZNYMI powierzchniami/obramowaniami (bliżej wyglądu sprzed mockupu — panele czytelne jako
          karty, nie tylko cienka linia). Przełączana w runtime (ThemeManager) razem z motywem WPF-UI. -->
-    <SolidColorBrush x:Key="Panel"      Color="#1AFFFFFF"/>
+    <!-- Panel jest NIEPRZEZROCZYSTY, a nie białą nakładką, z dwóch mierzalnych powodów.
+         (1) Nakładka bieli wypłukuje odcień: kanwa ma nasycenie 14,9%, po jednej warstwie #1AFFFFFF
+             zostaje 6,4%, po dwóch 3,6% — czyli powierzchnia robi się po prostu szara.
+         (2) Nakładki się SUMUJĄ. Panel plików malował Panel dwa razy (siatka DualFilePanel plus każdy
+             FileTransferPanel), więc wychodził o całą warstwę jaśniejszy niż każda inna karta w oknie
+             (#424247 zamiast #2C2D32) — stąd zgłoszenie „za dużo szarego". Kolor nieprzezroczysty
+             sprawia, że nałożenie dwóch warstw daje dokładnie ten sam kolor.
+         #282A36 to ten sam odcień (H 231) i ta sama jasność (L 18,4%) co dotychczasowy render, ale z
+         nasyceniem kanwy. Kontrast tekstu na panelu nawet lekko rośnie: 11,65 / 6,90 / 4,85 (było
+         11,24 / 6,66 / 4,68) — wszystkie trzy stopnie nadal ponad progiem 4.5. -->
+    <SolidColorBrush x:Key="Panel"      Color="#282A36"/>
     <SolidColorBrush x:Key="RailBg"     Color="#CC161820"/>
-    <SolidColorBrush x:Key="Elevated"   Color="#22FFFFFF"/>
+    <!-- Uniesienie (hover, wewnętrzne powierzchnie) ZOSTAJE przezroczyste — ma być względne wobec tego,
+         na czym leży (karta, szyna, pasek kart). Zmienia się tylko barwa nakładki: biel odbarwiała
+         uniesiony fragment do 3,4% nasycenia, ten sam krok w odcieniu motywu daje 11,4% przy tej samej
+         jasności (L 29,2%). -->
+    <SolidColorBrush x:Key="Elevated"   Color="#2DBDC1DB"/>
     <SolidColorBrush x:Key="Border"     Color="#22FFFFFF"/>
     <SolidColorBrush x:Key="TextPrim"   Color="#E7E8EE"/>
-    <!-- Trzy stopnie tekstu mierzone wobec PANELU (#2C2E37), nie kanwy — bo na panelach leży większość
+    <!-- Trzy stopnie tekstu mierzone wobec PANELU (#282A36), nie kanwy — bo na panelach leży większość
          tekstu (karty, wiersze ustawień, lista), a panel w motywie ciemnym jest JAŚNIEJSZY od kanwy, więc
          to gorszy przypadek. Wcześniejsza poprawka TextTer liczyła kontrast wobec kanwy i dawała 4.52,
          ale na panelu wychodziło 3.39 — wciąż pod progiem. Teraz: 11.06 / 6.55 / 4.61, czyli ten sam
