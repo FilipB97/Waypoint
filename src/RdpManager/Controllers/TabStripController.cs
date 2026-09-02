@@ -27,7 +27,8 @@ namespace RdpManager.Controllers
 
         // Elementy karty per sesja (podkreślenie aktywnej / kropka statusu / nazwa / ✕) — do odświeżania w miejscu.
         private readonly Dictionary<Session, Rectangle> _tabUnderline = new Dictionary<Session, Rectangle>();
-        private readonly Dictionary<Session, Ellipse> _tabStatus = new Dictionary<Session, Ellipse>();
+        // Pole znacznika stanu sesji (stały rozmiar) — kształt podmienia się przy zmianie stanu.
+        private readonly Dictionary<Session, Grid> _tabStatus = new Dictionary<Session, Grid>();
         private readonly Dictionary<Session, TextBlock> _tabName = new Dictionary<Session, TextBlock>();
         private readonly Dictionary<Session, TextBlock> _tabClose = new Dictionary<Session, TextBlock>();
         // Grupy kart (stosy jak w Vivaldi). Przynależność po Id serwera (w TabGroup.ServerIds), więc
@@ -116,12 +117,12 @@ namespace RdpManager.Controllers
             content.Children.Add(tabName);
             // Adres nie jest już na karcie (był w 3 miejscach naraz) — zostaje w pasku bocznym,
             // podpowiedzi karty i szybkim przełączaniu. Karta = ikona + nazwa + kropka + ✕.
-            // Kropka odzwierciedla ŻYWY stan sesji (nie statyczny status serwera): startowo rozłączona.
-            var tabDot = new Ellipse
-            {
-                Width = 6, Height = 6, Fill = _owner.StatusBrush(ServerStatus.Offline),
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
-            };
+            // Znacznik odzwierciedla ŻYWY stan sesji, nie statyczny status serwera. Startowo „łączenie",
+            // bo karta powstaje dokładnie w chwili, gdy sesja zaczyna się łączyć. Dotąd startowała ze
+            // statusem serwera „Offline", co znaczyło „rozłączona", a wyglądało jak „serwer nie żyje".
+            var tabDot = StatusGlyph.Host();
+            tabDot.Margin = new Thickness(7, 0, 0, 0);
+            ApplyTabGlyph(tabDot, SessionState.Connecting);
             _tabStatus[session] = tabDot;
             content.Children.Add(tabDot);
             content.Children.Add(BuildTabClose(session));
@@ -159,10 +160,8 @@ namespace RdpManager.Controllers
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             var content = new StackPanel { Orientation = Orientation.Horizontal };
-            var tabDot = new Ellipse
-            {
-                Width = 7, Height = 7, Fill = _owner.StatusBrush(ServerStatus.Offline), VerticalAlignment = VerticalAlignment.Center
-            };
+            var tabDot = StatusGlyph.Host();
+            ApplyTabGlyph(tabDot, SessionState.Connecting);
             _tabStatus[session] = tabDot;
             content.Children.Add(tabDot);
             var tabName = new TextBlock
@@ -733,9 +732,17 @@ namespace RdpManager.Controllers
         }
 
         /// <summary>Kropka statusu karty (szew wołany przez MainWindow z cyklu życia sesji).</summary>
-        internal void SetTabStatus(Session s, ServerStatus status)
+        internal void SetTabStatus(Session s, SessionState state)
         {
-            if (_tabStatus.TryGetValue(s, out var dot)) dot.Fill = _owner.StatusBrush(status);
+            if (_tabStatus.TryGetValue(s, out var dot)) ApplyTabGlyph(dot, state);
+        }
+
+        /// <summary>Wstawia kształt stanu sesji do pola karty; opisuje go też dla czytnika ekranu.</summary>
+        private void ApplyTabGlyph(Grid host, SessionState state)
+        {
+            var (shape, key) = StatusGlyph.For(state);
+            StatusGlyph.Set(host, shape, key == null ? null : _owner.Res(key));
+            System.Windows.Automation.AutomationProperties.SetName(host, MainWindow.SessionStateLabel(state));
         }
 
         /// <summary>Sprzątanie karty przy zamknięciu sesji (woła MainWindow.CloseSession): odłącz od paska

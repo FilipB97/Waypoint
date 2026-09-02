@@ -2072,7 +2072,7 @@ namespace RdpManager
         internal void RebuildTabStrip() => _tabs.RebuildTabStrip();
         internal void RefreshTabStyles() => _tabs.RefreshTabStyles();
         internal void RefreshTabTitles() => _tabs.RefreshTabTitles();
-        internal void SetTabStatus(Session s, ServerStatus status) => _tabs.SetTabStatus(s, status);
+        internal void SetTabStatus(Session s, SessionState state) => _tabs.SetTabStatus(s, state);
 
         // ---------- Cykl życia sesji: delegacje do SessionManager (PR 6) ----------
         // Handlery XAML + metody wołane z innych kontrolerów/miejsc — cienki shim zamiast edycji każdego wołania.
@@ -2458,7 +2458,12 @@ namespace RdpManager
             Grid.SetColumn(name, 1);
             grid.Children.Add(name);
 
-            var dot = new Ellipse { Width = 7, Height = 7, Fill = StatusBrush(dotStatus), VerticalAlignment = VerticalAlignment.Center };
+            // Ten sam znacznik co w liście serwerów — kształt plus kolor. Zostawienie tu samej kropki
+            // znosiłoby sens kształtów gdzie indziej: użytkownik uczyłby się dwóch kodów naraz.
+            var dot = StatusGlyph.Host();
+            var (shape, key) = StatusGlyph.For(dotStatus);
+            StatusGlyph.Set(dot, shape, Res(key));
+            System.Windows.Automation.AutomationProperties.SetName(dot, StatusLabel(dotStatus));
             Grid.SetColumn(dot, 2);
             grid.Children.Add(dot);
 
@@ -3319,6 +3324,18 @@ namespace RdpManager
                 case ServerStatus.Online: return Res("Online");
                 case ServerStatus.Idle: return Res("Idle");
                 default: return Res("Offline");
+            }
+        }
+
+        /// <summary>Tekstowy odpowiednik stanu SESJI (czytnik ekranu — stan nie tylko kształtem).</summary>
+        internal static string SessionStateLabel(SessionState state)
+        {
+            switch (state)
+            {
+                case SessionState.Connecting: return LocalizationManager.S("S.sess.connecting");
+                case SessionState.Connected: return LocalizationManager.S("S.sess.connected");
+                case SessionState.Disconnected: return LocalizationManager.S("S.sess.disconnected");
+                default: return LocalizationManager.S("S.sess.failed");
             }
         }
 

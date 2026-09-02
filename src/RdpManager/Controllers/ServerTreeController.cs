@@ -28,7 +28,9 @@ namespace RdpManager.Controllers
         // Wiersze + akcje aktywacji + kropki statusu + etykiety opóźnień (klucz = serwer).
         private readonly Dictionary<ServerInfo, Border> _serverRows = new Dictionary<ServerInfo, Border>();
         private readonly Dictionary<ServerInfo, Action<bool>> _serverActivate = new Dictionary<ServerInfo, Action<bool>>();
-        private readonly Dictionary<ServerInfo, Ellipse> _serverStatusDot = new Dictionary<ServerInfo, Ellipse>();
+        // Pole znacznika stanu (stały rozmiar), nie sam kształt: kształt podmienia się przy każdej
+        // zmianie statusu, a pozycja kolumny musi zostać ta sama — patrz Core/StatusGlyph.
+        private readonly Dictionary<ServerInfo, Grid> _serverStatusDot = new Dictionary<ServerInfo, Grid>();
         private readonly Dictionary<ServerInfo, TextBlock> _serverLatency = new Dictionary<ServerInfo, TextBlock>();
 
         // Aktywny filtr protokołu z paska chipów (null = „Wszystkie"). Stan sesyjny.
@@ -386,11 +388,8 @@ namespace RdpManager.Controllers
             Grid.SetColumn(meta, 2);
             grid.Children.Add(meta);
 
-            var status = new Ellipse
-            {
-                Width = 7, Height = 7, Fill = _owner.StatusBrush(server.Status),
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            var status = StatusGlyph.Host();
+            ApplyRowStatusGlyph(status, server.Status);
             _serverStatusDot[server] = status;
 
             var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
@@ -470,11 +469,8 @@ namespace RdpManager.Controllers
             Grid.SetColumn(name, 1);
             grid.Children.Add(name);
 
-            var status = new Ellipse
-            {
-                Width = 7, Height = 7, Fill = _owner.StatusBrush(server.Status),
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            var status = StatusGlyph.Host();
+            ApplyRowStatusGlyph(status, server.Status);
             _serverStatusDot[server] = status;
 
             // Po prawej: opóźnienie, gwiazdka przypięcia i kropka statusu. Adres (DisplayHost) zdjęty
@@ -637,6 +633,16 @@ namespace RdpManager.Controllers
         }
 
         // Tło wiersza w stanie spoczynku (nie hover/focus/aktywny): zaznaczony = AccentSoft, inaczej przezroczysty.
+        /// <summary>
+        /// Wstawia kształt statusu do pola wiersza. Kolor idzie z palety przez klucz, a nie przez
+        /// StatusBrush — dzięki temu kształt i barwa są opisane w JEDNYM miejscu (StatusGlyph).
+        /// </summary>
+        private void ApplyRowStatusGlyph(Grid host, ServerStatus status)
+        {
+            var (shape, key) = StatusGlyph.For(status);
+            StatusGlyph.Set(host, shape, _owner.Res(key));
+        }
+
         private Brush RowRestBackground(ServerInfo s)
             => _multiSelect.Contains(s) ? _owner.Res("AccentSoft") : Brushes.Transparent;
 
@@ -782,7 +788,7 @@ namespace RdpManager.Controllers
         // Szew dla ReachabilityService: po sondzie ustaw kropkę statusu i etykietę opóźnienia wiersza.
         internal void SetRowStatus(ServerInfo server, ServerStatus status, int rttMs)
         {
-            if (_serverStatusDot.TryGetValue(server, out var dot)) dot.Fill = _owner.StatusBrush(status);
+            if (_serverStatusDot.TryGetValue(server, out var dot)) ApplyRowStatusGlyph(dot, status);
             if (_serverLatency.TryGetValue(server, out var lat)) lat.Text = RdpUtils.FormatLatency(rttMs);
         }
 
