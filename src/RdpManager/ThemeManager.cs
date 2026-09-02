@@ -56,6 +56,7 @@ namespace RdpManager
                 ?? (res["Accent"] as SolidColorBrush)?.Color
                 ?? (light ? AccentLight : AccentDark);
             ApplicationAccentColorManager.Apply(accent, appTheme);   // akcent kontrolek WPF-UI
+            PinAccentFills(res, accent, light);                       // ...i sprowadzenie go do JEDNEGO odcienia
             if (custom != null)
             {
                 res["Accent"] = new SolidColorBrush(accent);
@@ -63,8 +64,58 @@ namespace RdpManager
                 res["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
                 res["AccentBright"] = new SolidColorBrush(Lighten(accent, 0.30));
             }
+
+            // Gradient akcji głównej („Szybkie połączenie"). Stał tu na sztywno gradient ZE ZNAKU MARKI
+            // (niebieski -> fioletowy), więc po wybraniu presetu z pomarańczowym akcentem przycisk zostawał
+            // niebieski — jedyny element w oknie, który nie słuchał wyboru użytkownika. Teraz gradient
+            // powstaje Z AKCENTU: ten sam kolor co reszta, tylko z lekkim rozjaśnieniem, żeby przycisk
+            // zachował głębię. Logo zostaje przy swoich barwach — znak marki nie zmienia się z motywem.
+            res["AccentGradient"] = new LinearGradientBrush(accent, Lighten(accent, 0.22), 45);
             WindowBorder.ReapplyAll();   // WPF-UI po zmianie motywu/akcentu przemalowuje krawędź — przywróć wybraną obwódkę
         }
+
+        /// <summary>
+        /// Sprowadza rodzinę akcentu WPF-UI do JEDNEGO odcienia — naszego.
+        ///
+        /// ApplicationAccentColorManager generuje własne warianty: w motywie ciemnym ROZJAŚNIA akcent
+        /// (primary/secondary/tertiary z korektą jasności), w jasnym go przyciemnia. To konwencja Fluenta,
+        /// ale u nas dawała dwie rodziny akcentu obok siebie: pigułka raila i obwódka fokusu w kolorze
+        /// „Accent", a przyciski Primary, przełączniki i pola wyboru w wariancie jaśniejszym. Wygląda to
+        /// po prostu jak dwa różne kolory w jednym oknie.
+        ///
+        /// Klucze piszemy WPROST do Application.Resources, nie przez paletę: ApplicationAccentColorManager
+        /// robi to samo, a wpisy własne słownika mają pierwszeństwo przed jego MergedDictionaries — więc
+        /// nadpisanie w Palette.* i tak by nie zadziałało.
+        ///
+        /// Odcienie na hover/wciśnięcie ZOSTAJĄ zróżnicowane (inaczej kontrolki straciłyby reakcję na
+        /// dotknięcie), ale stan spoczynkowy jest dokładnie akcentem — a to on rzuca się w oczy.
+        /// </summary>
+        private static void PinAccentFills(ResourceDictionary res, Color accent, bool light)
+        {
+            // Hover/wciśnięcie: w ciemnym motywie w stronę bieli, w jasnym w stronę czerni — czyli
+            // „dalej od tła", tak jak reakcja na dotknięcie w pozostałych kontrolkach aplikacji.
+            Color step1 = light ? Darken(accent, 0.10) : Lighten(accent, 0.10);
+            Color step2 = light ? Darken(accent, 0.20) : Lighten(accent, 0.20);
+
+            res["AccentFillColorDefault"] = accent;
+            res["AccentFillColorSecondary"] = step1;
+            res["AccentFillColorTertiary"] = step2;
+            res["AccentFillColorDefaultBrush"] = new SolidColorBrush(accent);
+            res["AccentFillColorSecondaryBrush"] = new SolidColorBrush(step1);
+            res["AccentFillColorTertiaryBrush"] = new SolidColorBrush(step2);
+            res["SystemAccentBrush"] = new SolidColorBrush(accent);
+
+            // Tekst NA akcencie nie może być na sztywno biały: przy jasnym akcencie (pomarańcz presetu
+            // „Claude", bursztyn z próbnika, błękit Norda) biel ma na nim kontrast 2.0-3.1. Reguła jest
+            // wspólna z inicjałami na awatarach — patrz ColorMath.PrefersDarkInk.
+            Color ink = ColorMath.PrefersDarkInk(accent) ? ColorMath.InkDark : Colors.White;
+            res["TextOnAccentFillColorPrimary"] = ink;
+            res["TextOnAccentFillColorSecondary"] = Color.FromArgb(0xC8, ink.R, ink.G, ink.B);
+            res["TextOnAccentFillColorSelectedText"] = ink;
+        }
+
+        private static Color Darken(Color c, double f) => Color.FromRgb(
+            (byte)(c.R * (1 - f)), (byte)(c.G * (1 - f)), (byte)(c.B * (1 - f)));
 
         private static Color? ParseAccent(string hex)
         {
