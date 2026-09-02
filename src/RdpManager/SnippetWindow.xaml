@@ -1,0 +1,181 @@
+<ui:FluentWindow x:Class="RdpManager.SnippetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="" Width="760" Height="520"
+        Icon="pack://application:,,,/Assets/app.ico"
+        UseLayoutRounding="True"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize" MinWidth="620" MinHeight="420"
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica">
+    <Window.Resources>
+        <Style x:Key="SnipIconBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSec}"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="2" BorderBrush="Transparent" IsHitTestVisible="False"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.12"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.22"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SnipListItem" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrim}"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid>
+                            <Border x:Name="Bd" CornerRadius="{StaticResource RadiusSm}" Background="{DynamicResource Accent}" Opacity="0"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            <Border x:Name="FocusRing" CornerRadius="{StaticResource RadiusSm}" BorderThickness="2"
+                                    BorderBrush="Transparent" IsHitTestVisible="False"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Opacity" Value="0.10"/></Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.22"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Wiersz listy: numer skrótu + nazwa. Numer jest tu, a nie w podpowiedzi, bo kolejność na liście
+             JEST przypisaniem skrótów — bez tego przestawienie wpisu byłoby zmianą po ciemku. -->
+        <DataTemplate x:Key="SnipRow">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="20" Height="18" Margin="0,0,8,0" CornerRadius="{StaticResource RadiusXs}"
+                        Background="{DynamicResource Elevated}" Visibility="{Binding HotkeyVisibility}">
+                    <TextBlock Text="{Binding Hotkey}" FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontCaption}"
+                               Foreground="{DynamicResource TextTer}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Background="{DynamicResource CanvasBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar x:Name="WinTitleBar" Grid.Row="0" Title=""/>
+
+        <Grid Grid.Row="1" Margin="{StaticResource DialogContentMarginTight}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <ListBox Grid.Row="0" x:Name="SnipList" SelectionChanged="Snip_Changed"
+                         ItemTemplate="{StaticResource SnipRow}"
+                         ItemContainerStyle="{StaticResource SnipListItem}" Padding="4"
+                         Foreground="{DynamicResource TextPrim}"
+                         BorderThickness="1" BorderBrush="{DynamicResource Border}" Background="Transparent"/>
+                <Grid Grid.Row="1" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Style="{StaticResource SnipIconBtn}" Foreground="{DynamicResource Accent}"
+                            Click="Add_Click" AutomationProperties.Name="{DynamicResource S.snip.add}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Add20" FontSize="{StaticResource IconSm}"/>
+                            <TextBlock Text="{DynamicResource S.snip.add}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Style="{StaticResource SnipIconBtn}" Width="30" Click="Up_Click"
+                                ToolTip="{DynamicResource S.snip.up}" AutomationProperties.Name="{DynamicResource S.snip.up}">
+                            <ui:SymbolIcon Symbol="ArrowUp24" FontSize="{StaticResource IconMd}"/>
+                        </Button>
+                        <Button Style="{StaticResource SnipIconBtn}" Width="30" Click="Down_Click"
+                                ToolTip="{DynamicResource S.snip.down}" AutomationProperties.Name="{DynamicResource S.snip.down}">
+                            <ui:SymbolIcon Symbol="ArrowDown24" FontSize="{StaticResource IconMd}"/>
+                        </Button>
+                        <Border Width="1" Margin="6,6" Background="{DynamicResource Border}"/>
+                        <Button Style="{StaticResource SnipIconBtn}" Width="30" Click="Delete_Click"
+                                ToolTip="{DynamicResource S.snip.delete}" AutomationProperties.Name="{DynamicResource S.snip.delete}">
+                            <ui:SymbolIcon Symbol="Delete24" FontSize="{StaticResource IconMd}"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <Grid Grid.Column="1" x:Name="Editor" Margin="16,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="{DynamicResource S.snip.name}" Foreground="{DynamicResource TextSec}"
+                           FontWeight="SemiBold" Margin="2,0,0,4"/>
+                <ui:TextBox Grid.Row="1" x:Name="NameBox" TextChanged="Name_Changed" Margin="0,0,0,12"/>
+
+                <TextBlock Grid.Row="2" Text="{DynamicResource S.snip.command}" Foreground="{DynamicResource TextSec}"
+                           FontWeight="SemiBold" Margin="2,0,0,4"/>
+                <!-- Zwykły TextBox, nie ui:TextBox: komenda bywa wielowierszowa, a monospace jest tu
+                     konieczny — w komendach liczy się każda spacja i każdy myślnik. -->
+                <TextBox Grid.Row="3" x:Name="CommandBox" TextChanged="Command_Changed"
+                         AcceptsReturn="True" AcceptsTab="False" TextWrapping="Wrap" MinHeight="120"
+                         VerticalScrollBarVisibility="Auto" SpellCheck.IsEnabled="False"
+                         FontFamily="{DynamicResource Mono}" FontSize="{StaticResource FontSmall}"
+                         Foreground="{DynamicResource TextPrim}" CaretBrush="{DynamicResource TextPrim}"
+                         Background="{DynamicResource Elevated}" BorderBrush="{DynamicResource Border}"
+                         BorderThickness="1" Padding="8,6"/>
+
+                <CheckBox Grid.Row="4" x:Name="EnterCheck" Margin="2,10,0,0" Click="Enter_Click"
+                          Content="{DynamicResource S.snip.enter}" Foreground="{DynamicResource TextPrim}"/>
+
+                <TextBlock Grid.Row="5" x:Name="VarsHint" Margin="2,10,0,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontSmall}"/>
+            </Grid>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource DialogButtonRowMargin}">
+            <ui:Button Content="{DynamicResource S.cancel}" Appearance="Secondary" Click="Cancel_Click" Margin="0,0,8,0" MinWidth="90" IsCancel="True"/>
+            <ui:Button Content="{DynamicResource S.save}" Appearance="Primary" Click="Save_Click" MinWidth="90" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

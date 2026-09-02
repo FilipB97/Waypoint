@@ -36,6 +36,11 @@ namespace RdpManager
         /// <summary>Rozłączono; parametr = powód (null = zwykłe zamknięcie). Wątek roboczy.</summary>
         public event Action<string> Disconnected;
 
+        /// <summary>Ctrl+Shift+K w terminalu — pokaż listę snippetów. Wątek UI.</summary>
+        public event Action SnippetPickerRequested;
+        /// <summary>Ctrl+Shift+1..9 w terminalu — wyślij snippet o tym numerze (1-based). Wątek UI.</summary>
+        public event Action<int> SnippetRequested;
+
         protected bool IsTerminalDisposed => _disposed;
 
         protected XtermControl()
@@ -138,6 +143,13 @@ namespace RdpManager
                         if (!string.IsNullOrEmpty(sel))
                             Dispatcher.BeginInvoke(new Action(() => { try { Clipboard.SetText(sel); } catch { } }));
                         break;
+                    case "snippets": // Ctrl+Shift+K → lista snippetów (okno decyduje, jak ją pokazać)
+                        Dispatcher.BeginInvoke(new Action(() => SnippetPickerRequested?.Invoke()));
+                        break;
+                    case "snippet":  // Ctrl+Shift+1..9 → snippet o tym numerze
+                        var nth = root.GetProperty("n").GetInt32();
+                        Dispatcher.BeginInvoke(new Action(() => SnippetRequested?.Invoke(nth)));
+                        break;
                     case "paste": // Ctrl+Shift+V → tekst ze schowka do terminala (JSON = kanał sterujący)
                         Dispatcher.BeginInvoke(new Action(() =>
                         {
@@ -191,6 +203,17 @@ namespace RdpManager
 
         /// <summary>Lokalny komunikat do terminala (status łączenia itp.) — NIE idzie do transportu.</summary>
         public void WriteLocal(string text) => PostToTerminal(text);
+
+        /// <summary>
+        /// Wysyła tekst do transportu tak, jakby wpisał go użytkownik — serwer odbije echo, więc komenda
+        /// pojawi się w buforze i w historii powłoki dokładnie jak wpisana ręcznie. Używane przez snippety
+        /// i broadcast. W bazie, a nie tylko w SSH, bo snippet ma działać też na Telnecie i porcie szeregowym.
+        /// </summary>
+        public void SendText(string text)
+        {
+            if (_disposed || string.IsNullOrEmpty(text)) return;
+            OnTerminalInput(text);
+        }
 
         public void FocusTerminal()
         {
@@ -467,6 +490,16 @@ term.attachCustomKeyEventHandler(ev => {
     return false;
   }
   if (ev.ctrlKey && ev.shiftKey && ev.code === 'KeyF') { openSearch(); return false; }
+  // Snippety: lista (K) i pierwsze dziewięć wprost. Skróty muszą być łapane TUTAJ — WebView2 to osobne
+  // okno, więc klawisze wpisywane w terminalu nigdy nie docierają do warstwy WPF.
+  if (ev.ctrlKey && ev.shiftKey && ev.code === 'KeyK') {
+    window.chrome.webview.postMessage({ t:'snippets' });
+    return false;
+  }
+  if (ev.ctrlKey && ev.shiftKey && ev.code && ev.code.indexOf('Digit') === 0) {
+    const n = +ev.code.slice(5);
+    if (n >= 1 && n <= 9) { window.chrome.webview.postMessage({ t:'snippet', n:n }); return false; }
+  }
   if (ev.key === 'Escape' && !sb.hidden) { closeSearch(); return false; }
   return true;
 });
