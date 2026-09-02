@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 using Microsoft.Win32;
@@ -24,7 +25,8 @@ namespace RdpManager
         private static readonly Color AccentLight = Color.FromRgb(0x5B, 0x4B, 0xD6);
 
         // Rodzina kluczy akcentu nadpisywana bezpośrednio w zasobach App, gdy wybrano własny kolor (§4.7).
-        private static readonly string[] AccentKeys = { "Accent", "AccentSoft", "AccentStrong", "AccentBright" };
+        private static readonly string[] AccentKeys =
+            { "Accent", "AccentSoft", "AccentSoftHover", "AccentStrong", "AccentBright" };
 
         /// <summary>Czy aktualnie obowiązuje jasny motyw — ostatni wynik <see cref="Apply"/>. Czytane m.in.
         /// przez XtermControl, który (WebView2/xterm.js) nie żyje w drzewie zasobów WPF i nie może
@@ -60,9 +62,7 @@ namespace RdpManager
             if (custom != null)
             {
                 res["Accent"] = new SolidColorBrush(accent);
-                res["AccentSoft"] = new SolidColorBrush(Color.FromArgb(0x1F, accent.R, accent.G, accent.B));
-                res["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
-                res["AccentBright"] = new SolidColorBrush(Lighten(accent, 0.30));
+                foreach (var kv in AccentTints(accent)) res[kv.Key] = kv.Value;
             }
 
             // Gradient akcji głównej („Szybkie połączenie"). Stał tu na sztywno gradient ZE ZNAKU MARKI
@@ -127,6 +127,20 @@ namespace RdpManager
             res["TextOnAccentFillColorSelectedText"] = ink;
         }
 
+        /// <summary>
+        /// Odcienie pochodne akcentu. JEDNA definicja dla presetu i dla własnego akcentu — dwie kopie
+        /// tych samych stałych rozjechały się już raz i dały dwie rodziny akcentu obok siebie.
+        /// Krycia: 0x1F zaznaczenie spoczynkowe, 0x3A to samo pod kursorem (krok NAD, nie zamiennik),
+        /// 0x66 wypełnienia mocne; „Bright" to rozjaśnienie, nie przezroczystość, bo bywa na tekście.
+        /// </summary>
+        private static Dictionary<string, SolidColorBrush> AccentTints(Color accent) => new Dictionary<string, SolidColorBrush>
+        {
+            ["AccentSoft"]      = new SolidColorBrush(Color.FromArgb(0x1F, accent.R, accent.G, accent.B)),
+            ["AccentSoftHover"] = new SolidColorBrush(Color.FromArgb(0x3A, accent.R, accent.G, accent.B)),
+            ["AccentStrong"]    = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B)),
+            ["AccentBright"]    = new SolidColorBrush(Lighten(accent, 0.30)),
+        };
+
         private static Color Darken(Color c, double f) => Color.FromRgb(
             (byte)(c.R * (1 - f)), (byte)(c.G * (1 - f)), (byte)(c.B * (1 - f)));
 
@@ -162,7 +176,13 @@ namespace RdpManager
             Color sec = ColorMath.EnsureContrast(p.TextSec, p.Panel, 4.5);
             Color ter = ColorMath.EnsureContrast(p.TextTer, p.Panel, 4.5);
             B("TextPrim", prim); B("TextSec", sec); B("TextTer", ter);
+            // Accent NIE MOŻE iść sam. Rodzina odcieni (AccentSoft/…Hover/…Strong/…Bright) zostawała
+            // wtedy z BAZOWEJ palety, więc pod każdym presetem zaznaczenie wiersza, obwódki i pigułki
+            // miały inną barwę niż akcent — np. w „Claude Dark" akcent pomarańczowy, a zaznaczenie
+            // indygo. Ta sama funkcja liczy odcienie dla presetu i dla własnego akcentu użytkownika,
+            // więc nie ma jak się rozjechać.
             B("Accent", p.Accent);
+            foreach (var kv in AccentTints(p.Accent)) d[kv.Key] = kv.Value;
             d["AccentSoft"] = new SolidColorBrush(Color.FromArgb(0x1F, p.Accent.R, p.Accent.G, p.Accent.B));
             d["AccentStrong"] = new SolidColorBrush(Color.FromArgb(0x66, p.Accent.R, p.Accent.G, p.Accent.B));
             d["AccentBright"] = new SolidColorBrush(Lighten(p.Accent, 0.25));

@@ -37,6 +37,11 @@
     <SolidColorBrush x:Key="AccentSoft"   Color="#266C6DFF"/>
     <SolidColorBrush x:Key="AccentBright" Color="#8A8BFF"/>
     <SolidColorBrush x:Key="AccentStrong" Color="#666C6DFF"/>
+    <!-- Hover NA zaznaczonym wierszu. Wcześniej kursor podmieniał tło zaznaczenia na Elevated,
+         czyli przejechanie myszą gasiło zaznaczenie na wszystkich mijanych wierszach. Hover musi
+         być krokiem NAD stanem spoczynkowym, nie jego zamiennikiem — stąd osobny, mocniejszy
+         stopień tego samego akcentu. -->
+    <SolidColorBrush x:Key="AccentSoftHover" Color="#3A6C6DFF"/>
     <SolidColorBrush x:Key="SplitDim"     Color="#33000000"/>
     <SolidColorBrush x:Key="TextOnColor" Color="White"/>
     <SolidColorBrush x:Key="Online"     Color="#3DDC97"/>
@@ -51,6 +56,12 @@
     <SolidColorBrush x:Key="GdProd"     Color="#D06BD8"/>
     <SolidColorBrush x:Key="GdStaging"  Color="#FFB454"/>
     <SolidColorBrush x:Key="GdClient"   Color="#36B8C4"/>
+    <!-- Dopełnienie do sześciu kolorów grup (kart i serwerów). Wszystkie mają wobec akcentu
+         ΔE > 15, czyli są od niego ROZRÓŻNIALNE, a nie tylko czytelne: 37,9 / 135,6 / 92,1 /
+         42,0 / 83,1 / 138,4. Pilnuje tego TabGroupColorTests. -->
+    <SolidColorBrush x:Key="GdBlue"     Color="#7BA6FF"/>
+    <SolidColorBrush x:Key="GdRose"     Color="#E8567F"/>
+    <SolidColorBrush x:Key="GdGreen"    Color="#3DDC97"/>
 
     <!-- Kolory etykiet protokołów (Compass §2) — używane od Fazy 2 (świadoma protokołów lista). -->
     <SolidColorBrush x:Key="ProtoRdp"    Color="#7BA6FF"/>

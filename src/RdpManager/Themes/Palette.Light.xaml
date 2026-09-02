@@ -19,6 +19,8 @@
     <SolidColorBrush x:Key="AccentSoft"   Color="#225B4BD6"/>
     <SolidColorBrush x:Key="AccentBright" Color="#6C6DFF"/>
     <SolidColorBrush x:Key="AccentStrong" Color="#665B4BD6"/>
+    <!-- Hover na zaznaczonym wierszu — patrz komentarz w palecie ciemnej. -->
+    <SolidColorBrush x:Key="AccentSoftHover" Color="#345B4BD6"/>
     <SolidColorBrush x:Key="SplitDim"     Color="#33000000"/>
     <SolidColorBrush x:Key="TextOnColor" Color="White"/>
     <!-- Statusy na jasnym tle były wyraźnie słabsze niż na ciemnym (10.2 vs 2.5). Kropka statusu to
@@ -32,6 +34,11 @@
     <SolidColorBrush x:Key="GdProd"     Color="#A32FAE"/>
     <SolidColorBrush x:Key="GdStaging"  Color="#C28029"/>
     <SolidColorBrush x:Key="GdClient"   Color="#1F8B94"/>
+    <!-- Jak w palecie ciemnej: sześć kolorów grup, każdy z ΔE > 15 wobec akcentu
+         (31,2 / 127,9 / 90,8 / 23,5 / 73,5 / 120,3). -->
+    <SolidColorBrush x:Key="GdBlue"     Color="#2F6BE0"/>
+    <SolidColorBrush x:Key="GdRose"     Color="#C0396A"/>
+    <SolidColorBrush x:Key="GdGreen"    Color="#12855A"/>
 
     <!-- Kolory etykiet protokołów (Compass §2) — warianty przyciemnione dla kontrastu na jasnym tle. -->
     <SolidColorBrush x:Key="ProtoRdp"    Color="#2F6BE0"/>

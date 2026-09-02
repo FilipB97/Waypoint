@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -40,17 +41,25 @@ namespace RdpManager.Controllers
         // Podpowiedź przy przeciąganiu karty: środek celu = podświetlenie („zgrupuj"), brzeg = pionowa
         // krawędź („wstaw przed/za"). Czyszczenie przywraca style wszystkich kart (RefreshTabStyles).
         private Border _tabDropTarget;
+        private InsertionAdorner _tabDropAdorner;   // linia „tu wyląduje karta" (warstwa adornerów)
 
-        // Paleta kolorów grup (spójna z akcentami/awatarami motywu). Nowa grupa dostaje pierwszy nieużyty.
-        private static readonly Color[] GroupColors =
-        {
-            Color.FromRgb(0x7C, 0x6C, 0xFB),  // fiolet
-            Color.FromRgb(0x36, 0xB8, 0xC4),  // turkus
-            Color.FromRgb(0xFF, 0xB4, 0x54),  // bursztyn
-            Color.FromRgb(0x37, 0x8A, 0xDD),  // błękit
-            Color.FromRgb(0xD4, 0x53, 0x7E),  // róż
-            Color.FromRgb(0x3D, 0xDC, 0x97),  // zieleń
-        };
+        /// <summary>
+        /// Paleta kolorów grup kart. Czytana Z PALETY, bo tablica literałów miała dwie wady naraz.
+        ///
+        /// Pierwszy wpis był dosłownie #7C6CFB — ten sam odcień, który usunęliśmy z próbnika akcentów
+        /// i ze slotu 0 kolorów grup serwerów, bo dzieli go od akcentu #6C6DFF odległość barwna
+        /// ΔE 4,1 (w jasnym motywie 12,8). Poprawka objęła wtedy dwa miejsca z trzech, a to trzecie
+        /// przydzielało ten kolor PIERWSZEJ tworzonej grupie.
+        ///
+        /// Druga wada: tablica była statyczna, czyli niezależna od motywu — te same wartości siadały
+        /// na jasnym panelu. Klucze palety mają oba warianty.
+        ///
+        /// Te same klucze niosą kolory grup SERWERÓW, więc grupa kart „Produkcja" i grupa serwerów
+        /// „Produkcja" dostają wreszcie ten sam kolor.
+        /// </summary>
+        private IEnumerable<Color> GroupColors
+            => Core.GroupPalette.Keys.Select(k => (_owner.TryFindResource(k) as SolidColorBrush)?.Color
+                                          ?? Color.FromRgb(0xD0, 0x6B, 0xD8));
         private const string GroupMenuMark = "grp";   // znacznik pozycji menu karty wstrzykiwanych dla grup
 
         private static string L(string key) => LocalizationManager.S(key);
@@ -397,9 +406,10 @@ namespace RdpManager.Controllers
 
         private Color NextGroupColor()
         {
-            foreach (var c in GroupColors)
+            var palette = GroupColors.ToList();
+            foreach (var c in palette)
                 if (!_tabGroups.Any(g => g.Color == c)) return c;
-            return GroupColors[_tabGroups.Count % GroupColors.Length];
+            return palette[_tabGroups.Count % palette.Count];
         }
 
         // Wypina serwer ze wszystkich grup i kasuje grupy, które przez to zostały puste.
@@ -489,7 +499,7 @@ namespace RdpManager.Controllers
             {
                 Color color;
                 try { color = (Color)ColorConverter.ConvertFromString(d.Color); }
-                catch { color = GroupColors[0]; }
+                catch { color = GroupColors.First(); }
                 _tabGroups.Add(new TabGroup
                 {
                     Name = d.Name, Color = color, Collapsed = d.Collapsed,
@@ -527,13 +537,26 @@ namespace RdpManager.Controllers
             }
             else
             {
-                tab.BorderBrush = _owner.Res("Accent");
-                tab.BorderThickness = after ? new Thickness(0, 0, 2, 0) : new Thickness(2, 0, 0, 0);
+                // Linia w WARSTWIE ADORNERÓW, nie obramowanie karty. BorderThickness zmienia grubość
+                // ramki (karta ma w spoczynku 1 px), więc wskaźnik kolejności przesuwał treść karty
+                // o 1–2 px dokładnie w chwili, gdy użytkownik celuje w nią myszą. Ten sam wzorzec
+                // i ta sama klasa co w drzewie serwerów — tam działa tak od początku.
+                var layer = AdornerLayer.GetAdornerLayer(tab);
+                if (layer != null)
+                {
+                    _tabDropAdorner = new InsertionAdorner(tab, _owner.Res("Accent")) { Vertical = true, AtEnd = after };
+                    layer.Add(_tabDropAdorner);
+                }
             }
         }
 
         private void ClearTabDropIndicator()
         {
+            if (_tabDropAdorner != null)
+            {
+                AdornerLayer.GetAdornerLayer(_tabDropAdorner.AdornedElement)?.Remove(_tabDropAdorner);
+                _tabDropAdorner = null;
+            }
             if (_tabDropTarget == null) return;
             _tabDropTarget.BorderThickness = new Thickness(1);   // domyślna grubość z BuildTab
             _tabDropTarget = null;

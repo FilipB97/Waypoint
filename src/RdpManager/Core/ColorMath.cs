@@ -72,6 +72,42 @@ namespace RdpManager.Core
         /// wraca bez zmian — preset zachowuje swoje kolory wszędzie tam, gdzie są czytelne.
         /// Kroki po 1%: bierzemy PIERWSZY, który przechodzi, więc zmiana jest najmniejsza z możliwych.
         /// </summary>
+        /// <summary>
+        /// Odległość barwna CIE76 (ΔE) w przestrzeni Lab — o ile dwa kolory różnią się dla OKA,
+        /// a nie w kanałach RGB. Kontrast (WCAG) mówi o jasności i odpowiada na pytanie „czy da się
+        /// to odczytać"; ΔE odpowiada na „czy da się to ROZRÓŻNIĆ", co jest właściwym pytaniem dla
+        /// kolorów-etykiet: grup, protokołów, statusów. Poniżej ~15 dwa kolory czytają się jako
+        /// odcienie tego samego — stąd próg w testach palety kolorów grup.
+        /// CIE76 zamiast CIEDE2000: różnica między nimi jest istotna przy dobieraniu par bliskich
+        /// progu percepcji, a my pytamy o rząd wielkości (4 kontra 40), gdzie obie zgadzają się co do wyniku.
+        /// </summary>
+        public static double DeltaE(Color a, Color b)
+        {
+            var (l1, a1, b1) = Lab(a);
+            var (l2, a2, b2) = Lab(b);
+            double dl = l1 - l2, da = a1 - a2, db = b1 - b2;
+            return Math.Sqrt(dl * dl + da * da + db * db);
+        }
+
+        // sRGB → liniowe → XYZ (D65) → Lab.
+        private static (double L, double A, double B) Lab(Color c)
+        {
+            double r = Linear(c.R), g = Linear(c.G), bl = Linear(c.B);
+            double x = (0.4124 * r + 0.3576 * g + 0.1805 * bl) / 0.95047;
+            double y = 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+            double z = (0.0193 * r + 0.1192 * g + 0.9505 * bl) / 1.08883;
+            double fx = Pivot(x), fy = Pivot(y), fz = Pivot(z);
+            return (116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz));
+        }
+
+        private static double Linear(byte v)
+        {
+            double d = v / 255.0;
+            return d <= 0.04045 ? d / 12.92 : Math.Pow((d + 0.055) / 1.055, 2.4);
+        }
+
+        private static double Pivot(double t) => t > 0.008856 ? Math.Pow(t, 1.0 / 3.0) : 7.787 * t + 16.0 / 116.0;
+
         public static Color EnsureContrast(Color foreground, Color background, double target)
         {
             if (Contrast(foreground, background) >= target) return foreground;
