@@ -58,6 +58,13 @@ namespace RdpManager
 
         public void CreateDirectory(string path) => Directory.CreateDirectory(Denorm(path));
 
+        public void Rename(string fullPath, string newFullPath)
+        {
+            string from = Denorm(fullPath), to = Denorm(newFullPath);
+            if (Directory.Exists(from)) Directory.Move(from, to);
+            else File.Move(from, to);   // rzuca, gdy cel istnieje — panel pyta wcześniej
+        }
+
         public void Delete(string fullPath, bool isDir)
         {
             if (isDir) Directory.Delete(Denorm(fullPath), false);   // tylko pusty (jak reszta implementacji)

@@ -46,6 +46,11 @@ namespace RdpManager
             public DateTime Mod { get; set; }     // surowa data — klucz sortowania (Modified jest sformatowany)
         }
 
+        // Pełny listing bieżącego katalogu. FileList.ItemsSource pokazuje jego PRZEFILTROWANY podzbiór,
+        // więc wszystko, co pyta „co jest w tym katalogu" (konflikt nazw, sortowanie), musi patrzeć tutaj —
+        // inaczej ukryty filtrem plik przestałby być konfliktem i cicho zostałby nadpisany.
+        private List<Row> _allRows = new List<Row>();
+
         // Sortowanie listy po kolumnie (klik nagłówka). Katalogi ZAWSZE na górze, sortowanie w obrębie grupy.
         private enum SortCol { Name, Size, Modified }
         private SortCol _sortCol = SortCol.Name;
@@ -118,10 +123,13 @@ namespace RdpManager
         private static string L(string key) => LocalizationManager.S(key);
         private static Brush Res(string key) => Application.Current.TryFindResource(key) as Brush ?? Brushes.Gray;
 
+        private bool _localMode;
+
         public FileTransferPanel(Func<IRemoteFs> factory, bool localMode = false)
         {
             InitializeComponent();
             _factory = factory;
+            _localMode = localMode;
             if (localMode)   // panel lokalny w dual-pane: transfer robią strzałki/drag, nie dialogi
             {
                 UploadBtn.Visibility = Visibility.Collapsed;
@@ -440,7 +448,7 @@ namespace RdpManager
         private bool CheckUploadConflict(string name, out bool cancelWhole)
         {
             cancelWhole = false;
-            bool exists = (FileList.ItemsSource as IEnumerable<Row>)?.Any(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)) == true;
+            bool exists = _allRows.Any(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
             if (!exists) return true;
             var choice = AskOverwrite(name);
             if (choice == OverwriteChoice.Cancel) { cancelWhole = true; return false; }
@@ -479,7 +487,8 @@ namespace RdpManager
                 rows = SortRows(rows);
             });
             if (!ok) return;
-            FileList.ItemsSource = rows;
+            _allRows = rows;
+            ApplyFilter();
             UpdateSortIndicators();
             BuildBreadcrumb();
             SetStatus("");
@@ -515,11 +524,9 @@ namespace RdpManager
             if (_sortCol == target) _sortDesc = !_sortDesc;
             else { _sortCol = target; _sortDesc = false; }
 
-            if (FileList.ItemsSource is IEnumerable<Row> current)
-            {
-                FileList.ItemsSource = SortRows(current.ToList());
-                UpdateSortIndicators();
-            }
+            _allRows = SortRows(_allRows);
+            ApplyFilter();
+            UpdateSortIndicators();
         }
 
         private void UpdateSortIndicators()
@@ -657,30 +664,233 @@ namespace RdpManager
             if (ok) RefreshAsync();
         }
 
+        // Usuwanie: dla katalogów NAJPIERW liczymy zawartość, potem pytamy, potem kasujemy. Przelicznik
+        // kosztuje dodatkowe listowania, ale bez niego potwierdzenie brzmiałoby „usunąć katalog?" przy
+        // operacji, która potrafi skasować tysiące plików — a tego się nie cofa. Dla samych plików pytamy
+        // od razu (liczbę i tak znamy z zaznaczenia).
         private async void Delete_Click(object sender, RoutedEventArgs e)
         {
             var sel = GetSelection();
             if (sel.Count == 0) return;
-            string prompt = sel.Count == 1
-                ? string.Format(L("S.sftp.delete.confirm"), sel[0].Name)
-                : string.Format(L("S.sftp.delete.confirmmany"), sel.Count);
-            if (MessageBox.Show(prompt, L("S.sftp.delete"),
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            bool anyDir = sel.Any(x => x.IsDir);
 
-            bool ok = await RunAsync(L("S.sftp.connecting"), fs =>
+            string prompt;
+            if (anyDir)
             {
-                foreach (var it in sel) fs.Delete(it.Full, it.IsDir);   // katalog: tylko pusty
+                int files = 0; long bytes = 0;
+                bool counted = await RunAsync(L("S.sftp.counting"), fs =>
+                {
+                    foreach (var it in sel)
+                    {
+                        var st = RemoteTreeStats(fs, it.Full, it.IsDir, 0);
+                        files += st.Files; bytes += st.Bytes;
+                    }
+                });
+                if (!counted) return;
+                prompt = string.Format(L("S.sftp.delete.confirmtree"),
+                    sel.Count == 1 ? "\"" + sel[0].Name + "\"" : sel.Count.ToString(), files, FormatSize(bytes));
+            }
+            else
+            {
+                prompt = sel.Count == 1
+                    ? string.Format(L("S.sftp.delete.confirm"), sel[0].Name)
+                    : string.Format(L("S.sftp.delete.confirmmany"), sel.Count);
+            }
+
+            if (MessageBox.Show(prompt, L("S.sftp.delete"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+
+            bool ok = await RunAsync(L("S.sftp.deleting"), fs =>
+            {
+                foreach (var it in sel) DeleteTree(fs, it.Full, it.IsDir, CancellationToken.None);
             });
             if (ok) RefreshAsync();
         }
 
+        /// <summary>
+        /// Usuwa wpis, a dla katalogu najpierw całą jego zawartość — wszystkie trzy implementacje
+        /// <see cref="IRemoteFs"/> kasują wyłącznie PUSTE katalogi, więc rekurencja musi być tutaj,
+        /// raz dla wszystkich backendów. Listing jest materializowany PRZED kasowaniem, bo usuwanie
+        /// w trakcie iteracji po żywym listingu potrafi go unieważnić. Publiczne dla testów.
+        /// </summary>
+        public static void DeleteTree(IRemoteFs fs, string fullPath, bool isDir, CancellationToken ct, int depth = 0)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (depth > MaxTreeDepth) throw new System.IO.IOException(string.Format(L("S.sftp.toodeep"), MaxTreeDepth));
+            if (isDir)
+                foreach (var e in fs.List(fullPath).ToList())
+                    DeleteTree(fs, e.FullName, e.IsDir, ct, depth + 1);
+            fs.Delete(fullPath, isDir);
+        }
+
+        /// <summary>Liczba plików i suma bajtów w poddrzewie — do potwierdzenia usunięcia. Publiczne dla testów.</summary>
+        public static (int Files, long Bytes) RemoteTreeStats(IRemoteFs fs, string fullPath, bool isDir, long knownLength, int depth = 0)
+        {
+            if (!isDir) return (1, knownLength);
+            if (depth > MaxTreeDepth) return (0, 0);
+            int files = 0; long bytes = 0;
+            foreach (var e in fs.List(fullPath))
+            {
+                var st = RemoteTreeStats(fs, e.FullName, e.IsDir, e.Length, depth + 1);
+                files += st.Files; bytes += st.Bytes;
+            }
+            return (files, bytes);
+        }
+
+        // ---------- Zmiana nazwy ----------
+
+        // Katalog nadrzędny bierzemy z PEŁNEJ ŚCIEŻKI wpisu, a nie z _path: dla panelu lokalnego korzeniem
+        // jest lista dysków ("C:/"), gdzie sklejanie z _path dałoby bezsensowne "/nowa-nazwa". Brak "/" w
+        // ścieżce = wpis bez katalogu nadrzędnego (właśnie dysk) — zmiana nazwy nie ma tam zastosowania.
+        private async void Rename_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(FileList.SelectedItem is Row r)) return;
+
+            string trimmed = r.FullName.TrimEnd('/');
+            int slash = trimmed.LastIndexOf('/');
+            if (slash < 0) { SetStatus(L("S.sftp.rename.noparent"), error: true); return; }
+
+            var dlg = new InputDialog(L("S.sftp.rename"), L("S.sftp.rename.label"), r.Name)
+            { Owner = Window.GetWindow(this) };
+            if (dlg.ShowDialog() != true) return;
+
+            string name = (dlg.Value ?? "").Trim();
+            if (name.Length == 0 || name == r.Name) return;
+
+            // Nazwa trafia wprost do ścieżki, więc separator albo "."/".." wyprowadziłby operację poza
+            // bieżący katalog — ta sama klasa błędu, którą przy pobieraniu odrzuca SafeCombine.
+            if (name.IndexOfAny(new[] { '/', '\\' }) >= 0 || name == "." || name == "..")
+            { SetStatus(string.Format(L("S.sftp.unsafename"), name), error: true); return; }
+
+            if (_allRows.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+            { SetStatus(string.Format(L("S.sftp.rename.exists"), name), error: true); return; }
+
+            string target = trimmed.Substring(0, slash + 1) + name;
+            bool ok = await RunAsync(L("S.sftp.connecting"), fs => fs.Rename(r.FullName, target));
+            if (ok) RefreshAsync();
+        }
+
+        // ---------- Podgląd ----------
+
+        // Zdalny system plików umie tylko pobrać CAŁY plik (IRemoteFs nie ma czytania fragmentu), więc
+        // rozmiar bramkujemy tutaj: powyżej progu miękkiego pytamy, powyżej twardego odmawiamy. Bez tego
+        // podgląd 2 GB loga oznaczałby kilkuminutowe pobieranie i tyle samo pamięci.
+        private async void Preview_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(FileList.SelectedItem is Row r) || r.IsDir) return;
+
+            if (r.Len > Core.FilePreview.HardLimitBytes)
+            { SetStatus(string.Format(L("S.preview.toobig"), FormatSize(Core.FilePreview.HardLimitBytes)), error: true); return; }
+
+            if (r.Len > Core.FilePreview.SoftLimitBytes
+                && MessageBox.Show(string.Format(L("S.preview.large"), r.Name, FormatSize(r.Len)),
+                       L("S.sftp.preview"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            byte[] data = null;
+            bool ok = await RunAsync(string.Format(L("S.sftp.downloading"), r.Name), fs =>
+            {
+                using (var ms = new System.IO.MemoryStream())
+                {
+                    fs.Download(r.FullName, ms);
+                    data = ms.ToArray();
+                }
+            });
+            if (!ok || data == null) return;
+
+            SetStatus("");
+            FilePreviewWindow.Open(Window.GetWindow(this), r.Name, data);
+        }
+
+        // ---------- Filtr listy ----------
+
+        private void FilterToggle_Click(object sender, RoutedEventArgs e) => ToggleFilter(FilterRow.Visibility != Visibility.Visible);
+
+        private void ToggleFilter(bool show)
+        {
+            FilterRow.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            if (show) { FilterBox.Focus(); FilterBox.SelectAll(); }
+            else if (FilterBox.Text.Length > 0) { FilterBox.Text = ""; }   // TextChanged sam odświeży widok
+        }
+
+        private void FilterBox_TextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
+
+        private void FilterBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape) { ToggleFilter(false); FileList.Focus(); e.Handled = true; }
+            else if (e.Key == System.Windows.Input.Key.Enter) { FileList.Focus(); e.Handled = true; }
+        }
+
+        // Filtruje tylko WIDOK — _allRows zostaje kompletne (patrz komentarz przy polu).
+        private void ApplyFilter()
+        {
+            string q = FilterRow.Visibility == Visibility.Visible ? (FilterBox.Text ?? "").Trim() : "";
+            FileList.ItemsSource = q.Length == 0
+                ? _allRows
+                : _allRows.Where(r => r.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        }
+
+        // ---------- Klawiatura i menu kontekstowe ----------
+
+        private void List_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            var mods = System.Windows.Input.Keyboard.Modifiers;
+            if ((mods & System.Windows.Input.ModifierKeys.Control) != 0)
+            {
+                if (e.Key == System.Windows.Input.Key.F) { ToggleFilter(true); e.Handled = true; }
+                return;   // Ctrl+A i reszta zostaje domyślnej obsłudze ListView
+            }
+            switch (e.Key)
+            {
+                case System.Windows.Input.Key.F2:        Rename_Click(sender, null); e.Handled = true; break;
+                case System.Windows.Input.Key.Delete:    Delete_Click(sender, null); e.Handled = true; break;
+                case System.Windows.Input.Key.F5:        RefreshAsync(); e.Handled = true; break;
+                case System.Windows.Input.Key.Back:      Up_Click(sender, null); e.Handled = true; break;
+                case System.Windows.Input.Key.Enter:     OpenSelected(); e.Handled = true; break;
+                case System.Windows.Input.Key.Space:     Preview_Click(sender, null); e.Handled = true; break;
+                case System.Windows.Input.Key.Escape:    if (FilterRow.Visibility == Visibility.Visible) { ToggleFilter(false); e.Handled = true; } break;
+            }
+        }
+
+        // Katalog → wejdź, plik → podgląd. Zapis na dysk jest o jeden klik dalej (przycisk w podglądzie
+        // korzysta z JUŻ pobranych bajtów), więc dwuklik nie musi już oznaczać pobierania.
+        private void OpenSelected()
+        {
+            if (!(FileList.SelectedItem is Row r)) return;
+            if (r.IsDir) { _path = r.FullName; RefreshAsync(); }
+            else Preview_Click(this, null);
+        }
+
+        private void MenuOpen_Click(object sender, RoutedEventArgs e) => OpenSelected();
+
+        private void MenuCopyPath_Click(object sender, RoutedEventArgs e)
+        {
+            var sel = GetSelection();
+            if (sel.Count == 0) return;
+            try { Clipboard.SetText(string.Join(Environment.NewLine, sel.Select(x => x.Full))); }
+            catch (Exception ex) { SetStatus(ex.Message, error: true); }
+        }
+
+        // Pozycje działające na POJEDYNCZYM wpisie są wyłączane przy wielozaznaczeniu i pustym zaznaczeniu,
+        // żeby menu nie obiecywało akcji, która i tak nic nie zrobi.
+        private void RowMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            int n = FileList.SelectedItems.Count;
+            bool one = n == 1;
+            bool file = one && FileList.SelectedItem is Row r1 && !r1.IsDir;
+            MenuOpen.IsEnabled = one;
+            MenuPreview.IsEnabled = file;
+            MenuRename.IsEnabled = one;
+            // „Pobierz…" na panelu LOKALNYM oznaczałoby kopiowanie pliku z dysku na dysk przez okno
+            // zapisu — mylące, więc znika tak samo jak przycisk na pasku (patrz konstruktor).
+            MenuDownload.Visibility = _localMode ? Visibility.Collapsed : Visibility.Visible;
+            MenuDownload.IsEnabled = n > 0;
+            MenuDelete.IsEnabled = n > 0;
+        }
+
         private void List_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (FileList.SelectedItem is Row r)
-            {
-                if (r.IsDir) { _path = r.FullName; RefreshAsync(); }
-                else Download_Click(sender, null);
-            }
+            OpenSelected();
         }
 
         // ---------- Przeciąganie wiersza (dual-pane: między panelami) + zaznaczanie prostokątem (rubber-band) ----------

@@ -525,8 +525,8 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.newfolder">Nowy folder</sys:String>
     <sys:String x:Key="S.sftp.newfolder.label">Nazwa nowego folderu:</sys:String>
     <sys:String x:Key="S.sftp.delete">Usuń</sys:String>
-    <sys:String x:Key="S.sftp.delete.confirm">Usunąć "{0}"? (katalogi tylko puste)</sys:String>
-    <sys:String x:Key="S.sftp.delete.confirmmany">Usunąć zaznaczone ({0})? (katalogi tylko puste)</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirm">Usunąć „{0}”? Tego nie da się cofnąć.</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirmmany">Usunąć zaznaczone ({0})? Tego nie da się cofnąć.</sys:String>
     <sys:String x:Key="S.sftp.unsafename">Serwer zwrócił niebezpieczną nazwę pliku: „{0}” — pobieranie odrzucone.</sys:String>
     <sys:String x:Key="S.sftp.toodeep">Drzewo folderów jest zbyt głębokie (ponad {0} poziomów) — transfer przerwany (możliwa pętla dowiązań).</sys:String>
     <sys:String x:Key="S.sftp.connecting">Łączenie SFTP…</sys:String>
@@ -538,6 +538,30 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.sftp.exists.confirm">"{0}" już istnieje w miejscu docelowym. Nadpisać? (Tak = nadpisz, Nie = pomiń, Anuluj = przerwij)</sys:String>
     <sys:String x:Key="S.sftp.cancel">Anuluj transfer</sys:String>
     <sys:String x:Key="S.sftp.drophint">Upuść pliki tutaj, aby wysłać</sys:String>
+    <sys:String x:Key="S.sftp.rename">Zmień nazwę</sys:String>
+    <sys:String x:Key="S.sftp.rename.label">Nowa nazwa:</sys:String>
+    <sys:String x:Key="S.sftp.rename.exists">„{0}” już istnieje w tym katalogu.</sys:String>
+    <sys:String x:Key="S.sftp.rename.noparent">Tego wpisu nie da się przemianować — nie ma katalogu nadrzędnego.</sys:String>
+    <sys:String x:Key="S.sftp.preview">Podgląd</sys:String>
+    <sys:String x:Key="S.sftp.filter">Filtruj listę (Ctrl+F)</sys:String>
+    <sys:String x:Key="S.sftp.filter.hint">Filtruj po nazwie…</sys:String>
+    <sys:String x:Key="S.sftp.counting">Liczenie zawartości…</sys:String>
+    <sys:String x:Key="S.sftp.deleting">Usuwanie…</sys:String>
+    <sys:String x:Key="S.sftp.delete.confirmtree">Usunąć {0} wraz z zawartością? Plików: {1}, rozmiar: {2}. Tego nie da się cofnąć.</sys:String>
+    <sys:String x:Key="S.sftp.menu.open">Otwórz</sys:String>
+    <sys:String x:Key="S.sftp.menu.copypath">Kopiuj ścieżkę</sys:String>
+    <sys:String x:Key="S.preview.title">Podgląd pliku</sys:String>
+    <sys:String x:Key="S.preview.copy">Kopiuj</sys:String>
+    <sys:String x:Key="S.preview.saveas">Zapisz jako…</sys:String>
+    <sys:String x:Key="S.preview.close">Zamknij</sys:String>
+    <sys:String x:Key="S.preview.copied">Skopiowano do schowka</sys:String>
+    <sys:String x:Key="S.preview.truncated">Pokazano pierwsze {0} linii — reszta pliku pominięta.</sys:String>
+    <sys:String x:Key="S.preview.hex">Zawartość binarna — zrzut szesnastkowy.</sys:String>
+    <sys:String x:Key="S.preview.toobig">Plik jest za duży na podgląd (limit {0}).</sys:String>
+    <sys:String x:Key="S.preview.large">„{0}” ma {1}. Pobrać go w całości do podglądu?</sys:String>
+    <sys:String x:Key="S.preview.meta.size">Rozmiar: {0}</sys:String>
+    <sys:String x:Key="S.preview.meta.binary">dane binarne</sys:String>
+    <sys:String x:Key="S.preview.meta.image">obraz {0}×{1} px</sys:String>
     <sys:String x:Key="S.dual.push">Wyślij zaznaczony plik na serwer →</sys:String>
     <sys:String x:Key="S.dual.pull">← Pobierz zaznaczony plik na dysk</sys:String>
 

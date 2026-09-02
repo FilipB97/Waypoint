@@ -31,6 +31,8 @@ namespace RdpManager
         void Download(string remotePath, Stream local);
         void CreateDirectory(string path);
         void Delete(string fullPath, bool isDir);
+        /// <summary>Zmienia nazwę/przenosi wpis. Obie ścieżki PEŁNE, w formacie danego backendu.</summary>
+        void Rename(string fullPath, string newFullPath);
     }
 
     /// <summary>
@@ -77,6 +79,7 @@ namespace RdpManager
         public void Upload(Stream local, string remotePath, bool overwrite) => _c.UploadFile(local, remotePath, overwrite);
         public void Download(string remotePath, Stream local) => _c.DownloadFile(remotePath, local);
         public void CreateDirectory(string path) => _c.CreateDirectory(path);
+        public void Rename(string fullPath, string newFullPath) => _c.RenameFile(fullPath, newFullPath);
 
         public void Delete(string fullPath, bool isDir)
         {

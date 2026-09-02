@@ -104,6 +104,7 @@ namespace RdpManager
         public void Download(string remotePath, Stream local) => _c.DownloadStream(local, remotePath);
 
         public void CreateDirectory(string path) => _c.CreateDirectory(path);
+        public void Rename(string fullPath, string newFullPath) => _c.Rename(fullPath, newFullPath);
 
         public void Delete(string fullPath, bool isDir)
         {
