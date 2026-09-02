@@ -139,6 +139,9 @@ namespace RdpManager.Diagnostics
               .Append(" TabStripHost=").Append(Short(_w.TabStripHost.Visibility))
               .Append(" FocusControls=").Append(Short(_w.FocusControls.Visibility))
               .Append(" SessionActions=").Append(Short(_w.SessionActions.Visibility)).AppendLine();
+            // Zwinięty pasek tytułu WPF-UI potrafi nadal zajmować strefę niekliencką nad paskiem kart
+            // (patrz MainWindow.SetTitleBarChromeHitTest) — stąd ta linia obok WM_NCHITTEST poniżej.
+            sb.Append("titleBar: IsHitTestVisible=").Append(_w.AppTitleBar.IsHitTestVisible).AppendLine();
 
             // --- wejscie ---
             GetCursorPos(out POINT sp);
