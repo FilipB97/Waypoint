@@ -1,0 +1,463 @@
+<title>Przegląd spójności UI</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap">
+<style>
+/* Arkusz pomiarowy: neutralne z lekkim przechyłem w zieleń-morską, żeby NARZĘDZIE nie myliło się
+   z mierzonym przedmiotem (Waypoint jest indygo). Wszystkie barwy przez tokeny — trzy stany motywu. */
+:root {
+  --paper:  #F7F8F7;
+  --sheet:  #FFFFFF;
+  --ink:    #16201E;
+  --ink-2:  #4A5754;
+  --ink-3:  #7D8A87;
+  --rule:   #DFE4E2;
+  --rule-2: #C6CFCC;
+  --mark:   #0D6B62;
+  --mark-bg:#E4EFED;
+  --ok:     #2F7D4F;
+  --warn:   #8A5A10;
+  --bad:    #A5322A;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:  #111413;
+    --sheet:  #191E1D;
+    --ink:    #E6EDEA;
+    --ink-2:  #A3B2AE;
+    --ink-3:  #74827F;
+    --rule:   #232B29;
+    --rule-2: #35403D;
+    --mark:   #5CD3C6;
+    --mark-bg:#16302D;
+    --ok:     #5FC98D;
+    --warn:   #E0AC57;
+    --bad:    #F0897C;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:  #111413;
+  --sheet:  #191E1D;
+  --ink:    #E6EDEA;
+  --ink-2:  #A3B2AE;
+  --ink-3:  #74827F;
+  --rule:   #232B29;
+  --rule-2: #35403D;
+  --mark:   #5CD3C6;
+  --mark-bg:#16302D;
+  --ok:     #5FC98D;
+  --warn:   #E0AC57;
+  --bad:    #F0897C;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Newsreader, Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 940px; margin: 0 auto; padding: 0 32px 120px; }
+.col  { max-width: 66ch; }
+
+code, .mono, table, .chip, .num {
+  font-family: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+code {
+  font-size: .82em; background: var(--mark-bg); color: var(--mark);
+  padding: 1px 5px; border-radius: 3px;
+}
+
+/* ---- otwarcie ---- */
+header { padding: 72px 0 8px; }
+.kicker {
+  font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0 0 18px;
+}
+h1 {
+  font-size: 46px; font-weight: 600; line-height: 1.08; letter-spacing: -.015em;
+  margin: 0 0 20px; text-wrap: balance;
+}
+.verdict {
+  font-size: 21px; line-height: 1.55; color: var(--ink); max-width: 60ch;
+  border-left: 2px solid var(--mark); padding-left: 20px; margin: 0 0 14px;
+}
+.meta {
+  font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-3);
+  margin: 28px 0 0; padding-top: 14px; border-top: 1px solid var(--rule);
+  display: flex; flex-wrap: wrap; gap: 6px 26px;
+}
+
+h2 {
+  font-size: 15px; font-family: "JetBrains Mono", monospace; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+  margin: 76px 0 22px; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+}
+p { margin: 0 0 16px; }
+.col p, .col ul { max-width: 66ch; }
+ul { padding-left: 20px; margin: 0 0 16px; }
+li { margin: 0 0 7px; }
+strong { font-weight: 600; }
+
+/* ---- ustalenie ---- */
+.finding { margin: 0 0 52px; }
+.fhead { display: flex; align-items: baseline; gap: 14px; margin: 0 0 6px; }
+.fnum {
+  font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 13px;
+  color: var(--mark); flex: none; width: 22px;
+}
+.ftitle { font-size: 25px; font-weight: 600; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.chip {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 500;
+  border: 1px solid currentColor; border-radius: 3px; padding: 2px 7px; flex: none;
+  align-self: center;
+}
+.chip.s-bad  { color: var(--bad); }
+.chip.s-warn { color: var(--warn); }
+.chip.s-low  { color: var(--ink-3); }
+.fbody { margin-left: 36px; }
+@media (max-width: 700px) { .fbody { margin-left: 0; } }
+.fix {
+  background: var(--sheet); border: 1px solid var(--rule); border-left: 2px solid var(--mark);
+  border-radius: 0 6px 6px 0; padding: 14px 18px; margin: 18px 0 0; max-width: 66ch;
+}
+.fix b {
+  font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--mark); display: block; margin-bottom: 4px;
+}
+.fix p { margin: 0; font-size: 17px; }
+
+/* ---- tabele pomiarowe ---- */
+.measure { margin: 20px 0; overflow-x: auto; }
+table { border-collapse: collapse; font-size: 13px; width: 100%; min-width: 460px; }
+caption {
+  text-align: left; font-family: "JetBrains Mono", monospace; font-size: 10.5px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+  padding-bottom: 8px;
+}
+th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--ink-3); font-weight: 500; border-bottom: 1px solid var(--rule-2); }
+tbody tr:last-child td { border-bottom: 0; }
+td.ok   { color: var(--ok); }
+td.warn { color: var(--warn); font-weight: 700; }
+td.bad  { color: var(--bad); font-weight: 700; }
+td.dim  { color: var(--ink-3); }
+
+/* ---- lista „co się trzyma" ---- */
+.healthy { display: grid; gap: 0; max-width: 72ch; }
+.hrow {
+  display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: baseline;
+  padding: 11px 0; border-bottom: 1px solid var(--rule);
+}
+.hrow:last-child { border-bottom: 0; }
+.hrow .num { font-size: 13px; color: var(--ok); white-space: nowrap; }
+.hrow span:first-child { font-size: 17px; }
+
+footer {
+  margin: 90px 0 0; padding-top: 22px; border-top: 1px solid var(--rule);
+  color: var(--ink-2); font-size: 16px; max-width: 66ch;
+}
+</style>
+
+<div class="page">
+<header>
+  <p class="kicker">Waypoint · przegląd systemu wizualnego</p>
+  <h1>Przegląd spójności UI</h1>
+  <p class="verdict">
+    System trzyma się dobrze: promienie, stopnie pisma i rozmiary ikon idą przez tokeny prawie bez
+    wyjątków, wszystkie czternaście okien ma identyczną oprawę, a kontrast tekstu przechodzi AA
+    w dwudziestu jeden z dwudziestu czterech par. Osobno stoi jedna usterka, którą widać gołym okiem
+    w motywie jasnym, i jedno miejsce, w którym ten sam element jest napisany pięć razy.
+  </p>
+  <p class="meta">
+    <span>master · a5fca86</span><span>src/RdpManager</span><span>14 okien · 2 motywy · 6 ustaleń</span>
+  </p>
+</header>
+
+<h2>Co się trzyma</h2>
+<div class="col">
+<p>
+  To nie jest uprzejmy wstęp — to wynik. Rzeczy, które w aplikacjach tej wielkości zwykle się rozjeżdżają,
+  tutaj się nie rozjechały, i da się to policzyć:
+</p>
+</div>
+<div class="healthy">
+  <div class="hrow"><span>Promienie zaokrągleń poza drabiną <code>2/4/8/12/16</code></span><span class="num">2 na cały kod</span></div>
+  <div class="hrow"><span>Stopnie pisma poza skalą <code>Metrics.xaml</code></span><span class="num">6, każdy z uzasadnieniem w komentarzu</span></div>
+  <div class="hrow"><span>Rozmiary ikon spoza tokenów <code>Icon*</code></span><span class="num">1 na 55</span></div>
+  <div class="hrow"><span>Okna z pełną oprawą (FluentWindow · Mica · TitleBar · ikona · CanvasBrush)</span><span class="num">14 / 14</span></div>
+  <div class="hrow"><span>Marginesy wiersza przycisków z tokenu <code>DialogButtonRowMargin</code></span><span class="num">wszystkie okna dialogowe</span></div>
+  <div class="hrow"><span>Style z szablonem kontrolki bez widocznego fokusu klawiatury</span><span class="num">0</span></div>
+  <div class="hrow"><span>Barwy nietekstowe (akcent, statusy) poniżej progu 3,0 na panelu</span><span class="num">0 w obu motywach</span></div>
+  <div class="hrow"><span>Klucze tłumaczeń rozjechane między <code>pl</code> a <code>en</code></span><span class="num">0 — pilnuje tego test</span></div>
+</div>
+<div class="col">
+<p style="margin-top:22px">
+  Sześć literałów stopnia pisma to inicjały awatara w trzech rozmiarach kafelka (9,5 · 10,5 · 14 px),
+  ikona dopasowana do kafelka 22 px i nakładka diagnostyczna. To skala proporcjonalna, nie dryf —
+  każdy z tych wyjątków ma przy sobie zdanie, dlaczego nie jest tokenem.
+</p>
+</div>
+
+<h2>Ustalenia</h2>
+<div class="col">
+<p>
+  Uporządkowane wedle tego, jak bardzo widać je w użyciu — nie wedle tego, jak trudno je naprawić.
+</p>
+</div>
+
+<!-- 1 -->
+<section class="finding">
+  <div class="fhead">
+    <span class="fnum">01</span>
+    <h3 class="ftitle">W motywie jasnym awatar i kropka tej samej grupy mają inny kolor</h3>
+    <span class="chip s-bad">widoczne</span>
+  </div>
+  <div class="fbody">
+    <p class="col">
+      W wierszu listy serwerów awatar stoi po lewej, a kropka grupy po prawej — jeden wiersz, dwa różne
+      odcienie tej samej grupy. W motywie ciemnym zgadzają się; w jasnym rozjeżdżają się o ΔE ~20, czyli
+      wyraźnie powyżej progu 15, od którego dwa kolory przestają czytać się jako ten sam.
+    </p>
+    <div class="measure">
+      <table>
+        <caption>ΔE (CIE76) między awatarem a kropką tej samej grupy</caption>
+        <thead><tr><th>Grupa</th><th>Awatar</th><th>Kropka</th><th>ΔE ciemny</th><th>ΔE jasny</th></tr></thead>
+        <tbody>
+          <tr><td>Produkcja</td><td class="dim">#D06BD8</td><td class="dim">#A32FAE</td><td class="ok">0,0</td><td class="bad">20,1</td></tr>
+          <tr><td>Staging</td><td class="dim">#FFB454</td><td class="dim">#C28029</td><td class="ok">0,0</td><td class="bad">20,1</td></tr>
+          <tr><td>Klienci</td><td class="dim">#36C4CF</td><td class="dim">#1F8B94</td><td class="ok">4,7</td><td class="bad">21,4</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="col">
+      Przyczyna jest w palecie: klucze <code>AvProd</code> · <code>AvStaging</code> · <code>AvClient</code>
+      mają w <code>Palette.Light.xaml</code> <strong>dokładnie te same wartości</strong> co w wersji ciemnej,
+      podczas gdy <code>GdProd</code> · <code>GdStaging</code> · <code>GdClient</code> zostały pod jasne tło
+      przetonowane. Awatary siedzą więc w palecie, ale motywu nie widzą.
+    </p>
+    <div class="fix"><b>Poprawka</b><p>Dotonować trzy gradienty <code>Av*</code> w palecie jasnej do tych samych barw, z których wzięły się <code>Gd*</code>. Zmiana obejmuje sześć wartości w jednym pliku.</p></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="finding">
+  <div class="fhead">
+    <span class="fnum">02</span>
+    <h3 class="ftitle">Trzy niezależne palety opisują to samo pojęcie</h3>
+    <span class="chip s-bad">strukturalne</span>
+  </div>
+  <div class="fbody">
+    <p class="col">
+      „Kolor, po którym poznaję ten serwer albo tę grupę” jest w aplikacji rozwiązany trzy razy, trzema
+      zestawami, które o sobie nie wiedzą:
+    </p>
+    <div class="measure">
+      <table>
+        <caption>Systemy barw tożsamości</caption>
+        <thead><tr><th>Źródło</th><th>Postać</th><th>Zależy od motywu</th><th>Walidowane ΔE</th><th>Zasila</th></tr></thead>
+        <tbody>
+          <tr><td>Core.GroupPalette</td><td class="dim">6 kluczy palety</td><td class="ok">tak</td><td class="ok">tak, ≥ 15</td><td>grupy kart, kropki grup</td></tr>
+          <tr><td>MainWindow.GroupPalette</td><td class="dim">8 par hex</td><td class="bad">nie</td><td class="warn">częściowo</td><td>awatary</td></tr>
+          <tr><td>ServerEditWindow.SwatchColors</td><td class="dim">8 hex spoza palety</td><td class="bad">nie</td><td class="bad">nie</td><td>ręczny wybór koloru</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="col">
+      Trzeci zestaw to w całości barwy z Tailwinda — <code>#3B82F6</code>, <code>#10B981</code>,
+      <code>#EF4444</code> i tak dalej. Użytkownik wybiera kolor awatara z palety, która z paletą aplikacji
+      nie dzieli ani jednej wartości.
+    </p>
+    <p class="col">
+      To nie jest nowy problem, tylko jego niedokończona połowa: dokładnie ten błąd — statyczna tablica
+      hexów niezależna od motywu — został już raz naprawiony dla kolorów grup kart, i komentarz w
+      <code>TabStripController</code> to opisuje. Poprawka objęła wtedy jedno miejsce z trzech.
+    </p>
+    <div class="fix"><b>Poprawka</b><p>Sprowadzić wszystkie trzy do <code>Core.GroupPalette</code>: awatary czytają te same klucze co kropki, a próbnik w edycji serwera pokazuje tę samą szóstkę zamiast Tailwinda. Wtedy „zielony” znaczy jeden zielony w całej aplikacji, w obu motywach.</p></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="finding">
+  <div class="fhead">
+    <span class="fnum">03</span>
+    <h3 class="ftitle">Przycisk ikonowy jest napisany pięć razy i już się rozjechał</h3>
+    <span class="chip s-warn">odczuwalne</span>
+  </div>
+  <div class="fbody">
+    <p class="col">
+      Ten sam przezroczysty przycisk z ikoną ma pięć osobnych definicji w pięciu plikach —
+      153 linie XAML-a o podobieństwie 72–85%. Kopie nie są identyczne i różnice widać w ruchu:
+    </p>
+    <div class="measure">
+      <table>
+        <caption>Pięć kopii jednego stylu</caption>
+        <thead><tr><th>Styl</th><th>Plik</th><th>Animacja hover</th><th>Hover</th><th>Wciśnięty</th></tr></thead>
+        <tbody>
+          <tr><td>FtIconBtn</td><td class="dim">FileTransferPanel</td><td class="ok">0,11 s</td><td>0,12</td><td>0,20</td></tr>
+          <tr><td>RestIconBtn</td><td class="dim">RestConsole</td><td class="ok">0,11 s</td><td>0,12</td><td>0,20</td></tr>
+          <tr><td>EnvIconBtn</td><td class="dim">RestEnvWindow</td><td class="ok">0,11 s</td><td>0,12</td><td class="warn">0,22</td></tr>
+          <tr><td>SnipIconBtn</td><td class="dim">SnippetWindow</td><td class="bad">brak</td><td>0,12</td><td class="warn">0,22</td></tr>
+          <tr><td>IconGhostBtn</td><td class="dim">PasswordGeneratorWindow</td><td class="bad">brak</td><td>0,12</td><td>0,20</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="col">
+      Skutek jest taki, że ten sam gest zachowuje się inaczej zależnie od okna: w panelu plików i w konsoli
+      REST podświetlenie <em>narasta</em> przez 110 ms, a w generatorze haseł i w snippetach <em>przeskakuje</em>.
+      Tego się nie nazywa, ale się czuje. Podobnie wiersz listy — dwie kopie, 64 linie.
+    </p>
+    <p class="col">
+      Uczciwie: <code>SnipIconBtn</code> to moja kopia z tego tygodnia. Dołożyłem szóstą wersję zamiast
+      wyciągnąć wspólną — i to ona wprowadziła rozjazd w animacji.
+    </p>
+    <div class="fix"><b>Poprawka</b><p>Jeden <code>Themes/Controls.xaml</code> w <code>MergedDictionaries</code> obok <code>Metrics.xaml</code>, z <code>IconBtn</code> i <code>ListRow</code>. Pięć plików traci po ~30 linii, a przyszłe okno dostaje ten język za darmo.</p></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="finding">
+  <div class="fhead">
+    <span class="fnum">04</span>
+    <h3 class="ftitle">Trzy pary tekstu nie dochodzą do AA</h3>
+    <span class="chip s-warn">na progu</span>
+  </div>
+  <div class="fbody">
+    <p class="col">
+      Dwadzieścia jeden par z dwudziestu czterech przechodzi próg 4,5 dla treści. Trzy nie — wszystkie
+      dotyczą tekstu trzeciorzędnego, a najgorsza wypada na tle <code>Elevated</code>, czyli pod kursorem.
+    </p>
+    <div class="measure">
+      <table>
+        <caption>Kontrast tekstu na powierzchniach (WCAG, próg 4,5)</caption>
+        <thead><tr><th>Token</th><th>Canvas</th><th>Panel</th><th>Elevated</th><th>RailBg</th></tr></thead>
+        <tbody>
+          <tr><td>TextPrim · ciemny</td><td class="ok">15,55</td><td class="ok">11,65</td><td class="ok">7,80</td><td class="ok">14,71</td></tr>
+          <tr><td>TextSec · ciemny</td><td class="ok">9,21</td><td class="ok">6,90</td><td class="ok">4,62</td><td class="ok">8,72</td></tr>
+          <tr><td>TextTer · ciemny</td><td class="ok">6,48</td><td class="ok">4,85</td><td class="bad">3,25</td><td class="ok">6,13</td></tr>
+          <tr><td>TextPrim · jasny</td><td class="ok">14,77</td><td class="ok">16,27</td><td class="ok">13,66</td><td class="ok">15,15</td></tr>
+          <tr><td>TextSec · jasny</td><td class="ok">6,06</td><td class="ok">6,68</td><td class="ok">5,61</td><td class="ok">6,22</td></tr>
+          <tr><td>TextTer · jasny</td><td class="warn">4,41</td><td class="ok">4,86</td><td class="warn">4,08</td><td class="ok">4,52</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="col">
+      Nie jest to kombinacja teoretyczna. <code>Elevated</code> to tło najechanego wiersza listy serwerów,
+      a opóźnienie („37 ms”) obok nazwy jest rysowane w <code>TextTer</code> — czyli liczba traci kontrast
+      dokładnie w chwili, gdy użytkownik na nią celuje myszą.
+    </p>
+    <p class="col">
+      Ciekawsze jest to, że <strong>żadna z dwóch oczywistych poprawek nie działa</strong>, i widać to
+      dopiero po policzeniu:
+    </p>
+    <div class="measure">
+      <table>
+        <caption>Dwie oczywiste poprawki i ich koszt</caption>
+        <thead><tr><th>Wariant</th><th>Osiąga 4,5?</th><th>Koszt uboczny</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Rozjaśnić <code>TextTer</code><br><span class="mono dim">#9396A6 → #B0B2BE</span></td>
+            <td class="ok">tak, 4,52</td>
+            <td class="bad">ΔE do <code>TextSec</code> spada z 11,2 na 1,3 — trzy stopnie tekstu robią się dwoma</td>
+          </tr>
+          <tr>
+            <td>Osłabić <code>Elevated</code><br><span class="mono dim">alfa 0x2D → 0x09</span></td>
+            <td class="ok">tak, 4,50</td>
+            <td class="bad">kontrast samego hoveru do panelu spada z 1,49 na 1,08 — podświetlenie znika</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="col">
+      To znaczy, że 3,25 nie jest literówką w palecie, tylko napięciem między trzystopniową hierarchią
+      tekstu a jasnym tłem hoveru — i że sam token jest już dociśnięty do granicy. W kodzie zresztą
+      widać, że raz go dociskano: komentarz w drzewie serwerów odnotowuje, że <code>TextTer</code>
+      miał kiedyś kontrast 2,71.
+    </p>
+    <div class="fix"><b>Poprawka</b><p>Nie ruszać tokenów, tylko ich użycie: tekst niosący informację (opóźnienie, adres) w wierszu z hoverem podnieść do <code>TextSec</code>, zostawiając <code>TextTer</code> dla rzeczy naprawdę drugorzędnych — separatorów, liczników, znaków ozdobnych. W motywie jasnym ta sama zmiana zamyka obie wartości na progu (4,41 i 4,08).</p></div>
+  </section>
+
+<!-- 5 -->
+<section class="finding">
+  <div class="fhead">
+    <span class="fnum">05</span>
+    <h3 class="ftitle">Inicjały na awatarze wychodzą tuż pod próg czytelności</h3>
+    <span class="chip s-low">drobne</span>
+  </div>
+  <div class="fbody">
+    <p class="col">
+      Reguła doboru atramentu (<code>PrefersDarkInk</code>) optymalizuje ŚRODEK gradientu, bo tam leżą litery.
+      Nawet w tym najkorzystniejszym punkcie cztery z jedenastu kolorów awatara nie dochodzą do 4,5 —
+      a przy 9,5 px to zwykły tekst, nie „duży”.
+    </p>
+    <div class="measure">
+      <table>
+        <caption>Kontrast inicjałów w środku gradientu awatara</caption>
+        <thead><tr><th>Kolor</th><th>Atrament</th><th>Kontrast</th><th>Ocena</th></tr></thead>
+        <tbody>
+          <tr><td>slot 5 · chabrowy</td><td class="dim">biel</td><td class="bad">3,84</td><td class="bad">poniżej AA</td></tr>
+          <tr><td>slot 6 · fiolet</td><td class="dim">biel</td><td class="warn">4,31</td><td class="warn">poniżej AA</td></tr>
+          <tr><td>AvProd · magenta</td><td class="dim">biel</td><td class="warn">4,42</td><td class="warn">poniżej AA</td></tr>
+          <tr><td>slot 7 · ceglany</td><td class="dim">biel</td><td class="warn">4,44</td><td class="warn">poniżej AA</td></tr>
+          <tr><td>pozostałe siedem</td><td class="dim">ciemny / biel</td><td class="ok">5,15 – 8,36</td><td class="ok">AA</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="col">
+      Dlaczego to „drobne”, a nie „widoczne”: inicjały nie niosą informacji samodzielnie — nazwa serwera
+      stoi bezpośrednio obok, a kolor awatara powtarza kropka grupy. To ozdobny skrót, nie jedyny nośnik.
+      Naprawić i tak warto, bo cztery przypadki na jedenaście to nie wyjątek.
+    </p>
+    <div class="fix"><b>Poprawka</b><p>Wychodzi za darmo przy ustaleniu 02: gdy awatary przejdą na klucze <code>Core.GroupPalette</code>, przechodzą też pod istniejący test progu ΔE — wystarczy dołożyć do niego próg kontrastu atramentu.</p></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="finding">
+  <div class="fhead">
+    <span class="fnum">06</span>
+    <h3 class="ftitle">Dwa przyciski bez nazwy dla czytnika ekranu</h3>
+    <span class="chip s-low">drobne</span>
+  </div>
+  <div class="fbody">
+    <p class="col">
+      <code>SendBtn</code> w konsoli REST i <code>RevealBtn</code> w edycji serwera to przyciski wyłącznie
+      z ikoną, bez <code>AutomationProperties.Name</code> i bez tekstowego <code>Content</code> — czytnik
+      ekranu przeczyta je jako „przycisk”. To jedyne dwa takie w całej aplikacji, co samo w sobie mówi,
+      że reguła jest tu pilnowana; tym łatwiej ją domknąć.
+    </p>
+    <div class="fix"><b>Poprawka</b><p>Dwa atrybuty, klucze tłumaczeń już istnieją (<code>S.rest.send</code>, podpowiedź przycisku odsłaniania).</p></div>
+  </div>
+</section>
+
+<h2>Czego ten przegląd nie obejmuje</h2>
+<div class="col">
+<p>
+  To jest audyt <strong>systemu wizualnego z kodu</strong>, a nie oglądanie działającej aplikacji.
+  Środowisko jest linuksowe, a Waypoint to WPF — nie da się go tu uruchomić ani zrzucić z ekranu.
+  Wszystko powyżej jest policzone z palety, metryk i szablonów; nic nie jest oceną „na oko”.
+</p>
+<p>
+  Poza zasięgiem takiego pomiaru zostają rzeczy, które rozstrzyga dopiero patrzenie: rytm odstępów
+  w gotowym oknie, zachowanie układu przy bardzo długich nazwach serwerów, gęstość pulpitu przy
+  trzydziestu kartach, płynność animacji przy zmianie rozmiaru. Najbliższą powierzchnią do takiej
+  oceny jest makieta <code>visualization/waypoint-atlas.html</code> w repozytorium.
+</p>
+<p>
+  Nie sprawdzałem też jednej rzeczy, którą warto sprawdzić osobno: jak wygląda styl blokowy paska kart
+  w trybie skupienia przy widoku minimalnym. Karta ma tam 26 px przy przyciskach okna 24 px — liczbowo
+  się mieści, ale to najciaśniejsza kombinacja w całej aplikacji.
+</p>
+</div>
+
+<footer>
+  <p>
+    Trzy ustalenia (01, 03, 06) są mechaniczne i można je zamknąć w jednym podejściu.
+    Ustalenie 02 jest właściwą pracą — i to ono zamyka też 05.
+  </p>
+</footer>
+</div>
