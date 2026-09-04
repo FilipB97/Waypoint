@@ -1,0 +1,607 @@
+<title>Warianty paska kart</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================================
+   Warianty paska kart — makieta porównawcza dla Waypointa.
+
+   Zasada: WSZYSTKO poza samą geometrią karty jest wzięte 1:1 z aplikacji —
+   barwy z Themes/Palette.*.xaml, promienie z Themes/Metrics.xaml, wymiary
+   i odstępy z Controllers/TabStripController.cs. Inaczej porównanie byłoby
+   porównaniem makiet, a nie wariantów.
+   ============================================================================ */
+
+/* ---- chrome strony (świadomie INNE niż aplikacja: to jest arkusz próbek,
+        nie podgląd okna — specimen ma być najgłośniejszą rzeczą na stronie) ---- */
+:root {
+  --ink:        #1A1A22;
+  --ink-2:      #4B4B5A;
+  --ink-3:      #7C7C8C;
+  --ground:     #F1F1F5;
+  --sheet:      #FFFFFF;
+  --line:       #E0E0E8;
+  --line-2:     #CFCFDA;
+  --mark:       #4A3FBF;
+  --mark-soft:  #ECEAFA;
+  --warn:       #B03024;
+  --shadow:     0 1px 2px rgba(26,26,34,.06), 0 8px 24px rgba(26,26,34,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink:       #E9E9F0;
+    --ink-2:     #A8A8B8;
+    --ink-3:     #74748A;
+    --ground:    #131318;
+    --sheet:     #1B1B22;
+    --line:      #2A2A34;
+    --line-2:    #3A3A46;
+    --mark:      #9A92FF;
+    --mark-soft: #23213A;
+    --warn:      #FF8A7A;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --ink:       #E9E9F0;
+  --ink-2:     #A8A8B8;
+  --ink-3:     #74748A;
+  --ground:    #131318;
+  --sheet:     #1B1B22;
+  --line:      #2A2A34;
+  --line-2:    #3A3A46;
+  --mark:      #9A92FF;
+  --mark-soft: #23213A;
+  --warn:      #FF8A7A;
+  --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 28px 96px; }
+
+/* ---- nagłówek ---- */
+header { padding: 56px 0 26px; }
+h1 {
+  font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 10px;
+  text-wrap: balance;
+}
+.lede { max-width: 62ch; color: var(--ink-2); margin: 0 0 4px; }
+.lede code, .spec code, .note code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .88em;
+  background: var(--mark-soft); color: var(--mark); padding: 1px 5px; border-radius: 3px;
+}
+
+/* ---- pasek sterowania ---- */
+.toolbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px;
+  padding: 12px 28px; margin: 0 -28px 34px;
+  background: color-mix(in srgb, var(--ground) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.grp { display: flex; align-items: center; gap: 8px; }
+.grp > span {
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+}
+.seg { display: flex; background: var(--sheet); border: 1px solid var(--line); border-radius: 7px; padding: 2px; }
+.seg button {
+  font: inherit; font-size: 13px; padding: 4px 12px; border: 0; border-radius: 5px;
+  background: transparent; color: var(--ink-2); cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--mark); color: #fff; }
+.seg button:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+.jump { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.jump a {
+  font-family: "IBM Plex Mono", monospace; font-size: 12px; text-decoration: none;
+  color: var(--ink-2); border: 1px solid var(--line); border-radius: 5px;
+  width: 26px; height: 26px; display: grid; place-items: center;
+}
+.jump a:hover { border-color: var(--mark); color: var(--mark); }
+
+/* ---- blok wariantu ---- */
+.variant { margin: 0 0 44px; scroll-margin-top: 76px; }
+.vhead { display: flex; align-items: baseline; gap: 14px; margin: 0 0 4px; }
+.vnum {
+  font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 600;
+  color: var(--mark); background: var(--mark-soft);
+  width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center;
+  flex: none;
+}
+.vname { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 0; }
+.vtag {
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-3);
+  border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 6px;
+}
+.vthesis { color: var(--ink-2); margin: 0 0 16px 42px; max-width: 68ch; }
+
+.stage { display: grid; gap: 16px; margin-left: 42px; grid-template-columns: minmax(0, 1fr); }
+.stage > * { min-width: 0; }
+@media (max-width: 900px) { .stage, .vthesis { margin-left: 0; } }
+
+.spec {
+  margin: 16px 0 0 42px; padding: 0; list-style: none;
+  display: grid; gap: 5px;
+  font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-2);
+}
+.spec li { display: grid; grid-template-columns: 118px 1fr; gap: 12px; align-items: start; }
+.spec b { font-weight: 500; color: var(--ink-3); }
+.spec .warn { color: var(--warn); }
+@media (max-width: 900px) { .spec { margin-left: 0; } }
+
+/* ============================================================================
+   RAMKA PRÓBKI — odwzorowanie okna Waypointa.
+   Tokeny 1:1 z Palette.Dark.xaml / Palette.Light.xaml.
+   ============================================================================ */
+.frame {
+  --canvas-a: #0F1014; --canvas-b: #181A22;
+  --rail:     rgba(22,24,32,.80);          /* RailBg  #CC161820 */
+  --panel:    #282A36;
+  --elevated: rgba(189,193,219,.176);      /* Elevated #2DBDC1DB */
+  --border:   rgba(255,255,255,.133);      /* Border   #22FFFFFF */
+  --tx1: #E7E8EE; --tx2: #B1B4C2; --tx3: #9396A6;
+  --accent: #6C6DFF;
+  --accent-soft: rgba(108,109,255,.149);   /* AccentSoft   #266C6DFF */
+  --accent-strong: rgba(108,109,255,.4);   /* AccentStrong #666C6DFF */
+  --online: #3DDC97; --idle: #FFB454; --offline: #747783; --danger: #E8463F;
+  --gd-prod: #D06BD8; --gd-staging: #FFB454; --gd-client: #36B8C4;
+  --gd-blue: #7BA6FF; --gd-green: #3DDC97;
+
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--canvas-a), var(--canvas-b));
+  box-shadow: var(--shadow);
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif;
+  user-select: none;
+}
+.frame[data-app="light"] {
+  --canvas-a: #EEF0F3; --canvas-b: #DEE2E8;
+  --rail:     rgba(242,243,245,.90);       /* RailBg  #E6F2F3F5 */
+  --panel:    #FAFBFC;
+  --elevated: rgba(0,0,0,.078);            /* Elevated #14000000 */
+  --border:   rgba(0,0,0,.133);            /* Border   #22000000 */
+  --tx1: #1B1D22; --tx2: #565A62; --tx3: #6B6F78;
+  --accent: #5B4BD6;
+  --accent-soft: rgba(91,75,214,.133);
+  --accent-strong: rgba(91,75,214,.4);
+  --online: #12855A; --idle: #9A6512; --offline: #767A83; --danger: #C0281F;
+  --gd-prod: #A32FAE; --gd-staging: #C28029; --gd-client: #1F8B94;
+  --gd-blue: #2F6BE0; --gd-green: #12855A;
+}
+.flabel {
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0 0 6px 2px;
+}
+
+/* pasek kart: TabStripHost — RailBg + 1 px dolnej krawędzi; StackPanel Margin="8,6,8,6" */
+.strip {
+  position: relative;
+  background: var(--rail);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  display: flex; align-items: flex-end;
+  overflow-x: auto; scrollbar-width: none;
+}
+.strip::-webkit-scrollbar { display: none; }
+/* skrawek obszaru treści — po to, żeby było widać, czy karta zlewa się z zawartością */
+.body-strip { height: 46px; display: flex; align-items: center; padding: 0 14px; gap: 10px; }
+.body-strip .fake {
+  height: 8px; border-radius: 4px; background: var(--elevated);
+}
+
+/* ---- karta: geometria z BuildTabDefault ---- */
+.tab {
+  position: relative;
+  display: flex; flex-direction: column;
+  padding: 6px 7px 5px 10px;      /* Thickness(10,6,7,5) */
+  margin-right: 4px;              /* Thickness(0,0,4,0) */
+  border: 1px solid transparent;
+  border-radius: 8px;             /* RadiusSm */
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+  transition: background-color .11s ease, color .11s ease;
+}
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tab .row { display: flex; align-items: center; }
+.tab .av {
+  width: 17px; height: 17px; border-radius: 4px; flex: none;
+  display: grid; place-items: center;
+  font-size: 9.5px; font-weight: 700; color: #0E0F13; letter-spacing: .01em;
+}
+.frame[data-app="light"] .tab .av { color: #FFFFFF; }
+.tab .nm { font-size: 12px; color: var(--tx2); margin-left: 7px; white-space: nowrap; }
+.tab.is-active .nm { color: var(--tx1); }
+.tab .gl { width: 10px; height: 10px; margin-left: 7px; flex: none; display: grid; place-items: center; }
+.tab .x {
+  font-size: 11px; color: var(--tx3); padding: 1px 5px; margin-left: 3px;
+  visibility: hidden; line-height: 1;
+}
+.tab.is-active .x, .tab:hover .x { visibility: visible; }
+.tab .x:hover { color: var(--danger); }
+/* podkreślenie: Rectangle H=2, RadiusX=1, Margin(2,4,2,0) */
+.tab .ul {
+  height: 2px; border-radius: 1px; background: var(--accent);
+  margin: 4px 2px 0; visibility: hidden;
+}
+
+/* gęstość minimalna: ListStyle="Minimal" — bez awatara, ciaśniej */
+.dense-min .tab { padding: 2px 6px 2px 11px; }
+.dense-min .tab .av { display: none; }
+.dense-min .tab .row { align-items: center; }
+.dense-min .tab .gl { order: -1; margin-left: 0; }
+.dense-min .tab .nm { margin-left: 8px; }
+.dense-min .tab .ul { margin-top: 2px; }
+.dense-min .strip { padding: 2px 8px; }
+
+/* ---- grupa kart „jak w Vivaldi" (BuildGroupContainer) ---- */
+.group {
+  display: flex; align-items: center; flex: none;
+  border: 1px solid var(--g-strong); background: var(--g-tint);
+  border-radius: 8px; padding: 0 4px 0 3px; margin-right: 5px;
+}
+.group .pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--g-strong); border-radius: 4px;
+  padding: 2px 7px 3px 6px; margin: 0 4px 0 1px;
+  font-size: 11.5px; font-weight: 600; color: var(--g-color); cursor: pointer;
+}
+
+/* ---- znaczniki stanu (Core/StatusGlyph, pole 10 px) ---- */
+.gl > * { display: block; }
+.gl .g-disc { width: 8px; height: 8px; border-radius: 50%; }
+.gl .g-bar  { width: 10px; height: 2px; border-radius: 1px; }
+.gl .g-dia  { width: 7px; height: 7px; transform: rotate(45deg); }
+.gl .g-arc  { width: 10px; height: 10px; border-radius: 50%; border: 2px solid;
+              border-color: currentColor transparent transparent transparent;
+              animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .gl .g-arc { animation: none; } }
+
+/* ============================================================================
+   WARIANTY — jedyne, co się między nimi różni.
+   ============================================================================ */
+
+/* 1 — obecny: wypełnienie Panel + 2 px akcentu pod treścią */
+.v1 .tab:hover           { background: var(--elevated); }
+.v1 .tab.is-active       { background: var(--panel); }
+.v1 .tab.is-active .ul   { visibility: visible; }
+
+/* 2 — podkreślenie: zero wypełnienia; hover zapowiada kreskę */
+.v2 .tab                 { border-radius: 0; padding-left: 9px; padding-right: 9px; margin-right: 2px; }
+.v2 .tab .ul             { margin: 5px 0 0; height: 2px; border-radius: 0; }
+.v2 .tab:hover .ul       { visibility: visible; background: var(--tx3); }
+.v2 .tab:hover .nm       { color: var(--tx1); }
+.v2 .tab.is-active .ul   { visibility: visible; background: var(--accent); }
+.v2 .tab.is-active .nm   { font-weight: 600; }
+
+/* 3 — kapsuła: pełne zaokrąglenie, wypełnienie akcentem, bez kreski */
+.v3 .tab                 { border-radius: 999px; padding: 6px 10px 5px 10px; }
+.v3 .tab:hover           { background: var(--elevated); }
+.v3 .tab.is-active       { background: var(--accent-soft); border-color: var(--accent-strong); }
+.v3 .tab.is-active .ul   { visibility: hidden; }
+.v3 .group               { border-radius: 999px; padding: 0 5px 0 4px; }
+.v3 .group .pill         { border-radius: 999px; }
+
+/* 4 — przeglądarkowa: karta zrośnięta z obszarem treści */
+.v4 .strip               { border-bottom: 0; padding-bottom: 0; align-items: flex-end; }
+.v4 .tab                 { border-radius: 10px 10px 0 0; margin-right: 2px; padding: 7px 7px 7px 10px; }
+.v4 .tab .ul             { display: none; }
+.v4 .tab:hover           { background: var(--elevated); }
+.v4 .tab.is-active       { background: var(--canvas-a); }
+/* „nóżki": kwadrat w kolorze treści z wyciętym ćwiartkowym łukiem — to one sprawiają,
+   że karta wygląda na wtopioną w obszar pod paskiem, a nie doklejoną do niego. */
+.v4 .tab.is-active::before,
+.v4 .tab.is-active::after {
+  content: ""; position: absolute; bottom: 0; width: 8px; height: 8px;
+  background: var(--canvas-a);
+}
+.v4 .tab.is-active::before {
+  left: -8px;
+  -webkit-mask: radial-gradient(circle 8px at 0 0, transparent 98%, #000 100%);
+          mask: radial-gradient(circle 8px at 0 0, transparent 98%, #000 100%);
+}
+.v4 .tab.is-active::after {
+  right: -8px;
+  -webkit-mask: radial-gradient(circle 8px at 100% 0, transparent 98%, #000 100%);
+          mask: radial-gradient(circle 8px at 100% 0, transparent 98%, #000 100%);
+}
+.v4 .group               { border-radius: 8px 8px 0 0; align-self: flex-end; padding-bottom: 0; }
+
+/* 5 — blok (IDE): promień 0, akcent u GÓRY, pionowe separatory */
+.v5 .strip               { padding: 0 0 0 8px; align-items: stretch; }
+.v5 .tab {
+  border-radius: 0; margin-right: 0; padding: 9px 8px 9px 10px;
+  border: 0; border-right: 1px solid var(--border);
+  border-top: 2px solid transparent;
+}
+.v5 .tab .ul             { display: none; }
+.v5 .tab:hover           { background: var(--elevated); }
+.v5 .tab.is-active       { background: var(--panel); border-top-color: var(--accent); }
+.v5 .group               { border-radius: 0; border-top: 0; border-bottom: 0; margin-right: 0; padding: 0 0 0 3px; }
+.v5 .group .pill         { border-radius: 0; }
+
+/* 6 — lewy znacznik: język zaznaczenia z nawigacji Ustawień */
+.v6 .tab                 { padding-left: 12px; }
+.v6 .tab:hover           { background: var(--elevated); }
+.v6 .tab .ul             { display: none; }
+.v6 .tab.is-active       { background: var(--panel); }
+.v6 .tab.is-active::before {
+  content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 3px;
+  border-radius: 4px; background: var(--accent);
+}
+
+/* ---- stopka ---- */
+.note {
+  margin: 56px 0 0; padding: 22px 24px; border-radius: 10px;
+  background: var(--sheet); border: 1px solid var(--line);
+  color: var(--ink-2); max-width: 74ch;
+}
+.note h2 { font-size: 15px; margin: 0 0 8px; color: var(--ink); }
+.note p { margin: 0 0 10px; }
+.note p:last-child { margin: 0; }
+</style>
+
+<div class="toolbar">
+  <div class="grp">
+    <span>Motyw</span>
+    <div class="seg" id="segTheme">
+      <button data-v="both" aria-pressed="true">Oba</button>
+      <button data-v="dark" aria-pressed="false">Ciemny</button>
+      <button data-v="light" aria-pressed="false">Jasny</button>
+    </div>
+  </div>
+  <div class="grp">
+    <span>Gęstość</span>
+    <div class="seg" id="segDense">
+      <button data-v="def" aria-pressed="true">Domyślna</button>
+      <button data-v="min" aria-pressed="false">Minimalna</button>
+    </div>
+  </div>
+  <nav class="jump" id="jump" aria-label="Skocz do wariantu"></nav>
+</div>
+
+<div class="wrap">
+  <header>
+    <h1>Warianty paska kart</h1>
+    <p class="lede">
+      Sześć sposobów pokazania, która karta jest aktywna. Wszystko poza samą geometrią karty jest
+      wzięte 1:1 z aplikacji — barwy z <code>Palette.*.xaml</code>, promienie z <code>Metrics.xaml</code>,
+      wymiary i odstępy z <code>TabStripController.cs</code>. Inaczej porównywalibyśmy makiety, a nie warianty.
+    </p>
+    <p class="lede">
+      Karty są klikalne: wybierz inną, żeby zobaczyć wyróżnienie na innej pozycji. Każda próbka ma
+      kartę aktywną, połączoną, łączącą się, rozłączoną, z błędem oraz grupę — bo wariant, który
+      wygląda dobrze na trzech kartach, potrafi się rozjechać na sześciu.
+    </p>
+  </header>
+
+  <main id="variants"></main>
+
+  <div class="note">
+    <h2>Czego makieta nie rozstrzyga</h2>
+    <p>
+      Nie ma tu trybu skupienia: tam na pasku kart siedzą jeszcze przyciski okna, a karty stykają się
+      z prawą krawędzią ekranu. Wariant wybrany tutaj sprawdzę tam osobno przed wdrożeniem.
+    </p>
+    <p>
+      Nie ma też przeciągania. Podpowiedź „wstaw przed/za” to pionowa kreska w warstwie adornerów,
+      a „zgrupuj” podświetla kartę akcentem — obie działają niezależnie od kształtu karty, poza
+      wariantem&nbsp;4, gdzie kreska musiałaby omijać nóżki.
+    </p>
+    <p>
+      Napisz numer wariantu, a zrobię z niego opcję w Ustawieniach obok obecnego stylu listy
+      (<code>Domyślny</code> / <code>Minimalny</code>) — nie podmianę, żeby dało się wrócić.
+    </p>
+  </div>
+</div>
+
+<script>
+/* ---------------------------------------------------------------------------
+   Jeden renderer dla wszystkich wariantów. Karty powstają z tych samych danych
+   i tego samego HTML-a — różni je WYŁĄCZNIE klasa wariantu na pasku, więc
+   porównanie jest uczciwe.
+   --------------------------------------------------------------------------- */
+const VARIANTS = [
+  {
+    id: 1, name: "Wypełnienie + podkreślenie", tag: "obecny",
+    cls: "v1",
+    thesis: "Aktywna karta dostaje zaokrąglone tło w kolorze panelu i 2 px akcentu pod treścią. Dwa sygnały naraz — to o ten pierwszy pytasz.",
+    spec: [
+      ["kształt", "promień 8 px (RadiusSm), odstęp 4 px między kartami"],
+      ["aktywna", "tło Panel + kreska 2 px Accent pod treścią"],
+      ["hover", "tło Elevated"],
+      ["koszt", "zero — to stan obecny"]
+    ]
+  },
+  {
+    id: 2, name: "Samo podkreślenie", tag: "najlżejszy",
+    cls: "v2",
+    thesis: "Żadnych wypełnień. Aktywną wskazuje kreska pod nazwą, a hover ją zapowiada w kolorze przygaszonym. Pasek czyta się jak rząd etykiet, nie jak rząd pudełek.",
+    spec: [
+      ["kształt", "promień 0, odstęp 2 px — karty rozdziela światło, nie krawędź"],
+      ["aktywna", "kreska 2 px Accent na całej szerokości + nazwa SemiBold"],
+      ["hover", "kreska 2 px TextTer — ten sam element, słabszy kolor"],
+      ["uwaga", "przy zwężonym oknie kreska bywa jedynym sygnałem — nazwa musi zostać w TextPrim"],
+      ["koszt", "mały: podkreślenie już istnieje, znika wypełnienie"]
+    ]
+  },
+  {
+    id: 3, name: "Kapsuła", tag: "najbardziej wyrazisty",
+    cls: "v3",
+    thesis: "Pełne zaokrąglenie i wypełnienie akcentem zamiast szarym panelem. Aktywna karta jest wyraźnie „wciśnięta”, ale pasek robi się bardziej kolorowy.",
+    spec: [
+      ["kształt", "promień RadiusPill, odstęp 4 px"],
+      ["aktywna", "tło AccentSoft + obrys AccentStrong, bez podkreślenia"],
+      ["hover", "tło Elevated w tej samej kapsule"],
+      ["uwaga", "akcent na karcie konkuruje z akcentem znacznika „łączenie” — ten sam kolor w dwóch rolach"],
+      ["koszt", "mały: promień + dwa klucze tła"]
+    ]
+  },
+  {
+    id: 4, name: "Przeglądarkowa", tag: "największa zmiana",
+    cls: "v4",
+    thesis: "Aktywna karta zrasta się z obszarem treści pod paskiem — jak w Chrome czy Edge. Najmocniej mówi „to jest ta karta, którą oglądasz”, bo pokazuje to fizycznie, a nie kolorem.",
+    spec: [
+      ["kształt", "promień 10 px tylko u góry, nóżki (odwrócone narożniki) po bokach"],
+      ["aktywna", "tło = kolor obszaru treści (Canvas), brak dolnej krawędzi paska pod kartą"],
+      ["hover", "tło Elevated"],
+      ["uwaga", "dolna krawędź TabStripHost musi być PRZERWANA pod aktywną kartą — dziś to jeden Border na całą szerokość"],
+      ["uwaga", "Canvas jest gradientem: karta i tło pod nią muszą brać ten sam punkt gradientu, inaczej zobaczysz szew"],
+      ["koszt", "duży: nowa geometria karty + zmiana krawędzi paska"]
+    ]
+  },
+  {
+    id: 5, name: "Blok (jak w edytorze)", tag: "najgęstszy",
+    cls: "v5",
+    thesis: "Zero zaokrągleń, karty stykają się bokami, akcent przenosi się nad kartę. Wygląd narzędzia — VS Code, terminal Windows. Mieści najwięcej kart na tej samej szerokości.",
+    spec: [
+      ["kształt", "promień 0, brak odstępu, separator 1 px Border między kartami"],
+      ["aktywna", "tło Panel + kreska 2 px Accent U GÓRY karty"],
+      ["hover", "tło Elevated"],
+      ["uwaga", "kontener grupy traci zaokrąglenie — grupa przestaje wyglądać jak osobny obiekt"],
+      ["koszt", "średni: pasek traci wewnętrzny margines, karty rosną na pełną wysokość"]
+    ]
+  },
+  {
+    id: 6, name: "Lewy znacznik", tag: "spójny z resztą aplikacji",
+    cls: "v6",
+    thesis: "Dokładnie ten język zaznaczenia, którego używa nawigacja Ustawień: tło panelu plus 3 px akcentu przy lewej krawędzi. Nic nowego do nauczenia — to samo, co użytkownik już widzi w oknie.",
+    spec: [
+      ["kształt", "promień 8 px (RadiusSm), odstęp 4 px — jak dziś"],
+      ["aktywna", "tło Panel + pasek 3 px Accent po lewej (RadiusXs), bez podkreślenia"],
+      ["hover", "tło Elevated"],
+      ["źródło", "SettingsNavItem w MainWindow.xaml — Bar Width=3, HorizontalAlignment=Left"],
+      ["koszt", "mały: podkreślenie zamienia się w pionowy pasek"]
+    ]
+  }
+];
+
+/* Karty próbki. Stany odpowiadają SessionState; znaczniki — Core/StatusGlyph:
+   Connecting = łuk (Accent), Connected = BRAK znacznika, Disconnected = kreska
+   (Offline), Failed = romb (Danger). */
+const TABS = [
+  { id:"t1", nm:"ADM-PROD-01", ini:"AP", av:"--gd-prod",    st:"connecting", active:true },
+  { id:"t2", nm:"app-01",      ini:"A1", av:"--gd-green",   st:"connected" },
+  { id:"t3", nm:"switch-core", ini:"SC", av:"--gd-staging", st:"connected" },
+  { group:"Klient X", color:"--gd-client", members:[
+    { id:"t4", nm:"kx-web", ini:"KW", av:"--gd-client", st:"connected" },
+    { id:"t5", nm:"kx-db",  ini:"KD", av:"--gd-client", st:"failed" }
+  ]},
+  { id:"t6", nm:"backup-nas",  ini:"BN", av:"--gd-blue",    st:"disconnected" }
+];
+
+function glyph(st) {
+  if (st === "connected")    return "";
+  if (st === "connecting")   return '<span class="g-arc" style="color:var(--accent)"></span>';
+  if (st === "disconnected") return '<span class="g-bar" style="background:var(--offline)"></span>';
+  return '<span class="g-dia" style="background:var(--danger)"></span>';
+}
+
+function tabHtml(t, activeId) {
+  const on = t.id === activeId;
+  return `<div class="tab${on ? " is-active" : ""}" role="tab" tabindex="0" aria-selected="${on}" data-id="${t.id}">
+      <div class="row">
+        <div class="av" style="background:var(${t.av})">${t.ini}</div>
+        <div class="nm">${t.nm}</div>
+        <div class="gl">${glyph(t.st)}</div>
+        <div class="x">&#10005;</div>
+      </div>
+      <div class="ul"></div>
+    </div>`;
+}
+
+function stripHtml(v, activeId) {
+  let out = "";
+  for (const item of TABS) {
+    if (item.group) {
+      const inner = item.members.map(m => tabHtml(m, activeId)).join("");
+      out += `<div class="group" style="--g-color:var(${item.color});
+                 --g-tint:color-mix(in srgb, var(${item.color}) 13%, transparent);
+                 --g-strong:color-mix(in srgb, var(${item.color}) 23%, transparent)">
+                <div class="pill"><span>&#9662;</span>${item.group}</div>${inner}</div>`;
+    } else {
+      out += tabHtml(item, activeId);
+    }
+  }
+  return out;
+}
+
+function frameHtml(v, theme, activeId) {
+  return `<div>
+      <p class="flabel">${theme === "dark" ? "Ciemny" : "Jasny"}</p>
+      <div class="frame" data-app="${theme}">
+        <div class="strip ${v.cls}" role="tablist">${stripHtml(v, activeId)}</div>
+        <div class="body-strip">
+          <div class="fake" style="width:120px"></div>
+          <div class="fake" style="width:64px"></div>
+          <div class="fake" style="width:200px"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+const state = { theme: "both", dense: "def", active: {} };
+VARIANTS.forEach(v => state.active[v.id] = "t1");
+
+function render() {
+  const themes = state.theme === "both" ? ["dark", "light"] : [state.theme];
+  document.getElementById("variants").innerHTML = VARIANTS.map(v => `
+    <section class="variant" id="w${v.id}">
+      <div class="vhead">
+        <div class="vnum">${v.id}</div>
+        <h2 class="vname">${v.name}</h2>
+        <span class="vtag">${v.tag}</span>
+      </div>
+      <p class="vthesis">${v.thesis}</p>
+      <div class="stage">
+        ${themes.map(t => frameHtml(v, t, state.active[v.id])).join("")}
+      </div>
+      <ul class="spec">
+        ${v.spec.map(([k, val]) => `<li><b>${k}</b><span class="${k === "uwaga" ? "warn" : ""}">${val}</span></li>`).join("")}
+      </ul>
+    </section>`).join("");
+
+  document.querySelectorAll(".variant").forEach(sec => {
+    const id = +sec.id.slice(1);
+    sec.querySelectorAll(".tab").forEach(tab => {
+      const pick = () => { state.active[id] = tab.dataset.id; render(); };
+      tab.addEventListener("click", pick);
+      tab.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
+      });
+    });
+  });
+  document.body.classList.toggle("dense-min", state.dense === "min");
+}
+
+document.getElementById("jump").innerHTML =
+  VARIANTS.map(v => `<a href="#w${v.id}" title="${v.name}">${v.id}</a>`).join("");
+
+function wireSeg(elId, key) {
+  const el = document.getElementById(elId);
+  el.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state[key] = b.dataset.v;
+    el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    render();
+  });
+}
+wireSeg("segTheme", "theme");
+wireSeg("segDense", "dense");
+
+/* dense-min musi siedzieć na body, bo próbki są przerysowywane przy każdym renderze */
+document.body.classList.toggle("dense-min", state.dense === "min");
+render();
+</script>
