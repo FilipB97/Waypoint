@@ -842,6 +842,23 @@
                                 </Grid>
                             </Border>
 
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.set.tabstyle}" Style="{DynamicResource SetLbl}"/>
+                                        <TextBlock Text="{DynamicResource S.set.tabstyle.sub}" Style="{DynamicResource SetSub}"/>
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Style="{DynamicResource SegBar}">
+                                        <StackPanel x:Name="TabStyleSeg" Orientation="Horizontal">
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Default" Content="{DynamicResource S.tabstyle.default}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Block" Content="{DynamicResource S.tabstyle.block}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Marker" Content="{DynamicResource S.tabstyle.marker}" Checked="SegSetting_Changed"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
                             <Border Style="{DynamicResource SetRow}" BorderThickness="0">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

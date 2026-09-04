@@ -118,6 +118,14 @@ namespace RdpManager
         /// <summary>Styl renderowania listy serwerów i paska kart: „Default" | „Minimal".</summary>
         public string ListStyle { get; set; } = "Default";
 
+        /// <summary>
+        /// Kształt karty na pasku kart: „Default" (zaokrąglona z podkreśleniem) | „Block" (kanciasta,
+        /// karty stykają się bokami, akcent u góry) | „Marker" (jak domyślna, akcent to pionowy pasek
+        /// przy lewej krawędzi). Osobno od <see cref="ListStyle"/>, bo to dwie różne rzeczy: tamto
+        /// steruje GĘSTOŚCIĄ (i listy serwerów, i kart), to — kształtem samej karty.
+        /// </summary>
+        public string TabStyle { get; set; } = "Default";
+
         /// <summary>Pokazuj opóźnienie (ms) obok kropki dostępności w liście serwerów (Compass §4.3).
         /// Domyślnie wyłączone — dane z sondowania osiągalności w tle.</summary>
         public bool ShowLatency { get; set; }

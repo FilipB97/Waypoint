@@ -436,6 +436,9 @@ namespace RdpManager
                 Sidebar.Visibility = (immersive || _sidebarCollapsed) ? Visibility.Collapsed : Visibility.Visible;
             }
             FocusControls.Visibility = immersive ? Visibility.Visible : Visibility.Collapsed;
+            // Styl blokowy paska kart ma w skupieniu NIŻSZĄ kartę — pasek zastępuje wtedy pasek tytułu
+            // i każdy jego piksel jest zabrany sesji. Aktualizacja w miejscu, bez odbudowy paska.
+            _tabs.ApplyTabStripStyle();
             _fs.SetPeekPolling(immersive);   // wł/wył polling krawędzi peeku wg trybu skupienia
             UpdateToolbarMode();
             // Puls od razu po PRZEŁĄCZENIU w obie strony: przycisk trybu skupienia sam siedzi na pasku kart,
@@ -1085,6 +1088,7 @@ namespace RdpManager
             SegSet(BorderSeg, _settings.WindowBorderColor ?? "");
             SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
             SegSet(ListStyleSeg, _settings.ListStyle);
+            SegSet(TabStyleSeg, _settings.TabStyle);
             SetShowLatency.IsChecked = _settings.ShowLatency;
             BuildThemePresets();
             BuildAccentSwatches();
@@ -1369,6 +1373,7 @@ namespace RdpManager
             _settings.Theme = SegTag(ThemeSeg) ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
             _settings.ListStyle = SegTag(ListStyleSeg) ?? "Default";
+            _settings.TabStyle = SegTag(TabStyleSeg) ?? "Default";
             _settings.WindowBorderColor = SegTag(BorderSeg) ?? "";
             _settings.ShowLatency = SetShowLatency.IsChecked == true;
 
@@ -1499,6 +1504,7 @@ namespace RdpManager
             _settings.Theme = SegTag(ThemeSeg) ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
             _settings.ListStyle = SegTag(ListStyleSeg) ?? "Default";
+            _settings.TabStyle = SegTag(TabStyleSeg) ?? "Default";
             _settings.WindowBorderColor = SegTag(BorderSeg) ?? "";
             WindowBorder.SetSpec(_settings.WindowBorderColor);
             ApplySettings();
