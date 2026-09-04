@@ -25,8 +25,9 @@ namespace RdpManager.Controllers
     {
         private readonly MainWindow _owner;
 
-        // Elementy karty per sesja (podkreślenie aktywnej / kropka statusu / nazwa / ✕) — do odświeżania w miejscu.
-        private readonly Dictionary<Session, Rectangle> _tabUnderline = new Dictionary<Session, Rectangle>();
+        // Elementy karty per sesja (pasek akcentu aktywnej / kropka statusu / nazwa / ✕) — do odświeżania w miejscu.
+        // Który to element (dolna kreska / górna / lewy pasek), decyduje styl paska kart — patrz Core/TabMetrics.
+        private readonly Dictionary<Session, Rectangle> _tabMark = new Dictionary<Session, Rectangle>();
         // Pole znacznika stanu sesji (stały rozmiar) — kształt podmienia się przy zmianie stanu.
         private readonly Dictionary<Session, Grid> _tabStatus = new Dictionary<Session, Grid>();
         private readonly Dictionary<Session, TextBlock> _tabName = new Dictionary<Session, TextBlock>();
@@ -69,123 +70,137 @@ namespace RdpManager.Controllers
 
         private bool IsMinimalList => _owner._settings != null && _owner._settings.ListStyle == "Minimal";
 
+        /// <summary>Wymiary karty i paska dla bieżącego stylu, widoku i trybu — patrz Core/TabMetrics.</summary>
+        private TabMetrics Metrics()
+            => TabMetrics.For(TabMetrics.Parse(_owner._settings?.TabStyle),
+                              IsMinimalList,
+                              _owner.IsImmersive());
+
         // ---------- Pasek zakładek ----------
 
         internal FrameworkElement BuildTab(Session session)
-            => IsMinimalList ? BuildTabMinimal(session) : BuildTabDefault(session);
-
-        // Wariant DOMYŚLNY: awatar 14px + nazwa + kropka statusu + ✕; aktywna = podkreślenie akcentem.
-        private FrameworkElement BuildTabDefault(Session session)
         {
+            var m = Metrics();
+            bool minimal = IsMinimalList;
+
             var tab = new Border
             {
-                CornerRadius = Radii.Sm,
-                BorderThickness = new Thickness(1),
-                BorderBrush = Brushes.Transparent,
+                CornerRadius = new CornerRadius(m.Radius),
+                BorderThickness = m.Border,
+                // Blok: prawa krawędź JEST separatorem, więc widoczna od razu. Pozostałe style
+                // trzymają przezroczysty obrys 1 px jako rezerwę miejsca dla wskaźnika „zgrupuj".
+                BorderBrush = m.Mark == TabMark.Top ? _owner.Res("Border") : Brushes.Transparent,
                 Background = Brushes.Transparent,
-                Padding = new Thickness(10, 6, 7, 5),
-                Margin = new Thickness(0, 0, 4, 0),
+                Margin = m.Margin,
                 Cursor = Cursors.Hand,
                 Tag = session,
                 ToolTip = session.Server.Name + " — " + MainWindow.DisplayHost(session.Server)
             };
+            if (m.TabHeight > 0) tab.Height = m.TabHeight;
 
-            // 2 wiersze: treść (góra) + pasek podświetlenia (dół) z odstępem — pasek nie nachodzi na nazwę.
-            var grid = new Grid();
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            // Korzeń karty: treść i paski akcentu leżą NA SOBIE (jedna komórka Grida). Dzięki temu
+            // pasek górny i lewy siadają na krawędzi karty, poza jej wewnętrznym marginesem — czyli
+            // tam, gdzie mają być, bez osobnej geometrii dla każdego stylu.
+            var root = new Grid();
+
+            var inner = new Grid
+            {
+                Margin = m.Padding,
+                VerticalAlignment = m.TabHeight > 0 ? VerticalAlignment.Center : VerticalAlignment.Stretch
+            };
+            inner.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            if (m.ReserveBottom) inner.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             var content = new StackPanel { Orientation = Orientation.Horizontal };
-            content.Children.Add(new Border
+            var tabDot = StatusGlyph.Host();
+            // Znacznik odzwierciedla ŻYWY stan sesji, nie statyczny status serwera. Startowo „łączenie",
+            // bo karta powstaje dokładnie w chwili, gdy sesja zaczyna się łączyć. Dotąd startowała ze
+            // statusem serwera „Offline", co znaczyło „rozłączona", a wyglądało jak „serwer nie żyje".
+            ApplyTabGlyph(tabDot, SessionState.Connecting);
+            _tabStatus[session] = tabDot;
+
+            if (minimal)
             {
-                // 14 px kafelek z inicjałami 7 px był nieczytelny — dwa wersaliki zlewały się w plamę.
-                Width = 17, Height = 17, CornerRadius = Radii.Xs,
-                Background = _owner.AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock
+                // Widok minimalny: znacznik PRZED nazwą, bez awatara — niższa, lżejsza karta.
+                content.Children.Add(tabDot);
+            }
+            else
+            {
+                content.Children.Add(new Border
                 {
-                    Text = MainWindow.ServerInitials(session.Server),
-                    Foreground = MainWindow.AvatarInk(_owner.AvatarBrush(session.Server)), FontSize = 9.5, FontWeight = FontWeights.Bold,
-                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
-                }
-            });
+                    // 14 px kafelek z inicjałami 7 px był nieczytelny — dwa wersaliki zlewały się w plamę.
+                    Width = 17, Height = 17, CornerRadius = Radii.Xs,
+                    Background = _owner.AvatarBrush(session.Server), VerticalAlignment = VerticalAlignment.Center,
+                    Child = new TextBlock
+                    {
+                        Text = MainWindow.ServerInitials(session.Server),
+                        Foreground = MainWindow.AvatarInk(_owner.AvatarBrush(session.Server)), FontSize = 9.5, FontWeight = FontWeights.Bold,
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                    }
+                });
+            }
+
             var tabName = new TextBlock
             {
                 Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = (double)_owner.TryFindResource("FontSmall"),
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(7, 0, 0, 0)
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(minimal ? 8 : 7, 0, 0, 0)
             };
             _tabName[session] = tabName;
             content.Children.Add(tabName);
             // Adres nie jest już na karcie (był w 3 miejscach naraz) — zostaje w pasku bocznym,
-            // podpowiedzi karty i szybkim przełączaniu. Karta = ikona + nazwa + kropka + ✕.
-            // Znacznik odzwierciedla ŻYWY stan sesji, nie statyczny status serwera. Startowo „łączenie",
-            // bo karta powstaje dokładnie w chwili, gdy sesja zaczyna się łączyć. Dotąd startowała ze
-            // statusem serwera „Offline", co znaczyło „rozłączona", a wyglądało jak „serwer nie żyje".
-            var tabDot = StatusGlyph.Host();
-            tabDot.Margin = new Thickness(7, 0, 0, 0);
-            ApplyTabGlyph(tabDot, SessionState.Connecting);
-            _tabStatus[session] = tabDot;
-            content.Children.Add(tabDot);
+            // podpowiedzi karty i szybkim przełączaniu. Karta = ikona + nazwa + znacznik + ✕.
+            if (!minimal) { tabDot.Margin = new Thickness(7, 0, 0, 0); content.Children.Add(tabDot); }
             content.Children.Add(BuildTabClose(session));
             Grid.SetRow(content, 0);
-            grid.Children.Add(content);
+            inner.Children.Add(content);
 
-            var underline = BuildTabUnderline(new Thickness(2, 4, 2, 0));
-            Grid.SetRow(underline, 1);
-            grid.Children.Add(underline);
+            // Dolna kreska. W stylu „lewy znacznik" zostaje jako ROZPÓRKA (na stałe niewidoczna), żeby
+            // przełączenie stylu nie zmieniało wysokości paska i nie przesuwało obszaru sesji.
+            Rectangle bottom = null;
+            if (m.ReserveBottom)
+            {
+                bottom = new Rectangle
+                {
+                    Height = m.MarkSize, Fill = _owner.Res("Accent"), RadiusX = 1, RadiusY = 1,
+                    Margin = new Thickness(2, minimal ? 2 : 4, 2, 0),
+                    Visibility = Visibility.Hidden
+                };
+                Grid.SetRow(bottom, 1);
+                inner.Children.Add(bottom);
+            }
+            root.Children.Add(inner);
 
-            tab.Child = grid;
-            _tabUnderline[session] = underline;
+            // Pasek akcentu aktywnej karty — jeden element, trzy możliwe krawędzie.
+            Rectangle mark = bottom;
+            if (m.Mark == TabMark.Top)
+            {
+                mark = new Rectangle
+                {
+                    Height = m.MarkSize, Fill = _owner.Res("Accent"),
+                    VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Visibility = Visibility.Hidden
+                };
+                root.Children.Add(mark);
+            }
+            else if (m.Mark == TabMark.Left)
+            {
+                mark = new Rectangle
+                {
+                    Width = m.MarkSize, Fill = _owner.Res("Accent"), RadiusX = 1.5, RadiusY = 1.5,
+                    HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Stretch,
+                    Margin = new Thickness(4, minimal ? 4 : 6, 0, minimal ? 4 : 6),
+                    Visibility = Visibility.Hidden
+                };
+                root.Children.Add(mark);
+            }
+
+            tab.Child = root;
+            if (mark != null) _tabMark[session] = mark;
             WireTab(tab, session);
             return tab;
         }
 
-        // Wariant MINIMALISTYCZNY: kropka statusu + nazwa (bez awatara i hosta) — niższa, lżejsza karta.
-        private FrameworkElement BuildTabMinimal(Session session)
-        {
-            var tab = new Border
-            {
-                CornerRadius = Radii.Sm,
-                BorderThickness = new Thickness(1),
-                BorderBrush = Brushes.Transparent,
-                Background = Brushes.Transparent,
-                Padding = new Thickness(11, 2, 6, 2),
-                Margin = new Thickness(0, 0, 4, 0),
-                Cursor = Cursors.Hand,
-                Tag = session,
-                ToolTip = session.Server.Name + " — " + MainWindow.DisplayHost(session.Server)
-            };
-
-            var grid = new Grid();
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-            var content = new StackPanel { Orientation = Orientation.Horizontal };
-            var tabDot = StatusGlyph.Host();
-            ApplyTabGlyph(tabDot, SessionState.Connecting);
-            _tabStatus[session] = tabDot;
-            content.Children.Add(tabDot);
-            var tabName = new TextBlock
-            {
-                Text = session.Server.Name, Foreground = _owner.Res("TextPrim"), FontSize = (double)_owner.TryFindResource("FontSmall"),
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
-            };
-            _tabName[session] = tabName;
-            content.Children.Add(tabName);
-            content.Children.Add(BuildTabClose(session));
-            Grid.SetRow(content, 0);
-            grid.Children.Add(content);
-
-            var underline = BuildTabUnderline(new Thickness(2, 2, 2, 0));
-            Grid.SetRow(underline, 1);
-            grid.Children.Add(underline);
-
-            tab.Child = grid;
-            _tabUnderline[session] = underline;
-            WireTab(tab, session);
-            return tab;
-        }
-
-        // ✕ karty (wspólny dla obu stylów): pokazywany na aktywnej/hoverze (Hidden, nie Collapsed — stała szerokość).
+        // ✕ karty (wspólny dla wszystkich stylów): pokazywany na aktywnej/hoverze (Hidden, nie Collapsed — stała szerokość).
         private TextBlock BuildTabClose(Session session)
         {
             var close = new TextBlock
@@ -201,12 +216,6 @@ namespace RdpManager.Controllers
             _tabClose[session] = close;
             return close;
         }
-
-        private Rectangle BuildTabUnderline(Thickness margin) => new Rectangle
-        {
-            Height = 2, Fill = _owner.Res("Accent"), RadiusX = 1, RadiusY = 1,
-            Margin = margin, Visibility = Visibility.Hidden   // Hidden: karta ma stałą wysokość aktywna/nie
-        };
 
         // Wspólne zachowanie karty (hover / klik / środkowy-klik / przeciąganie: grupuj lub zmień kolejność / menu).
         private void WireTab(Border tab, Session session)
@@ -337,17 +346,20 @@ namespace RdpManager.Controllers
 
         internal void RefreshTabStyles()
         {
+            bool block = Metrics().Mark == TabMark.Top;
             foreach (var s in _owner._sessions)
             {
                 if (!(s.TabButton is Border b)) continue;
                 bool active = s == _owner._active;
                 // Lżej: aktywna = subtelne tło + akcent (underline), bez „pudełkowego" obrysu.
                 b.Background = active ? _owner.Res("Panel") : Brushes.Transparent;
-                b.BorderBrush = Brushes.Transparent;
+                // W stylu blokowym prawa krawędź jest separatorem między kartami, a nie obrysem
+                // zaznaczenia — wyczyszczenie jej tutaj skleiłoby karty w jedną plamę.
+                b.BorderBrush = block ? (_owner.Res("Border") ?? Brushes.Transparent) : Brushes.Transparent;
                 // Hierarchia: nieaktywne karty przygaszone (spokojniejszy pasek).
                 if (_tabName.TryGetValue(s, out var nm))
                     nm.Foreground = _owner.Res(active ? "TextPrim" : "TextSec");
-                if (_tabUnderline.TryGetValue(s, out var u))
+                if (_tabMark.TryGetValue(s, out var u) && u != null)
                     u.Visibility = active ? Visibility.Visible : Visibility.Hidden;
                 if (_tabClose.TryGetValue(s, out var c))
                     c.Visibility = active ? Visibility.Visible : Visibility.Hidden;   // ✕ tylko na aktywnej/hoverze
@@ -516,15 +528,29 @@ namespace RdpManager.Controllers
             if (s?.TabButton is FrameworkElement fe && fe.Parent is Panel p) p.Children.Remove(fe);
         }
 
-        // Minimal: niższy pasek kart (mniejszy margines) i drobniejsze ikony sesji po prawej stronie paska.
+        // Wysokość paska kart i rozmiar ikon sesji wg stylu (Domyślny / Blok / Lewy znacznik), widoku
+        // (Domyślny / Minimalny) i trybu skupienia.
+        //
+        // Wymiary ISTNIEJĄCYCH kart są aktualizowane w miejscu, a nie przez odbudowę paska: wejście
+        // w tryb skupienia zmienia wysokość karty blokowej, a odbudowa w tej samej chwili gubiłaby
+        // trwające przeciąganie i mrugała paskiem dokładnie wtedy, gdy okno i tak się przelicza.
         internal void ApplyTabStripStyle()
         {
             bool min = IsMinimalList;
-            _owner.TabStrip.Margin = new Thickness(8, min ? 2 : 6, 8, min ? 2 : 6);
+            var m = Metrics();
+
+            _owner.TabStrip.Margin = new Thickness(8, m.StripPadV, 8, m.StripPadV);
             foreach (var b in _owner.SessionActions.Children.OfType<Button>())
             {
-                b.Width = min ? 24 : 28;
-                b.Height = min ? 24 : 28;
+                b.Width = min ? TabMetrics.FocusButtonMinimal : TabMetrics.FocusButton;
+                b.Height = min ? TabMetrics.FocusButtonMinimal : TabMetrics.FocusButton;
+            }
+
+            foreach (var s in _owner._sessions)
+            {
+                if (!(s.TabButton is Border b)) continue;
+                if (m.TabHeight > 0) b.Height = m.TabHeight;
+                else b.ClearValue(FrameworkElement.HeightProperty);
             }
         }
 
@@ -536,7 +562,7 @@ namespace RdpManager.Controllers
             {
                 tab.Background = _owner.Res("AccentSoft");
                 tab.BorderBrush = _owner.Res("Accent");
-                tab.BorderThickness = new Thickness(1);
+                tab.BorderThickness = new Thickness(1);   // pełny obrys „zgrupuj" niezależnie od stylu
             }
             else
             {
@@ -561,7 +587,7 @@ namespace RdpManager.Controllers
                 _tabDropAdorner = null;
             }
             if (_tabDropTarget == null) return;
-            _tabDropTarget.BorderThickness = new Thickness(1);   // domyślna grubość z BuildTab
+            _tabDropTarget.BorderThickness = Metrics().Border;   // grubość spoczynkowa wg stylu (w bloku: sam separator)
             _tabDropTarget = null;
             RefreshTabStyles();
         }
@@ -612,10 +638,16 @@ namespace RdpManager.Controllers
             var tint = new SolidColorBrush(Color.FromArgb(0x22, color.R, color.G, color.B));
             var strong = new SolidColorBrush(Color.FromArgb(0x3A, color.R, color.G, color.B));
 
+            // W stylu blokowym kontener grupy też traci zaokrąglenie i przylega do sąsiadów: zostają
+            // boczne krawędzie w kolorze grupy, bo to one mówią, gdzie grupa się zaczyna i kończy.
+            bool block = Metrics().Mark == TabMark.Top;
             var box = new Border
             {
-                CornerRadius = Radii.Sm, Background = tint, BorderBrush = strong, BorderThickness = new Thickness(1),
-                Padding = new Thickness(3, 0, 4, 0), Margin = new Thickness(0, 0, 5, 0)
+                CornerRadius = block ? new CornerRadius(0) : Radii.Sm,
+                Background = tint, BorderBrush = strong,
+                BorderThickness = block ? new Thickness(1, 0, 1, 0) : new Thickness(1),
+                Padding = block ? new Thickness(0, 0, 0, 0) : new Thickness(3, 0, 4, 0),
+                Margin = block ? new Thickness(0) : new Thickness(0, 0, 5, 0)
             };
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             box.Child = row;
@@ -623,7 +655,7 @@ namespace RdpManager.Controllers
             // Pastylka z nazwą: klik = zwiń/rozwiń; prawy klik = menu (nazwa / kolor / rozgrupuj).
             var pill = new Border
             {
-                CornerRadius = Radii.Xs, Background = strong, Cursor = Cursors.Hand,
+                CornerRadius = block ? new CornerRadius(0) : Radii.Xs, Background = strong, Cursor = Cursors.Hand,
                 Padding = new Thickness(6, IsMinimalList ? 1 : 2, 7, IsMinimalList ? 1 : 3),
                 Margin = new Thickness(1, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center,
                 ContextMenu = BuildGroupMenu(g)
@@ -754,7 +786,7 @@ namespace RdpManager.Controllers
         internal void OnSessionClosed(Session s)
         {
             DetachTab(s);              // odłącz kartę od paska / kontenera grupy (grupa serwera zostaje)
-            _tabUnderline.Remove(s);
+            _tabMark.Remove(s);
             _tabStatus.Remove(s);
             _tabName.Remove(s);
             _tabClose.Remove(s);

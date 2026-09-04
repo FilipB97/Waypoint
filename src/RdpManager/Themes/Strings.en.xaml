@@ -92,6 +92,11 @@
     <sys:String x:Key="S.set.liststyle">List view style</sys:String>
     <sys:String x:Key="S.liststyle.default">Default</sys:String>
     <sys:String x:Key="S.liststyle.minimal">Minimal</sys:String>
+    <sys:String x:Key="S.set.tabstyle">Tab shape</sys:String>
+    <sys:String x:Key="S.set.tabstyle.sub">How the active session's tab looks in the strip at the top</sys:String>
+    <sys:String x:Key="S.tabstyle.default">Rounded</sys:String>
+    <sys:String x:Key="S.tabstyle.block">Block</sys:String>
+    <sys:String x:Key="S.tabstyle.marker">Marker</sys:String>
     <sys:String x:Key="S.set.showlatency">Show latency (ms) in list</sys:String>
     <sys:String x:Key="S.proto.filter.all">All</sys:String>
     <sys:String x:Key="S.set.border">Window border</sys:String>

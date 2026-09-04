@@ -92,6 +92,11 @@
     <sys:String x:Key="S.set.liststyle">Styl widoku listy</sys:String>
     <sys:String x:Key="S.liststyle.default">Domyślny</sys:String>
     <sys:String x:Key="S.liststyle.minimal">Minimalistyczny</sys:String>
+    <sys:String x:Key="S.set.tabstyle">Kształt kart</sys:String>
+    <sys:String x:Key="S.set.tabstyle.sub">Jak wygląda karta aktywnej sesji na pasku u góry</sys:String>
+    <sys:String x:Key="S.tabstyle.default">Zaokrąglony</sys:String>
+    <sys:String x:Key="S.tabstyle.block">Blokowy</sys:String>
+    <sys:String x:Key="S.tabstyle.marker">Znacznik</sys:String>
     <sys:String x:Key="S.set.showlatency">Pokazuj opóźnienia (ms) w liście</sys:String>
     <sys:String x:Key="S.proto.filter.all">Wszystkie</sys:String>
     <sys:String x:Key="S.set.border">Obwódka okna</sys:String>
