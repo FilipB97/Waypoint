@@ -1088,6 +1088,7 @@ namespace RdpManager
             SegSet(BorderSeg, _settings.WindowBorderColor ?? "");
             SetLanguage.SelectedIndex = _settings.Language == "en" ? 1 : 0;
             SegSet(ListStyleSeg, _settings.ListStyle);
+            SegSet(GroupLayoutSeg, _settings.GroupLayout);
             SegSet(TabStyleSeg, _settings.TabStyle);
             SetShowLatency.IsChecked = _settings.ShowLatency;
             BuildThemePresets();
@@ -1373,6 +1374,7 @@ namespace RdpManager
             _settings.Theme = SegTag(ThemeSeg) ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
             _settings.ListStyle = SegTag(ListStyleSeg) ?? "Default";
+            _settings.GroupLayout = SegTag(GroupLayoutSeg) ?? "Indent";
             _settings.TabStyle = SegTag(TabStyleSeg) ?? "Default";
             _settings.WindowBorderColor = SegTag(BorderSeg) ?? "";
             _settings.ShowLatency = SetShowLatency.IsChecked == true;
@@ -1504,6 +1506,7 @@ namespace RdpManager
             _settings.Theme = SegTag(ThemeSeg) ?? "Dark";
             _settings.Language = (SetLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "pl";
             _settings.ListStyle = SegTag(ListStyleSeg) ?? "Default";
+            _settings.GroupLayout = SegTag(GroupLayoutSeg) ?? "Indent";
             _settings.TabStyle = SegTag(TabStyleSeg) ?? "Default";
             _settings.WindowBorderColor = SegTag(BorderSeg) ?? "";
             WindowBorder.SetSpec(_settings.WindowBorderColor);
@@ -1831,7 +1834,10 @@ namespace RdpManager
         private void FsBarThumb_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) => _fs.OnBarThumbDragDelta(e);
 
 
-        private bool IsMinimalList => _settings != null && _settings.ListStyle == "Minimal";
+
+        // Przyklejony nagłówek grupy (układ „Płaskie sekcje") — nakładka nad listą, aktualizowana
+        // przy przewijaniu. Szczegóły: ServerTreeController.UpdateStickyHeader.
+        private void ServerScroll_ScrollChanged(object sender, ScrollChangedEventArgs e) => _tree?.UpdateStickyHeader();
 
         // ---------- Drzewo serwerów → Controllers/ServerTreeController (PR 3 refaktoru) ----------
         // Cienkie shimy: RenderTree wołane z ~14 miejsc, UpdateActiveRows z Activate, BuildServerContextMenu

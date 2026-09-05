@@ -318,11 +318,19 @@
                          ukryte, gdy jest tylko jeden protokół (nie ma czego filtrować). -->
                     <WrapPanel x:Name="ProtoFilterBar" Grid.Row="1" Orientation="Horizontal" Margin="12,0,8,4" Visibility="Collapsed"/>
 
-                    <ScrollViewer x:Name="ServerScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="8,0">
+                    <!-- Grid, nie sam ScrollViewer: w układzie grup „Płaskie sekcje" nagłówek bieżącej grupy
+                         przykleja się do góry i musi leżeć NAD przewijaną treścią. WPF nie ma position:sticky,
+                         więc to nakładka aktualizowana w ScrollChanged (ServerTreeController.UpdateStickyHeader). -->
+                    <Grid Grid.Row="2">
+                    <ScrollViewer x:Name="ServerScroll" VerticalScrollBarVisibility="Auto" Padding="8,0"
+                                  ScrollChanged="ServerScroll_ScrollChanged">
                         <AdornerDecorator>
                             <StackPanel x:Name="ServerTree"/>
                         </AdornerDecorator>
                     </ScrollViewer>
+                        <Border x:Name="StickyGroupHeader" VerticalAlignment="Top" Margin="8,0,8,0"
+                                Visibility="Collapsed" IsHitTestVisible="True"/>
+                    </Grid>
 
                     <TextBlock x:Name="TreeEmptyHint" Grid.Row="2" Visibility="Collapsed" Text=""
                                Foreground="{DynamicResource TextTer}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" TextAlignment="Center"
@@ -832,11 +840,32 @@
                             <Border Style="{DynamicResource SetRow}">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                    <TextBlock Text="{DynamicResource S.set.liststyle}" Style="{DynamicResource SetLbl}"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.set.liststyle}" Style="{DynamicResource SetLbl}"/>
+                                        <TextBlock Text="{DynamicResource S.set.liststyle.sub}" Style="{DynamicResource SetSub}"/>
+                                    </StackPanel>
                                     <Border Grid.Column="1" Style="{DynamicResource SegBar}">
                                         <StackPanel x:Name="ListStyleSeg" Orientation="Horizontal">
                                             <RadioButton Style="{DynamicResource Seg}" Tag="Default" Content="{DynamicResource S.liststyle.default}" Checked="SegSetting_Changed"/>
                                             <RadioButton Style="{DynamicResource Seg}" Tag="Minimal" Content="{DynamicResource S.liststyle.minimal}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Dense" Content="{DynamicResource S.liststyle.dense}" Checked="SegSetting_Changed"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.set.grouplayout}" Style="{DynamicResource SetLbl}"/>
+                                        <TextBlock Text="{DynamicResource S.set.grouplayout.sub}" Style="{DynamicResource SetSub}"/>
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Style="{DynamicResource SegBar}">
+                                        <StackPanel x:Name="GroupLayoutSeg" Orientation="Horizontal">
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Indent" Content="{DynamicResource S.grouplayout.indent}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Rail" Content="{DynamicResource S.grouplayout.rail}" Checked="SegSetting_Changed"/>
+                                            <RadioButton Style="{DynamicResource Seg}" Tag="Flat" Content="{DynamicResource S.grouplayout.flat}" Checked="SegSetting_Changed"/>
                                         </StackPanel>
                                     </Border>
                                 </Grid>
