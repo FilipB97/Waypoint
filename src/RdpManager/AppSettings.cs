@@ -115,8 +115,21 @@ namespace RdpManager
         /// z danej grupy trafiają do niej automatycznie.</summary>
         public List<TabGroupDef> TabGroups { get; set; } = new List<TabGroupDef>();
 
-        /// <summary>Styl renderowania listy serwerów i paska kart: „Default" | „Minimal".</summary>
+        /// <summary>
+        /// Gęstość wiersza listy serwerów i paska kart: „Default" (awatar + etykieta protokołu) |
+        /// „Minimal" (kafelek z ikoną protokołu) | „Dense" (sam pasek koloru protokołu, najwięcej
+        /// pozycji na ekranie). Pasek kart ma dwa stopnie, nie trzy — „Dense" zachowuje się tam
+        /// jak „Minimal", bo karta bez ikony przestałaby nieść cokolwiek poza nazwą.
+        /// </summary>
         public string ListStyle { get; set; } = "Default";
+
+        /// <summary>
+        /// Jak listę serwerów dzielą grupy: „Indent" (wiersze wcięte względem nagłówka — dotychczas) |
+        /// „Rail" (pionowy pas w kolorze grupy przez wszystkie jej wiersze) | „Flat" (bez wcięcia,
+        /// nagłówek przyklejony do góry przy przewijaniu). Niezależne od <see cref="ListStyle"/>:
+        /// tamto mówi, co jest w wierszu, to — jak wiersze dzielą się na sekcje.
+        /// </summary>
+        public string GroupLayout { get; set; } = "Indent";
 
         /// <summary>
         /// Kształt karty na pasku kart: „Default" (zaokrąglona z podkreśleniem) | „Block" (kanciasta,

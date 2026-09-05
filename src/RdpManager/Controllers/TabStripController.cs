@@ -68,7 +68,9 @@ namespace RdpManager.Controllers
 
         public TabStripController(MainWindow owner) => _owner = owner;
 
-        private bool IsMinimalList => _owner._settings != null && _owner._settings.ListStyle == "Minimal";
+        // Pasek kart ma DWA stopnie gęstości, nie trzy: „Dense" z listy serwerów zachowuje się tu
+        // jak „Minimal", bo karta bez ikony protokołu przestałaby nieść cokolwiek poza nazwą.
+        private bool IsMinimalList => _owner._settings != null && _owner._settings.ListStyle != "Default";
 
         /// <summary>Wymiary karty i paska dla bieżącego stylu, widoku i trybu — patrz Core/TabMetrics.</summary>
         private TabMetrics Metrics()

@@ -92,6 +92,13 @@
     <sys:String x:Key="S.set.liststyle">List view style</sys:String>
     <sys:String x:Key="S.liststyle.default">Default</sys:String>
     <sys:String x:Key="S.liststyle.minimal">Minimal</sys:String>
+    <sys:String x:Key="S.liststyle.dense">Dense</sys:String>
+    <sys:String x:Key="S.set.liststyle.sub">What a row carries: an avatar, a protocol icon, or just a colour bar</sys:String>
+    <sys:String x:Key="S.set.grouplayout">Group layout</sys:String>
+    <sys:String x:Key="S.set.grouplayout.sub">How the list splits into sections</sys:String>
+    <sys:String x:Key="S.grouplayout.indent">Indent</sys:String>
+    <sys:String x:Key="S.grouplayout.rail">Colour rail</sys:String>
+    <sys:String x:Key="S.grouplayout.flat">Flat sections</sys:String>
     <sys:String x:Key="S.set.tabstyle">Tab shape</sys:String>
     <sys:String x:Key="S.set.tabstyle.sub">How the active session's tab looks in the strip at the top</sys:String>
     <sys:String x:Key="S.tabstyle.default">Rounded</sys:String>

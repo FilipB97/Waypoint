@@ -92,6 +92,13 @@
     <sys:String x:Key="S.set.liststyle">Styl widoku listy</sys:String>
     <sys:String x:Key="S.liststyle.default">Domyślny</sys:String>
     <sys:String x:Key="S.liststyle.minimal">Minimalistyczny</sys:String>
+    <sys:String x:Key="S.liststyle.dense">Gęsty</sys:String>
+    <sys:String x:Key="S.set.liststyle.sub">Co niesie wiersz: awatar, ikonę protokołu albo sam pasek koloru</sys:String>
+    <sys:String x:Key="S.set.grouplayout">Układ grup</sys:String>
+    <sys:String x:Key="S.set.grouplayout.sub">Jak lista dzieli się na sekcje</sys:String>
+    <sys:String x:Key="S.grouplayout.indent">Wcięcie</sys:String>
+    <sys:String x:Key="S.grouplayout.rail">Pas koloru</sys:String>
+    <sys:String x:Key="S.grouplayout.flat">Płaskie sekcje</sys:String>
     <sys:String x:Key="S.set.tabstyle">Kształt kart</sys:String>
     <sys:String x:Key="S.set.tabstyle.sub">Jak wygląda karta aktywnej sesji na pasku u góry</sys:String>
     <sys:String x:Key="S.tabstyle.default">Zaokrąglony</sys:String>

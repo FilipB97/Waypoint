@@ -57,7 +57,13 @@ namespace RdpManager.Controllers
 
         public ServerTreeController(MainWindow owner) => _owner = owner;
 
-        private bool IsMinimalList => _owner._settings != null && _owner._settings.ListStyle == "Minimal";
+        private ListDensity Density => ListMetrics.ParseDensity(_owner._settings?.ListStyle);
+        private GroupLayout Layout => ListMetrics.ParseLayout(_owner._settings?.GroupLayout);
+
+        /// <summary>Wymiary wiersza i sekcji dla bieżącej gęstości i układu — patrz Core/ListMetrics.</summary>
+        private ListMetrics Metrics() => ListMetrics.For(Density, Layout);
+
+        private bool IsMinimalList => Density != ListDensity.Default;
 
         /// <summary>
         /// Czy wiersz ma nieść tag protokołu („RDP"/„SFTP"…). Przy AKTYWNYM filtrze protokołu tag jest
@@ -142,6 +148,7 @@ namespace RdpManager.Controllers
             _multiSelect.Clear();
             _selectAnchor = null;
             _visibleOrder.Clear();
+            _sections.Clear();
 
             // Pasek chipów filtra protokołów nad listą (Compass §4.2); też weryfikuje _protocolFilter
             // względem obecnych serwerów (gdy protokół zniknął — reset do „Wszystkie").
@@ -158,9 +165,7 @@ namespace RdpManager.Controllers
             if (pinned.Count > 0)
             {
                 bool pinCollapsed = _owner._settings.CollapsedGroups.Contains(PinnedGroupKey);
-                _owner.ServerTree.Children.Add(BuildGroupHeader(PinnedGroupKey, pinned, pinCollapsed, isPinned: true));
-                if (!pinCollapsed)
-                    foreach (var s in pinned) { _owner.ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
+                EmitSection(PinnedGroupKey, pinned, pinCollapsed, isPinned: true);
             }
 
             // Zwykłe grupy (bez przypiętych).
@@ -179,10 +184,7 @@ namespace RdpManager.Controllers
             foreach (var g in order)
             {
                 bool collapsed = _owner._settings.CollapsedGroups.Contains(g);
-                _owner.ServerTree.Children.Add(BuildGroupHeader(g, byGroup[g], collapsed, isPinned: false));
-                if (!collapsed)
-                    foreach (var s in byGroup[g])
-                    { _owner.ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
+                EmitSection(g, byGroup[g], collapsed, isPinned: false);
             }
             UpdateActiveRows();
 
@@ -200,12 +202,119 @@ namespace RdpManager.Controllers
                 _owner.TreeEmptyHint.Visibility = Visibility.Visible;
             }
             else _owner.TreeEmptyHint.Visibility = Visibility.Collapsed;
+
+            // Nakładka z przyklejonym nagłówkiem musi znać nowe sekcje — i zniknąć, gdy układ grup
+            // przestał ją przewidywać. Po ułożeniu, bo pozycje sekcji liczą się dopiero wtedy.
+            _stickyKey = null;
+            _owner.Dispatcher.BeginInvoke(new System.Action(UpdateStickyHeader),
+                                          System.Windows.Threading.DispatcherPriority.Loaded);
         }
+
+        // Nagłówki sekcji w kolejności renderowania — potrzebne do przyklejania nagłówka przy
+        // przewijaniu (układ płaski). Element, bo pozycję liczymy dopiero po ułożeniu.
+        private readonly List<(string Key, bool Pinned, List<ServerInfo> Servers, bool Collapsed, FrameworkElement Element)> _sections
+            = new List<(string, bool, List<ServerInfo>, bool, FrameworkElement)>();
+
+        /// <summary>
+        /// Wypuszcza jedną sekcję (nagłówek + wiersze) wedle wybranego układu grup.
+        ///
+        /// Układ z pasem opakowuje sekcję w kontener z pionową kreską w kolorze grupy — dzięki temu
+        /// przynależność widać przy KAŻDYM wierszu, a nie tylko przy nagłówku, więc przy przewijaniu
+        /// nie trzeba wracać wzrokiem do góry. Pozostałe układy wypuszczają wiersze wprost do listy.
+        /// </summary>
+        private void EmitSection(string key, List<ServerInfo> servers, bool collapsed, bool isPinned)
+        {
+            var m = Metrics();
+            var header = BuildGroupHeader(key, servers, collapsed, isPinned);
+
+            if (!m.Rail)
+            {
+                _owner.ServerTree.Children.Add(header);
+                _sections.Add((key, isPinned, servers, collapsed, header));
+                if (collapsed) return;
+                foreach (var s in servers) { _owner.ServerTree.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
+                return;
+            }
+
+            // Kolor sekcji: ten sam, którym grupa jest oznaczona wszędzie indziej. Przypięte nie są
+            // grupą, więc niosą akcent — to jedyny „kolor bez grupy", jaki lista już zna.
+            var color = isPinned ? _owner.Res("Accent") : _owner.GroupDotBrush(key);
+
+            var box = new Grid { Margin = new Thickness(8, 2, 0, 4) };
+            box.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(m.RailWidth) });
+            box.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var rail = new Rectangle
+            {
+                Width = m.RailWidth, RadiusX = m.RailWidth / 2, RadiusY = m.RailWidth / 2,
+                Fill = color, VerticalAlignment = VerticalAlignment.Stretch,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            Grid.SetColumn(rail, 0);
+            box.Children.Add(rail);
+
+            var stack = new StackPanel { Margin = new Thickness(9, 0, 0, 0) };
+            Grid.SetColumn(stack, 1);
+            box.Children.Add(stack);
+
+            stack.Children.Add(header);
+            _sections.Add((key, isPinned, servers, collapsed, header));
+            if (!collapsed)
+                foreach (var s in servers) { stack.Children.Add(BuildServerRow(s)); _visibleOrder.Add(s); }
+
+            _owner.ServerTree.Children.Add(box);
+        }
+
+        /// <summary>
+        /// Przyklejony nagłówek grupy (układ „Płaskie sekcje"). WPF nie zna odpowiednika
+        /// position: sticky, więc nakładka nad obszarem przewijania pokazuje nagłówek tej sekcji,
+        /// której początek wyjechał już ponad górną krawędź.
+        ///
+        /// Nagłówek jest budowany PONOWNIE, a nie przenoszony: przeniesienie wyjęłoby go z listy,
+        /// więc treść pod spodem podskoczyłaby o jego wysokość dokładnie w chwili przyklejenia.
+        /// </summary>
+        internal void UpdateStickyHeader()
+        {
+            var host = _owner.StickyGroupHeader;
+            if (host == null) return;
+
+            if (!Metrics().StickyHeader || _sections.Count == 0)
+            {
+                host.Visibility = Visibility.Collapsed;
+                host.Child = null;
+                _stickyKey = null;
+                return;
+            }
+
+            double offset = _owner.ServerScroll.VerticalOffset;
+            (string Key, bool Pinned, List<ServerInfo> Servers, bool Collapsed, FrameworkElement Element)? current = null;
+            foreach (var sec in _sections)
+            {
+                double y;
+                try { y = sec.Element.TransformToAncestor(_owner.ServerTree).Transform(new Point(0, 0)).Y; }
+                catch { continue; }   // element jeszcze nieułożony (pierwsze przejście layoutu)
+                if (y <= offset + 0.5) current = sec; else break;
+            }
+
+            // Pierwsza sekcja w całości widoczna — nie ma czego przyklejać.
+            if (current == null) { host.Visibility = Visibility.Collapsed; host.Child = null; _stickyKey = null; return; }
+
+            if (_stickyKey != current.Value.Key)
+            {
+                _stickyKey = current.Value.Key;
+                host.Child = BuildGroupHeader(current.Value.Key, current.Value.Servers,
+                                              current.Value.Collapsed, current.Value.Pinned);
+            }
+            host.Visibility = Visibility.Visible;
+        }
+
+        private string _stickyKey;
 
         private FrameworkElement BuildGroupHeader(string name, List<ServerInfo> servers, bool collapsed, bool isPinned)
         {
             // Włosowa kreska nad każdą grupą POZA pierwszą — rozdziela sekcje bez dokładania pustej
             // przestrzeni. Pierwszy nagłówek jej nie dostaje, bo nad nim jest już pasek chipów.
+            var m = Metrics();
             bool first = _owner.ServerTree.Children.Count == 0;
             var row = new Border
             {
@@ -213,10 +322,13 @@ namespace RdpManager.Controllers
                 // Padding 12 od lewej stawia tytuł grupy w tej samej kolumnie co kafelki wierszy, a 8
                 // od prawej kończy licznik równo z kolumną statusu. Dotąd tytuł zaczynał się 18 px od
                 // brzegu, a licznik kończył 6 px — obie krawędzie mijały się z wierszami pod spodem.
-                Padding = IsMinimalList ? new Thickness(12, 5, 8, 3) : new Thickness(12, 7, 8, 3),
-                Background = Brushes.Transparent,
+                Padding = m.HeaderPadding,
+                Background = m.StickyHeader ? _owner.Res("Panel") : Brushes.Transparent,
                 BorderBrush = _owner.Res("Border"),
-                BorderThickness = first ? new Thickness(0) : new Thickness(0, 1, 0, 0),
+                // Układ płaski daje nagłówkowi własne tło (przykleja się przy przewijaniu, więc musi
+                // zasłaniać wiersze pod sobą), a układ z pasem rozdziela sekcje kolorem — w obu
+                // kreska nad nagłówkiem byłaby zdublowaniem tego samego sygnału.
+                BorderThickness = (first || !m.HeaderRule) ? new Thickness(0) : new Thickness(0, 1, 0, 0),
                 // Bez dodatkowego marginesu: kreska włosowa JUŻ rozdziela sekcje. Dotąd działały oba
                 // naraz, więc odstęp nad grupą był dwa razy większy, niż wynikało z drabiny odstępów.
                 Margin = new Thickness(0),
@@ -376,22 +488,38 @@ namespace RdpManager.Controllers
         }
 
         private FrameworkElement BuildServerRow(ServerInfo server)
-            => IsMinimalList ? BuildServerRowMinimal(server) : BuildServerRowDefault(server);
+        {
+            switch (Density)
+            {
+                case ListDensity.Minimal: return BuildServerRowMinimal(server);
+                case ListDensity.Dense: return BuildServerRowDense(server);
+                default: return BuildServerRowDefault(server);
+            }
+        }
+
+        // Wspólne dla wszystkich gęstości: margines i promień wiersza zależą od UKŁADU GRUP, a nie
+        // od tego, co jest w wierszu. Układ płaski ciągnie wiersz na pełną szerokość (bez zaokrągleń
+        // po bokach), pozostałe zostawiają go jako osobny „kafelek" z wcięciem.
+        private void ApplyRowShape(Border row, ListMetrics m)
+        {
+            row.Margin = new Thickness(m.RowIndent, m.RowGap, 0, m.RowGap);
+            row.CornerRadius = m.FullBleedRow ? new CornerRadius(0) : Radii.Sm;
+        }
 
         // Wariant DOMYŚLNY: awatar 22px + dwie linie (nazwa/host) + kropka statusu po prawej.
         private FrameworkElement BuildServerRowDefault(ServerInfo server)
         {
+            var m = Metrics();
             var row = new Border
             {
-                CornerRadius = Radii.Sm,
-                Margin = new Thickness(18, 1, 0, 1),   // wcięcie = element należy do grupy powyżej (Compass §4.3)
-                Padding = new Thickness(4, 5, 6, 5),    // -2 z każdej strony: miejsce na ramkę fokusu 2 px
+                Padding = m.RowPadding,                 // -2 z każdej strony: miejsce na ramkę fokusu 2 px
                 BorderThickness = new Thickness(2),
                 BorderBrush = Brushes.Transparent,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Tag = server
             };
+            ApplyRowShape(row, m);   // wcięcie („należę do grupy powyżej") i promień wg układu grup
 
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });                     // pasek aktywności
@@ -432,7 +560,7 @@ namespace RdpManager.Controllers
             Grid.SetColumn(meta, 2);
             grid.Children.Add(meta);
 
-            AddRowRightColumns(grid, server, tagColumn: 3, withTag: true);
+            AddRowRightColumns(grid, server, tagColumn: 3, withTag: m.ProtocolTag);
 
             var status = StatusGlyph.Host();
             ApplyRowStatusGlyph(status, server.Status);
@@ -456,24 +584,22 @@ namespace RdpManager.Controllers
         // Wariant MINIMALISTYCZNY: jednowierszowy, bez awatara — pasek koloru + kropka statusu + nazwa/host.
         private FrameworkElement BuildServerRowMinimal(ServerInfo server)
         {
+            var m = Metrics();
             var row = new Border
             {
-                CornerRadius = Radii.Sm,
-                // Wcięcie grupy rozbite na margines + padding: bez paddingu tło zaznaczenia zaczynałoby się
-                // dokładnie na krawędzi kafelka z glifem, bez oddechu. Suma wcięcia bez zmian (12 + 6 = 18).
-                Margin = new Thickness(12, 1, 0, 1),
                 // Padding o 2 mniej z każdej strony, bo doszła stała ramka 2px (przezroczysta w spoczynku,
                 // akcent przy fokusie klawiatury). Rezerwujemy ją zawsze, żeby fokus nie przesuwał treści.
                 // 2 px, nie 1 — taka sama grubość jak w każdym innym szablonie; przy 1 px obwódka ginęła
                 // na tle włosowych kresek listy.
-                Padding = new Thickness(4, 2, 6, 2),
+                Padding = m.RowPadding,
                 BorderThickness = new Thickness(2),
                 BorderBrush = Brushes.Transparent,
-                MinHeight = 27,
+                MinHeight = m.RowMinHeight,
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Tag = server
             };
+            ApplyRowShape(row, m);
 
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // glif protokołu
@@ -514,6 +640,75 @@ namespace RdpManager.Controllers
 
             // Bez etykiety protokołu: niesie ją glif po lewej. Kolumna 2 zostaje pusta, kolumnę 3
             // wypełnia opóźnienie/„⋯" — te same indeksy w obu gęstościach, więc jedna metoda.
+            AddRowRightColumns(grid, server, tagColumn: 2, withTag: false);
+
+            var status = StatusGlyph.Host();
+            ApplyRowStatusGlyph(status, server.Status);
+            _serverStatusDot[server] = status;
+            Grid.SetColumn(status, 4);
+            grid.Children.Add(status);
+
+            row.Child = grid;
+
+            _serverActivate[server] = active =>
+            {
+                row.Background = active ? _owner.Res("AccentSoft") : Brushes.Transparent;
+                name.FontWeight = active ? FontWeights.SemiBold : FontWeights.Medium;
+            };
+            WireServerRow(row, server);
+            return row;
+        }
+
+        // Wariant GĘSTY: pasek koloru protokołu + nazwa + opóźnienie + znacznik stanu. Bez kafelka
+        // i bez awatara, więc wiersz schodzi z 27 px na 22 px — przy trzydziestu serwerach to cztery
+        // pozycje więcej bez przewijania.
+        //
+        // Świadoma strata: znika tożsamość WIZUALNA serwera (kolor grupy w kafelku). Zostaje kolor
+        // protokołu, który mówi „czym się łączę", a nie „co to za maszyna" — kto potrzebuje tego
+        // drugiego, wybiera gęstość domyślną. Pasek jest przy krawędzi, a nie w środku wiersza, żeby
+        // przy przewijaniu tworzył ciągłą kolumnę koloru.
+        private FrameworkElement BuildServerRowDense(ServerInfo server)
+        {
+            var m = Metrics();
+            var row = new Border
+            {
+                Padding = m.RowPadding,
+                BorderThickness = new Thickness(2),
+                BorderBrush = Brushes.Transparent,
+                MinHeight = m.RowMinHeight,
+                Background = Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                Tag = server
+            };
+            ApplyRowShape(row, m);
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });                     // pasek protokołu
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });  // nazwa
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // (pusta — bez etykiety)
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                       // opóźnienie / „⋯"
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(StatusGlyph.Field) });     // status
+
+            var bar = new Rectangle
+            {
+                Width = 3, RadiusX = 1.5, RadiusY = 1.5,
+                Fill = _owner.ProtocolBrush(server.Protocol),
+                VerticalAlignment = VerticalAlignment.Stretch,
+                Margin = new Thickness(0, 3, 0, 3)
+            };
+            Grid.SetColumn(bar, 0);
+            grid.Children.Add(bar);
+
+            var name = new TextBlock
+            {
+                Text = server.Name, Foreground = _owner.Res("TextPrim"),
+                FontSize = (double)_owner.TryFindResource("FontSmall"), FontWeight = FontWeights.Medium,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(9, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            Grid.SetColumn(name, 1);
+            grid.Children.Add(name);
+
             AddRowRightColumns(grid, server, tagColumn: 2, withTag: false);
 
             var status = StatusGlyph.Host();
