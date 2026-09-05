@@ -23,6 +23,74 @@ namespace RdpManager.Tests
             => Assert.Equal(expected, TabMetrics.Parse(value));
 
         [Fact]
+        public void StylBlokowyZrastaSieZObszaremPodPaskiem()
+        {
+            // Regresja z użycia: „wygląda praktycznie tak samo jak znacznik". Wszystkie trzy style
+            // malują aktywną kartę tym samym „Panel", więc samo wypełnienie ich nie rozróżnia —
+            // rozróżnia je ZROŚNIĘCIE: karta blokowa bierze kolor obszaru pod paskiem (SessionToolbar
+            // jest pomalowany dokładnie tym kluczem) i traci dolną krawędź, więc kreska paska jest pod
+            // nią przerwana. To jest cała istota karty przeglądarkowej i edytorowej.
+            var b = M(TabStyle.Block);
+            Assert.True(b.FuseWithContent);
+            Assert.Equal("Panel", b.ActiveFill);   // ten sam klucz co SessionToolbar pod paskiem
+            Assert.Equal(0, b.Radius);
+        }
+
+        [Fact]
+        public void TylkoStylBlokowyPrzerywaKreskePaska()
+        {
+            // Gdyby przerywał ją też któryś z pozostałych, pasek zostałby z dziurą bez powodu —
+            // to jedyny styl, w którym karta ma czym tę dziurę wypełnić.
+            Assert.False(M(TabStyle.Default).FuseWithContent);
+            Assert.False(M(TabStyle.Marker).FuseWithContent);
+        }
+
+        [Fact]
+        public void ZnacznikRozniSieOdDomyslnegoWylacznieMiejscemAkcentu()
+        {
+            // Świadomie: znacznik NIE jest inną budową karty, tylko tym samym kształtem z akcentem
+            // przeniesionym na lewą krawędź. Wspólne wypełnienie jest tu treścią wariantu.
+            Assert.Equal(M(TabStyle.Default).ActiveFill, M(TabStyle.Marker).ActiveFill);
+            Assert.NotEqual(M(TabStyle.Default).Mark, M(TabStyle.Marker).Mark);
+        }
+
+        [Fact]
+        public void WTrybieSkupieniaKartaBlokowaTraciAwatarIJestNiska()
+        {
+            // Pasek kart zastępuje w skupieniu pasek tytułu, więc każdy jego piksel jest zabrany
+            // sesji. Karta traci tam awatar niezależnie od wybranej gęstości i schodzi do 26 px.
+            foreach (var min in new[] { false, true })
+            {
+                var f = M(TabStyle.Block, min, focus: true);
+                Assert.True(f.HideAvatar);
+                Assert.Equal(26, f.TabHeight);
+                Assert.True(f.TabHeight < M(TabStyle.Block, min).TabHeight);
+            }
+            // Poza skupieniem awatar znika tylko wtedy, gdy tak wybrano gęstość.
+            Assert.False(M(TabStyle.Block).HideAvatar);
+            Assert.True(M(TabStyle.Block, min: true).HideAvatar);
+        }
+
+        [Fact]
+        public void KartaBlokowaDobijaDoObuKrawedziPaska()
+        {
+            // Bez tego „blok" jest tylko kanciastą kartą pływającą w pasku — a to jest ten sam obrazek
+            // co pozostałe style. Karta ma dotykać paska z góry, z dołu i z boków.
+            var b = M(TabStyle.Block);
+            Assert.Equal(0, b.StripPadV);
+            Assert.Equal(0, b.StripPadH);
+            Assert.True(M(TabStyle.Default).StripPadH > 0);
+        }
+
+        [Fact]
+        public void PasekAkcentuBlokuNieJestCienszyNizZnacznika()
+        {
+            // Pasek bloku leży na samej krawędzi paska kart, gdzie 2 px ginie. Znacznik ma 3 px
+            // i to jest dolna granica dla obu.
+            Assert.True(M(TabStyle.Block).MarkSize >= M(TabStyle.Marker).MarkSize);
+        }
+
+        [Fact]
         public void KazdyStylNosiAkcentGdzieIndziej()
         {
             Assert.Equal(TabMark.Bottom, M(TabStyle.Default).Mark);
@@ -80,8 +148,16 @@ namespace RdpManager.Tests
         public void StylBlokowyJestNizszyWWidokuMinimalnym()
         {
             Assert.True(M(TabStyle.Block, min: true).TabHeight < M(TabStyle.Block).TabHeight);
-            Assert.True(M(TabStyle.Block, min: true, focus: true).TabHeight
-                        < M(TabStyle.Block, focus: true).TabHeight);
+        }
+
+        [Fact]
+        public void WSkupieniuObieGestosciSchodzaDoTejSamejWysokosci()
+        {
+            // I to jest poprawne, a nie przeoczenie: w skupieniu karta blokowa traci awatar niezależnie
+            // od gęstości, więc obie mają dokładnie tę samą treść — i nie ma z czego robić dwóch
+            // wysokości. Test pilnuje, żeby ktoś nie „naprawił" tego, dokładając różnicę bez powodu.
+            Assert.Equal(M(TabStyle.Block, min: false, focus: true).TabHeight,
+                         M(TabStyle.Block, min: true, focus: true).TabHeight);
         }
 
         [Fact]
@@ -98,23 +174,33 @@ namespace RdpManager.Tests
         {
             // W skupieniu przyciski minimalizuj/przywróć/zamknij stoją NA pasku kart. Karta niższa od
             // nich nie zmniejszyłaby paska ani o piksel — zmniejszyłaby tylko samą siebie.
-            Assert.True(M(TabStyle.Block, focus: true).TabHeight >= TabMetrics.FocusButton);
-            Assert.True(M(TabStyle.Block, min: true, focus: true).TabHeight >= TabMetrics.FocusButtonMinimal);
+            // W skupieniu karta blokowa traci awatar, więc przyciski schodzą razem z nią do wersji
+            // zwartej — inaczej to one wyznaczałyby wysokość paska i obniżenie byłoby pozorne.
+            foreach (var min in new[] { false, true })
+            {
+                var f = M(TabStyle.Block, min, focus: true);
+                double btn = f.HideAvatar ? TabMetrics.FocusButtonMinimal : TabMetrics.FocusButton;
+                Assert.True(f.TabHeight >= btn, $"Karta {f.TabHeight} px nie mieści przycisku {btn} px");
+            }
         }
 
         [Fact]
-        public void KartaBlokowaMiesciAwatar()
+        public void KartaBlokowaMiesciAwatarTam_GdzieGoPokazuje()
         {
-            // Awatar ma 17 px i w widoku domyślnym jest najwyższym elementem treści; karta niższa
-            // przycięłaby go. (W widoku minimalnym awatara nie ma — stąd wolno tam zejść niżej.)
-            foreach (var focus in new[] { false, true })
-                Assert.True(M(TabStyle.Block, focus: focus).TabHeight >= 17 + 2 * 4,
-                    "Karta blokowa musi pomieścić awatar 17 px z oddechem");
+            // Awatar ma 17 px i jest najwyższym elementem treści; karta niższa przycięłaby go.
+            // Sprawdzamy tylko te kombinacje, w których awatar w ogóle jest.
+            foreach (var min in new[] { false, true })
+                foreach (var focus in new[] { false, true })
+                {
+                    var x = M(TabStyle.Block, min, focus);
+                    if (x.HideAvatar) continue;
+                    Assert.True(x.TabHeight >= 17 + 2 * 4, "Karta blokowa musi pomieścić awatar 17 px z oddechem");
+                }
         }
 
         [Theory]
         [InlineData(false, false, 40)]
-        [InlineData(false, true, 36)]
+        [InlineData(false, true, 26)]
         [InlineData(true, false, 28)]
         [InlineData(true, true, 26)]
         public void WysokosciKartyBlokowejSaPrzypiete(bool minimal, bool focus, double expected)

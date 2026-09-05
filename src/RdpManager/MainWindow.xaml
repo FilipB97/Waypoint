@@ -449,6 +449,15 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
+
+                        <!-- Dolna kreska paska kart w stylu BLOKOWYM. Musi być osobnym prostokątem POD kartami,
+                             a nie obramowaniem TabStripHost: karta aktywna (nieprzezroczysta, na pełną wysokość)
+                             ma ją zasłonić i tym samym PRZERWAĆ — na tym polega karta przeglądarkowa i edytorowa.
+                             Obramowanie Bordera rysuje się poza treścią, więc karta nie miałaby jak go zakryć.
+                             W pozostałych stylach ukryty, a kreskę rysuje jak dotąd BorderThickness hosta. -->
+                        <Rectangle x:Name="TabStripUnderline" Grid.ColumnSpan="2" Height="1"
+                                   VerticalAlignment="Bottom" Fill="{DynamicResource Border}"
+                                   Visibility="Collapsed"/>
                         <!-- Pasek przewijania ukryty: przy wielu kartach przewija się kółkiem myszy (handler niżej)
                              i przeciąganiem — bez brzydkiego natywnego scrollbara pod kartami. -->
                         <ScrollViewer x:Name="TabScroller" Grid.Column="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"

@@ -56,6 +56,22 @@ namespace RdpManager.Core
         public bool ReserveBottom { get; private set; }
         /// <summary>Pionowy margines paska kart (odstęp karty od krawędzi paska).</summary>
         public double StripPadV { get; private set; }
+        /// <summary>Poziomy margines paska. Zero = karty dobijają do krawędzi (styl blokowy).</summary>
+        public double StripPadH { get; private set; }
+        /// <summary>Klucz palety na tło AKTYWNEJ karty.</summary>
+        public string ActiveFill { get; private set; }
+        /// <summary>
+        /// Karta aktywna zrasta się z obszarem POD paskiem: bierze jego kolor i traci dolną krawędź,
+        /// więc dolna kreska paska jest pod nią PRZERWANA. To jest cała istota karty przeglądarkowej
+        /// i edytorowej — i jedyna rzecz, która odróżnia taki pasek od rzędu wypełnionych prostokątów.
+        /// Bez tego blok i znacznik czytają się jako ten sam obrazek, co zostało zgłoszone z użycia.
+        /// </summary>
+        public bool FuseWithContent { get; private set; }
+        /// <summary>
+        /// Karta nie pokazuje awatara (sam znacznik stanu i nazwa). Poza gęstością minimalną włącza to
+        /// tryb skupienia w stylu blokowym: pasek kart zastępuje tam pasek tytułu, więc ma być niski.
+        /// </summary>
+        public bool HideAvatar { get; private set; }
         /// <summary>Wymuszona wysokość karty; 0 = z treści.</summary>
         public double TabHeight { get; private set; }
 
@@ -75,12 +91,15 @@ namespace RdpManager.Core
         /// <param name="focus">Tryb skupienia — pasek kart pełni rolę paska tytułu, więc liczy się każdy piksel.</param>
         public static TabMetrics For(TabStyle style, bool minimal, bool focus)
         {
+            TabMetrics m;
             switch (style)
             {
-                case TabStyle.Block: return Block(minimal, focus);
-                case TabStyle.Marker: return Marker(minimal);
-                default: return Default(minimal);
+                case TabStyle.Block: m = Block(minimal, focus); break;
+                case TabStyle.Marker: m = Marker(minimal); break;
+                default: m = Default(minimal); break;
             }
+            m.HideAvatar = minimal || (style == TabStyle.Block && focus);
+            return m;
         }
 
         // Stan obecny — wartości przeniesione 1:1 z BuildTabDefault / BuildTabMinimal.
@@ -94,6 +113,8 @@ namespace RdpManager.Core
             MarkSize = 2,
             ReserveBottom = true,
             StripPadV = minimal ? 2 : 6,
+            StripPadH = 8,
+            ActiveFill = "Panel",
             TabHeight = 0
         };
 
@@ -119,11 +140,11 @@ namespace RdpManager.Core
         // samej sesji. Dolna granica to przycisk okna, który w skupieniu stoi na tym samym pasku.
         private static TabMetrics Block(bool minimal, bool focus)
         {
-            //   widok domyślny : 40 px zwykle, 36 px w skupieniu — mieści awatar 17 px i przycisk okna 28 px,
-            //   widok minimalny : 28 px zwykle, 26 px w skupieniu — nie ma awatara, więc granicą jest
-            //                     wiersz tekstu (~16 px) i przycisk okna w wersji minimalnej (24 px).
-            // Dla porównania: pasek w stylu domyślnym ma dziś 48 px (widok domyślny) i ~30 px (minimalny).
-            double h = minimal ? (focus ? 26 : 28) : (focus ? 36 : 40);
+            //   zwykle          : 40 px przy awatarze, 28 px bez niego,
+            //   tryb skupienia  : 26 px ZAWSZE — karta traci tam awatar (HideAvatar), więc granicą
+            //                     jest wiersz tekstu (~16 px) i przycisk okna w wersji zwartej (24 px).
+            // Dla porównania: pasek w stylu domyślnym ma 48 px (widok domyślny) i ~30 px (minimalny).
+            double h = focus ? 26 : (minimal ? 28 : 40);
             return new TabMetrics
             {
                 Radius = 0,
@@ -131,9 +152,16 @@ namespace RdpManager.Core
                 Padding = minimal ? new Thickness(11, 0, 8, 0) : new Thickness(10, 0, 8, 0),
                 Margin = new Thickness(0),
                 Mark = TabMark.Top,
-                MarkSize = 2,
+                MarkSize = 3,                         // 2 px na samej krawędzi paska było za cienkie
                 ReserveBottom = false,                // wysokość daje TabHeight, nie rozpórka
                 StripPadV = 0,                        // karta dotyka krawędzi paska — stąd „blok"
+                StripPadH = 0,                        // ...i dobija do jego boków, jak segment kontrolki
+                // „Panel" — DOKŁADNIE ten sam klucz, którym pomalowany jest SessionToolbar leżący
+                // bezpośrednio pod paskiem kart. To nie jest powtórzenie stylu znacznika: tam Panel jest
+                // wypełnieniem pływającej karty, tu jest kolorem obszaru, w który karta się WTAPIA.
+                // Rozróżnia je FuseWithContent — przerwana dolna krawędź paska pod aktywną kartą.
+                ActiveFill = "Panel",
+                FuseWithContent = true,
                 TabHeight = h
             };
         }
