@@ -58,12 +58,20 @@ namespace RdpManager.Core
         public double StripPadV { get; private set; }
         /// <summary>Poziomy margines paska. Zero = karty dobijają do krawędzi (styl blokowy).</summary>
         public double StripPadH { get; private set; }
-        /// <summary>
-        /// Klucz palety na tło AKTYWNEJ karty. To jest sygnał DOMINUJĄCY — ten, który widać z odległości
-        /// rzutu oka, zanim ktokolwiek zauważy promień czy położenie paska akcentu. Style muszą się
-        /// różnić właśnie tutaj, inaczej różnią się tylko w szczegółach i czytają jako to samo.
-        /// </summary>
+        /// <summary>Klucz palety na tło AKTYWNEJ karty.</summary>
         public string ActiveFill { get; private set; }
+        /// <summary>
+        /// Karta aktywna zrasta się z obszarem POD paskiem: bierze jego kolor i traci dolną krawędź,
+        /// więc dolna kreska paska jest pod nią PRZERWANA. To jest cała istota karty przeglądarkowej
+        /// i edytorowej — i jedyna rzecz, która odróżnia taki pasek od rzędu wypełnionych prostokątów.
+        /// Bez tego blok i znacznik czytają się jako ten sam obrazek, co zostało zgłoszone z użycia.
+        /// </summary>
+        public bool FuseWithContent { get; private set; }
+        /// <summary>
+        /// Karta nie pokazuje awatara (sam znacznik stanu i nazwa). Poza gęstością minimalną włącza to
+        /// tryb skupienia w stylu blokowym: pasek kart zastępuje tam pasek tytułu, więc ma być niski.
+        /// </summary>
+        public bool HideAvatar { get; private set; }
         /// <summary>Wymuszona wysokość karty; 0 = z treści.</summary>
         public double TabHeight { get; private set; }
 
@@ -83,12 +91,15 @@ namespace RdpManager.Core
         /// <param name="focus">Tryb skupienia — pasek kart pełni rolę paska tytułu, więc liczy się każdy piksel.</param>
         public static TabMetrics For(TabStyle style, bool minimal, bool focus)
         {
+            TabMetrics m;
             switch (style)
             {
-                case TabStyle.Block: return Block(minimal, focus);
-                case TabStyle.Marker: return Marker(minimal);
-                default: return Default(minimal);
+                case TabStyle.Block: m = Block(minimal, focus); break;
+                case TabStyle.Marker: m = Marker(minimal); break;
+                default: m = Default(minimal); break;
             }
+            m.HideAvatar = minimal || (style == TabStyle.Block && focus);
+            return m;
         }
 
         // Stan obecny — wartości przeniesione 1:1 z BuildTabDefault / BuildTabMinimal.
@@ -129,11 +140,11 @@ namespace RdpManager.Core
         // samej sesji. Dolna granica to przycisk okna, który w skupieniu stoi na tym samym pasku.
         private static TabMetrics Block(bool minimal, bool focus)
         {
-            //   widok domyślny : 40 px zwykle, 36 px w skupieniu — mieści awatar 17 px i przycisk okna 28 px,
-            //   widok minimalny : 28 px zwykle, 26 px w skupieniu — nie ma awatara, więc granicą jest
-            //                     wiersz tekstu (~16 px) i przycisk okna w wersji minimalnej (24 px).
-            // Dla porównania: pasek w stylu domyślnym ma dziś 48 px (widok domyślny) i ~30 px (minimalny).
-            double h = minimal ? (focus ? 26 : 28) : (focus ? 36 : 40);
+            //   zwykle          : 40 px przy awatarze, 28 px bez niego,
+            //   tryb skupienia  : 26 px ZAWSZE — karta traci tam awatar (HideAvatar), więc granicą
+            //                     jest wiersz tekstu (~16 px) i przycisk okna w wersji zwartej (24 px).
+            // Dla porównania: pasek w stylu domyślnym ma 48 px (widok domyślny) i ~30 px (minimalny).
+            double h = focus ? 26 : (minimal ? 28 : 40);
             return new TabMetrics
             {
                 Radius = 0,
@@ -145,13 +156,12 @@ namespace RdpManager.Core
                 ReserveBottom = false,                // wysokość daje TabHeight, nie rozpórka
                 StripPadV = 0,                        // karta dotyka krawędzi paska — stąd „blok"
                 StripPadH = 0,                        // ...i dobija do jego boków, jak segment kontrolki
-                // Wypełnienie akcentem, a NIE „Panel" jak w pozostałych stylach. Powód jest zmierzony:
-                // dopóki blok i znacznik malowały aktywną kartę tym samym „Panel", różniły się wyłącznie
-                // promieniem, odstępem i położeniem paska 2 px — czyli szczegółami, które przy rzucie oka
-                // znikają, i oba style czytały się jako ten sam. AccentSoft odsuwa je od siebie o ΔE 11,7
-                // (motyw ciemny) i 14,3 (jasny). W motywie jasnym to zarazem naprawa czytelności samego
-                // stanu aktywnego: „Panel" dzieli od paska ΔE 2,9, AccentSoft — 12,0.
-                ActiveFill = "AccentSoft",
+                // „Panel" — DOKŁADNIE ten sam klucz, którym pomalowany jest SessionToolbar leżący
+                // bezpośrednio pod paskiem kart. To nie jest powtórzenie stylu znacznika: tam Panel jest
+                // wypełnieniem pływającej karty, tu jest kolorem obszaru, w który karta się WTAPIA.
+                // Rozróżnia je FuseWithContent — przerwana dolna krawędź paska pod aktywną kartą.
+                ActiveFill = "Panel",
+                FuseWithContent = true,
                 TabHeight = h
             };
         }

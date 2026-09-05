@@ -81,7 +81,7 @@ namespace RdpManager.Controllers
         internal FrameworkElement BuildTab(Session session)
         {
             var m = Metrics();
-            bool minimal = IsMinimalList;
+            bool minimal = m.HideAvatar;
 
             var tab = new Border
             {
@@ -121,7 +121,8 @@ namespace RdpManager.Controllers
 
             if (minimal)
             {
-                // Widok minimalny: znacznik PRZED nazwą, bez awatara — niższa, lżejsza karta.
+                // Bez awatara: znacznik PRZED nazwą — niższa, lżejsza karta. Poza gęstością minimalną
+                // dotyczy to trybu skupienia w stylu blokowym (patrz TabMetrics.HideAvatar).
                 content.Children.Add(tabDot);
             }
             else
@@ -538,15 +539,20 @@ namespace RdpManager.Controllers
         // trwające przeciąganie i mrugała paskiem dokładnie wtedy, gdy okno i tak się przelicza.
         internal void ApplyTabStripStyle()
         {
-            bool min = IsMinimalList;
             var m = Metrics();
 
             _owner.TabStrip.Margin = new Thickness(m.StripPadH, m.StripPadV, m.StripPadH, m.StripPadV);
-            foreach (var b in _owner.SessionActions.Children.OfType<Button>())
-            {
-                b.Width = min ? TabMetrics.FocusButtonMinimal : TabMetrics.FocusButton;
-                b.Height = min ? TabMetrics.FocusButtonMinimal : TabMetrics.FocusButton;
-            }
+
+            // Kreska pod paskiem: w stylu zrastającym rysuje ją prostokąt LEŻĄCY POD kartami (żeby
+            // aktywna mogła go zasłonić), w pozostałych — obramowanie hosta, jak dotąd.
+            _owner.TabStripHost.BorderThickness = m.FuseWithContent ? new Thickness(0) : new Thickness(0, 0, 0, 1);
+            _owner.TabStripUnderline.Visibility = m.FuseWithContent ? Visibility.Visible : Visibility.Collapsed;
+
+            // Przyciski okna na pasku kart schodzą do wersji zwartej razem z kartą — inaczej to ONE,
+            // a nie karta, wyznaczałyby wysokość paska i całe obniżenie w skupieniu byłoby pozorne.
+            double btn = m.HideAvatar ? TabMetrics.FocusButtonMinimal : TabMetrics.FocusButton;
+            foreach (var b in _owner.SessionActions.Children.OfType<Button>()) { b.Width = btn; b.Height = btn; }
+            foreach (var b in _owner.FocusControls.Children.OfType<Button>()) { b.Width = btn; b.Height = btn; }
 
             foreach (var s in _owner._sessions)
             {
