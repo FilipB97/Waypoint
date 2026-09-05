@@ -425,6 +425,15 @@ namespace RdpManager
         internal void UpdateImmersive()
         {
             if (_settings == null || _isFullscreen) return;
+
+            // Minimalizacja NIE JEST zmianą układu. IsImmersive() wymaga WindowState == Maximized, więc
+            // przy zminimalizowanym oknie zwraca false — przeliczenie pokazałoby wtedy pasek tytułu,
+            // rail i panel boczny, czyli ZWĘZIŁO panel sesji. Przy sesji RDP to realna zmiana rozmiaru
+            // kontrolki, więc leci renegocjacja rozdzielczości do serwera; po przywróceniu okna wszystko
+            // wraca i leci druga. Efekt: każdy cykl minimalizuj/przywróć przemalowuje sesję dwa razy,
+            // a układ i tak kończy identyczny jak przed minimalizacją. Ten sam warunek stoi już przy
+            // pollingu peeku i paska pełnoekranowego (FullscreenController, SessionWindow).
+            if (WindowState == WindowState.Minimized) return;
             bool immersive = IsImmersive();
             if (!immersive) _fs.HideFocusPeek();   // wyjście ze skupienia: zwiń peek (przenosi Rail/Sidebar z powrotem)
             AppTitleBar.Visibility = immersive ? Visibility.Collapsed : Visibility.Visible;

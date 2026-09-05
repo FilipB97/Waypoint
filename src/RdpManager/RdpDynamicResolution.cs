@@ -287,8 +287,9 @@ namespace RdpManager
                 // dalsze resize okna dopasowuje wyłącznie SmartSizing, bez kolejnych Display-Update.
                 (w, h) = LockedFitTarget(baseW, baseH);
             }
-            if (w < MinDim || h < MinDim) return;
-            if (w == _lastW && h == _lastH) return;
+            // Jedna decyzja zamiast dwóch warunków rozsypanych po metodzie — i testowalna bez WPF.
+            // Dochodzi do nich stan okna: przy zminimalizowanym renegocjacja jest czystą stratą.
+            if (!RdpDisplay.ShouldApplyResize(IsWindowMinimized(), w, h, _lastW, _lastH)) return;
 
             try
             {
@@ -342,6 +343,16 @@ namespace RdpManager
             {
                 rdp.UpdateSessionDisplaySettings((uint)w, (uint)h, 0u, 0u, 0u, 100u, RdpDisplay.DeviceScaleFactor);
             }
+        }
+
+        /// <summary>
+        /// Czy okno z tą sesją jest zminimalizowane. Dotyczy zarówno okna głównego (karty), jak i okna
+        /// oderwanej sesji — stąd odczyt z drzewa, a nie z konkretnego typu okna.
+        /// </summary>
+        private bool IsWindowMinimized()
+        {
+            try { return System.Windows.Window.GetWindow(_host)?.WindowState == System.Windows.WindowState.Minimized; }
+            catch { return false; }   // host już poza drzewem — niech zadecydują pozostałe warunki
         }
 
         private bool TryGetPhysicalPixels(out int w, out int h)
