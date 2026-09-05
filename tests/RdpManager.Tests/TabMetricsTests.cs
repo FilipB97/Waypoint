@@ -23,6 +23,48 @@ namespace RdpManager.Tests
             => Assert.Equal(expected, TabMetrics.Parse(value));
 
         [Fact]
+        public void StylBlokowyMaInneWypelnienieAktywnejKartyNizPozostale()
+        {
+            // Regresja z użycia. Blok i znacznik malowały aktywną kartę tym samym „Panel", więc
+            // różniły się WYŁĄCZNIE promieniem, odstępem i położeniem paska 2 px — czyli szczegółami,
+            // które przy rzucie oka na sześć kart znikają. Zgłoszone wprost: „wygląda praktycznie tak
+            // samo jak znacznik". Tło aktywnej karty to sygnał dominujący i style o różnej BUDOWIE
+            // muszą się różnić właśnie tutaj, a nie tylko w detalach.
+            var block = M(TabStyle.Block);
+            Assert.NotEqual(M(TabStyle.Default).ActiveFill, block.ActiveFill);
+            Assert.NotEqual(M(TabStyle.Marker).ActiveFill, block.ActiveFill);
+        }
+
+        [Fact]
+        public void ZnacznikDzieliWypelnienieZDomyslnym_ITakMaByc()
+        {
+            // Świadomy wyjątek od reguły powyżej: znacznik NIE jest inną budową karty, tylko tym samym
+            // kształtem z akcentem przeniesionym na lewą krawędź. Wspólne wypełnienie jest tu treścią
+            // wariantu, a nie przeoczeniem — rozróżnia je kształt i miejsce akcentu.
+            Assert.Equal(M(TabStyle.Default).ActiveFill, M(TabStyle.Marker).ActiveFill);
+            Assert.NotEqual(M(TabStyle.Default).Mark, M(TabStyle.Marker).Mark);
+        }
+
+        [Fact]
+        public void KartaBlokowaDobijaDoObuKrawedziPaska()
+        {
+            // Bez tego „blok" jest tylko kanciastą kartą pływającą w pasku — a to jest ten sam obrazek
+            // co pozostałe style. Karta ma dotykać paska z góry, z dołu i z boków.
+            var b = M(TabStyle.Block);
+            Assert.Equal(0, b.StripPadV);
+            Assert.Equal(0, b.StripPadH);
+            Assert.True(M(TabStyle.Default).StripPadH > 0);
+        }
+
+        [Fact]
+        public void PasekAkcentuBlokuNieJestCienszyNizZnacznika()
+        {
+            // Pasek bloku leży na samej krawędzi paska kart, gdzie 2 px ginie. Znacznik ma 3 px
+            // i to jest dolna granica dla obu.
+            Assert.True(M(TabStyle.Block).MarkSize >= M(TabStyle.Marker).MarkSize);
+        }
+
+        [Fact]
         public void KazdyStylNosiAkcentGdzieIndziej()
         {
             Assert.Equal(TabMark.Bottom, M(TabStyle.Default).Mark);

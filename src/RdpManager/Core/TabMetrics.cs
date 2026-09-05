@@ -56,6 +56,14 @@ namespace RdpManager.Core
         public bool ReserveBottom { get; private set; }
         /// <summary>Pionowy margines paska kart (odstęp karty od krawędzi paska).</summary>
         public double StripPadV { get; private set; }
+        /// <summary>Poziomy margines paska. Zero = karty dobijają do krawędzi (styl blokowy).</summary>
+        public double StripPadH { get; private set; }
+        /// <summary>
+        /// Klucz palety na tło AKTYWNEJ karty. To jest sygnał DOMINUJĄCY — ten, który widać z odległości
+        /// rzutu oka, zanim ktokolwiek zauważy promień czy położenie paska akcentu. Style muszą się
+        /// różnić właśnie tutaj, inaczej różnią się tylko w szczegółach i czytają jako to samo.
+        /// </summary>
+        public string ActiveFill { get; private set; }
         /// <summary>Wymuszona wysokość karty; 0 = z treści.</summary>
         public double TabHeight { get; private set; }
 
@@ -94,6 +102,8 @@ namespace RdpManager.Core
             MarkSize = 2,
             ReserveBottom = true,
             StripPadV = minimal ? 2 : 6,
+            StripPadH = 8,
+            ActiveFill = "Panel",
             TabHeight = 0
         };
 
@@ -131,9 +141,17 @@ namespace RdpManager.Core
                 Padding = minimal ? new Thickness(11, 0, 8, 0) : new Thickness(10, 0, 8, 0),
                 Margin = new Thickness(0),
                 Mark = TabMark.Top,
-                MarkSize = 2,
+                MarkSize = 3,                         // 2 px na samej krawędzi paska było za cienkie
                 ReserveBottom = false,                // wysokość daje TabHeight, nie rozpórka
                 StripPadV = 0,                        // karta dotyka krawędzi paska — stąd „blok"
+                StripPadH = 0,                        // ...i dobija do jego boków, jak segment kontrolki
+                // Wypełnienie akcentem, a NIE „Panel" jak w pozostałych stylach. Powód jest zmierzony:
+                // dopóki blok i znacznik malowały aktywną kartę tym samym „Panel", różniły się wyłącznie
+                // promieniem, odstępem i położeniem paska 2 px — czyli szczegółami, które przy rzucie oka
+                // znikają, i oba style czytały się jako ten sam. AccentSoft odsuwa je od siebie o ΔE 11,7
+                // (motyw ciemny) i 14,3 (jasny). W motywie jasnym to zarazem naprawa czytelności samego
+                // stanu aktywnego: „Panel" dzieli od paska ΔE 2,9, AccentSoft — 12,0.
+                ActiveFill = "AccentSoft",
                 TabHeight = h
             };
         }

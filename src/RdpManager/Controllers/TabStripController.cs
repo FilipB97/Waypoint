@@ -346,13 +346,15 @@ namespace RdpManager.Controllers
 
         internal void RefreshTabStyles()
         {
-            bool block = Metrics().Mark == TabMark.Top;
+            var m = Metrics();
+            bool block = m.Mark == TabMark.Top;
+            var activeFill = _owner.Res(m.ActiveFill) ?? Brushes.Transparent;
             foreach (var s in _owner._sessions)
             {
                 if (!(s.TabButton is Border b)) continue;
                 bool active = s == _owner._active;
                 // Lżej: aktywna = subtelne tło + akcent (underline), bez „pudełkowego" obrysu.
-                b.Background = active ? _owner.Res("Panel") : Brushes.Transparent;
+                b.Background = active ? activeFill : Brushes.Transparent;
                 // W stylu blokowym prawa krawędź jest separatorem między kartami, a nie obrysem
                 // zaznaczenia — wyczyszczenie jej tutaj skleiłoby karty w jedną plamę.
                 b.BorderBrush = block ? (_owner.Res("Border") ?? Brushes.Transparent) : Brushes.Transparent;
@@ -539,7 +541,7 @@ namespace RdpManager.Controllers
             bool min = IsMinimalList;
             var m = Metrics();
 
-            _owner.TabStrip.Margin = new Thickness(8, m.StripPadV, 8, m.StripPadV);
+            _owner.TabStrip.Margin = new Thickness(m.StripPadH, m.StripPadV, m.StripPadH, m.StripPadV);
             foreach (var b in _owner.SessionActions.Children.OfType<Button>())
             {
                 b.Width = min ? TabMetrics.FocusButtonMinimal : TabMetrics.FocusButton;
@@ -560,7 +562,9 @@ namespace RdpManager.Controllers
             _tabDropTarget = tab;
             if (group)
             {
-                tab.Background = _owner.Res("AccentSoft");
+                // AccentSoftHover, nie AccentSoft: w stylu blokowym AccentSoft jest tłem karty AKTYWNEJ,
+                // więc podpowiedź „zgrupuj" wyglądałaby jak „ta karta właśnie się uaktywniła".
+                tab.Background = _owner.Res("AccentSoftHover") ?? _owner.Res("AccentSoft");
                 tab.BorderBrush = _owner.Res("Accent");
                 tab.BorderThickness = new Thickness(1);   // pełny obrys „zgrupuj" niezależnie od stylu
             }
