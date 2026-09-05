@@ -1,0 +1,472 @@
+<title>Poprawki UI — przed i po</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* ============================================================================
+   Podgląd sześciu poprawek z przeglądu spójności. Fragmenty interfejsu są
+   zbudowane na PRAWDZIWYCH tokenach Waypointa (Palette.*.xaml, Metrics.xaml),
+   a kolumna „po" pokazuje wartości POLICZONE, nie dobrane na oko — każda liczba
+   pod fragmentem jest wynikiem, który wyjdzie po zmianie.
+   ============================================================================ */
+
+:root {
+  --ground:  #F4F4F2;
+  --sheet:   #FFFFFF;
+  --ink:     #1C1D1A;
+  --ink-2:   #55574F;
+  --ink-3:   #87897F;
+  --rule:    #E3E3DE;
+  --rule-2:  #CACAC2;
+  --after:   #2C6E49;
+  --after-bg:#E7F1EB;
+  --before:  #9C4221;
+  --before-bg:#F6EAE3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:  #141513;
+    --sheet:   #1C1E1A;
+    --ink:     #EDEEE9;
+    --ink-2:   #A9ACA1;
+    --ink-3:   #787B71;
+    --rule:    #292B26;
+    --rule-2:  #3B3E37;
+    --after:   #62C48F;
+    --after-bg:#16281E;
+    --before:  #E08A5F;
+    --before-bg:#2A1D16;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:  #141513;
+  --sheet:   #1C1E1A;
+  --ink:     #EDEEE9;
+  --ink-2:   #A9ACA1;
+  --ink-3:   #787B71;
+  --rule:    #292B26;
+  --rule-2:  #3B3E37;
+  --after:   #62C48F;
+  --after-bg:#16281E;
+  --before:  #E08A5F;
+  --before-bg:#2A1D16;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font-family: Archivo, "Segoe UI", system-ui, sans-serif;
+  font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px 110px; }
+.mono, code, .delta, table { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+code { font-size: .84em; background: var(--rule); color: var(--ink-2); padding: 1px 5px; border-radius: 3px; }
+
+/* ---- pasek sterowania ---- */
+.controls {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 10px 22px; flex-wrap: wrap;
+  padding: 12px max(28px, calc((100% - 1120px) / 2)); margin: 0 0 40px;
+  background: color-mix(in srgb, var(--ground) 90%, transparent);
+  backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule);
+}
+.controls > span {
+  font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.seg { display: flex; background: var(--sheet); border: 1px solid var(--rule); border-radius: 7px; padding: 2px; }
+.seg button {
+  font: inherit; font-size: 13px; padding: 4px 13px; border: 0; border-radius: 5px;
+  background: transparent; color: var(--ink-2); cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--after); color: #fff; }
+.seg button:focus-visible { outline: 2px solid var(--after); outline-offset: 2px; }
+.jump { margin-left: auto; display: flex; gap: 6px; }
+.jump a {
+  font-family: "JetBrains Mono", monospace; font-size: 12px; text-decoration: none; color: var(--ink-2);
+  border: 1px solid var(--rule); border-radius: 5px; width: 27px; height: 27px; display: grid; place-items: center;
+}
+.jump a:hover { border-color: var(--after); color: var(--after); }
+
+/* ---- nagłówek ---- */
+header { padding: 60px 0 18px; }
+.eyebrow {
+  font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0 0 14px;
+}
+h1 { font-size: 40px; font-weight: 700; letter-spacing: -.025em; line-height: 1.06; margin: 0 0 16px; text-wrap: balance; }
+.lede { max-width: 64ch; color: var(--ink-2); font-size: 16.5px; margin: 0 0 12px; }
+
+/* ---- blok poprawki ---- */
+.fix { margin: 0 0 56px; scroll-margin-top: 78px; }
+.fhead { display: flex; align-items: baseline; gap: 13px; margin: 0 0 5px; }
+.fnum {
+  font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 12px; color: var(--after);
+  background: var(--after-bg); width: 26px; height: 26px; border-radius: 6px;
+  display: grid; place-items: center; flex: none; align-self: center;
+}
+.ftitle { font-size: 21px; font-weight: 600; letter-spacing: -.012em; margin: 0; text-wrap: balance; }
+.fnote { color: var(--ink-2); margin: 0 0 16px 39px; max-width: 68ch; font-size: 15px; }
+@media (max-width: 860px) { .fnote { margin-left: 0; } }
+
+.pair { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; margin-left: 39px; }
+.pair.solo { grid-template-columns: minmax(0,1fr); }
+@media (max-width: 860px) { .pair { grid-template-columns: minmax(0,1fr); margin-left: 0; } }
+
+.side { min-width: 0; }
+.slabel {
+  font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: .1em;
+  text-transform: uppercase; margin: 0 0 7px 2px; display: flex; align-items: center; gap: 8px;
+}
+.slabel.b { color: var(--before); }
+.slabel.a { color: var(--after); }
+.slabel::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+.delta {
+  font-size: 12px; margin: 9px 0 0 2px; color: var(--ink-2);
+}
+.delta b { color: var(--after); font-weight: 700; }
+.delta s { color: var(--before); text-decoration-thickness: 1px; }
+
+/* ============================================================================
+   RAMKA: prawdziwe tokeny Waypointa (Palette.Dark.xaml / Palette.Light.xaml)
+   ============================================================================ */
+.app {
+  --canvas-a:#0F1014; --canvas-b:#181A22;
+  --rail:rgba(22,24,32,.80); --panel:#282A36;
+  --elevated:rgba(189,193,219,.176); --border:rgba(255,255,255,.133);
+  --tx1:#E7E8EE; --tx2:#B1B4C2; --tx3:#9396A6;
+  --accent:#6C6DFF; --accent-soft:rgba(108,109,255,.149);
+  --online:#3DDC97; --offline:#747783; --danger:#E8463F;
+  /* paleta tożsamości — klucze Gd* */
+  --gd-prod:#D06BD8; --gd-staging:#FFB454; --gd-client:#36B8C4;
+  --gd-blue:#7BA6FF; --gd-rose:#E8567F; --gd-green:#3DDC97;
+  /* awatary DZIŚ: te same wartości w obu motywach (na tym polega usterka 01) */
+  --av-prod-1:#D06BD8; --av-prod-2:#8E3AA0;
+  --av-staging-1:#FFB454; --av-staging-2:#D98F2E;
+  --av-client-1:#36C4CF; --av-client-2:#1F8B94;
+
+  background: linear-gradient(135deg, var(--canvas-a), var(--canvas-b));
+  border: 1px solid var(--rule); border-radius: 10px; overflow: hidden;
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif;
+  user-select: none; padding: 10px;
+}
+.app[data-app="light"] {
+  --canvas-a:#EEF0F3; --canvas-b:#DEE2E8;
+  --rail:rgba(242,243,245,.90); --panel:#FAFBFC;
+  --elevated:rgba(0,0,0,.078); --border:rgba(0,0,0,.133);
+  --tx1:#1B1D22; --tx2:#565A62; --tx3:#6B6F78;
+  --accent:#5B4BD6; --accent-soft:rgba(91,75,214,.133);
+  --online:#12855A; --offline:#767A83; --danger:#C0281F;
+  --gd-prod:#A32FAE; --gd-staging:#C28029; --gd-client:#1F8B94;
+  --gd-blue:#2F6BE0; --gd-rose:#C0396A; --gd-green:#12855A;
+}
+/* Każda para izoluje WYŁĄCZNIE swoją poprawkę. Gdyby kolumna „po" nakładała wszystkie naraz,
+   sekcje 01, 04 i 05 wyglądałyby identycznie i nie dałoby się przypisać różnicy do zmiany. */
+
+/* 01 — awatar bierze pierwszy stop z klucza Gd bieżącego motywu (drugi stop bez zmian, ×~0,65). */
+.app.f1 {
+  --av-prod-1:var(--gd-prod); --av-staging-1:var(--gd-staging); --av-client-1:var(--gd-client);
+}
+.app.f1[data-app="light"] { --av-prod-2:#6B2073; --av-staging-2:#82551B; --av-client-2:#125A61; }
+
+/* 04 — adres i opóźnienie schodzą z TextTer na TextSec. Nic poza tym. */
+.app.f4 .rmeta { color: var(--tx2); }
+
+/* 05 — węższy gradient (×0,82) i atrament liczony dla KRAŃCA, nie dla środka. */
+.app.f5 {
+  --av-prod-1:var(--gd-prod);       --av-prod-2:#AB58B1;
+  --av-staging-1:var(--gd-staging); --av-staging-2:#D19445;
+  --av-client-1:var(--gd-client);   --av-client-2:#2C97A1;
+  --ink-prod:#0B0C10; --ink-staging:#0B0C10; --ink-client:#0B0C10;
+}
+.app.f5[data-app="light"] {
+  --av-prod-2:#86278F; --av-staging-2:#9F6922; --av-client-2:#197279;
+  --ink-prod:#FFFFFF; --ink-staging:#0B0C10; --ink-client:#FFFFFF;
+}
+
+/* wiersz listy serwerów */
+.row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 8px; margin-bottom: 2px;
+}
+.row.hover { background: var(--elevated); }
+.av {
+  width: 22px; height: 22px; border-radius: 4px; flex: none;
+  display: grid; place-items: center; font-size: 10.5px; font-weight: 700;
+}
+/* Atrament inicjałów: dziś biel/#141620 dobierane do środka gradientu (te same w obu motywach,
+   bo klucze Av* są dziś w obu paletach identyczne). Kolumna „po" nadpisuje to w .app.f5. */
+.app { --ink-prod:#FFFFFF; --ink-staging:#141620; --ink-client:#141620; }
+.av.prod    { background: linear-gradient(135deg, var(--av-prod-1), var(--av-prod-2)); color: var(--ink-prod); }
+.av.staging { background: linear-gradient(135deg, var(--av-staging-1), var(--av-staging-2)); color: var(--ink-staging); }
+.av.client  { background: linear-gradient(135deg, var(--av-client-1), var(--av-client-2)); color: var(--ink-client); }
+.rowtext { min-width: 0; flex: 1; }
+.rname { font-size: 12px; color: var(--tx1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rmeta { font-size: 11px; color: var(--tx3); font-family: "Cascadia Mono", Consolas, monospace; }
+.app.after .rmeta { color: var(--tx2); }        /* poprawka 04 */
+.gdot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.glyph { width: 10px; height: 10px; display: grid; place-items: center; flex: none; }
+.glyph i { width: 8px; height: 8px; border-radius: 50%; background: var(--online); display: block; }
+
+/* próbnik koloru awatara */
+.swatches { display: flex; gap: 7px; flex-wrap: wrap; padding: 4px 2px; }
+.sw {
+  width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--border);
+  display: grid; place-items: center; font-size: 9px; color: var(--tx3);
+}
+.sw.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* przyciski ikonowe */
+.iconrow { display: flex; gap: 4px; padding: 4px 2px; }
+.ib {
+  width: 30px; height: 30px; border-radius: 8px; border: 0; background: transparent;
+  color: var(--tx2); cursor: pointer; display: grid; place-items: center; position: relative;
+  font-size: 14px; line-height: 1;
+}
+.ib::before {
+  content: ""; position: absolute; inset: 0; border-radius: 8px;
+  background: var(--accent); opacity: 0;
+}
+.ib:hover::before  { opacity: .12; }
+.ib:active::before { opacity: .20; }
+.ib.slow::before { transition: opacity .11s cubic-bezier(.2,0,0,1); }
+.ib.p22:active::before { opacity: .22; }
+.ib:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* pasek kart z grupą */
+.strip { background: var(--rail); border-bottom: 1px solid var(--border); padding: 6px 8px; display: flex; align-items: center; border-radius: 6px; }
+.tab { display: flex; align-items: center; gap: 7px; padding: 6px 8px 5px 10px; border-radius: 8px; margin-right: 4px; }
+.tab.on { background: var(--panel); }
+.tab .nm { font-size: 12px; color: var(--tx2); white-space: nowrap; }
+.tab.on .nm { color: var(--tx1); }
+.grp { display: flex; align-items: center; border-radius: 8px; padding: 0 4px 0 3px; }
+.grp .pill { border-radius: 4px; padding: 2px 7px 3px 6px; margin: 0 4px 0 1px; font-size: 11.5px; font-weight: 600; }
+
+/* tabelka pomiaru */
+.measure { margin: 14px 0 0 39px; overflow-x: auto; max-width: calc(100% - 39px); }
+@media (max-width: 860px) { .measure { margin-left: 0; max-width: 100%; } }
+table { border-collapse: collapse; font-size: 12.5px; width: 100%; min-width: 420px; }
+th, td { text-align: right; padding: 5px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--ink-3); font-weight: 500; border-bottom: 1px solid var(--rule-2); }
+tbody tr:last-child td { border-bottom: 0; }
+td.was { color: var(--before); }
+td.now { color: var(--after); font-weight: 700; }
+td.dim { color: var(--ink-3); }
+
+.tail {
+  margin: 74px 0 0; padding: 22px 24px; background: var(--sheet);
+  border: 1px solid var(--rule); border-radius: 10px; max-width: 74ch; color: var(--ink-2);
+}
+.tail h2 { font-size: 15px; color: var(--ink); margin: 0 0 8px; }
+.tail p { margin: 0 0 10px; }
+.tail p:last-child { margin: 0; }
+</style>
+
+<div class="controls">
+  <span>Motyw aplikacji</span>
+  <div class="seg" id="segTheme">
+    <button data-v="light" aria-pressed="true">Jasny</button>
+    <button data-v="dark" aria-pressed="false">Ciemny</button>
+  </div>
+  <nav class="jump" id="jump" aria-label="Skocz do poprawki"></nav>
+</div>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Waypoint · sześć poprawek z przeglądu spójności</p>
+  <h1>Poprawki UI — przed i po</h1>
+  <p class="lede">
+    Fragmenty interfejsu zbudowane na prawdziwych tokenach Waypointa. Kolumna <b>po</b> pokazuje wartości
+    <b>policzone</b>, nie dobrane na oko — każda liczba pod fragmentem jest wynikiem, który wyjdzie po zmianie.
+  </p>
+  <p class="lede">
+    Domyślnie ustawiony motyw <b>jasny</b>, bo tam widać poprawkę 01. Przyciski ikonowe są klikalne —
+    różnicę z poprawki 03 słychać dopiero w ruchu.
+  </p>
+</header>
+
+<main id="fixes"></main>
+
+<div class="tail">
+  <h2>Czego ta makieta nie rozstrzyga</h2>
+  <p>
+    Poprawka <b>06</b> (nazwy dwóch przycisków dla czytnika ekranu) nie ma reprezentacji wizualnej —
+    nie zmienia ani jednego piksela. Jest tu wymieniona dla kompletu.
+  </p>
+  <p>
+    Poprawka <b>05</b> nie domyka się do końca i nie udaję, że domyka: cztery z dwunastu kolorów
+    zostają między 3,99 a 4,42. Nasycona barwa o średniej jasności nie utrzyma tekstu 4,5:1 ani na
+    bieli, ani na czerni — sufit teoretyczny dla takiej barwy to około 4,58. Inicjały zostają więc
+    świadomie ozdobnym skrótem obok nazwy, a nie samodzielnym nośnikiem informacji.
+  </p>
+  <p>
+    To dalej jest kod, nie zrzut z działającej aplikacji — WPF-a nie da się uruchomić w tym środowisku.
+    Kolory, promienie i odstępy są prawdziwe; rytm gotowego okna oceni dopiero uruchomienie.
+  </p>
+</div>
+</div>
+
+<script>
+const AV = { prod: 'PR', staging: 'ST', client: 'KX' };
+
+function row(cls, ini, name, meta, group, hover) {
+  return `<div class="row${hover ? ' hover' : ''}">
+      <div class="av ${cls}">${ini}</div>
+      <div class="rowtext">
+        <div class="rname">${name}</div>
+        <div class="rmeta">${meta}</div>
+      </div>
+      <div class="glyph"><i></i></div>
+      <div class="gdot" style="background:var(--gd-${group})"></div>
+    </div>`;
+}
+
+const LIST = `
+  ${row('prod','PR','ADM-PROD-01','10.0.0.5 · 18 ms','prod', true)}
+  ${row('staging','ST','stg-web-02','10.2.4.11 · 41 ms','staging', false)}
+  ${row('client','KX','kx-db','10.9.1.7 · 12 ms','client', false)}`;
+
+const SW_BEFORE = ['','#3B82F6','#22C1C3','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#64748B'];
+const SW_AFTER  = ['','var(--gd-prod)','var(--gd-staging)','var(--gd-client)','var(--gd-blue)','var(--gd-rose)','var(--gd-green)'];
+function swatches(list) {
+  return '<div class="swatches">' + list.map((c,i) =>
+    c === '' ? `<div class="sw sel" title="Auto">A</div>`
+             : `<div class="sw" style="background:${c};border-color:transparent"></div>`).join('') + '</div>';
+}
+
+function tabs(after) {
+  const g = after ? 'var(--gd-client)' : '#22C1C3';
+  return `<div class="strip">
+      <div class="tab on"><div class="av prod" style="width:17px;height:17px;font-size:9.5px">PR</div><span class="nm">ADM-PROD-01</span></div>
+      <div class="grp" style="background:color-mix(in srgb, ${g} 13%, transparent);border:1px solid color-mix(in srgb, ${g} 23%, transparent)">
+        <div class="pill" style="background:color-mix(in srgb, ${g} 23%, transparent);color:${g}">▾ Klienci</div>
+        <div class="tab"><div class="av client" style="width:17px;height:17px;font-size:9.5px">KX</div><span class="nm">kx-db</span></div>
+      </div>
+    </div>`;
+}
+
+function iconrow(slow, p22) {
+  const cls = 'ib' + (slow ? ' slow' : '') + (p22 ? ' p22' : '');
+  return `<div class="iconrow">
+      ${['↑','↓','⟳','✕'].map(s => `<button class="${cls}" aria-label="Przykładowy przycisk">${s}</button>`).join('')}
+    </div>`;
+}
+
+const FIXES = [
+  {
+    id: 1,
+    title: 'Awatar bierze kolor z tej samej palety co kropka grupy',
+    note: 'Widoczne wyłącznie w motywie jasnym — przełącz na ciemny, żeby zobaczyć, że tam było dobrze od początku. Awatar i kropka stoją w jednym wierszu, więc rozjazd ΔE ~20 czyta się jako dwa różne kolory tej samej grupy.',
+    before: () => `<div class="app" data-app="${state.theme}">${LIST}</div>`,
+    after:  () => `<div class="app f1" data-app="${state.theme}">${LIST}</div>`,
+    table: {
+      head: ['Grupa', 'ΔE dziś (jasny)', 'ΔE po'],
+      rows: [['Produkcja','20,1','0,0'], ['Staging','20,1','0,0'], ['Klienci','21,4','0,0']]
+    }
+  },
+  {
+    id: 2,
+    title: 'Jedna paleta tożsamości zamiast trzech',
+    note: 'Próbnik koloru w edycji serwera pokazywał osiem barw Tailwinda, niezwiązanych z paletą aplikacji. Po zmianie to ta sama szóstka, z której biorą się awatary, kropki grup i kontenery grup kart — z gwarancją ΔE ≥ 15 między nimi i osobno dobrana dla każdego motywu.',
+    before: () => `<div class="app" data-app="${state.theme}">${swatches(SW_BEFORE)}<div style="height:10px"></div>${tabs(false)}</div>`,
+    after:  () => `<div class="app f1" data-app="${state.theme}">${swatches(SW_AFTER)}<div style="height:10px"></div>${tabs(true)}</div>`,
+    table: {
+      head: ['Cecha', 'Dziś', 'Po'],
+      rows: [
+        ['Zestawy barw tożsamości', '3 niezależne', '1'],
+        ['Barwy spoza palety aplikacji', '8', '0'],
+        ['Zależne od motywu', '1 z 3', 'wszystkie'],
+        ['Gwarancja rozróżnialności ΔE ≥ 15', '1 z 3', 'wszystkie'],
+        ['Barw do automatycznego przydziału', '8', '6']
+      ]
+    }
+  },
+  {
+    id: 3,
+    title: 'Jeden przycisk ikonowy zamiast pięciu kopii',
+    note: 'Najedź i przytrzymaj oba rzędy. Po lewej podświetlenie przeskakuje (generator haseł, snippety), po prawej narasta przez 110 ms — dziś aplikacja robi jedno i drugie zależnie od okna. Wciśnięty ujednolicony na 0,20, czyli wartość z większości.',
+    before: () => `<div class="app" data-app="${state.theme}">${iconrow(false, true)}</div>`,
+    after:  () => `<div class="app" data-app="${state.theme}">${iconrow(true, false)}</div>`,
+    table: {
+      head: ['Cecha', 'Dziś', 'Po'],
+      rows: [
+        ['Definicji stylu', '5 (153 linie XAML)', '1'],
+        ['Animacja hoveru', '0,11 s ×3, brak ×2', '0,11 s wszędzie'],
+        ['Krycie wciśniętego', '0,20 ×3, 0,22 ×2', '0,20'],
+        ['Kopie wiersza listy', '2 (64 linie)', '1']
+      ]
+    }
+  },
+  {
+    id: 4,
+    title: 'Tekst niosący informację nie schodzi do trzeciego stopnia',
+    note: 'Pierwszy wiersz jest najechany. Adres i opóźnienie były rysowane w TextTer, który na tle hoveru ma w motywie ciemnym 3,25 — czyli liczba blakła dokładnie wtedy, gdy użytkownik na nią celował. Po zmianie idą w TextSec; TextTer zostaje dla separatorów i liczników.',
+    before: () => `<div class="app" data-app="${state.theme}">${LIST}</div>`,
+    after:  () => `<div class="app f4" data-app="${state.theme}">${LIST}</div>`,
+    table: {
+      head: ['Tło', 'TextTer (dziś)', 'TextSec (po)'],
+      rows: [['Elevated · ciemny','3,25','4,62'], ['Elevated · jasny','4,08','5,61'], ['Canvas · jasny','4,41','6,06']]
+    }
+  },
+  {
+    id: 5,
+    title: 'Atrament inicjałów dobierany do najgorszego punktu kafelka',
+    note: 'Reguła optymalizowała ŚRODEK gradientu, więc na krańcach robiło się gorzej, niż wskazywał pomiar. Po zmianie: gradient węższy (×0,82 zamiast ~×0,65), atrament ciemny pogłębiony do #0B0C10, a wybór liczony dla krańca, nie dla środka.',
+    before: () => `<div class="app" data-app="${state.theme}">${LIST}</div>`,
+    after:  () => `<div class="app f5" data-app="${state.theme}">${LIST}</div>`,
+    table: {
+      head: ['Miara', 'Dziś', 'Po'],
+      rows: [
+        ['Najgorszy punkt — zakres', '2,70 – 6,80', '3,99 – 7,46'],
+        ['Poniżej AA 4,5', '6 z 8', '4 z 12'],
+        ['Najsłabszy przypadek', '2,70', '3,99'],
+        ['Sufit teoretyczny takiej barwy', '—', '≈ 4,58']
+      ]
+    }
+  }
+];
+
+const state = { theme: 'light' };
+
+function render() {
+  document.getElementById('fixes').innerHTML = FIXES.map(f => `
+    <section class="fix" id="f${f.id}">
+      <div class="fhead">
+        <div class="fnum">${String(f.id).padStart(2, '0')}</div>
+        <h2 class="ftitle">${f.title}</h2>
+      </div>
+      <p class="fnote">${f.note}</p>
+      <div class="pair">
+        <div class="side">
+          <p class="slabel b">Dziś</p>
+          ${f.before()}
+        </div>
+        <div class="side">
+          <p class="slabel a">Po poprawce</p>
+          ${f.after()}
+        </div>
+      </div>
+      <div class="measure">
+        <table>
+          <thead><tr>${f.table.head.map((h, i) => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${f.table.rows.map(r => `<tr>
+            <td>${r[0]}</td><td class="was">${r[1]}</td><td class="now">${r[2]}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </section>`).join('');
+}
+
+document.getElementById('jump').innerHTML =
+  FIXES.map(f => `<a href="#f${f.id}" title="${f.title}">${f.id}</a>`).join('');
+
+document.getElementById('segTheme').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  state.theme = b.dataset.v;
+  e.currentTarget.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  render();
+});
+
+render();
+</script>
