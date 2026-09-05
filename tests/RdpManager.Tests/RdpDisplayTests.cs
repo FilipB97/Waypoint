@@ -150,5 +150,51 @@ namespace RdpManager.Tests
             // ulDeviceScaleFactor przyjmuje wyłącznie 100/140/180 — inna wartość unieważnia całe Display-Update.
             Assert.Contains(RdpDisplay.DeviceScaleFactor, new uint[] { 100u, 140u, 180u });
         }
+
+        // ---------- kiedy w ogóle renegocjować rozdzielczość ----------
+        //
+        // Każde Display-Update kosztuje widoczne przemalowanie całej sesji, więc warunek „czy teraz"
+        // jest tu tak samo ważny jak samo przeliczenie wymiarów.
+
+        [Fact]
+        public void ZminimalizowaneOknoNieRenegocjuje()
+        {
+            // Zgłoszone z użycia: „po zminimalizowaniu i zmaksymalizowaniu za każdym razem jest
+            // przerenderowanie połączenia". Przy zminimalizowanym oknie układ przelicza się na wersję
+            // bez trybu skupienia (IsImmersive wymaga Maximized), więc panel sesji się zwęża i leci
+            // renegocjacja — a po przywróceniu druga, z powrotem. Nikt tego wtedy nie ogląda.
+            Assert.False(RdpDisplay.ShouldApplyResize(minimized: true, 1920, 1080, 1280, 720));
+        }
+
+        [Fact]
+        public void TenSamRozmiarNieRenegocjuje()
+        {
+            // Serwer już zna te wymiary — wysyłka byłaby samym mignięciem, bez żadnej zmiany.
+            Assert.False(RdpDisplay.ShouldApplyResize(minimized: false, 1920, 1080, 1920, 1080));
+        }
+
+        [Fact]
+        public void ZmianaJednegoWymiaruWystarczyDoRenegocjacji()
+        {
+            Assert.True(RdpDisplay.ShouldApplyResize(minimized: false, 1920, 1200, 1920, 1080));
+            Assert.True(RdpDisplay.ShouldApplyResize(minimized: false, 1680, 1080, 1920, 1080));
+        }
+
+        [Fact]
+        public void WymiaryPonizejProgiNieRenegocjuja()
+        {
+            // Chwilowy pomiar w trakcie układania okna (albo panel podziału zwinięty do zera) nie jest
+            // rozdzielczością, o którą warto pytać serwer.
+            Assert.False(RdpDisplay.ShouldApplyResize(minimized: false, RdpUtils.MinDim - 1, 1080, -1, -1));
+            Assert.False(RdpDisplay.ShouldApplyResize(minimized: false, 1920, RdpUtils.MinDim - 1, -1, -1));
+            Assert.True(RdpDisplay.ShouldApplyResize(minimized: false, RdpUtils.MinDim, RdpUtils.MinDim, -1, -1));
+        }
+
+        [Fact]
+        public void PierwszaNegocjacjaPrzechodzi()
+        {
+            // -1 = nic jeszcze nie wysłano; pierwszy poprawny pomiar musi dojść do serwera.
+            Assert.True(RdpDisplay.ShouldApplyResize(minimized: false, 1920, 1080, -1, -1));
+        }
     }
 }

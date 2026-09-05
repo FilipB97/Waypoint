@@ -119,6 +119,26 @@ namespace RdpManager.Core
         /// (8192), przycinamy MNOŻNIK, nie pojedynczy wymiar — inaczej pulpit dostałby inne proporcje
         /// niż okno i obraz byłby rozciągnięty.
         /// </summary>
+        /// <summary>
+        /// Czy wolno teraz wysłać Display-Update (renegocjację rozdzielczości) do serwera.
+        ///
+        /// Każde „tak" kosztuje widoczne przemalowanie całej sesji, więc pytanie nie jest formalnością.
+        /// Trzy powody, dla których odpowiedź brzmi „nie":
+        ///  - okno jest ZMINIMALIZOWANE — nikt tego nie ogląda, a po przywróceniu i tak przyszłoby
+        ///    zdarzenie rozmiaru z właściwymi wartościami; wysyłka teraz daje wyłącznie dwa przemalowania
+        ///    na cykl minimalizuj/przywróć,
+        ///  - wymiary są poniżej progu sensu (chwilowy pomiar w trakcie układania okna),
+        ///  - wymiary są DOKŁADNIE takie, jakie serwer już zna — nie ma czego negocjować.
+        /// </summary>
+        /// <param name="minimized">Okno sesji jest zminimalizowane.</param>
+        /// <param name="lastW">Ostatnio wynegocjowana szerokość; -1 = nic jeszcze nie wysłano.</param>
+        public static bool ShouldApplyResize(bool minimized, int w, int h, int lastW, int lastH)
+        {
+            if (minimized) return false;
+            if (w < RdpUtils.MinDim || h < RdpUtils.MinDim) return false;
+            return w != lastW || h != lastH;
+        }
+
         public static (int Width, int Height) ScaleResolution(int width, int height, int effectiveScale)
         {
             if (width < RdpUtils.MinDim || height < RdpUtils.MinDim) return (0, 0);
