@@ -34,7 +34,58 @@ namespace RdpManager
         {
             new ChangelogEntry
             {
-                Version = "1.8.0", Date = "2026-07-09", Latest = true,
+                Version = "1.9.1", Date = "2026-09-05", Latest = true,
+                Items = new List<ChangeItem>
+                {
+                    new ChangeItem(ChangeKind.Fix, "Minimalizacja okna nie renegocjuje już rozdzielczości sesji RDP"),
+                },
+            },
+            new ChangelogEntry
+            {
+                Version = "1.9.0", Date = "2026-09-05",
+                Items = new List<ChangeItem>
+                {
+                    new ChangeItem(ChangeKind.Change, "Styl blokowy paska kart jako prawdziwa karta przeglądarki / edytora"),
+                },
+            },
+            new ChangelogEntry
+            {
+                Version = "1.8.29", Date = "2026-09-05",
+                Items = new List<ChangeItem>
+                {
+                    new ChangeItem(ChangeKind.New, "Gęstość wiersza i układ grup listy serwerów do wyboru"),
+                },
+            },
+            new ChangelogEntry
+            {
+                Version = "1.8.28", Date = "2026-09-04",
+                Items = new List<ChangeItem>
+                {
+                    new ChangeItem(ChangeKind.New, "Snippety komend wysyłane do terminala klikiem albo skrótem"),
+                    new ChangeItem(ChangeKind.New, "Styl paska kart do wyboru — blokowy i lewy znacznik"),
+                    new ChangeItem(ChangeKind.Change, "Terminal korzysta z bieżącej palety motywu"),
+                },
+            },
+            new ChangelogEntry
+            {
+                Version = "1.8.27", Date = "2026-09-02",
+                Items = new List<ChangeItem>
+                {
+                    new ChangeItem(ChangeKind.New, "Pulpit rysowany w WebView2, z nowymi wykresami"),
+                },
+            },
+            new ChangelogEntry
+            {
+                Version = "1.8.26", Date = "2026-09-02",
+                Items = new List<ChangeItem>
+                {
+                    new ChangeItem(ChangeKind.Change, "Stała siatka wiersza listy, akcje pod kursorem, kształty statusu"),
+                    new ChangeItem(ChangeKind.Fix, "Poprawki hover, gwiazdki, wskaźnika kart i kolorów grup"),
+                },
+            },
+            new ChangelogEntry
+            {
+                Version = "1.8.0", Date = "2026-07-09",
                 Items = new List<ChangeItem>
                 {
                     new ChangeItem(ChangeKind.New, "Redesign „Compass”: nowa paleta, presety motywu i konfigurowalny akcent"),

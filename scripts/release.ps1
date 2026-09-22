@@ -9,7 +9,7 @@
     Dzieki temu publikacja nie wymaga narzedzia 'gh'.
 
 .EXAMPLE
-  .\scripts\release.ps1                     # build z wersja z .csproj
+  .\scripts\release.ps1                     # build z wersja ostatniego taga (lub z .csproj)
 .EXAMPLE
   .\scripts\release.ps1 -Version 1.1.0      # build z podana wersja
 .EXAMPLE
@@ -33,10 +33,15 @@ $Csproj = 'src\RdpManager\RdpManager.csproj'
 # dotnet: lokalny SDK .NET 8 jesli jest (systemowy bywa za stary), inaczej z PATH
 $Dotnet = if (Test-Path 'C:\dotnet8\dotnet.exe') { 'C:\dotnet8\dotnet.exe' } else { 'dotnet' }
 
-# Wersja: z parametru albo z <Version> w .csproj
+# Wersja: z parametru, inaczej z najblizszego taga vX.Y.Z (tak jak target VersionFromGitTag w .csproj),
+# a bez gita/tagow - z <WaypointFallbackVersion> w .csproj
 if (-not $Version) {
-  $m = Select-String -Path $Csproj -Pattern '<Version>(.*?)</Version>' | Select-Object -First 1
-  $Version = if ($m) { $m.Matches[0].Groups[1].Value } else { '1.0.0' }
+  $tag = try { & git describe --tags --abbrev=0 --match 'v[0-9]*' 2>$null } catch { $null }   # brak gita = brak taga
+  if ($tag -match '^v(\d+\.\d+\.\d+)$') { $Version = $Matches[1] }
+  else {
+    $m = Select-String -Path $Csproj -Pattern '<WaypointFallbackVersion>(.*?)</WaypointFallbackVersion>' | Select-Object -First 1
+    $Version = if ($m) { $m.Matches[0].Groups[1].Value } else { '1.0.0' }
+  }
 }
 Write-Host ">> Waypoint release - wersja $Version" -ForegroundColor Cyan
 

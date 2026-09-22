@@ -12,7 +12,10 @@
     <AssemblyName>Waypoint</AssemblyName>
     <RootNamespace>RdpManager</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>1.4.2</Version>
+    <!-- Wersja awaryjna, gdy nie ma gita/tagów (np. płytki checkout w CI). Na co dzień nadpisuje ją
+         target VersionFromGitTag (najbliższy tag vX.Y.Z), a przy wydaniu -p:Version z workflow Release. -->
+    <WaypointFallbackVersion>1.9.1</WaypointFallbackVersion>
+    <Version>$(WaypointFallbackVersion)</Version>
     <Product>Waypoint</Product>
     <AssemblyTitle>Waypoint</AssemblyTitle>
     <Description>Waypoint — nowoczesny menedżer połączeń RDP i SSH (Fluent / Mica).</Description>
@@ -35,6 +38,23 @@
     <PackageReference Include="System.IO.Ports" Version="10.0.9" />
     <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
+
+  <!-- Lokalny build przedstawia się wersją ostatniego wydania (najbliższy tag vX.Y.Z), zamiast
+       ręcznie utrzymywanego <Version>, który rozjeżdżał się z tagami. -p:Version z wiersza poleceń
+       (workflow Release, release.ps1) ma pierwszeństwo — target działa tylko, gdy Version nie przyszło z zewnątrz
+       (właściwość ustawiona w targecie nadpisałaby nawet globalną). -->
+  <Target Name="VersionFromGitTag" BeforeTargets="GetAssemblyVersion" Condition="'$(Version)' == '$(WaypointFallbackVersion)'">
+    <Exec Command="git describe --tags --abbrev=0 --match &quot;v[0-9]*&quot;" WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true"
+          StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitTag" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitExitCode" />
+    </Exec>
+    <PropertyGroup Condition="'$(_GitExitCode)' == '0' And $([System.Text.RegularExpressions.Regex]::IsMatch('$(_GitTag)', '^v\d+\.\d+\.\d+$'))">
+      <Version>$(_GitTag.Substring(1))</Version>
+      <InformationalVersion>$(Version)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
 
   <!-- RDP ActiveX interop generated with AxImp from C:\Windows\System32\mstscax.dll -->
   <ItemGroup>

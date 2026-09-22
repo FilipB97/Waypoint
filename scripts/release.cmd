@@ -3,7 +3,7 @@ REM Dwuklikowy wrapper na release.ps1 — pyta o wersje i czy publikowac.
 setlocal
 set "VER="
 set "PUB="
-set /p VER=Podaj wersje (np. 1.0.0), Enter = z csproj:
+set /p VER=Podaj wersje (np. 1.0.0), Enter = wersja ostatniego taga:
 set /p PUB=Opublikowac release na GitHub? wpisz t = tak (Enter = tylko build):
 
 set "ARGS="
