@@ -15,7 +15,8 @@ Grab the latest **`Waypoint-<version>-win-x64.exe`** from the
 [Releases](https://github.com/FilipB97/Waypoint/releases) page and run it —
 it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 
-> Not code-signed yet, so SmartScreen may warn on first run: *More info → Run anyway*.
+> Signed with a self-signed certificate (no paid CA certificate), so SmartScreen may warn on first
+> run: *More info → Run anyway*. Auto-update checks that each new build is signed with the same certificate.
 
 ## Features
 
@@ -76,7 +77,7 @@ it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 
 ## Known limitations
 
-- **Not code-signed** — SmartScreen warns on first run (*More info → Run anyway*).
+- **Self-signed only** — no CA certificate, so SmartScreen warns on first run (*More info → Run anyway*).
 - **SSH host keys** use trust-on-first-use with a fingerprint prompt; existing OpenSSH
   `known_hosts` files are not imported (yet).
 - The embedded terminal (SSH/Telnet/serial) needs the **WebView2 Runtime** (built into Windows 11;

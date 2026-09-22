@@ -1,5 +1,11 @@
 # Plan refaktoryzacji `MainWindow.xaml.cs` (god object → kontrolery/serwisy)
 
+> **Status: zrealizowany.** Wszystkie sześć kroków weszło w PR-ach #155–#165 (`MainWindow.xaml.cs`
+> ~6000 → ~3400 linii). Dokument zostaje jako zapis podejścia; kolejne możliwe ekstrakcje są
+> w [`ROADMAP.md`](ROADMAP.md) („Code health"). Uwaga do „Kontekstu" niżej: projekt **da się jednak
+> zbudować na Linuksie** z `-p:EnableWindowsTargeting=true` (sama kompilacja; testy i uruchomienie
+> nadal wymagają Windows).
+
 ## Kontekst
 
 `src/RdpManager/MainWindow.xaml.cs` to **6016 linii, ~260 metod, ~70 pól** w jednej klasie
