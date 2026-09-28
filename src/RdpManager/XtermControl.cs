@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -138,10 +139,10 @@ namespace RdpManager
                         var text = root.GetProperty("d").GetString();
                         Dispatcher.BeginInvoke(new Action(() => WriteTranscriptFile(text)));
                         break;
-                    case "copy": // zaznaczenie / Ctrl+Shift+C → schowek Windows
+                    case "copy": // zaznaczenie / Ctrl+Shift+C / prawy klik → schowek Windows
                         var sel = root.GetProperty("d").GetString();
                         if (!string.IsNullOrEmpty(sel))
-                            Dispatcher.BeginInvoke(new Action(() => { try { Clipboard.SetText(sel); } catch { } }));
+                            Dispatcher.BeginInvoke(new Action(() => TrySetClipboard(sel)));
                         break;
                     case "snippets": // Ctrl+Shift+K → lista snippetów (okno decyduje, jak ją pokazać)
                         Dispatcher.BeginInvoke(new Action(() => SnippetPickerRequested?.Invoke()));
@@ -150,22 +151,66 @@ namespace RdpManager
                         var nth = root.GetProperty("n").GetInt32();
                         Dispatcher.BeginInvoke(new Action(() => SnippetRequested?.Invoke(nth)));
                         break;
-                    case "paste": // Ctrl+Shift+V → tekst ze schowka do terminala (JSON = kanał sterujący)
-                        Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            try
-                            {
-                                string txt = Clipboard.GetText();
-                                if (!string.IsNullOrEmpty(txt) && !_disposed)
-                                    Web.CoreWebView2?.PostWebMessageAsJson(
-                                        JsonSerializer.Serialize(new { t = "paste", d = txt }));
-                            }
-                            catch { }
-                        }));
+                    case "paste": // Ctrl+V / Ctrl+Shift+V / Shift+Ins / prawy / środkowy klik
+                        Dispatcher.BeginInvoke(new Action(PasteFromClipboard));
                         break;
                 }
             }
             catch { /* uszkodzona wiadomość — ignoruj */ }
+        }
+
+        // ---------- Schowek ----------
+        //
+        // Windows pozwala trzymać otwarty schowek tylko JEDNEMU procesowi naraz. Menedżer schowka,
+        // zdalny pulpit czy nawet Excel potrafią go zająć na ułamek sekundy — wtedy Clipboard.GetText
+        // rzuca COMException (CLIPBRD_E_CANT_OPEN). Dotąd łapał to pusty catch, więc wklejanie po
+        // prostu nic nie robiło i nie było jak zgadnąć, dlaczego. Stąd ponowienia i widoczny komunikat.
+
+        private const int ClipboardRetries = 5;
+        private const int ClipboardRetryMs = 20;
+
+        private static bool TryGetClipboardText(out string text)
+        {
+            for (int i = 0; i < ClipboardRetries; i++)
+            {
+                try { text = Clipboard.GetText(); return true; }
+                catch (COMException) { System.Threading.Thread.Sleep(ClipboardRetryMs); }
+                catch { break; }   // inny błąd (np. brak STA) — ponawianie nic nie da
+            }
+            text = null;
+            return false;
+        }
+
+        private void TrySetClipboard(string text)
+        {
+            for (int i = 0; i < ClipboardRetries; i++)
+            {
+                try { Clipboard.SetText(text); return; }
+                catch (COMException) { System.Threading.Thread.Sleep(ClipboardRetryMs); }
+                catch { break; }
+            }
+            WriteLocal("\r\n\x1b[93m" + LocalizationManager.S("S.term.clip.busy") + "\x1b[0m\r\n");
+        }
+
+        /// <summary>
+        /// Wkleja schowek do terminala. Tekst idzie kanałem sterującym (JSON), a nie jako wyjście —
+        /// po drugiej stronie robi to term.paste, które respektuje bracketed paste, więc powłoka wie,
+        /// że to wklejka, i nie wykonuje wielowierszowego bloku linia po linii.
+        /// </summary>
+        private void PasteFromClipboard()
+        {
+            if (_disposed) return;
+            if (!TryGetClipboardText(out string txt))
+            {
+                WriteLocal("\r\n\x1b[93m" + LocalizationManager.S("S.term.clip.busy") + "\x1b[0m\r\n");
+                return;
+            }
+            if (string.IsNullOrEmpty(txt)) return;   // pusty schowek to nie błąd — po prostu nie ma czego wkleić
+            try
+            {
+                Web.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(new { t = "paste", d = txt }));
+            }
+            catch { /* strona znika przy zamykaniu karty */ }
         }
 
         // ---------- Zdarzenia stanu ----------
@@ -489,6 +534,16 @@ term.attachCustomKeyEventHandler(ev => {
     window.chrome.webview.postMessage({ t:'paste' });
     return false;
   }
+  // Ctrl+V i Shift+Insert też wklejają. Ctrl+Shift+V to konwencja terminali linuksowych, której
+  // użytkownik Windows po prostu nie naciśnie — a tu nie było żadnej innej drogi.
+  // Ctrl+C ZOSTAJE SIGINT-em i nie jest przeciążany: kopiowanie ma już ścieżkę automatyczną
+  // (zaznaczenie samo trafia do schowka, niżej), więc nie ma czego do niego dowiązywać. Wklejanie
+  // takiej ścieżki nie ma — i stąd cała ta różnica.
+  if ((ev.ctrlKey && !ev.shiftKey && !ev.altKey && ev.code === 'KeyV') ||
+      (ev.shiftKey && !ev.ctrlKey && !ev.altKey && ev.code === 'Insert')) {
+    window.chrome.webview.postMessage({ t:'paste' });
+    return false;
+  }
   if (ev.ctrlKey && ev.shiftKey && ev.code === 'KeyF') { openSearch(); return false; }
   // Snippety: lista (K) i pierwsze dziewięć wprost. Skróty muszą być łapane TUTAJ — WebView2 to osobne
   // okno, więc klawisze wpisywane w terminalu nigdy nie docierają do warstwy WPF.
@@ -503,6 +558,31 @@ term.attachCustomKeyEventHandler(ev => {
   if (ev.key === 'Escape' && !sb.hidden) { closeSearch(); return false; }
   return true;
 });
+// Mysz: schowek po windowsowemu i po puttowemu naraz.
+//   prawy przycisk  — jest zaznaczenie: kopiuj, nie ma: wklej (jak Terminal Windows),
+//   środkowy        — wklej (jak PuTTY/X11).
+// Menu kontekstowe WebView2 jest wyłączone (AreDefaultContextMenusEnabled = false), więc prawy
+// przycisk dotąd nie robił w terminalu zupełnie nic.
+//
+// Oba działają TYLKO wtedy, gdy aplikacja w terminalu nie przejęła myszy. vim, htop czy mc włączają
+// raportowanie myszy i czekają na te kliknięcia — przechwycenie ich odebrałoby im sterowanie.
+function mouseFree() {
+  try { return !term.modes || term.modes.mouseTrackingMode === 'none'; } catch (e) { return true; }
+}
+const termEl = document.getElementById('t');
+termEl.addEventListener('contextmenu', ev => {
+  if (!mouseFree()) return;
+  ev.preventDefault();
+  const s = term.getSelection();
+  if (s) { window.chrome.webview.postMessage({ t:'copy', d:s }); term.clearSelection(); }
+  else window.chrome.webview.postMessage({ t:'paste' });
+});
+termEl.addEventListener('mousedown', ev => {
+  if (ev.button !== 1 || !mouseFree()) return;   // 1 = środkowy przycisk
+  ev.preventDefault();
+  window.chrome.webview.postMessage({ t:'paste' });
+});
+
 // Kopiowanie samym zaznaczeniem (styl PuTTY), z małym opóźnieniem.
 let selT = null;
 term.onSelectionChange(() => {
