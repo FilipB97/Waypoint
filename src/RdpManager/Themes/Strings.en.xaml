@@ -412,6 +412,10 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.snip.nonumber">There is no snippet number {0}.</sys:String>
     <sys:String x:Key="S.snip.emptywarn">Entries with no command: {0}. They will not be saved — an empty snippet sends nothing.</sys:String>
     <sys:String x:Key="S.keys.snippets">Command snippets</sys:String>
+    <sys:String x:Key="S.keys.termpaste">Paste into the terminal (also Shift+Insert)</sys:String>
+    <sys:String x:Key="S.keys.rmb">Right click</sys:String>
+    <sys:String x:Key="S.keys.termclip">In the terminal: copy the selection, or paste</sys:String>
+    <sys:String x:Key="S.term.clip.busy">The clipboard is currently held by another program — try again.</sys:String>
     <sys:String x:Key="S.st.importedProfile">Profile imported ✓</sys:String>
     <sys:String x:Key="S.warn.telnet.title">Telnet — unencrypted</sys:String>
     <sys:String x:Key="S.warn.telnet">Telnet transmits everything, including your password, in clear text. Use it only on trusted networks. Prefer SSH where possible.</sys:String>

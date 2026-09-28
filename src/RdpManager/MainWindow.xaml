@@ -1332,6 +1332,16 @@
                         <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+Shift+K" Style="{StaticResource KeyCapText}"/></Border>
                         <TextBlock Text="{DynamicResource S.keys.snippets}" Style="{StaticResource KeyDesc}"/>
                     </StackPanel>
+                    <!-- Schowek terminala. Dotąd jedyną drogą było Ctrl+Shift+V — konwencja terminali
+                         linuksowych, nieudokumentowana nigdzie w interfejsie. -->
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="Ctrl+V" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.termpaste}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource KeyRow}">
+                        <Border Style="{StaticResource KeyCap}"><TextBlock Text="{DynamicResource S.keys.rmb}" Style="{StaticResource KeyCapText}"/></Border>
+                        <TextBlock Text="{DynamicResource S.keys.termclip}" Style="{StaticResource KeyDesc}"/>
+                    </StackPanel>
                     <StackPanel Style="{StaticResource KeyRow}" Margin="0,0,0,0">
                         <Border Style="{StaticResource KeyCap}"><TextBlock Text="F1" Style="{StaticResource KeyCapText}"/></Border>
                         <TextBlock Text="{DynamicResource S.keys.help}" Style="{StaticResource KeyDesc}"/>
