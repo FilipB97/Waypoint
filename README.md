@@ -34,7 +34,9 @@ it's a self-contained single file, no .NET install required (Windows 10/11 x64).
 - **Telnet & serial (COM)** — classic terminal sessions for switches, routers and embedded devices
   (configurable baud rate for serial).
 - **SFTP / FTP / FTPS** — a **dual-pane file manager**: browse local and remote side by side, upload
-  and download files and whole folders **recursively**, with progress.
+  and download files and whole folders **recursively**, with progress. **Edit remote files in place**
+  (F4) in a built-in Monaco editor: syntax highlighting, original encoding and line endings kept,
+  and a safe save (temp file + atomic rename) that preserves permissions and ownership.
 - **REST / HTTP** — a built-in, Postman-style **API client** (see below).
 - **Web links** — open a saved URL / web panel.
 

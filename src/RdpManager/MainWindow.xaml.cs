@@ -1058,6 +1058,14 @@ namespace RdpManager
                 return;
             }
 
+            // Edytory plików są osobnymi oknami (bez Owner) — same nie zamknęłyby się z aplikacją,
+            // a niezapisane zmiany przepadłyby bez pytania.
+            if (!(_update?.IsUpdating ?? false) && !FileEditorWindow.CloseAllForShutdown(this))
+            {
+                e.Cancel = true;
+                return;
+            }
+
             // Zapamiętaj otwarte karty + dograj odroczony zapis ustawień (debounce zoomu), zanim aplikacja zniknie.
             _settingsSaveTimer?.Stop();
             PersistOpenSessions();
@@ -1454,6 +1462,7 @@ namespace RdpManager
             // presetu albo akcentu musi do nich dojść wiadomością. Bez tego przemalowywały się dopiero
             // nowo otwierane sesje, a już otwarte zostawały na palecie sprzed zmiany.
             foreach (var s in _sessions) s.Term?.ApplyTheme();
+            FileEditorWindow.ApplyThemeAll();
         }
 
         // Filtr Ustawień: chowa karty, których zagregowany (zlokalizowany) tekst nie zawiera zapytania.

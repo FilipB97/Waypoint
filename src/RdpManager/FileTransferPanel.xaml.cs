@@ -915,6 +915,42 @@ namespace RdpManager
             FilePreviewWindow.Open(Window.GetWindow(this), r.Name, data);
         }
 
+        // ---------- Edycja ----------
+
+        // Pobranie idzie TYM połączeniem panelu (otwarcie nie czeka na logowanie), zapis — własnym
+        // połączeniem edytora (patrz FileEditorWindow). Uid z właściciela katalogu domowego służy tylko
+        // do przewidzenia, czy zapis w ogóle ma szansę (plik roota otwiera się od razu tylko do odczytu).
+        private async void Edit_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(FileList.SelectedItem is Row r) || r.IsDir) return;
+            if (r.Len > FileEditorWindow.MaxBytes)
+            { SetStatus(string.Format(L("S.edit.toobig"), FormatSize(FileEditorWindow.MaxBytes)), error: true); return; }
+            if (FileEditorWindow.TryActivate(_factory, r.FullName)) return;
+
+            byte[] data = null;
+            Core.RemoteFileInfo info = null;
+            int? myUid = null;
+            bool ok = await RunAsync(string.Format(L("S.sftp.downloading"), r.Name), fs =>
+            {
+                info = fs.Stat(r.FullName);
+                if (info.Length > FileEditorWindow.MaxBytes) return;
+                using (var ms = new System.IO.MemoryStream())
+                {
+                    fs.Download(info.Path, ms);
+                    data = ms.ToArray();
+                }
+                try { myUid = fs.Stat(fs.HomeDirectory).UserId; } catch { /* nieznany — edytor spróbuje zapisać */ }
+            });
+            if (!ok || info == null) return;
+            if (data == null)
+            { SetStatus(string.Format(L("S.edit.toobig"), FormatSize(FileEditorWindow.MaxBytes)), error: true); return; }
+            if (Core.FilePreview.LooksBinary(data))
+            { SetStatus(L("S.edit.binary"), error: true); return; }
+
+            SetStatus("");
+            FileEditorWindow.OpenFile(Window.GetWindow(this), _factory, r.FullName, r.Name, info, data, myUid);
+        }
+
         // ---------- Filtr listy ----------
 
         private void FilterToggle_Click(object sender, RoutedEventArgs e) => ToggleFilter(FilterRow.Visibility != Visibility.Visible);
@@ -956,6 +992,7 @@ namespace RdpManager
             switch (e.Key)
             {
                 case System.Windows.Input.Key.F2:        Rename_Click(sender, null); e.Handled = true; break;
+                case System.Windows.Input.Key.F4:        Edit_Click(sender, null); e.Handled = true; break;
                 case System.Windows.Input.Key.Delete:    Delete_Click(sender, null); e.Handled = true; break;
                 case System.Windows.Input.Key.F5:        RefreshAsync(); e.Handled = true; break;
                 case System.Windows.Input.Key.Back:      Up_Click(sender, null); e.Handled = true; break;
@@ -993,6 +1030,7 @@ namespace RdpManager
             bool file = one && FileList.SelectedItem is Row r1 && !r1.IsDir;
             MenuOpen.IsEnabled = one;
             MenuPreview.IsEnabled = file;
+            MenuEdit.IsEnabled = file;
             MenuRename.IsEnabled = one;
             // „Pobierz…" na panelu LOKALNYM oznaczałoby kopiowanie pliku z dysku na dysk przez okno
             // zapisu — mylące, więc znika tak samo jak przycisk na pasku (patrz konstruktor).

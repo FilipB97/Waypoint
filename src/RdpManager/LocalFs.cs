@@ -71,6 +71,28 @@ namespace RdpManager
             else File.Delete(Denorm(fullPath));
         }
 
+        public Core.RemoteFileInfo Stat(string path)
+        {
+            var fi = new FileInfo(Denorm(path));
+            if (!fi.Exists) throw new FileNotFoundException(path);
+            return new Core.RemoteFileInfo { Path = path, Length = fi.Length, ModifiedUtc = fi.LastWriteTimeUtc };
+        }
+
+        // Lokalnie: plik tymczasowy obok + File.Replace (podmiana z zachowaniem atrybutów i ACL celu).
+        public SafeWriteResult WriteFileSafe(byte[] content, Core.RemoteFileInfo original)
+        {
+            string real = Denorm(original.Path);
+            string tmp = Path.Combine(Path.GetDirectoryName(real) ?? ".", "." + Path.GetFileName(real) + ".waypoint-" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".tmp");
+            try
+            {
+                File.WriteAllBytes(tmp, content);
+                File.Replace(tmp, real, null, ignoreMetadataErrors: true);
+                return new SafeWriteResult { Mode = SafeWriteMode.AtomicReplace };
+            }
+            catch (Exception e) { throw new SafeWriteException(originalMayBeDamaged: false, e); }
+            finally { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } }
+        }
+
         private static string Norm(string p) => (p ?? "").Replace('\\', '/');
 
         // „/"-ścieżka → ścieżka Windows; goła litera dysku „C:" → „C:\" (inaczej odnosi się do CWD dysku).

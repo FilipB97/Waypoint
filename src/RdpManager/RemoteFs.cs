@@ -33,6 +33,19 @@ namespace RdpManager
         void Delete(string fullPath, bool isDir);
         /// <summary>Zmienia nazwę/przenosi wpis. Obie ścieżki PEŁNE, w formacie danego backendu.</summary>
         void Rename(string fullPath, string newFullPath);
+
+        /// <summary>
+        /// Metadane jednego pliku do edycji: ścieżka po rozwiązaniu dowiązań, rozmiar, czas zmiany
+        /// i — gdzie backend je zna — uprawnienia oraz właściciel (patrz <see cref="Core.RemoteFileInfo"/>).
+        /// </summary>
+        Core.RemoteFileInfo Stat(string path);
+
+        /// <summary>
+        /// Zapisuje CAŁĄ treść pliku otwartego w edytorze tak, żeby błąd w połowie nie zostawił uciętego
+        /// pliku i żeby nie zgubić uprawnień ani właściciela. Rzuca <see cref="SafeWriteException"/>,
+        /// która mówi, czy oryginał mógł ucierpieć. <paramref name="original"/> pochodzi z <see cref="Stat"/>.
+        /// </summary>
+        SafeWriteResult WriteFileSafe(byte[] content, Core.RemoteFileInfo original);
     }
 
     /// <summary>
@@ -86,6 +99,9 @@ namespace RdpManager
             if (isDir) _c.DeleteDirectory(fullPath);
             else _c.DeleteFile(fullPath);
         }
+
+        public Core.RemoteFileInfo Stat(string path) => SftpSafeWriter.Stat(_c, path);
+        public SafeWriteResult WriteFileSafe(byte[] content, Core.RemoteFileInfo original) => SftpSafeWriter.Write(_c, content, original);
 
         public void Dispose()
         {

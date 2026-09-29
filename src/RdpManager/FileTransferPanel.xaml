@@ -206,6 +206,9 @@
                     <Button x:Name="PreviewBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.preview}" AutomationProperties.Name="{DynamicResource S.sftp.preview}" Click="Preview_Click">
                         <ui:SymbolIcon Symbol="Eye24"/>
                     </Button>
+                    <Button x:Name="EditBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.edit.open}" AutomationProperties.Name="{DynamicResource S.edit.open}" Click="Edit_Click">
+                        <ui:SymbolIcon Symbol="Edit24"/>
+                    </Button>
                     <Border Width="1" Margin="4,4" Background="{DynamicResource Border}"/>
                     <Button x:Name="FilterBtn" Style="{StaticResource FtIconBtn}" ToolTip="{DynamicResource S.sftp.filter}" AutomationProperties.Name="{DynamicResource S.sftp.filter}" Click="FilterToggle_Click">
                         <ui:SymbolIcon Symbol="Filter24"/>
@@ -274,6 +277,7 @@
                         <ContextMenu Opened="RowMenu_Opened">
                             <MenuItem x:Name="MenuOpen"     Click="MenuOpen_Click"   Header="{DynamicResource S.sftp.menu.open}"   InputGestureText="Enter"/>
                             <MenuItem x:Name="MenuPreview"  Click="Preview_Click"    Header="{DynamicResource S.sftp.preview}"     InputGestureText="Space"/>
+                            <MenuItem x:Name="MenuEdit"     Click="Edit_Click"       Header="{DynamicResource S.edit.open}"        InputGestureText="F4"/>
                             <Separator/>
                             <MenuItem x:Name="MenuDownload" Click="Download_Click"   Header="{DynamicResource S.sftp.download}"/>
                             <MenuItem x:Name="MenuRename"   Click="Rename_Click"     Header="{DynamicResource S.sftp.rename}"      InputGestureText="F2"/>
