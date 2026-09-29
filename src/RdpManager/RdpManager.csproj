@@ -24,6 +24,11 @@
     <!-- xterm.js dla terminala SSH — osadzone w exe, wstrzykiwane inline do WebView2 (offline, bez CDN). -->
     <None Remove="Assets\xterm\**" />
     <Resource Include="Assets\xterm\**" />
+    <!-- Monaco dla edytora plików — zip z przyciętą paczką (scripts/monaco/build-bundle.py), serwowany z pamięci. -->
+    <None Remove="Assets\monaco\**" />
+    <Resource Include="Assets\monaco\monaco-0.52.2.zip" />
+    <None Remove="Assets\editor\**" />
+    <Resource Include="Assets\editor\**" />
   </ItemGroup>
 
   <ItemGroup>

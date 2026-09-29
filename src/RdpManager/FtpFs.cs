@@ -127,6 +127,38 @@ namespace RdpManager
             else _c.DeleteFile(fullPath);
         }
 
+        public Core.RemoteFileInfo Stat(string path)
+        {
+            // FTP nie ma standardowego odczytu uprawnień ani właściciela (MLST bywa, ale bez gwarancji),
+            // więc tylko rozmiar i czas — wystarczą do wykrycia zmiany pliku w międzyczasie.
+            return new Core.RemoteFileInfo
+            {
+                Path = path,
+                Length = _c.GetFileSize(path),
+                ModifiedUtc = _c.GetModifiedTime(path).ToUniversalTime()
+            };
+        }
+
+        /// <summary>
+        /// FTP: zapis w miejscu. Podmiana przez RNFR/RNTO na istniejący plik zależy od serwera (część
+        /// odmawia, część nadpisuje), a plik tymczasowy dostałby uprawnienia z umask serwera zamiast
+        /// oryginalnych, których przez FTP nie odczytamy. Uczciwiej nadpisać i powiedzieć o tym.
+        /// </summary>
+        public SafeWriteResult WriteFileSafe(byte[] content, Core.RemoteFileInfo original)
+        {
+            try
+            {
+                using (var ms = new MemoryStream(content, writable: false))
+                {
+                    var st = _c.UploadStream(ms, original.Path, FtpRemoteExists.Overwrite);
+                    if (st == FtpStatus.Failed) throw new IOException("FTP: serwer odrzucił zapis.");
+                }
+            }
+            // Nie wiadomo, czy serwer zdążył obciąć plik — zakładamy gorszy przypadek.
+            catch (Exception e) { throw new SafeWriteException(originalMayBeDamaged: true, e); }
+            return new SafeWriteResult { Mode = SafeWriteMode.InPlace, FallbackReasonKey = "S.edit.fb.ftp" };
+        }
+
         public void Dispose()
         {
             try { _c?.Dispose(); } catch { }

@@ -1,0 +1,122 @@
+<!doctype html>
+<!--
+  Edytor plików Waypoint — strona hostowana w WebView2 (FileEditorWindow). Strona i Monaco przychodzą
+  z JEDNEGO wirtualnego źródła https://editor.waypoint.example/ obsługiwanego w C# z osadzonego zipa
+  (WebResourceRequested), więc nic nie idzie do sieci, a workery Monaco (np. walidacja JSON) wstają,
+  bo są z tego samego źródła co strona.
+
+  Kanał z C#: wiadomości JSON {t:...}
+    open  {text, lang, readOnly, fontSize, wrap, theme}  — treść pliku (końce linii już jako \n)
+    theme {theme}          — przemalowanie po zmianie palety
+    saved {}               — zapis się udał: bieżąca wersja to nowy punkt „bez zmian"
+    readOnly {v}           — przełączenie trybu tylko-do-odczytu
+    wrap {v}               — zawijanie wierszy
+    lang {v}               — zmiana języka podświetlania
+    reset {text}           — ponowne wczytanie z serwera: nowa treść, stan „bez zmian"
+    getText {}             — okno prosi o treść (przycisk Zapisz, zapis przy zamykaniu, kopia lokalna)
+    focus {}
+  Kanał do C#:
+    ready {}               — Monaco wczytane, można wysłać open
+    save {text}            — Ctrl+S
+    text {text}            — odpowiedź na getText
+    dirty {v}              — czy treść różni się od ostatnio zapisanej/otwartej
+    cursor {ln, col, sel}  — pozycja kursora i liczba zaznaczonych znaków
+-->
+<html><head><meta charset="utf-8">
+<style>
+  html, body, #e { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
+  body { background: var(--bg, #1e1e1e); }
+</style></head>
+<body><div id="e"></div>
+<script src="/vs/loader.js"></script>
+<script>
+(function () {
+  var host = window.chrome && window.chrome.webview;
+  function send(m) { try { host && host.postMessage(m); } catch (e) {} }
+
+  var editor = null, savedVersion = 0, lastDirty = false, pending = [];
+
+  function applyTheme(t) {
+    if (!t) return;
+    document.body.style.setProperty('--bg', t.colors['editor.background'] || '#1e1e1e');
+    monaco.editor.defineTheme('wp', { base: t.base, inherit: true, rules: t.rules || [], colors: t.colors });
+    monaco.editor.setTheme('wp');
+  }
+
+  function reportDirty() {
+    if (!editor) return;
+    var d = editor.getModel().getAlternativeVersionId() !== savedVersion;
+    if (d !== lastDirty) { lastDirty = d; send({ t: 'dirty', v: d }); }
+  }
+
+  function doSave() { if (editor) send({ t: 'save', text: editor.getValue() }); }
+
+  function handle(m) {
+    if (!m || !m.t) return;
+    if (!editor && m.t !== 'open') { pending.push(m); return; }
+    switch (m.t) {
+      case 'open': open(m); break;
+      case 'theme': applyTheme(m.theme); break;
+      case 'saved': savedVersion = editor.getModel().getAlternativeVersionId(); reportDirty(); break;
+      case 'readOnly': editor.updateOptions({ readOnly: !!m.v }); break;
+      case 'wrap': editor.updateOptions({ wordWrap: m.v ? 'on' : 'off' }); break;
+      case 'lang': monaco.editor.setModelLanguage(editor.getModel(), m.v || 'plaintext'); break;
+      case 'getText': send({ t: 'text', text: editor.getValue() }); break;
+      case 'reset':
+        editor.getModel().setValue(m.text || '');
+        editor.getModel().setEOL(monaco.editor.EndOfLineSequence.LF);
+        savedVersion = editor.getModel().getAlternativeVersionId();
+        lastDirty = true; reportDirty();
+        break;
+      case 'focus': editor.focus(); break;
+    }
+  }
+
+  function open(m) {
+    applyTheme(m.theme);
+    // Model zawsze z samymi \n — format pliku (CRLF/CR) odtwarza C# przy zapisie.
+    var model = monaco.editor.createModel(m.text || '', m.lang || 'plaintext',
+      monaco.Uri.parse('file:///' + encodeURIComponent(m.name || 'file')));
+    model.setEOL(monaco.editor.EndOfLineSequence.LF);
+    editor = monaco.editor.create(document.getElementById('e'), {
+      model: model,
+      theme: 'wp',
+      readOnly: !!m.readOnly,
+      automaticLayout: true,
+      fontFamily: "'Cascadia Mono', 'Cascadia Code', Consolas, 'Courier New', monospace",
+      fontSize: m.fontSize || 14,
+      wordWrap: m.wrap ? 'on' : 'off',
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      renderWhitespace: 'selection',
+      renderLineHighlight: 'line',
+      smoothScrolling: true,
+      mouseWheelZoom: true,
+      contextmenu: true,
+      autoDetectHighContrast: false,
+      fixedOverflowWidgets: true,
+      detectIndentation: true,
+      tabSize: 4
+    });
+    savedVersion = model.getAlternativeVersionId();
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, doSave);
+    model.onDidChangeContent(reportDirty);
+    editor.onDidChangeCursorSelection(function () {
+      var p = editor.getPosition(), s = editor.getSelection();
+      send({ t: 'cursor', ln: p.lineNumber, col: p.column, sel: s ? model.getValueInRange(s).length : 0 });
+    });
+    editor.focus();
+    send({ t: 'cursor', ln: 1, col: 1, sel: 0 });
+    var q = pending; pending = [];
+    q.forEach(handle);
+  }
+
+  if (host) host.addEventListener('message', function (ev) { handle(ev.data); });
+
+  // Pełny adres, nie „/vs": worker ładuje moduły przez fetch, a ten w workerze nie zna adresu bazowego.
+  require.config({ paths: { vs: location.origin + '/vs' } });
+  require(['vs/editor/editor.main'], function () { send({ t: 'ready' }); });
+})();
+</script>
+</body></html>

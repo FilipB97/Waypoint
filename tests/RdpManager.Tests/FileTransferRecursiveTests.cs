@@ -191,6 +191,8 @@ namespace RdpManager.Tests
             public void CreateDirectory(string path) { }
             public void Delete(string fullPath, bool isDir) { }
             public void Rename(string fullPath, string newFullPath) => throw new NotSupportedException();
+            public RdpManager.Core.RemoteFileInfo Stat(string path) => throw new NotSupportedException();
+            public SafeWriteResult WriteFileSafe(byte[] content, RdpManager.Core.RemoteFileInfo original) => throw new NotSupportedException();
             public void Dispose() { }
         }
     }
