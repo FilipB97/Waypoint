@@ -64,26 +64,27 @@
   html{scroll-behavior:smooth}
   body{
     margin:0;background:var(--bg);color:var(--tx);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;
-    background-image:
-      radial-gradient(1100px 620px at 78% -12%,rgba(38,87,214,.22),transparent 58%),
-      radial-gradient(760px 560px at 2% 12%,rgba(124,108,251,.14),transparent 55%),
-      radial-gradient(700px 700px at 60% 108%,rgba(54,196,207,.08),transparent 55%);
-    background-attachment:fixed;overflow-x:hidden;
+    overflow-x:hidden;
   }
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1140px;margin:0 auto;padding:0 26px}
-  h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.03em;text-wrap:balance}
+  h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.025em;line-height:1.12;text-wrap:balance}
   code{font-family:var(--mono);font-size:.88em;background:rgba(255,255,255,.08);padding:1px 6px;border-radius:5px;color:var(--tx)}
-  .eye{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--acc2)}
-  .eye::before{content:"";width:22px;height:1px;background:linear-gradient(90deg,transparent,var(--acc2))}
-  .eye.c{justify-content:center}.eye.c::before{display:none}
+  /* Section label = a waypoint on the route: a hollow node with a short track, in mono, normal case.
+     Replaces letter-spaced uppercase eyebrows (the most common template label). */
+  .eye{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:0;color:var(--tx2)}
+  .eye::before{content:"";width:40px;height:10px;flex:none;
+    background:radial-gradient(circle at calc(100% - 5px) 50%,transparent 2.6px,var(--acc2) 3px 5px,transparent 5.4px),
+      linear-gradient(var(--line2),var(--line2)) left center/30px 1px no-repeat}
+  .eye.c{justify-content:center}
 
-  .btn{display:inline-flex;align-items:center;gap:9px;font-size:14.5px;font-weight:600;padding:13px 24px;border-radius:12px;
-    border:1px solid var(--line2);cursor:pointer;transition:.2s;white-space:nowrap}
-  .btn.pri{background:linear-gradient(135deg,#6c6dff,#7c4dff);border-color:transparent;color:#fff;box-shadow:0 14px 34px -12px rgba(108,109,255,.7)}
-  .btn.pri:hover{transform:translateY(-2px);box-shadow:0 20px 44px -12px rgba(38,87,214,.85)}
-  .btn.gh{background:var(--panel)}
-  .btn.gh:hover{background:var(--panel2);transform:translateY(-2px)}
+  .btn{display:inline-flex;align-items:center;gap:9px;font-size:14.5px;font-weight:600;padding:13px 24px;border-radius:10px;
+    border:1px solid var(--line2);cursor:pointer;transition:background .2s,border-color .2s,color .2s;white-space:nowrap}
+  /* Solid accent, no coloured glow and no lift on hover: the button reacts by colour only. */
+  .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+  .btn.pri:hover{background:#5a5bf0;border-color:#5a5bf0}
+  .btn.gh{background:transparent}
+  .btn.gh:hover{background:var(--panel2);border-color:var(--tx3)}
   .btn.star svg{fill:#ffd166}
   .starcount{opacity:.7;font-variant-numeric:tabular-nums}
 
@@ -91,7 +92,7 @@
   nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);background:rgba(8,11,20,.6);border-bottom:1px solid var(--line)}
   .nav-in{display:flex;align-items:center;justify-content:space-between;height:66px;gap:16px}
   .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:17px}
-  .mark{width:30px;height:30px;flex:none;filter:drop-shadow(0 4px 12px rgba(108,109,255,.5))}
+  .mark{width:30px;height:30px;flex:none}
   .nlinks{display:flex;align-items:center;gap:24px;font-size:14.5px;color:var(--tx2)}
   .nlinks a.link:hover{color:var(--tx)}
   .nlinks .btn{padding:9px 16px;font-size:14px}
@@ -101,12 +102,12 @@
   @media(max-width:900px){.nlinks a.link{display:none}}
 
   /* hero */
-  .hero{text-align:center;padding:74px 0 20px;position:relative}
-  .badge{display:inline-flex;align-items:center;gap:9px;font-size:13px;color:var(--acc2);background:rgba(38,87,214,.1);
-    border:1px solid rgba(76,134,255,.28);border-radius:999px;padding:7px 16px;font-weight:600}
-  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--on);box-shadow:0 0 0 4px rgba(61,220,151,.18)}
-  h1{font-size:clamp(40px,6.4vw,74px);line-height:1.02;margin:24px auto 0;max-width:15ch}
-  h1 .grad{background:linear-gradient(115deg,#6e9eff,#a996ff 58%,#4bd6cf);-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* the hero is also .wrap: set only vertical padding so the 26px side gutter survives on phones */
+  .hero{text-align:center;padding-top:74px;padding-bottom:20px;position:relative}
+  .win{text-align:left}
+  .badge{font-size:13.5px}
+  h1{font-size:clamp(40px,6.4vw,76px);line-height:1;margin:22px auto 0;max-width:15ch;letter-spacing:-.035em}
+  h1 .grad{color:var(--acc2)}
   .lead{color:var(--tx2);font-size:19px;margin:22px auto 0;max-width:60ch}
   .lead b{color:var(--tx);font-weight:600}
   .hcta{display:flex;gap:14px;justify-content:center;margin-top:32px;flex-wrap:wrap}
@@ -119,7 +120,6 @@
   .meta .sep{width:3px;height:3px;border-radius:50%;background:var(--tx3);display:inline-block}
 
   .stage-wrap{margin:52px auto 0;max-width:1000px;position:relative;perspective:1800px}
-  .glow{position:absolute;inset:-8% 6% auto;height:70%;background:radial-gradient(60% 100% at 50% 0,rgba(38,87,214,.5),transparent 70%);filter:blur(46px);z-index:0}
   .float{position:relative;z-index:1;transform:rotateX(9deg);transform-origin:50% 0;animation:rise 1.1s cubic-bezier(.2,.7,.2,1) both}
   @keyframes rise{from{opacity:0;transform:rotateX(16deg) translateY(40px)}to{opacity:1;transform:rotateX(9deg) translateY(0)}}
 
@@ -138,7 +138,9 @@
   .tree{width:228px;flex:none;border-right:1px solid var(--line);padding:13px 11px;background:rgba(255,255,255,.014)}
   .srch{height:30px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.28);display:flex;align-items:center;padding:0 10px;color:var(--tx3);font-size:12px;font-family:var(--mono)}
   .grp{margin-top:14px}
-  .gh{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px}
+  /* group header in the window mock-up; scoped to .grp, because the bare .gh also hit the "View on GitHub" button
+     (it rendered in 11px uppercase) */
+  .grp>.gh{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--tx3);margin-bottom:7px}
   .av{width:16px;height:16px;border-radius:5px;flex:none}
   .av.prod{background:linear-gradient(135deg,#7c6cfb,#4f3fd1)}.av.stg{background:linear-gradient(135deg,#ffb454,#d98f2e)}.av.cli{background:linear-gradient(135deg,#36c4cf,#1f8b94)}
   .row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--tx2)}
@@ -152,19 +154,19 @@
   .tab.on{color:var(--tx);border-bottom-color:var(--acc2)}
   .screen{flex:1;background:#080a10;padding:16px 18px;font-family:var(--mono);font-size:13px;line-height:1.9;overflow:hidden}
   .screen .ok{color:var(--on)}.screen .p{color:var(--acc2)}.screen .a{color:var(--sftp)}.screen .m{color:var(--tx3)}
-  .tcaret{display:inline-block;width:7px;height:15px;background:var(--on);translate:0 2px;animation:bl 1.05s steps(1) infinite}
-  @keyframes bl{50%{opacity:0}}
+  .tcaret{display:inline-block;width:7px;height:15px;background:var(--on);translate:0 2px}
 
   /* stats */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:34px 0}
   .stat{text-align:center;border-left:1px solid var(--line)}
   .stat:first-child{border-left:0}
-  .stat .n{font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;background:linear-gradient(120deg,#eef0f6,#9cb6ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .n{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--tx)}
   .stat .l{font-size:12.5px;color:var(--tx2);margin-top:4px}
   @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr);gap:24px 16px}.stat:nth-child(3){border-left:0}}
 
   /* sections */
-  section{padding:78px 0;scroll-margin-top:80px}
+  /* sections also carry .wrap, whose `padding:0 26px` used to win and zero the vertical rhythm */
+  section,section.wrap{padding-top:78px;padding-bottom:78px;scroll-margin-top:80px}
   .shead{max-width:660px}
   .shead.center{margin:0 auto;text-align:center}
   h2{font-size:clamp(28px,4vw,40px);margin-top:14px}
@@ -176,7 +178,7 @@
   .frow:first-of-type{margin-top:44px}
   .frow.rev .txt{order:2}
   .frow h3{font-size:26px;letter-spacing:-.02em}
-  .frow .fk{color:var(--acc2);font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase}
+  .frow .fk{color:var(--acc2);font-family:var(--mono);font-weight:500;font-size:13px}
   .frow p{color:var(--tx2);font-size:15.5px;margin:14px 0 0}
   .flist{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
   .flist li{display:flex;gap:11px;color:var(--tx2);font-size:14.5px}
@@ -190,7 +192,7 @@
   .vhead i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.12)}
   .panes{display:grid;grid-template-columns:1fr 1fr;font-family:var(--mono);font-size:12px}
   .pane{padding:12px 13px}.pane+.pane{border-left:1px solid var(--line)}
-  .pane .ph{color:var(--tx3);font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px}
+  .pane .ph{color:var(--tx3);font-size:11px;margin-bottom:9px}
   .fitem{display:flex;align-items:center;gap:9px;padding:5px 0;color:var(--tx2)}
   .fitem .fi{width:13px;height:13px;border-radius:3px;background:rgba(76,134,255,.3);flex:none}
   .fitem .fi.f{background:rgba(240,180,95,.35)}
@@ -206,9 +208,9 @@
 
   /* bento */
   .bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-top:44px}
-  .cell{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:.2s}
-  .cell:hover{border-color:var(--line2);transform:translateY(-3px);background:var(--panel2)}
-  .cell .ico{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;margin-bottom:15px;background:rgba(76,134,255,.12);border:1px solid rgba(76,134,255,.24)}
+  .cell{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:border-color .2s}
+  .cell:hover{border-color:var(--line2)}
+  .cell .ico{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;margin-bottom:15px;background:rgba(108,109,255,.12)}
   .cell .ico svg{width:20px;height:20px;stroke:var(--acc2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .cell h3{font-size:16px;margin:0 0 7px}
   .cell p{margin:0;color:var(--tx2);font-size:14px}
@@ -220,10 +222,10 @@
   .ptabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
   .ptab{font:inherit;font-size:14px;font-weight:600;color:var(--tx2);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 18px;cursor:pointer;transition:.15s}
   .ptab:hover{color:var(--tx);border-color:var(--line2)}
-  .ptab.on{color:#fff;background:linear-gradient(135deg,#6c6dff,#7c4dff);border-color:transparent}
+  .ptab.on{color:#fff;background:var(--acc);border-color:var(--acc)}
   .pbody{margin-top:20px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:28px 26px;min-height:150px}
   .ppanel{display:none}.ppanel.on{display:block}
-  .ppanel .ptag{display:inline-block;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.6px;color:var(--acc2);background:rgba(76,134,255,.12);border:1px solid rgba(76,134,255,.24);border-radius:7px;padding:3px 10px;margin-bottom:12px}
+  .ppanel .ptag{display:inline-block;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--acc2);background:rgba(76,134,255,.12);border:1px solid rgba(76,134,255,.24);border-radius:7px;padding:3px 10px;margin-bottom:12px}
   .ppanel h3{font-size:19px;margin:0 0 8px}.ppanel p{margin:0;color:var(--tx2);font-size:15px;max-width:70ch}
 
   /* comparison */
@@ -241,20 +243,21 @@
 
   /* quick start */
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px}
-  .step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;position:relative}
-  .step .n{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,#6c6dff,#7c4dff);margin-bottom:14px}
+  /* Quick start as stops on one route: a line on top, the step number as a waypoint node. */
+  .step{border-top:1px solid var(--line2);padding:22px 0 0;position:relative}
+  .step .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:13px;color:var(--acc2);background:var(--bg);border:2px solid var(--acc2);margin:-38px 0 14px}
   .step h3{margin:0 0 6px;font-size:16px}.step p{margin:0;color:var(--tx2);font-size:14px}
   @media(max-width:720px){.steps{grid-template-columns:1fr}}
 
   /* band (security) */
-  .band{background:linear-gradient(180deg,rgba(124,108,251,.1),rgba(38,87,214,.06));border:1px solid var(--line);border-radius:18px;
+  .band{background:var(--bg2);border:1px solid var(--line);border-radius:18px;
     padding:40px;display:flex;gap:32px;align-items:center;flex-wrap:wrap;justify-content:space-between}
   .band .txt{max-width:680px}.band h2{font-size:26px;margin-top:10px}.band p{margin:14px 0 0;color:var(--tx2)}.band b{color:var(--tx)}
 
   /* faq */
-  .faq{margin-top:40px;display:grid;gap:12px;max-width:820px}
-  .faq details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:2px 20px}
-  .faq details[open]{border-color:var(--line2)}
+  /* FAQ as a ruled list, not a stack of boxes */
+  .faq{margin-top:40px;display:grid;max-width:820px;border-top:1px solid var(--line2)}
+  .faq details{border-bottom:1px solid var(--line)}
   .faq summary{cursor:pointer;padding:17px 0;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
   .faq summary::-webkit-details-marker{display:none}
   .faq summary::after{content:"+";color:var(--acc2);font-weight:800;font-size:20px;transition:.2s}
@@ -263,13 +266,15 @@
 
   /* roadmap */
   .road{margin-top:40px;display:grid;gap:12px;max-width:760px}
-  .road .r{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px}
-  .road .r .dot{width:9px;height:9px;border-radius:50%;background:var(--acc2);margin-top:7px;flex:none;box-shadow:0 0 0 4px rgba(76,134,255,.14)}
+  /* Roadmap literally as a route: nodes on one vertical line */
+  .road{gap:0}
+  .road .r{display:flex;gap:16px;align-items:flex-start;padding:0 0 22px;position:relative}
+  .road .r:not(:last-child)::before{content:"";position:absolute;left:5px;top:16px;bottom:-2px;width:2px;background:var(--line2)}
+  .road .r .dot{width:12px;height:12px;border-radius:50%;background:var(--bg);border:2px solid var(--acc2);margin-top:6px;flex:none;position:relative}
   .road .r p{margin:0;color:var(--tx2);font-size:14.5px}.road .r b{color:var(--tx)}
 
   /* download */
-  .dl{text-align:center;border:1px solid var(--line2);border-radius:22px;padding:66px 26px;
-    background:radial-gradient(700px 320px at 50% -10%,rgba(38,87,214,.22),transparent 62%),linear-gradient(180deg,var(--panel),transparent)}
+  .dl{text-align:center;border:1px solid var(--line2);border-radius:22px;padding:66px 26px;background:var(--bg2)}
   .dl .hcta{margin-top:30px}
   .note{margin-top:22px;font-size:13px;color:var(--tx3);max-width:60ch;margin-left:auto;margin-right:auto;line-height:1.7}
 
@@ -328,9 +333,9 @@
 </div></nav>
 
 <header class="wrap hero">
-  <span class="badge"><span class="dot"></span> <span data-i18n="hero.badge2">Open source · MIT · Windows</span></span>
+  <span class="eye badge"><span data-i18n="hero.badge2">Open source · MIT · Windows</span></span>
   <h1 data-i18n-html="hero.title">Every remote connection,<br><span class="grad">one modern app.</span></h1>
-  <p class="lead" data-i18n-html="hero.lead"><b>Waypoint</b> is a modern connection manager for Windows — RDP, SSH, VNC, Telnet &amp; serial, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.</p>
+  <p class="lead" data-i18n-html="hero.lead"><b>Waypoint</b> is a modern connection manager for Windows: RDP, SSH, VNC, Telnet &amp; serial, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.</p>
   <div class="hcta">
     <a class="btn pri" href="https://github.com/FilipB97/Waypoint/releases/latest">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
@@ -356,7 +361,7 @@
       <div class="win" role="img" aria-label="Waypoint app with an SSH session, connection tree and tabs">
         <div class="wtitle">
           <svg class="mark" style="width:17px;height:17px;filter:none" viewBox="41 30 430 430" aria-hidden="true"><defs><linearGradient id="wm2" x1="80" y1="70" x2="430" y2="440" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5b8cff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient></defs><path d="M82 124 L145 374 L205 206 L256 350 L307 206 L367 374 L430 124" fill="none" stroke="url(#wm2)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/><circle cx="82" cy="124" r="27" fill="#0f1117" stroke="#7aa2ff" stroke-width="12"/><circle cx="430" cy="124" r="27" fill="#0f1117" stroke="#7aa2ff" stroke-width="12"/><circle cx="256" cy="350" r="22" fill="#fff"/></svg>
-          <span class="t">Waypoint — Production / app-02</span>
+          <span class="t">Waypoint · Production / app-02</span>
           <span class="wdots"><i></i><i></i><i></i></span>
         </div>
         <div class="wbody">
@@ -407,22 +412,22 @@
   <div class="shead center reveal">
     <span class="eye c" data-i18n="fl.eyebrow">The toolbox</span>
     <h2 data-i18n="fl.h2">Four apps' worth of work, one window</h2>
-    <p class="ssub" data-i18n="fl.sub">The flagship trio — a real terminal, a file manager and an API client — living right next to your servers.</p>
+    <p class="ssub" data-i18n="fl.sub">The flagship trio: a real terminal, a file manager and an API client, living right next to your servers.</p>
   </div>
 
   <div class="frow">
     <div class="txt reveal">
       <span class="fk" data-i18n="fl.t.k">Terminal</span>
       <h3 data-i18n="fl.t.h">A real terminal, not an afterthought</h3>
-      <p data-i18n="fl.t.p">SSH, Telnet and serial run on an embedded xterm.js — the same terminal you already trust, wired into your connection tree.</p>
+      <p data-i18n="fl.t.p">SSH, Telnet and serial run on an embedded xterm.js, the same terminal you already trust, wired into your connection tree.</p>
       <ul class="flist">
         <li data-i18n-html="fl.t.b1"><b>Key &amp; password auth</b> with host-key verification on first use</li>
         <li data-i18n-html="fl.t.b2"><b>Port-forward tunnels</b> and an SFTP panel on the same link</li>
-        <li data-i18n-html="fl.t.b3"><b>Search, links and transcripts</b> — right in the terminal buffer</li>
+        <li data-i18n-html="fl.t.b3"><b>Search, links and transcripts</b>, right in the terminal buffer</li>
       </ul>
     </div>
     <div class="viz reveal">
-      <div class="vhead"><i></i><i></i><i></i> &nbsp;app-02 — ssh</div>
+      <div class="vhead"><i></i><i></i><i></i> &nbsp;app-02 · ssh</div>
       <div class="screen" style="background:#080a10">
         <div><span class="p">app-02:~$</span> <span style="color:var(--tx)">ssh -L 5432 db-internal</span></div>
         <div><span class="ok">✓</span> <span class="m">tunnel forwarding :5432</span></div>
@@ -437,15 +442,15 @@
     <div class="txt reveal">
       <span class="fk" data-i18n="fl.f.k">Files</span>
       <h3 data-i18n="fl.f.h">Move files without a second app</h3>
-      <p data-i18n="fl.f.p">A dual-pane SFTP / FTP / FTPS manager — local and remote side by side. Rename, preview and delete without leaving the panel; whole folders transfer recursively with progress and a cancel button.</p>
+      <p data-i18n="fl.f.p">A dual-pane SFTP / FTP / FTPS manager: local and remote side by side. Rename, preview and delete without leaving the panel; whole folders transfer recursively with progress and a cancel button.</p>
       <ul class="flist">
         <li data-i18n-html="fl.f.b1"><b>SFTP over SSH</b>, plain FTP and secure FTPS</li>
-        <li data-i18n-html="fl.f.b2"><b>Preview files in place</b> — text, code, JSON, Markdown, images</li>
-        <li data-i18n-html="fl.f.b3"><b>Rename, filter and keyboard shortcuts</b> — F2, Delete, F5, Ctrl+F</li>
+        <li data-i18n-html="fl.f.b2"><b>Preview files in place</b>: text, code, JSON, Markdown, images</li>
+        <li data-i18n-html="fl.f.b3"><b>Rename, filter and keyboard shortcuts</b>: F2, Delete, F5, Ctrl+F</li>
       </ul>
     </div>
     <div class="viz reveal">
-      <div class="vhead"><i></i><i></i><i></i> &nbsp;transfer — app-02</div>
+      <div class="vhead"><i></i><i></i><i></i> &nbsp;transfer · app-02</div>
       <div class="panes">
         <div class="pane"><div class="ph" data-i18n="viz.local">Local</div>
           <div class="fitem"><span class="fi"></span>project/</div>
@@ -459,7 +464,7 @@
         </div>
       </div>
       <div class="prog"><i></i></div>
-      <div class="pl" data-i18n="viz.upl">↑ uploading project/ — 64% · 12 files</div>
+      <div class="pl" data-i18n="viz.upl">↑ uploading project/ · 64% · 12 files</div>
     </div>
   </div>
 
@@ -467,7 +472,7 @@
     <div class="txt reveal">
       <span class="fk" data-i18n="fl.r.k">REST / API</span>
       <h3 data-i18n="fl.r.h">A Postman-style client, built in</h3>
-      <p data-i18n-html="fl.r.p">Collections, environments with <code>{{variables}}</code>, request history, Postman import and JavaScript scripts — secrets kept in Windows Credential Manager.</p>
+      <p data-i18n-html="fl.r.p">Collections, environments with <code>{{variables}}</code>, request history, Postman import and JavaScript scripts, with secrets kept in Windows Credential Manager.</p>
       <ul class="flist">
         <li data-i18n-html="fl.r.b1"><b>Environments</b> for URL, headers, body &amp; auth</li>
         <li data-i18n-html="fl.r.b2"><b>Pre-request &amp; test scripts</b> with a <code>pm.*</code> API</li>
@@ -475,7 +480,7 @@
       </ul>
     </div>
     <div class="viz reveal">
-      <div class="vhead"><i></i><i></i><i></i> &nbsp;rest — {{prod}}</div>
+      <div class="vhead"><i></i><i></i><i></i> &nbsp;rest · {{prod}}</div>
       <div class="req"><span class="vb">GET</span> <span class="u">{{base}}/v1/users?active=true</span><span class="badge2">200 OK · 84ms</span></div>
       <div class="res">
         <div><span class="m">{</span></div>
@@ -492,7 +497,7 @@
   <div class="shead reveal">
     <span class="eye" data-i18n="feat.eyebrow">Features</span>
     <h2 data-i18n="feat.h2">One window for the whole toolbox</h2>
-    <p class="ssub" data-i18n-html="feat.sub">RDP on Microsoft's official control (<code>mstscax</code>), a collapsible tree, multi-monitor and focus mode — all in one Fluent / Mica app.</p>
+    <p class="ssub" data-i18n-html="feat.sub">RDP on Microsoft's official control (<code>mstscax</code>), a collapsible tree, multi-monitor and focus mode, all in one Fluent / Mica app.</p>
   </div>
   <div class="bento">
     <div class="cell c2 reveal">
@@ -503,17 +508,17 @@
     <div class="cell c2 reveal">
       <div class="ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="7"/><path d="M9 5v7l4 2"/><path d="M16 6h6M16 12h6M16 18h6"/></svg></div>
       <h3 data-i18n="c5t">Every protocol, one tree</h3>
-      <p data-i18n="c5d">RDP, SSH, VNC, Telnet, serial (COM), SFTP/FTP and web links — grouped, pinnable and searchable together, with a collapsible sidebar.</p>
+      <p data-i18n="c5d">RDP, SSH, VNC, Telnet, serial (COM), SFTP/FTP and web links: grouped, pinnable and searchable together, with a collapsible sidebar.</p>
     </div>
     <div class="cell c2 reveal">
       <div class="ico"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="9" height="12" rx="1.5"/><rect x="13" y="7" width="9" height="13" rx="1.5"/></svg></div>
       <h3 data-i18n="c6t">Multi-monitor &amp; focus mode</h3>
-      <p data-i18n="c6d">Tear a tab into its own window on another screen. Maximize into a distraction-free view — just tabs and the session.</p>
+      <p data-i18n="c6d">Tear a tab into its own window on another screen. Maximize into a distraction-free view: just tabs and the session.</p>
     </div>
     <div class="cell c3 reveal">
       <div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div>
       <h3 data-i18n="c7t">Secure passwords + profiles</h3>
-      <p data-i18n="c7d">Credentials in Windows Credential Manager (DPAPI) — never in app files. Shared credential profiles and a built-in password generator.</p>
+      <p data-i18n="c7d">Credentials in Windows Credential Manager (DPAPI), never in app files. Shared credential profiles and a built-in password generator.</p>
     </div>
     <div class="cell c3 reveal">
       <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div>
@@ -523,7 +528,7 @@
     <div class="cell c3 reveal">
       <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10l2 2M5 19l2-2m10-10l2-2"/></svg></div>
       <h3 data-i18n="c9t">Redirections &amp; RD Gateway</h3>
-      <p data-i18n="c9d">Clipboard, drives, printers, audio, admin session, Wake-on-LAN and RD Gateway — configurable per server.</p>
+      <p data-i18n="c9d">Clipboard, drives, printers, audio, admin session, Wake-on-LAN and RD Gateway, configurable per server.</p>
     </div>
     <div class="cell c3 reveal">
       <div class="ico"><svg viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="11.5" r="2.5"/><circle cx="16.5" cy="15" r="2.5"/><path d="M3 20h18"/></svg></div>
@@ -552,11 +557,11 @@
   <div class="pbody reveal">
     <div class="ppanel on" data-proto="rdp"><span class="ptag">RDP</span><h3 data-i18n="proto.rdp.t">Remote Desktop</h3><p data-i18n="proto.rdp.d">Full Windows Remote Desktop on Microsoft's official ActiveX control. Dynamic resolution that follows the window, clipboard / drive / printer / audio redirection, RD Gateway and multi-monitor.</p></div>
     <div class="ppanel" data-proto="ssh"><span class="ptag">SSH</span><h3 data-i18n="proto.ssh.t">SSH terminal</h3><p data-i18n="proto.ssh.d">A real xterm.js terminal with password and private-key auth (with passphrase), host-key verification on first use, port-forwarding tunnels and an SFTP file panel on the same connection.</p></div>
-    <div class="ppanel" data-proto="vnc"><span class="ptag">VNC</span><h3 data-i18n="proto.vnc.t">VNC</h3><p data-i18n="proto.vnc.d">Connect to any VNC server — Windows, Linux or a Raspberry Pi — right in a tab, next to your RDP and SSH sessions.</p></div>
-    <div class="ppanel" data-proto="telnet"><span class="ptag">TELNET</span><h3 data-i18n="proto.telnet.t">Telnet</h3><p data-i18n="proto.telnet.d">Classic Telnet as a terminal session — handy for switches, routers and legacy devices that still speak it.</p></div>
-    <div class="ppanel" data-proto="serial"><span class="ptag">SERIAL</span><h3 data-i18n="proto.serial.t">Serial console</h3><p data-i18n="proto.serial.d">A serial (COM) console with configurable baud rate — reach the console port of network gear and embedded boards from the same app.</p></div>
+    <div class="ppanel" data-proto="vnc"><span class="ptag">VNC</span><h3 data-i18n="proto.vnc.t">VNC</h3><p data-i18n="proto.vnc.d">Connect to any VNC server (Windows, Linux or a Raspberry Pi) right in a tab, next to your RDP and SSH sessions.</p></div>
+    <div class="ppanel" data-proto="telnet"><span class="ptag">TELNET</span><h3 data-i18n="proto.telnet.t">Telnet</h3><p data-i18n="proto.telnet.d">Classic Telnet as a terminal session, handy for switches, routers and legacy devices that still speak it.</p></div>
+    <div class="ppanel" data-proto="serial"><span class="ptag">SERIAL</span><h3 data-i18n="proto.serial.t">Serial console</h3><p data-i18n="proto.serial.d">A serial (COM) console with configurable baud rate. Reach the console port of network gear and embedded boards from the same app.</p></div>
     <div class="ppanel" data-proto="sftp"><span class="ptag">SFTP</span><h3 data-i18n="proto.sftp.t">SFTP files</h3><p data-i18n="proto.sftp.d">A dual-pane file manager over SSH: browse local and remote side by side, upload and download files and whole folders recursively, with progress.</p></div>
-    <div class="ppanel" data-proto="ftp"><span class="ptag">FTP / FTPS</span><h3 data-i18n="proto.ftp.t">FTP &amp; FTPS</h3><p data-i18n="proto.ftp.d">The same dual-pane manager for plain FTP and secure FTPS — a lightweight replacement for a separate FTP client, with FileZilla site import.</p></div>
+    <div class="ppanel" data-proto="ftp"><span class="ptag">FTP / FTPS</span><h3 data-i18n="proto.ftp.t">FTP &amp; FTPS</h3><p data-i18n="proto.ftp.d">The same dual-pane manager for plain FTP and secure FTPS: a lightweight replacement for a separate FTP client, with FileZilla site import.</p></div>
     <div class="ppanel" data-proto="rest"><span class="ptag">REST</span><h3 data-i18n="proto.rest.t">REST / API client</h3><p data-i18n="proto.rest.d">A Postman-style HTTP client built in: collections and folders, environments with {{variables}}, request history, Postman import and JavaScript scripts.</p></div>
   </div>
 </section>
@@ -565,7 +570,7 @@
   <div class="shead reveal">
     <span class="eye" data-i18n="cmp.eyebrow">Why Waypoint</span>
     <h2 data-i18n="cmp.h2">One app instead of four</h2>
-    <p class="ssub" data-i18n="cmp.sub">What you'd normally split across mstsc, PuTTY, an FTP client and Postman — in one modern window.</p>
+    <p class="ssub" data-i18n="cmp.sub">What you'd normally split across mstsc, PuTTY, an FTP client and Postman, in one modern window.</p>
   </div>
   <div class="cmp-wrap reveal"><table class="cmp">
     <thead><tr><th></th><th class="wp" scope="col">Waypoint</th><th scope="col">mstsc</th><th scope="col">PuTTY</th><th scope="col">mRemoteNG</th></tr></thead>
@@ -588,7 +593,7 @@
     <h2 data-i18n="qs.h2">Up and running in a minute</h2>
   </div>
   <div class="steps">
-    <div class="step reveal"><div class="n">1</div><h3 data-i18n="qs.s1t">Download &amp; run</h3><p data-i18n="qs.s1d">One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.</p></div>
+    <div class="step reveal"><div class="n">1</div><h3 data-i18n="qs.s1t">Download &amp; run</h3><p data-i18n="qs.s1d">One .exe, no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.</p></div>
     <div class="step reveal"><div class="n">2</div><h3 data-i18n="qs.s2t">Add a connection</h3><p data-i18n="qs.s2d">Add one by hand or import from mstsc, .rdp, mRemoteNG, RDCMan or FileZilla; pick a protocol and save credentials.</p></div>
     <div class="step reveal"><div class="n">3</div><h3 data-i18n="qs.s3t">Connect</h3><p data-i18n="qs.s3d">Double-click to open a tab. Group, pin, tag and search your connections as they grow.</p></div>
   </div>
@@ -599,7 +604,7 @@
     <div class="txt">
       <span class="eye" data-i18n="sec.eyebrow">Security</span>
       <h2 data-i18n="sec.h2">Your passwords stay with you</h2>
-      <p data-i18n-html="sec.p">Waypoint never writes secrets to its own files. Passwords and API tokens go to <b>Windows Credential Manager</b> (DPAPI, tied to your account) — the same vault mstsc uses. RDP server-identity verification is on by default, and <b>SSH host keys are checked on first use</b> (fingerprint prompt, with a warning if a known key ever changes).</p>
+      <p data-i18n-html="sec.p">Waypoint never writes secrets to its own files. Passwords and API tokens go to <b>Windows Credential Manager</b> (DPAPI, tied to your account), the same vault mstsc uses. RDP server-identity verification is on by default, and <b>SSH host keys are checked on first use</b> (fingerprint prompt, with a warning if a known key ever changes).</p>
     </div>
     <a class="btn gh" href="https://github.com/FilipB97/Waypoint/blob/master/SECURITY.md" data-i18n="sec.link">Security model →</a>
   </div>
@@ -611,12 +616,12 @@
     <h2 data-i18n="faq.h2">Questions &amp; answers</h2>
   </div>
   <div class="faq">
-    <details class="reveal"><summary data-i18n="faq.q1">How is it different from mRemoteNG or PuTTY?</summary><p data-i18n="faq.a1">Waypoint puts RDP (Microsoft's official control), a real SSH terminal, VNC, an SFTP/FTP file manager and a REST client in one modern, actively-developed app — with tabs, credential profiles and a clean Fluent UI — instead of an aging manager or a terminal-only client.</p></details>
-    <details class="reveal"><summary data-i18n="faq.q2">Which protocols are supported?</summary><p data-i18n="faq.a2">RDP, SSH, VNC, Telnet and serial (COM) sessions, an SFTP/FTP/FTPS file manager, web-panel links and a built-in REST/API client — all grouped in one tree.</p></details>
-    <details class="reveal"><summary data-i18n="faq.q3">Does it really include a REST/API client?</summary><p data-i18n="faq.a3">Yes — a Postman-style client with collections, environments and {{variables}}, request history, Postman import, Bearer/Basic auth and JavaScript pre-request/test scripts. A lighter alternative to a separate API tool.</p></details>
-    <details class="reveal"><summary data-i18n="faq.q4">Does it support SSH keys?</summary><p data-i18n="faq.a4">Yes — password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.</p></details>
-    <details class="reveal"><summary data-i18n="faq.q5">Do I need to install anything?</summary><p data-i18n="faq.a5">No — a single .exe, no .NET install. The embedded terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.</p></details>
-    <details class="reveal"><summary data-i18n="faq.q6">Where are my passwords stored?</summary><p data-i18n="faq.a6">In Windows Credential Manager (DPAPI, tied to your account) — never in the app's own files. The same vault mstsc uses.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q1">How is it different from mRemoteNG or PuTTY?</summary><p data-i18n="faq.a1">Waypoint puts RDP (Microsoft's official control), a real SSH terminal, VNC, an SFTP/FTP file manager and a REST client in one modern, actively-developed app (with tabs, credential profiles and a clean Fluent UI) instead of an aging manager or a terminal-only client.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q2">Which protocols are supported?</summary><p data-i18n="faq.a2">RDP, SSH, VNC, Telnet and serial (COM) sessions, an SFTP/FTP/FTPS file manager, web-panel links and a built-in REST/API client, all grouped in one tree.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q3">Does it really include a REST/API client?</summary><p data-i18n="faq.a3">Yes: a Postman-style client with collections, environments and {{variables}}, request history, Postman import, Bearer/Basic auth and JavaScript pre-request/test scripts. A lighter alternative to a separate API tool.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q4">Does it support SSH keys?</summary><p data-i18n="faq.a4">Yes: password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q5">Do I need to install anything?</summary><p data-i18n="faq.a5">No: a single .exe, no .NET install. The embedded terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.</p></details>
+    <details class="reveal"><summary data-i18n="faq.q6">Where are my passwords stored?</summary><p data-i18n="faq.a6">In Windows Credential Manager (DPAPI, tied to your account), never in the app's own files. The same vault mstsc uses.</p></details>
   </div>
 </section>
 
@@ -624,7 +629,7 @@
   <div class="dl reveal">
     <span class="eye c" data-i18n="dl.eyebrow">Download</span>
     <h2 style="margin-top:12px" data-i18n="dl.h2">Get started with Waypoint</h2>
-    <p class="ssub" data-i18n="dl.sub" style="margin-left:auto;margin-right:auto">One file. Run it and go — no installer, no .NET to install.</p>
+    <p class="ssub" data-i18n="dl.sub" style="margin-left:auto;margin-right:auto">One file. Run it and go: no installer, no .NET to install.</p>
     <div class="hcta">
       <a class="btn pri" href="https://github.com/FilipB97/Waypoint/releases/latest">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
@@ -632,7 +637,7 @@
       </a>
       <a class="btn gh" href="https://github.com/FilipB97/Waypoint" data-i18n="dl.source">Source code</a>
     </div>
-    <p class="note" data-i18n-html="dl.note">Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.</p>
+    <p class="note" data-i18n-html="dl.note">Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning. Click <code>More info → Run anyway</code>.</p>
   </div>
 </section>
 
@@ -642,10 +647,10 @@
     <h2 data-i18n="road.h2">What's next</h2>
   </div>
   <div class="road">
-    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i1"><b>Code signing</b> — remove the SmartScreen warning on first launch.</p></div>
-    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i2"><b>Connection diagnostics</b> — DNS, ping, port and protocol banner in one click when something will not connect.</p></div>
-    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i3"><b>Screen capture &amp; recording</b> — screenshots and video of a session.</p></div>
-    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i4"><b>ARM64 build</b> — native for Windows on ARM.</p></div>
+    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i1"><b>Code signing</b>: remove the SmartScreen warning on first launch.</p></div>
+    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i2"><b>Connection diagnostics</b>: DNS, ping, port and protocol banner in one click when something will not connect.</p></div>
+    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i3"><b>Screen capture &amp; recording</b>: screenshots and video of a session.</p></div>
+    <div class="r reveal"><span class="dot"></span><p data-i18n-html="road.i4"><b>ARM64 build</b>: native for Windows on ARM.</p></div>
   </div>
 </section>
 
@@ -664,61 +669,61 @@
       "nav.features":"Features","nav.protocols":"Protocols","nav.security":"Security","nav.download":"Download","nav.star":"Star","nav.faq":"FAQ","stat.downloads":"downloads",
       "hero.badge2":"Open source · MIT · Windows",
       "hero.title":"Every remote connection,<br><span class=\"grad\">one modern app.</span>",
-      "hero.lead":"<b>Waypoint</b> is a modern connection manager for Windows — RDP, SSH, VNC, Telnet &amp; serial, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.",
+      "hero.lead":"<b>Waypoint</b> is a modern connection manager for Windows: RDP, SSH, VNC, Telnet &amp; serial, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.",
       "hero.dl":"Download for Windows","hero.gh":"View on GitHub",
       "meta.os":"Windows 10/11","meta.file":"single .exe","meta.net":"no .NET install","meta.free":"free · open source",
-      "stat.k1":"protocols, one tree","stat.k2":"portable .exe","stat.k3":"secrets in app files","stat.k4":"free &amp; open source",
-      "fl.eyebrow":"The toolbox","fl.h2":"Four apps' worth of work, one window","fl.sub":"The flagship trio — a real terminal, a file manager and an API client — living right next to your servers.",
-      "fl.t.k":"Terminal","fl.t.h":"A real terminal, not an afterthought","fl.t.p":"SSH, Telnet and serial run on an embedded xterm.js — the same terminal you already trust, wired into your connection tree.",
-      "fl.t.b1":"<b>Key &amp; password auth</b> with host-key verification on first use","fl.t.b2":"<b>Port-forward tunnels</b> and an SFTP panel on the same link","fl.t.b3":"<b>Search, links and transcripts</b> — right in the terminal buffer",
-      "fl.f.k":"Files","fl.f.h":"Move files without a second app","fl.f.p":"A dual-pane SFTP / FTP / FTPS manager — local and remote side by side. Rename, preview and delete without leaving the panel; whole folders transfer recursively with progress and a cancel button.",
-      "fl.f.b1":"<b>SFTP over SSH</b>, plain FTP and secure FTPS","fl.f.b2":"<b>Preview files in place</b> — text, code, JSON, Markdown, images","fl.f.b3":"<b>Rename, filter and keyboard shortcuts</b> — F2, Delete, F5, Ctrl+F",
-      "fl.r.k":"REST / API","fl.r.h":"A Postman-style client, built in","fl.r.p":"Collections, environments with <code>{{variables}}</code>, request history, Postman import and JavaScript scripts — secrets kept in Windows Credential Manager.",
+      "stat.k1":"protocols, one tree","stat.k2":"portable .exe","stat.k3":"secrets in app files","stat.k4":"free & open source",
+      "fl.eyebrow":"The toolbox","fl.h2":"Four apps' worth of work, one window","fl.sub":"The flagship trio: a real terminal, a file manager and an API client, living right next to your servers.",
+      "fl.t.k":"Terminal","fl.t.h":"A real terminal, not an afterthought","fl.t.p":"SSH, Telnet and serial run on an embedded xterm.js, the same terminal you already trust, wired into your connection tree.",
+      "fl.t.b1":"<b>Key &amp; password auth</b> with host-key verification on first use","fl.t.b2":"<b>Port-forward tunnels</b> and an SFTP panel on the same link","fl.t.b3":"<b>Search, links and transcripts</b>, right in the terminal buffer",
+      "fl.f.k":"Files","fl.f.h":"Move files without a second app","fl.f.p":"A dual-pane SFTP / FTP / FTPS manager: local and remote side by side. Rename, preview and delete without leaving the panel; whole folders transfer recursively with progress and a cancel button.",
+      "fl.f.b1":"<b>SFTP over SSH</b>, plain FTP and secure FTPS","fl.f.b2":"<b>Preview files in place</b>: text, code, JSON, Markdown, images","fl.f.b3":"<b>Rename, filter and keyboard shortcuts</b>: F2, Delete, F5, Ctrl+F",
+      "fl.r.k":"REST / API","fl.r.h":"A Postman-style client, built in","fl.r.p":"Collections, environments with <code>{{variables}}</code>, request history, Postman import and JavaScript scripts, with secrets kept in Windows Credential Manager.",
       "fl.r.b1":"<b>Environments</b> for URL, headers, body &amp; auth","fl.r.b2":"<b>Pre-request &amp; test scripts</b> with a <code>pm.*</code> API","fl.r.b3":"<b>One-click Postman import</b>",
-      "viz.local":"Local","viz.upl":"↑ uploading project/ — 64% · 12 files",
+      "viz.local":"Local","viz.upl":"↑ uploading project/ · 64% · 12 files",
       "feat.eyebrow":"Features","feat.h2":"One window for the whole toolbox",
-      "feat.sub":"RDP on Microsoft's official control (<code>mstscax</code>), a collapsible tree, multi-monitor and focus mode — all in one Fluent / Mica app.",
+      "feat.sub":"RDP on Microsoft's official control (<code>mstscax</code>), a collapsible tree, multi-monitor and focus mode, all in one Fluent / Mica app.",
       "c1t":"Tabs and standalone windows","c1d":"Many sessions in one window, or each in its own. Duplicate, reorder and drag tabs; tear one off to another monitor.",
-      "c5t":"Every protocol, one tree","c5d":"RDP, SSH, VNC, Telnet, serial (COM), SFTP/FTP and web links — grouped, pinnable and searchable together, with a collapsible sidebar.",
-      "c6t":"Multi-monitor & focus mode","c6d":"Tear a tab into its own window on another screen. Maximize into a distraction-free view — just tabs and the session.",
-      "c7t":"Secure passwords + profiles","c7d":"Credentials in Windows Credential Manager (DPAPI) — never in app files. Shared credential profiles and a built-in password generator.",
+      "c5t":"Every protocol, one tree","c5d":"RDP, SSH, VNC, Telnet, serial (COM), SFTP/FTP and web links: grouped, pinnable and searchable together, with a collapsible sidebar.",
+      "c6t":"Multi-monitor & focus mode","c6d":"Tear a tab into its own window on another screen. Maximize into a distraction-free view: just tabs and the session.",
+      "c7t":"Secure passwords + profiles","c7d":"Credentials in Windows Credential Manager (DPAPI), never in app files. Shared credential profiles and a built-in password generator.",
       "c8t":"One-click migration","c8d":"Import from mstsc history, .rdp files, mRemoteNG, RDCMan and FileZilla. Export back to .rdp or a full profile.",
-      "c9t":"Redirections & RD Gateway","c9d":"Clipboard, drives, printers, audio, admin session, Wake-on-LAN and RD Gateway — configurable per server.",
+      "c9t":"Redirections & RD Gateway","c9d":"Clipboard, drives, printers, audio, admin session, Wake-on-LAN and RD Gateway, configurable per server.",
       "c10t":"Themes, languages & tray","c10d":"Dark / light / system theme with six palette presets, English & Polish, system-tray with a global quick-connect hotkey.",
       "proto.eyebrow":"Protocols","proto.h2":"Everything you connect to","proto.sub":"Eight protocols, one tree and one set of habits. Pick a tab to see how each works.",
       "proto.rdp.t":"Remote Desktop","proto.rdp.d":"Full Windows Remote Desktop on Microsoft's official ActiveX control. Dynamic resolution that follows the window, clipboard / drive / printer / audio redirection, RD Gateway and multi-monitor.",
       "proto.ssh.t":"SSH terminal","proto.ssh.d":"A real xterm.js terminal with password and private-key auth (with passphrase), host-key verification on first use, port-forwarding tunnels and an SFTP file panel on the same connection.",
-      "proto.vnc.t":"VNC","proto.vnc.d":"Connect to any VNC server — Windows, Linux or a Raspberry Pi — right in a tab, next to your RDP and SSH sessions.",
-      "proto.telnet.t":"Telnet","proto.telnet.d":"Classic Telnet as a terminal session — handy for switches, routers and legacy devices that still speak it.",
-      "proto.serial.t":"Serial console","proto.serial.d":"A serial (COM) console with configurable baud rate — reach the console port of network gear and embedded boards from the same app.",
+      "proto.vnc.t":"VNC","proto.vnc.d":"Connect to any VNC server (Windows, Linux or a Raspberry Pi) right in a tab, next to your RDP and SSH sessions.",
+      "proto.telnet.t":"Telnet","proto.telnet.d":"Classic Telnet as a terminal session, handy for switches, routers and legacy devices that still speak it.",
+      "proto.serial.t":"Serial console","proto.serial.d":"A serial (COM) console with configurable baud rate. Reach the console port of network gear and embedded boards from the same app.",
       "proto.sftp.t":"SFTP files","proto.sftp.d":"A dual-pane file manager over SSH: browse local and remote side by side, upload and download files and whole folders recursively, with progress.",
-      "proto.ftp.t":"FTP & FTPS","proto.ftp.d":"The same dual-pane manager for plain FTP and secure FTPS — a lightweight replacement for a separate FTP client, with FileZilla site import.",
+      "proto.ftp.t":"FTP & FTPS","proto.ftp.d":"The same dual-pane manager for plain FTP and secure FTPS: a lightweight replacement for a separate FTP client, with FileZilla site import.",
       "proto.rest.t":"REST / API client","proto.rest.d":"A Postman-style HTTP client built in: collections and folders, environments with {{variables}}, request history, Postman import and JavaScript scripts.",
       "cmp.eyebrow":"Why Waypoint","cmp.h2":"One app instead of four",
-      "cmp.sub":"What you'd normally split across mstsc, PuTTY, an FTP client and Postman — in one modern window.",
+      "cmp.sub":"What you'd normally split across mstsc, PuTTY, an FTP client and Postman, in one modern window.",
       "cmp.r1":"RDP + SSH in one app","cmp.r2":"VNC, Telnet & serial","cmp.r3":"SFTP / FTP file manager","cmp.r4":"Built-in REST / API client","cmp.r5":"Tabbed sessions + groups","cmp.r6":"Modern Fluent / Mica UI","cmp.r7":"Shared credential profiles","cmp.r8":"Free & open source",
       "qs.eyebrow":"Quick start","qs.h2":"Up and running in a minute",
-      "qs.s1t":"Download & run","qs.s1d":"One .exe — no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.",
+      "qs.s1t":"Download & run","qs.s1d":"One .exe, no installer, no .NET to set up. If SmartScreen appears: More info → Run anyway.",
       "qs.s2t":"Add a connection","qs.s2d":"Add one by hand or import from mstsc, .rdp, mRemoteNG, RDCMan or FileZilla; pick a protocol and save credentials.",
       "qs.s3t":"Connect","qs.s3d":"Double-click to open a tab. Group, pin, tag and search your connections as they grow.",
       "sec.eyebrow":"Security","sec.h2":"Your passwords stay with you",
-      "sec.p":"Waypoint never writes secrets to its own files. Passwords and API tokens go to <b>Windows Credential Manager</b> (DPAPI, tied to your account) — the same vault mstsc uses. RDP server-identity verification is on by default, and <b>SSH host keys are checked on first use</b> (fingerprint prompt, with a warning if a known key ever changes).",
+      "sec.p":"Waypoint never writes secrets to its own files. Passwords and API tokens go to <b>Windows Credential Manager</b> (DPAPI, tied to your account), the same vault mstsc uses. RDP server-identity verification is on by default, and <b>SSH host keys are checked on first use</b> (fingerprint prompt, with a warning if a known key ever changes).",
       "sec.link":"Security model →",
       "faq.eyebrow":"FAQ","faq.h2":"Questions & answers",
-      "faq.q1":"How is it different from mRemoteNG or PuTTY?","faq.a1":"Waypoint puts RDP (Microsoft's official control), a real SSH terminal, VNC, an SFTP/FTP file manager and a REST client in one modern, actively-developed app — with tabs, credential profiles and a clean Fluent UI — instead of an aging manager or a terminal-only client.",
-      "faq.q2":"Which protocols are supported?","faq.a2":"RDP, SSH, VNC, Telnet and serial (COM) sessions, an SFTP/FTP/FTPS file manager, web-panel links and a built-in REST/API client — all grouped in one tree.",
-      "faq.q3":"Does it really include a REST/API client?","faq.a3":"Yes — a Postman-style client with collections, environments and {{variables}}, request history, Postman import, Bearer/Basic auth and JavaScript pre-request/test scripts. A lighter alternative to a separate API tool.",
-      "faq.q4":"Does it support SSH keys?","faq.a4":"Yes — password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.",
-      "faq.q5":"Do I need to install anything?","faq.a5":"No — a single .exe, no .NET install. The embedded terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.",
-      "faq.q6":"Where are my passwords stored?","faq.a6":"In Windows Credential Manager (DPAPI, tied to your account) — never in the app's own files. The same vault mstsc uses.",
-      "dl.eyebrow":"Download","dl.h2":"Get started with Waypoint","dl.sub":"One file. Run it and go — no installer, no .NET to install.",
+      "faq.q1":"How is it different from mRemoteNG or PuTTY?","faq.a1":"Waypoint puts RDP (Microsoft's official control), a real SSH terminal, VNC, an SFTP/FTP file manager and a REST client in one modern, actively-developed app (with tabs, credential profiles and a clean Fluent UI) instead of an aging manager or a terminal-only client.",
+      "faq.q2":"Which protocols are supported?","faq.a2":"RDP, SSH, VNC, Telnet and serial (COM) sessions, an SFTP/FTP/FTPS file manager, web-panel links and a built-in REST/API client, all grouped in one tree.",
+      "faq.q3":"Does it really include a REST/API client?","faq.a3":"Yes: a Postman-style client with collections, environments and {{variables}}, request history, Postman import, Bearer/Basic auth and JavaScript pre-request/test scripts. A lighter alternative to a separate API tool.",
+      "faq.q4":"Does it support SSH keys?","faq.a4":"Yes: password and private-key auth (with passphrase), host-key verification on first use, and local port-forwarding tunnels.",
+      "faq.q5":"Do I need to install anything?","faq.a5":"No: a single .exe, no .NET install. The embedded terminal uses the WebView2 runtime, already present on up-to-date Windows 10/11.",
+      "faq.q6":"Where are my passwords stored?","faq.a6":"In Windows Credential Manager (DPAPI, tied to your account), never in the app's own files. The same vault mstsc uses.",
+      "dl.eyebrow":"Download","dl.h2":"Get started with Waypoint","dl.sub":"One file. Run it and go: no installer, no .NET to install.",
       "dl.dl":"Download for Windows (x64)","dl.source":"Source code",
-      "dl.note":"Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning — click <code>More info → Run anyway</code>.",
+      "dl.note":"Requirements: Windows 10/11 (x64). The file isn't code-signed yet, so on first launch SmartScreen may show a warning. Click <code>More info → Run anyway</code>.",
       "road.eyebrow":"Roadmap","road.h2":"What's next",
-      "road.i1":"<b>Code signing</b> — remove the SmartScreen warning on first launch.",
-      "road.i2":"<b>Connection diagnostics</b> — DNS, ping, port and protocol banner in one click when something will not connect.",
-      "road.i3":"<b>Screen capture & recording</b> — screenshots and video of a session.",
-      "road.i4":"<b>ARM64 build</b> — native for Windows on ARM.",
+      "road.i1":"<b>Code signing</b>: remove the SmartScreen warning on first launch.",
+      "road.i2":"<b>Connection diagnostics</b>: DNS, ping, port and protocol banner in one click when something will not connect.",
+      "road.i3":"<b>Screen capture & recording</b>: screenshots and video of a session.",
+      "road.i4":"<b>ARM64 build</b>: native for Windows on ARM.",
       "foot.by":"Built by <b>Filip Benklewski</b> · <a href=\"https://github.com/FilipB97\" rel=\"author\">GitHub</a> · <a href=\"https://www.linkedin.com/in/filip-benklewski-705231184\" rel=\"author\">LinkedIn</a>",
       "foot.lic":"Waypoint · MIT © 2026",
       "foot.right":"Built with WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>",
@@ -728,61 +733,61 @@
       "nav.features":"Funkcje","nav.protocols":"Protokoły","nav.security":"Bezpieczeństwo","nav.download":"Pobierz","nav.star":"Star","nav.faq":"FAQ","stat.downloads":"pobrań",
       "hero.badge2":"Open source · MIT · Windows",
       "hero.title":"Każde zdalne połączenie<br><span class=\"grad\">w jednej aplikacji.</span>",
-      "hero.lead":"<b>Waypoint</b> to nowoczesny menedżer połączeń dla Windows — RDP, SSH, VNC, Telnet i port szeregowy, menedżer plików SFTP/FTP oraz wbudowany klient REST/API. Jedna aplikacja zamiast mstsc, PuTTY, WinSCP i Postmana.",
+      "hero.lead":"<b>Waypoint</b> to nowoczesny menedżer połączeń dla Windows: RDP, SSH, VNC, Telnet i port szeregowy, menedżer plików SFTP/FTP oraz wbudowany klient REST/API. Jedna aplikacja zamiast mstsc, PuTTY, WinSCP i Postmana.",
       "hero.dl":"Pobierz na Windows","hero.gh":"Zobacz na GitHub",
       "meta.os":"Windows 10/11","meta.file":"jeden plik .exe","meta.net":"bez instalacji .NET","meta.free":"za darmo · open source",
       "stat.k1":"protokołów, jedno drzewo","stat.k2":"przenośny plik .exe","stat.k3":"sekretów w plikach aplikacji","stat.k4":"za darmo i open source",
-      "fl.eyebrow":"Zestaw narzędzi","fl.h2":"Praca czterech aplikacji w jednym oknie","fl.sub":"Flagowa trójka — prawdziwy terminal, menedżer plików i klient API — tuż obok Twoich serwerów.",
-      "fl.t.k":"Terminal","fl.t.h":"Prawdziwy terminal, nie proteza","fl.t.p":"SSH, Telnet i port szeregowy działają na wbudowanym xterm.js — tym samym terminalu, któremu ufasz, wpiętym w drzewo połączeń.",
-      "fl.t.b1":"<b>Logowanie kluczem i hasłem</b> z weryfikacją klucza hosta przy pierwszym połączeniu","fl.t.b2":"<b>Tunele (port-forward)</b> i panel SFTP na tym samym połączeniu","fl.t.b3":"<b>Szukanie, odnośniki i transkrypt</b> — prosto z bufora terminala",
-      "fl.f.k":"Pliki","fl.f.h":"Przenoś pliki bez drugiej aplikacji","fl.f.p":"Dwupanelowy menedżer SFTP / FTP / FTPS — lokalne i zdalne obok siebie. Zmiana nazwy, podgląd i usuwanie bez wychodzenia z panelu; całe foldery przenoszone rekurencyjnie z paskiem postępu i anulowaniem.",
-      "fl.f.b1":"<b>SFTP przez SSH</b>, zwykły FTP i bezpieczny FTPS","fl.f.b2":"<b>Podgląd pliku na miejscu</b> — tekst, kod, JSON, Markdown, obrazy","fl.f.b3":"<b>Zmiana nazwy, filtr i skróty</b> — F2, Delete, F5, Ctrl+F",
-      "fl.r.k":"REST / API","fl.r.h":"Klient w stylu Postmana, wbudowany","fl.r.p":"Kolekcje, środowiska ze zmiennymi <code>{{variables}}</code>, historia żądań, import z Postmana i skrypty JavaScript — sekrety w Menedżerze poświadczeń Windows.",
+      "fl.eyebrow":"Zestaw narzędzi","fl.h2":"Praca czterech aplikacji w jednym oknie","fl.sub":"Flagowa trójka: prawdziwy terminal, menedżer plików i klient API, tuż obok Twoich serwerów.",
+      "fl.t.k":"Terminal","fl.t.h":"Prawdziwy terminal, nie proteza","fl.t.p":"SSH, Telnet i port szeregowy działają na wbudowanym xterm.js, tym samym terminalu, któremu ufasz, wpiętym w drzewo połączeń.",
+      "fl.t.b1":"<b>Logowanie kluczem i hasłem</b> z weryfikacją klucza hosta przy pierwszym połączeniu","fl.t.b2":"<b>Tunele (port-forward)</b> i panel SFTP na tym samym połączeniu","fl.t.b3":"<b>Szukanie, odnośniki i transkrypt</b>, prosto z bufora terminala",
+      "fl.f.k":"Pliki","fl.f.h":"Przenoś pliki bez drugiej aplikacji","fl.f.p":"Dwupanelowy menedżer SFTP / FTP / FTPS: lokalne i zdalne obok siebie. Zmiana nazwy, podgląd i usuwanie bez wychodzenia z panelu; całe foldery przenoszone rekurencyjnie z paskiem postępu i anulowaniem.",
+      "fl.f.b1":"<b>SFTP przez SSH</b>, zwykły FTP i bezpieczny FTPS","fl.f.b2":"<b>Podgląd pliku na miejscu</b>: tekst, kod, JSON, Markdown, obrazy","fl.f.b3":"<b>Zmiana nazwy, filtr i skróty</b>: F2, Delete, F5, Ctrl+F",
+      "fl.r.k":"REST / API","fl.r.h":"Klient w stylu Postmana, wbudowany","fl.r.p":"Kolekcje, środowiska ze zmiennymi <code>{{variables}}</code>, historia żądań, import z Postmana i skrypty JavaScript, a sekrety w Menedżerze poświadczeń Windows.",
       "fl.r.b1":"<b>Środowiska</b> dla URL, nagłówków, treści i uwierzytelniania","fl.r.b2":"<b>Skrypty przed żądaniem i testowe</b> z API <code>pm.*</code>","fl.r.b3":"<b>Import z Postmana jednym kliknięciem</b>",
-      "viz.local":"Lokalne","viz.upl":"↑ wysyłanie project/ — 64% · 12 plików",
+      "viz.local":"Lokalne","viz.upl":"↑ wysyłanie project/ · 64% · 12 plików",
       "feat.eyebrow":"Funkcje","feat.h2":"Jedno okno na cały zestaw narzędzi",
-      "feat.sub":"RDP na oficjalnej kontrolce Microsoftu (<code>mstscax</code>), zwijane drzewo, multi-monitor i tryb skupienia — wszystko w jednej aplikacji Fluent / Mica.",
+      "feat.sub":"RDP na oficjalnej kontrolce Microsoftu (<code>mstscax</code>), zwijane drzewo, multi-monitor i tryb skupienia, wszystko w jednej aplikacji Fluent / Mica.",
       "c1t":"Karty i osobne okna","c1d":"Wiele sesji w jednym oknie albo każda w swoim. Duplikuj, zmieniaj kolejność i przeciągaj karty; wyciągnij jedną na inny monitor.",
-      "c5t":"Każdy protokół w jednym drzewie","c5d":"RDP, SSH, VNC, Telnet, port szeregowy (COM), SFTP/FTP i linki web — grupowane, przypinane i przeszukiwane razem, ze zwijanym panelem bocznym.",
-      "c6t":"Multi-monitor i tryb skupienia","c6d":"Wyciągnij kartę do osobnego okna na drugim ekranie. Zmaksymalizuj do widoku bez rozpraszaczy — same karty i sesja.",
-      "c7t":"Bezpieczne hasła + profile","c7d":"Poświadczenia w Menedżerze poświadczeń Windows (DPAPI) — nigdy w plikach aplikacji. Współdzielone profile poświadczeń i wbudowany generator haseł.",
+      "c5t":"Każdy protokół w jednym drzewie","c5d":"RDP, SSH, VNC, Telnet, port szeregowy (COM), SFTP/FTP i linki web: grupowane, przypinane i przeszukiwane razem, ze zwijanym panelem bocznym.",
+      "c6t":"Multi-monitor i tryb skupienia","c6d":"Wyciągnij kartę do osobnego okna na drugim ekranie. Zmaksymalizuj do widoku bez rozpraszaczy: same karty i sesja.",
+      "c7t":"Bezpieczne hasła + profile","c7d":"Poświadczenia w Menedżerze poświadczeń Windows (DPAPI), nigdy w plikach aplikacji. Współdzielone profile poświadczeń i wbudowany generator haseł.",
       "c8t":"Migracja jednym kliknięciem","c8d":"Import z historii mstsc, plików .rdp, mRemoteNG, RDCMan i FileZilla. Eksport z powrotem do .rdp lub pełnego profilu.",
-      "c9t":"Przekierowania i RD Gateway","c9d":"Schowek, dyski, drukarki, audio, sesja administracyjna, Wake-on-LAN i brama RD — konfigurowalne per serwer.",
+      "c9t":"Przekierowania i RD Gateway","c9d":"Schowek, dyski, drukarki, audio, sesja administracyjna, Wake-on-LAN i brama RD, konfigurowalne per serwer.",
       "c10t":"Motywy, języki i zasobnik","c10d":"Motyw ciemny / jasny / systemowy z sześcioma presetami palety, polski i angielski, zasobnik systemowy z globalnym skrótem szybkiego połączenia.",
       "proto.eyebrow":"Protokoły","proto.h2":"Wszystko, z czym się łączysz","proto.sub":"Osiem protokołów, jedno drzewo i jedne przyzwyczajenia. Wybierz zakładkę, aby zobaczyć jak działa każdy.",
       "proto.rdp.t":"Pulpit zdalny","proto.rdp.d":"Pełny pulpit zdalny Windows na oficjalnej kontrolce ActiveX Microsoftu. Dynamiczna rozdzielczość podążająca za oknem, przekierowanie schowka / dysków / drukarek / audio, RD Gateway i multi-monitor.",
       "proto.ssh.t":"Terminal SSH","proto.ssh.d":"Prawdziwy terminal xterm.js z logowaniem hasłem i kluczem prywatnym (z hasłem do klucza), weryfikacją klucza hosta przy pierwszym połączeniu, tunelami (port-forwarding) i panelem plików SFTP na tym samym połączeniu.",
-      "proto.vnc.t":"VNC","proto.vnc.d":"Połącz się z dowolnym serwerem VNC — Windows, Linux czy Raspberry Pi — w karcie, obok sesji RDP i SSH.",
-      "proto.telnet.t":"Telnet","proto.telnet.d":"Klasyczny Telnet jako sesja terminalowa — przydatny do switchy, routerów i starszych urządzeń, które nadal go używają.",
-      "proto.serial.t":"Konsola szeregowa","proto.serial.d":"Konsola szeregowa (COM) z konfigurowalną prędkością (baud) — dostęp do portu konsolowego sprzętu sieciowego i płytek wbudowanych z tej samej aplikacji.",
+      "proto.vnc.t":"VNC","proto.vnc.d":"Połącz się z dowolnym serwerem VNC (Windows, Linux czy Raspberry Pi) w karcie, obok sesji RDP i SSH.",
+      "proto.telnet.t":"Telnet","proto.telnet.d":"Klasyczny Telnet jako sesja terminalowa, przydatny do switchy, routerów i starszych urządzeń, które nadal go używają.",
+      "proto.serial.t":"Konsola szeregowa","proto.serial.d":"Konsola szeregowa (COM) z konfigurowalną prędkością (baud). Dostęp do portu konsolowego sprzętu sieciowego i płytek wbudowanych z tej samej aplikacji.",
       "proto.sftp.t":"Pliki SFTP","proto.sftp.d":"Dwupanelowy menedżer plików przez SSH: przeglądaj lokalne i zdalne obok siebie, wysyłaj i pobieraj pliki oraz całe foldery rekurencyjnie, z paskiem postępu.",
-      "proto.ftp.t":"FTP i FTPS","proto.ftp.d":"Ten sam dwupanelowy menedżer dla zwykłego FTP i bezpiecznego FTPS — lekki zamiennik osobnego klienta FTP, z importem sitów FileZilli.",
+      "proto.ftp.t":"FTP i FTPS","proto.ftp.d":"Ten sam dwupanelowy menedżer dla zwykłego FTP i bezpiecznego FTPS: lekki zamiennik osobnego klienta FTP, z importem sitów FileZilli.",
       "proto.rest.t":"Klient REST / API","proto.rest.d":"Wbudowany klient HTTP w stylu Postmana: kolekcje i foldery, środowiska ze zmiennymi {{variables}}, historia żądań, import z Postmana i skrypty JavaScript.",
       "cmp.eyebrow":"Dlaczego Waypoint","cmp.h2":"Jedna aplikacja zamiast czterech",
-      "cmp.sub":"To, co zwykle rozdzielasz między mstsc, PuTTY, klienta FTP i Postmana — w jednym nowoczesnym oknie.",
+      "cmp.sub":"To, co zwykle rozdzielasz między mstsc, PuTTY, klienta FTP i Postmana, w jednym nowoczesnym oknie.",
       "cmp.r1":"RDP + SSH w jednej aplikacji","cmp.r2":"VNC, Telnet i port szeregowy","cmp.r3":"Menedżer plików SFTP / FTP","cmp.r4":"Wbudowany klient REST / API","cmp.r5":"Sesje w kartach + grupy","cmp.r6":"Nowoczesny UI Fluent / Mica","cmp.r7":"Współdzielone profile poświadczeń","cmp.r8":"Za darmo i open source",
       "qs.eyebrow":"Szybki start","qs.h2":"Gotowe w minutę",
-      "qs.s1t":"Pobierz i uruchom","qs.s1d":"Jeden plik .exe — bez instalatora, bez instalowania .NET. Gdy pojawi się SmartScreen: Więcej informacji → Uruchom mimo to.",
+      "qs.s1t":"Pobierz i uruchom","qs.s1d":"Jeden plik .exe, bez instalatora, bez instalowania .NET. Gdy pojawi się SmartScreen: Więcej informacji → Uruchom mimo to.",
       "qs.s2t":"Dodaj połączenie","qs.s2d":"Dodaj ręcznie lub zaimportuj z mstsc, .rdp, mRemoteNG, RDCMan albo FileZilli; wybierz protokół i zapisz poświadczenia.",
       "qs.s3t":"Połącz","qs.s3d":"Kliknij dwukrotnie, aby otworzyć kartę. Grupuj, przypinaj, taguj i wyszukuj połączenia, gdy ich przybywa.",
       "sec.eyebrow":"Bezpieczeństwo","sec.h2":"Twoje hasła zostają u Ciebie",
-      "sec.p":"Waypoint nie zapisuje sekretów w swoich plikach. Hasła i tokeny API trafiają do <b>Menedżera poświadczeń Windows</b> (DPAPI, powiązany z Twoim kontem) — tego samego sejfu, którego używa mstsc. Weryfikacja tożsamości serwera RDP jest domyślnie włączona, a <b>klucze hosta SSH są sprawdzane przy pierwszym połączeniu</b> (odcisk do potwierdzenia, z ostrzeżeniem, gdy znany klucz się zmieni).",
+      "sec.p":"Waypoint nie zapisuje sekretów w swoich plikach. Hasła i tokeny API trafiają do <b>Menedżera poświadczeń Windows</b> (DPAPI, powiązany z Twoim kontem), tego samego sejfu, którego używa mstsc. Weryfikacja tożsamości serwera RDP jest domyślnie włączona, a <b>klucze hosta SSH są sprawdzane przy pierwszym połączeniu</b> (odcisk do potwierdzenia, z ostrzeżeniem, gdy znany klucz się zmieni).",
       "sec.link":"Model bezpieczeństwa →",
       "faq.eyebrow":"FAQ","faq.h2":"Pytania i odpowiedzi",
-      "faq.q1":"Czym różni się od mRemoteNG lub PuTTY?","faq.a1":"Waypoint łączy RDP (oficjalna kontrolka Microsoftu), prawdziwy terminal SSH, VNC, menedżer plików SFTP/FTP i klient REST w jednej nowoczesnej, aktywnie rozwijanej aplikacji — z kartami, profilami poświadczeń i czystym UI Fluent — zamiast starzejącego się menedżera czy klienta tylko-terminalowego.",
-      "faq.q2":"Jakie protokoły są obsługiwane?","faq.a2":"RDP, SSH, VNC, Telnet i port szeregowy (COM), menedżer plików SFTP/FTP/FTPS, linki do paneli web oraz wbudowany klient REST/API — wszystko zgrupowane w jednym drzewie.",
-      "faq.q3":"Czy naprawdę zawiera klient REST/API?","faq.a3":"Tak — klient w stylu Postmana z kolekcjami, środowiskami i zmiennymi {{variables}}, historią żądań, importem z Postmana, uwierzytelnianiem Bearer/Basic oraz skryptami JavaScript przed żądaniem i testowymi. Lżejsza alternatywa dla osobnego narzędzia do API.",
-      "faq.q4":"Czy obsługuje klucze SSH?","faq.a4":"Tak — logowanie hasłem i kluczem prywatnym (z hasłem do klucza), weryfikacja klucza hosta przy pierwszym połączeniu oraz lokalne tunele (port-forwarding).",
-      "faq.q5":"Czy muszę coś instalować?","faq.a5":"Nie — jeden plik .exe, bez instalowania .NET. Wbudowany terminal używa środowiska WebView2, obecnego już w aktualnym Windows 10/11.",
-      "faq.q6":"Gdzie są przechowywane moje hasła?","faq.a6":"W Menedżerze poświadczeń Windows (DPAPI, powiązany z Twoim kontem) — nigdy w plikach aplikacji. Ten sam sejf, którego używa mstsc.",
-      "dl.eyebrow":"Pobierz","dl.h2":"Zacznij z Waypoint","dl.sub":"Jeden plik. Odpalasz i działa — bez instalatora, bez instalowania .NET.",
+      "faq.q1":"Czym różni się od mRemoteNG lub PuTTY?","faq.a1":"Waypoint łączy RDP (oficjalna kontrolka Microsoftu), prawdziwy terminal SSH, VNC, menedżer plików SFTP/FTP i klient REST w jednej nowoczesnej, aktywnie rozwijanej aplikacji (z kartami, profilami poświadczeń i czystym UI Fluent) zamiast starzejącego się menedżera czy klienta tylko-terminalowego.",
+      "faq.q2":"Jakie protokoły są obsługiwane?","faq.a2":"RDP, SSH, VNC, Telnet i port szeregowy (COM), menedżer plików SFTP/FTP/FTPS, linki do paneli web oraz wbudowany klient REST/API, wszystko zgrupowane w jednym drzewie.",
+      "faq.q3":"Czy naprawdę zawiera klient REST/API?","faq.a3":"Tak: klient w stylu Postmana z kolekcjami, środowiskami i zmiennymi {{variables}}, historią żądań, importem z Postmana, uwierzytelnianiem Bearer/Basic oraz skryptami JavaScript przed żądaniem i testowymi. Lżejsza alternatywa dla osobnego narzędzia do API.",
+      "faq.q4":"Czy obsługuje klucze SSH?","faq.a4":"Tak: logowanie hasłem i kluczem prywatnym (z hasłem do klucza), weryfikacja klucza hosta przy pierwszym połączeniu oraz lokalne tunele (port-forwarding).",
+      "faq.q5":"Czy muszę coś instalować?","faq.a5":"Nie: jeden plik .exe, bez instalowania .NET. Wbudowany terminal używa środowiska WebView2, obecnego już w aktualnym Windows 10/11.",
+      "faq.q6":"Gdzie są przechowywane moje hasła?","faq.a6":"W Menedżerze poświadczeń Windows (DPAPI, powiązany z Twoim kontem), nigdy w plikach aplikacji. Ten sam sejf, którego używa mstsc.",
+      "dl.eyebrow":"Pobierz","dl.h2":"Zacznij z Waypoint","dl.sub":"Jeden plik. Odpalasz i działa: bez instalatora, bez instalowania .NET.",
       "dl.dl":"Pobierz na Windows (x64)","dl.source":"Kod źródłowy",
-      "dl.note":"Wymagania: Windows 10/11 (x64). Plik nie jest jeszcze podpisany cyfrowo, więc przy pierwszym uruchomieniu SmartScreen może pokazać ostrzeżenie — kliknij <code>Więcej informacji → Uruchom mimo to</code>.",
+      "dl.note":"Wymagania: Windows 10/11 (x64). Plik nie jest jeszcze podpisany cyfrowo, więc przy pierwszym uruchomieniu SmartScreen może pokazać ostrzeżenie. Kliknij <code>Więcej informacji → Uruchom mimo to</code>.",
       "road.eyebrow":"Plan rozwoju","road.h2":"Co dalej",
-      "road.i1":"<b>Podpis cyfrowy</b> — usunięcie ostrzeżenia SmartScreen przy pierwszym uruchomieniu.",
-      "road.i2":"<b>Diagnostyka połączenia</b> — DNS, ping, port i baner protokołu jednym kliknięciem, gdy coś nie chce się połączyć.",
-      "road.i3":"<b>Zrzut i nagrywanie ekranu</b> — screenshoty i wideo z sesji.",
-      "road.i4":"<b>Wersja ARM64</b> — natywnie dla Windows on ARM.",
+      "road.i1":"<b>Podpis cyfrowy</b>: usunięcie ostrzeżenia SmartScreen przy pierwszym uruchomieniu.",
+      "road.i2":"<b>Diagnostyka połączenia</b>: DNS, ping, port i baner protokołu jednym kliknięciem, gdy coś nie chce się połączyć.",
+      "road.i3":"<b>Zrzut i nagrywanie ekranu</b>: screenshoty i wideo z sesji.",
+      "road.i4":"<b>Wersja ARM64</b>: natywnie dla Windows on ARM.",
       "foot.by":"Autor: <b>Filip Benklewski</b> · <a href=\"https://github.com/FilipB97\" rel=\"author\">GitHub</a> · <a href=\"https://www.linkedin.com/in/filip-benklewski-705231184\" rel=\"author\">LinkedIn</a>",
       "foot.lic":"Waypoint · MIT © 2026",
       "foot.right":"Zbudowane w WPF / .NET 8 · <a href=\"https://github.com/FilipB97/Waypoint\">GitHub</a>",
