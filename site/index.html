@@ -104,6 +104,18 @@
   /* hero */
   /* the hero is also .wrap: set only vertical padding so the 26px side gutter survives on phones */
   .hero{text-align:center;padding-top:60px;padding-bottom:20px;position:relative}
+  /* Wide screens: the headline as a poster, left aligned across the whole column (size in cqi of the hero, so it grows
+     with the column and never with the window), then one row with the pitch on the left and the actions on the right,
+     so the app window already shows in the first screen. */
+  @media (min-width:900px){
+    .hero{text-align:left;container-type:inline-size;padding-top:52px}
+    .hero h1{font-size:min(9.6cqi,124px);max-width:none;margin:20px 0 0;line-height:.94;letter-spacing:-.045em}
+    .hero-row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:48px;align-items:start;margin-top:32px}
+    .hero .lead{margin:0;max-width:52ch;font-size:18px}
+    .hero-r{display:grid;gap:16px;justify-items:start}
+    .hero .hcta,.hero .chips,.hero .meta{justify-content:flex-start;margin-top:0}
+    .hero .stage-wrap{margin-top:40px}
+  }
   .win{text-align:left}
   .badge{font-size:13.5px}
   h1{font-size:clamp(40px,6.4vw,76px);line-height:1;margin:22px auto 0;max-width:15ch;letter-spacing:-.035em}
@@ -310,6 +322,8 @@
   .by .who a:hover{border-bottom-color:currentColor}
   .by .lic{color:var(--tx3);font-size:12.5px}
 
+  /* the narrowest phones: logo mark without the word, so the language switch and Download still fit */
+  @media(max-width:380px){.brand{font-size:0;gap:0}.lang button{padding:7px 9px}}
   @media(max-width:560px){
     .nav-in{gap:10px}
     .nlinks{gap:12px}
@@ -356,7 +370,9 @@
 <header class="wrap hero">
   <span class="eye badge"><span data-i18n="hero.badge2">Open source · MIT · Windows</span></span>
   <h1 data-i18n-html="hero.title">Every remote connection,<br><span class="grad">one modern app.</span></h1>
+  <div class="hero-row">
   <p class="lead" data-i18n-html="hero.lead"><b>Waypoint</b> is a modern connection manager for Windows: RDP, SSH, VNC, Telnet &amp; serial, an SFTP/FTP file manager and a built-in REST/API client. One app instead of mstsc, PuTTY, WinSCP and Postman.</p>
+  <div class="hero-r">
   <div class="hcta">
     <a class="btn pri" href="https://github.com/FilipB97/Waypoint/releases/latest">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
@@ -374,6 +390,8 @@
     <b data-i18n="meta.file">single .exe</b><span class="sep"></span>
     <b data-i18n="meta.net">no .NET install</b><span class="sep"></span>
     <b data-i18n="meta.free">free · open source</b>
+  </div>
+  </div>
   </div>
 
   <div class="stage-wrap">

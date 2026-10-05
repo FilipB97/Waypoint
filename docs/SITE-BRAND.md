@@ -36,6 +36,13 @@ Kreski zamiast ramek: FAQ jako lista z liniami, szybki start jako przystanki na
 jednej linii. Ramkę dostaje to, co jest osobnym przedmiotem: okno aplikacji,
 makiety, tabela porównania, pas bezpieczeństwa, blok pobierania.
 
+## Pierwszy ekran
+
+Na szerokim ekranie hasło jak plakat: wyrównane do lewej, na całą szerokość kolumny
+(`min(9.6cqi, 124px)`, trzy wiersze), pod nim jeden rząd z opisem po lewej
+i przyciskami, protokołami i metryczką po prawej, a niżej okno aplikacji, którego
+górna krawędź jest widoczna już w pierwszym ekranie. Na telefonie układ wyśrodkowany.
+
 ## Gest marki
 
 Punkt trasy z logo: pusty węzeł na krótkim odcinku linii przy każdej etykiecie
