@@ -44,6 +44,10 @@ roadmapa jako węzły na jednej pionowej trasie.
 
 ## Energia i ruch
 
-Energia 2 z 5, ruch 1 z 5. Okno w hero wstaje raz przy wejściu, sekcje wchodzą
+Energia 3 z 5, ruch 2 z 5. Efekt-podpis: okno aplikacji w hero startuje mocno
+pochylone do tyłu (jak ekran na biurku widziany z góry) i przy przewijaniu prostuje
+się i rośnie, aż stoi płasko przed czytelnikiem (`@keyframes straighten`, oś
+`view()` okna, samo CSS). Cel: pokazać produkt jako przedmiot, a nie zrzut. Bez
+obsługi osi przewijania okno ma stałe lekkie pochylenie. Poza tym sekcje wchodzą
 raz przy przewijaniu, polecenie w terminalu wpisuje się raz. Kursor nie mruga
 w pętli. Przy `prefers-reduced-motion` wszystko stoi.

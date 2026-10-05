@@ -103,7 +103,7 @@
 
   /* hero */
   /* the hero is also .wrap: set only vertical padding so the 26px side gutter survives on phones */
-  .hero{text-align:center;padding-top:74px;padding-bottom:20px;position:relative}
+  .hero{text-align:center;padding-top:60px;padding-bottom:20px;position:relative}
   .win{text-align:left}
   .badge{font-size:13.5px}
   h1{font-size:clamp(40px,6.4vw,76px);line-height:1;margin:22px auto 0;max-width:15ch;letter-spacing:-.035em}
@@ -122,6 +122,25 @@
   .stage-wrap{margin:52px auto 0;max-width:1000px;position:relative;perspective:1800px}
   .float{position:relative;z-index:1;transform:rotateX(9deg);transform-origin:50% 0;animation:rise 1.1s cubic-bezier(.2,.7,.2,1) both}
   @keyframes rise{from{opacity:0;transform:rotateX(16deg) translateY(40px)}to{opacity:1;transform:rotateX(9deg) translateY(0)}}
+  /* Signature effect (docs/SITE-BRAND.md): the app window starts steeply tilted back, like a screen on a desk seen from
+     above, and straightens up and grows as you scroll, until it faces you flat. Driven by the window's own position in the
+     viewport (view timeline), CSS only. Without support, or with reduced motion, it keeps the gentle static tilt above. */
+  @supports (animation-timeline:view()){
+    @media (prefers-reduced-motion:no-preference){
+      .stage-wrap{perspective:1200px;margin-top:44px;max-width:1100px}
+      .float{animation:straighten linear both;animation-timeline:view();animation-range:entry 0% cover 48%;transform-origin:50% 100%}
+      @keyframes straighten{
+        from{transform:rotateX(32deg) scale(.86) translateY(24px)}
+        to{transform:rotateX(0) scale(1) translateY(0)}
+      }
+      /* the window's edge catches light while it is tilted and loses it when flat */
+      .float .win{animation:edge linear both;animation-timeline:view();animation-range:entry 0% cover 48%}
+      @keyframes edge{
+        from{box-shadow:0 60px 120px -40px #000,0 0 0 1px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.22)}
+        to{box-shadow:0 30px 80px -40px #000,0 0 0 1px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+      }
+    }
+  }
 
   /* ===== app window ===== */
   .win{border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#141826,#0d1120);border:1px solid var(--line2);
@@ -152,6 +171,7 @@
   .tab{display:flex;align-items:center;gap:8px;padding:0 14px;font-size:12.5px;color:var(--tx3);border-bottom:2px solid transparent}
   .tab .st{width:6px;height:6px;border-radius:50%}
   .tab.on{color:var(--tx);border-bottom-color:var(--acc2)}
+  .tab{white-space:nowrap;flex:none}.wtitle .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .screen{flex:1;background:#080a10;padding:16px 18px;font-family:var(--mono);font-size:13px;line-height:1.9;overflow:hidden}
   .screen .ok{color:var(--on)}.screen .p{color:var(--acc2)}.screen .a{color:var(--sftp)}.screen .m{color:var(--tx3)}
   .tcaret{display:inline-block;width:7px;height:15px;background:var(--on);translate:0 2px}
@@ -297,7 +317,8 @@
     .btn.star{display:none}
     .stage-wrap{width:100%}
     .win,.float{max-width:100%}
-    .tree{width:150px}.rail{width:46px}.wbody{height:320px}
+    /* on phones the connection tree squeezed the terminal to two words per line; the rail and tabs are enough here */
+    .tree{display:none}.rail{width:46px}.wbody{height:300px}
     .band{padding:28px 22px}
   }
 
