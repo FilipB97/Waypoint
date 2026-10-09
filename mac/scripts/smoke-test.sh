@@ -38,6 +38,7 @@ KbdInteractiveAuthentication yes
 PubkeyAuthentication no
 AllowUsers $USER_NAME
 PrintMotd no
+Subsystem sftp /usr/libexec/sftp-server
 CFG
 sudo /usr/sbin/sshd -f "$WORK/sshd_config" -E "$WORK/sshd.log"
 for i in $(seq 20); do nc -z 127.0.0.1 2222 && break; sleep 0.5; done

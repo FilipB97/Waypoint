@@ -58,6 +58,9 @@ struct ServerSidebar: View {
     @ViewBuilder
     private func menu(for s: Server) -> some View {
         Button(L("act.connect")) { model.connect(s) }
+        if s.proto == .ssh {
+            Button(L("act.files")) { model.openFiles(s) }
+        }
         Divider()
         Button(L("act.edit")) { model.beginEdit(s) }
         Button(L("act.duplicate")) { model.duplicate(s) }

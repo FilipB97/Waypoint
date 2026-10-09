@@ -13,6 +13,79 @@ struct PendingPrompt: Identifiable {
     let answer: (String?, Bool) -> Void   // (odpowiedź albo nil = anuluj, zapisać w Pęku kluczy?)
 }
 
+/// Logowanie dla procesu ssh (terminal albo panel plików): kanał askpass, hasło z Pęku kluczy przy
+/// pierwszej prośbie, pytania dla użytkownika i zapis hasła. Jeden obiekt na jedno uruchomienie ssh.
+@MainActor
+@Observable
+final class AuthBroker {
+    let server: Server
+    var prompt: PendingPrompt?
+    /// Krótka informacja nad kartą („Hasło zapisane w Pęku kluczy").
+    var notice: String?
+    /// Wołane po odpowiedzi na pytanie — karta oddaje fokus terminalowi.
+    @ObservationIgnored var onAnswered: (() -> Void)?
+
+    @ObservationIgnored private var channel: AskpassServer?
+    @ObservationIgnored private var storedPasswordTried = false
+    @ObservationIgnored private var passwordAttempts = 0
+
+    init(server: Server) { self.server = server }
+
+    /// Uruchamia kanał askpass i zwraca zmienne środowiskowe dla ssh (puste, gdy kanał się nie udał —
+    /// wtedy terminal zapyta w samym terminalu, a panel plików zgłosi błąd logowania).
+    func start() -> [String: String] {
+        stop()
+        storedPasswordTried = false
+        passwordAttempts = 0
+        do {
+            let srv = try AskpassServer { [weak self] req, reply in
+                Task { @MainActor in
+                    guard let self else { reply(Askpass.Reply(value: nil)); return }
+                    self.handle(req) { reply(Askpass.Reply(value: $0)) }
+                }
+            }
+            channel = srv
+            return srv.environment(askpassExecutable: Bundle.main.executablePath ?? CommandLine.arguments[0])
+        } catch {
+            channel = nil
+            return [:]
+        }
+    }
+
+    func stop() {
+        prompt?.answer(nil, false)
+        prompt = nil
+        channel?.stop()
+        channel = nil
+    }
+
+    private func handle(_ req: Askpass.Request, reply: @escaping (String?) -> Void) {
+        let kind = Askpass.classify(req.prompt, promptHint: req.hint)
+        if kind == .password {
+            passwordAttempts += 1
+            // Pierwsza prośba o hasło: zapisane w Pęku kluczy idzie od razu, bez okna.
+            if !storedPasswordTried {
+                storedPasswordTried = true
+                if let saved = Keychain.password(for: server.id) {
+                    reply(saved)
+                    return
+                }
+            }
+        }
+        let retry = kind == .password && passwordAttempts > 1
+        prompt = PendingPrompt(kind: kind, text: req.prompt, isRetry: retry) { [weak self] value, save in
+            reply(value)
+            guard let self else { return }
+            self.prompt = nil
+            if save, kind == .password, let value, !value.isEmpty {
+                let ok = Keychain.save(value, for: self.server.id, label: "Waypoint — \(self.server.displayName)")
+                self.notice = ok ? L("prompt.saved") : L("prompt.savefail")
+            }
+            self.onAnswered?()
+        }
+    }
+}
+
 /// Jedna karta SSH: proces `/usr/bin/ssh` w pseudo-terminalu (SwiftTerm) + kanał askpass.
 @MainActor
 @Observable
@@ -23,49 +96,32 @@ final class TerminalSession: Identifiable {
     private(set) var server: Server
     private(set) var state: State = .running
     var title: String
-    var prompt: PendingPrompt?
+    let auth: AuthBroker
     private(set) var warnings: [String] = []
-    /// Ostatnia informacja o zapisie hasła („Zapisano w Pęku kluczy") — pokazywana chwilę nad terminalem.
-    var notice: String?
 
     @ObservationIgnored let view: SessionTerminalView
-    @ObservationIgnored private var askpass: AskpassServer?
-    @ObservationIgnored private var storedPasswordTried = false
-    @ObservationIgnored private var passwordAttempts = 0
 
     init(server: Server) {
         self.server = server
         self.title = server.displayName
+        self.auth = AuthBroker(server: server)
         self.view = SessionTerminalView(frame: NSRect(x: 0, y: 0, width: 800, height: 500))
         view.session = self
         TerminalAppearance.apply(to: view)
+        auth.onAnswered = { [weak self] in
+            guard let v = self?.view else { return }
+            v.window?.makeFirstResponder(v)
+        }
         start()
     }
 
     var isRunning: Bool { state == .running }
 
     func start() {
-        storedPasswordTried = false
-        passwordAttempts = 0
         let launch = SshCommand.build(server, homeDirectory: NSHomeDirectory(),
                                       fileExists: { FileManager.default.fileExists(atPath: $0) })
         warnings = launch.warnings
-
-        var extra: [String: String] = [:]
-        do {
-            let srv = try AskpassServer { [weak self] req, reply in
-                Task { @MainActor in
-                    guard let self else { reply(Askpass.Reply(value: nil)); return }
-                    self.handle(req) { reply(Askpass.Reply(value: $0)) }
-                }
-            }
-            askpass = srv
-            extra = srv.environment(askpassExecutable: Bundle.main.executablePath ?? CommandLine.arguments[0])
-        } catch {
-            // Bez kanału askpass ssh zapyta o hasło w samym terminalu — dalej da się zalogować.
-            askpass = nil
-        }
-
+        let extra = auth.start()
         state = .running
         view.startProcess(executable: SshCommand.executable, args: launch.arguments,
                           environment: SshCommand.environment(base: ProcessInfo.processInfo.environment, extra: extra),
@@ -80,49 +136,13 @@ final class TerminalSession: Identifiable {
 
     /// Zamknięcie karty: odpowiada „anuluj" na wiszące pytanie i kończy ssh.
     func close() {
-        prompt?.answer(nil, false)
-        prompt = nil
+        auth.stop()
         if isRunning { view.terminate() }
-        askpass?.stop()
-        askpass = nil
     }
 
     func processEnded(_ code: Int32?) {
         state = .ended(code)
-        prompt?.answer(nil, false)
-        prompt = nil
-        askpass?.stop()
-        askpass = nil
-    }
-
-    // MARK: askpass
-
-    private func handle(_ req: Askpass.Request, reply: @escaping (String?) -> Void) {
-        let kind = Askpass.classify(req.prompt, promptHint: req.hint)
-
-        if kind == .password {
-            passwordAttempts += 1
-            // Pierwsza prośba o hasło: zapisane w Pęku kluczy idzie od razu, bez okna.
-            if !storedPasswordTried {
-                storedPasswordTried = true
-                if let saved = Keychain.password(for: server.id) {
-                    reply(saved)
-                    return
-                }
-            }
-        }
-
-        let retry = kind == .password && passwordAttempts > 1
-        prompt = PendingPrompt(kind: kind, text: req.prompt, isRetry: retry) { [weak self] value, save in
-            reply(value)
-            guard let self else { return }
-            self.prompt = nil
-            if save, kind == .password, let value, !value.isEmpty {
-                let ok = Keychain.save(value, for: self.server.id, label: "Waypoint — \(self.server.displayName)")
-                self.notice = ok ? L("prompt.saved") : L("prompt.savefail")
-            }
-            self.view.window?.makeFirstResponder(self.view)
-        }
+        auth.stop()
     }
 }
 

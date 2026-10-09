@@ -56,15 +56,15 @@ enum Smoke {
         //    — wpis dodany innym programem (np. `security`) wywołałby systemowe pytanie o dostęp.
         if let id = env["WAYPOINT_SMOKE_KEYCHAIN_SERVER"], let s = model.servers.first(where: { $0.id == id }),
            let password = env["WAYPOINT_SMOKE_PASSWORD"] {
+            keychainServerID = id
             note(Keychain.save(password, for: id, label: "Waypoint — smoke") ? "hasło zapisane w Pęku kluczy" : "FAIL: zapis do Pęku kluczy", out)
-            defer { Keychain.delete(for: id) }
             model.connect(s)
-            let session = model.activeSession!
-            let prompted = await waitFor(15, { session.prompt != nil ? true : (bufferText(session).contains("$ ") || bufferText(session).contains("% ") ? true : nil) })
-            if session.prompt != nil {
-                note("FAIL: pytanie o hasło mimo hasła w Pęku kluczy: \(session.prompt!.text)", out)
+            let session = model.activeSession!.terminal!
+            let prompted = await waitFor(15, { session.auth.prompt != nil ? true : (bufferText(session).contains("$ ") || bufferText(session).contains("% ") ? true : nil) })
+            if session.auth.prompt != nil {
+                note("FAIL: pytanie o hasło mimo hasła w Pęku kluczy: \(session.auth.prompt!.text)", out)
                 snapshot(window, out.appendingPathComponent("03-nieoczekiwane-pytanie.png"))
-                session.prompt?.answer(nil, false)
+                session.auth.prompt?.answer(nil, false)
                 ok = false
             } else if prompted == nil {
                 note("FAIL: brak znaku zachęty powłoki po 15 s", out); ok = false
@@ -85,8 +85,8 @@ enum Smoke {
         if let id = env["WAYPOINT_SMOKE_PROMPT_SERVER"], let s = model.servers.first(where: { $0.id == id }),
            let password = env["WAYPOINT_SMOKE_PASSWORD"] {
             model.connect(s)
-            let session = model.activeSession!
-            let p = await waitFor(15, { session.prompt })
+            let session = model.activeSession!.terminal!
+            let p = await waitFor(15, { session.auth.prompt })
             if let p {
                 try? await Task.sleep(for: .seconds(0.8))
                 snapshot(window, out.appendingPathComponent("04-pytanie-o-haslo.png"))
@@ -104,6 +104,45 @@ enum Smoke {
                 snapshot(window, out.appendingPathComponent("04-brak-pytania.png"))
                 try? bufferText(session).write(to: out.appendingPathComponent("terminal-prompt.txt"), atomically: true, encoding: .utf8)
                 ok = false
+            }
+        }
+
+        // 5. Panel plików SFTP (ten sam serwer, hasło z Pęku kluczy): wysłanie, lista, pobranie z porównaniem.
+        if let id = keychainServerID, let s = model.servers.first(where: { $0.id == id }) {
+            model.openFiles(s)
+            let fs = model.activeSession!.files!
+            let ready = await waitFor(20, { fs.state == .ready ? true : (fs.auth.prompt != nil ? false : nil) })
+            if ready != true {
+                note("FAIL: panel plików — \(fs.auth.prompt.map { "pytanie: \($0.text)" } ?? "\(fs.state)")", out)
+                snapshot(window, out.appendingPathComponent("10-pliki-blad.png"))
+                ok = false
+            } else {
+                let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("wp-smoke-\(UUID().uuidString.prefix(6))")
+                try? FileManager.default.createDirectory(at: tmp.appendingPathComponent("folder z plikami"), withIntermediateDirectories: true)
+                let name = "waypoint-smoke.txt"
+                let payload = "WAYPOINT_SFTP_OK zażółć gęślą jaźń\n" + String(repeating: "x", count: 300_000)
+                try? payload.write(to: tmp.appendingPathComponent(name), atomically: true, encoding: .utf8)
+                try? "w folderze".write(to: tmp.appendingPathComponent("folder z plikami/a.txt"), atomically: true, encoding: .utf8)
+                fs.upload([tmp.appendingPathComponent(name), tmp.appendingPathComponent("folder z plikami")])
+                let listed = await waitFor(20, { !fs.busy && fs.entries.contains { $0.name == name } && fs.entries.contains { $0.name == "folder z plikami" } ? true : nil })
+                fs.selection = Set(fs.entries.filter { $0.name == name }.map(\.id))
+                try? await Task.sleep(for: .seconds(0.8))
+                snapshot(window, out.appendingPathComponent("10-pliki.png"))
+                var downloaded = false
+                if listed == true, let e = fs.entries.first(where: { $0.name == name }) {
+                    let back = tmp.appendingPathComponent("pobrane")
+                    try? FileManager.default.createDirectory(at: back, withIntermediateDirectories: true)
+                    fs.download([e], to: back)
+                    _ = await waitFor(20, { fs.busy ? nil : true })
+                    downloaded = (try? String(contentsOf: back.appendingPathComponent(name), encoding: .utf8)) == payload
+                }
+                note(listed == true && downloaded ? "OK: SFTP — wysłanie pliku i folderu, lista, pobranie (treść zgodna)"
+                                                  : "FAIL: SFTP lista=\(listed == true) pobranie=\(downloaded) komunikat=\(fs.message ?? "-")", out)
+                ok = ok && listed == true && downloaded
+                // Sprzątanie na serwerze testowym.
+                let toDelete = fs.entries.filter { $0.name == name || $0.name == "folder z plikami" }
+                fs.delete(toDelete)
+                _ = await waitFor(10, { fs.busy ? nil : true })
             }
         }
 
@@ -134,14 +173,17 @@ enum Smoke {
             }
         }
 
-        // Kilka kart: zrzut paska kart z aktywną pierwszą.
+        // Kilka kart (terminale i pliki): zrzut paska kart z aktywną pierwszą.
         model.activateTab(0)
         try? await Task.sleep(for: .seconds(1))
         snapshot(window, out.appendingPathComponent("06-karty.png"))
         finish(out, ok: ok)
     }
 
+    private static var keychainServerID: String?
+
     private static func finish(_ out: URL, ok: Bool) {
+        if let id = keychainServerID { Keychain.delete(for: id) }
         try? (ok ? "OK" : "FAIL").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
         for s in AppModel.shared.sessions { s.close() }
         exit(ok ? 0 : 1)

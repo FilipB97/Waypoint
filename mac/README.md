@@ -36,7 +36,8 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | 1 | Szkielet, lista serwerów (grupy, przypięte, wyszukiwanie), edytor serwera, import z Windows, CI | ✅ |
 | 2 | Terminal SSH w kartach (SwiftTerm + systemowe `ssh`: agent, `~/.ssh/config`), hasła w Pęku kluczy | ✅ |
 | 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ✅ |
-| 4 | Panel plików SFTP/FTP: przeglądanie, wysyłanie/pobieranie | ⏳ |
+| 4 | Panel plików SFTP: przeglądanie, wysyłanie/pobieranie (także folderów), zmiana nazwy, usuwanie | ✅ |
+| 4b | FTP/FTPS | ⏳ |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | — |
 
 ## Terminal SSH
@@ -53,6 +54,17 @@ nigdy nie trafia do askpass, więc zapisanego hasła nie da się wyłudzić.
 
 Skróty: Enter / dwuklik na serwerze — połącz, ⌘W — zamknij kartę, ⌘1…⌘9 — karta, ⌘⇧[ / ⌘⇧] —
 poprzednia/następna.
+
+## Pliki (SFTP)
+
+Klient SFTP v3 jest w `WaypointCore` i rozmawia przez systemowe `ssh -s … sftp` — logowanie jest
+więc identyczne jak w terminalu (config, agent, Pęk kluczy przez askpass). Pobieranie i wysyłanie
+są potokowe (16 bloków po 64 KB w locie), foldery przenoszą się rekurencyjnie, nazwy z serwera są
+sprawdzane (`../` z wrogiego serwera nie zapisze pliku poza wybranym katalogiem), przerwany
+transfer nie zostawia połowy pliku. Karta „Pliki" otwiera się dla serwerów SFTP i — z menu
+„Pliki (SFTP)" — dla serwerów SSH. Wysyłanie: przycisk albo przeciągnięcie z Findera.
+
+Testy klienta na prawdziwym OpenSSH: `WAYPOINT_SFTP_TEST=host:port:user:klucz[:known_hosts] swift test`.
 
 ## RDP
 

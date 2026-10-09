@@ -127,6 +127,20 @@ import Testing
         #expect(!FileManager.default.fileExists(atPath: server.socketPath))
     }
 
+    /// Regresja: zatrzymany serwer nie może przejąć połączenia do nowego, który dostał ten sam numer
+    /// deskryptora (tak wygląda zamknięcie karty i otwarcie kolejnej).
+    @Test func zatrzymanySerwerNiePrzejmujePolaczenNowego() throws {
+        for i in 0..<40 {
+            let old = try AskpassServer { _, reply in reply(Askpass.Reply(value: "stary")) }
+            old.stop()
+            let fresh = try AskpassServer { _, reply in reply(Askpass.Reply(value: "nowy-\(i)")) }
+            defer { fresh.stop() }
+            var out: [String] = []
+            let code = Askpass.runClient(arguments: ["a", "Password:"], environment: fresh.environment(askpassExecutable: "/x")) { out.append($0) }
+            #expect(code == 0 && out == ["nowy-\(i)"], "próba \(i)")
+        }
+    }
+
     @Test func bezZmiennychTrybAskpassKonczySieBledem() {
         #expect(Askpass.runClient(arguments: ["a", "Password:"], environment: [:]) { _ in } == 2)
     }

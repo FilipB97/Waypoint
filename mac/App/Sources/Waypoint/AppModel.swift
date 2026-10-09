@@ -12,8 +12,8 @@ final class AppModel {
 
     var servers: [Server] = []
     /// Otwarte karty SSH. Aktywna karta zasłania szczegóły serwera; nil = widać szczegóły zaznaczonego.
-    var sessions: [TerminalSession] = []
-    var activeSessionID: TerminalSession.ID?
+    var sessions: [SessionTab] = []
+    var activeSessionID: SessionTab.ID?
     var query = ""
     var selection: Server.ID?
     /// Wpis otwarty w edytorze (arkusz). `isNew` rozróżnia „Dodaj" od „Edytuj".
@@ -27,7 +27,7 @@ final class AppModel {
     private let store = ServerStore(directory: ProcessInfo.processInfo.environment["WAYPOINT_DATA_DIR"]
         .map { URL(fileURLWithPath: $0, isDirectory: true) } ?? ServerStore.defaultDirectory)
 
-    var activeSession: TerminalSession? { sessions.first { $0.id == activeSessionID } }
+    var activeSession: SessionTab? { sessions.first { $0.id == activeSessionID } }
 
     var sections: [ServerList.Section] { ServerList.sections(servers, query: query) }
     var selected: Server? { servers.first { $0.id == selection } }
@@ -123,9 +123,9 @@ final class AppModel {
     func connect(_ s: Server) {
         switch s.proto {
         case .ssh?:
-            let session = TerminalSession(server: s)
-            sessions.append(session)
-            activeSessionID = session.id
+            add(.terminal(TerminalSession(server: s)))
+        case .sftp?:
+            openFiles(s)
         case .rdp?:
             RdpLauncher.open(s) { [weak self] outcome in
                 guard let self else { return }
@@ -173,8 +173,18 @@ final class AppModel {
         editingIsNew = true
     }
 
+    private func add(_ tab: SessionTab) {
+        sessions.append(tab)
+        activeSessionID = tab.id
+    }
+
+    /// Panel plików SFTP — dla serwerów SFTP i SSH (ten sam login, osobne połączenie).
+    func openFiles(_ s: Server) {
+        add(.files(FileSession(server: s)))
+    }
+
     /// Zamyka kartę; działające połączenie wymaga potwierdzenia (jak „Potwierdzaj zamknięcie" w Windows).
-    func close(_ session: TerminalSession, confirm: Bool = true) {
+    func close(_ session: SessionTab, confirm: Bool = true) {
         if confirm && session.isRunning {
             let a = NSAlert()
             a.messageText = String(format: L("close.title"), session.title)

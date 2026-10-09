@@ -17,6 +17,9 @@ struct ServerDetail: View {
                     }
                     Spacer()
                     Button(L("act.edit")) { model.beginEdit(server) }
+                    if server.proto == .ssh {
+                        Button(L("act.files")) { model.openFiles(server) }
+                    }
                     Button(L("act.connect")) { model.connect(server) }
                         .buttonStyle(.borderedProminent)
                         .keyboardShortcut(.defaultAction)
