@@ -23,6 +23,8 @@ final class EditorDocument: Identifiable {
     private(set) var saving = false
     private(set) var ready = false
     var readOnly: Bool
+    /// Zapis przez sudo (plik należy do innego użytkownika). Włączany świadomie przez użytkownika.
+    private(set) var sudoMode = false
     var wrap = false
     var line = 1
     var column = 1
@@ -118,6 +120,15 @@ final class EditorDocument: Identifiable {
         bridge.post(["t": "focus"])
     }
 
+    /// sudo działa tylko przez SSH (FTP nie ma wykonywania poleceń).
+    var sudoAvailable: Bool { server.proto == .ssh || server.proto == .sftp }
+
+    /// „Edytuj i zapisuj przez sudo" z paska tylko-do-odczytu.
+    func editWithSudo() {
+        sudoMode = true
+        editAnyway()
+    }
+
     // MARK: Zapis
 
     func saveFromButton() { requestText { [weak self] t in if let t { self?.save(t) } } }
@@ -164,28 +175,88 @@ final class EditorDocument: Identifiable {
                     self.setStatus(L("edit.conflict.kept"), error: true)
                     return
                 }
+                if self.sudoMode { self.sudoSave(bytes, fmt: fmt, path: path, password: nil, retry: false); return }
                 // Metadane ŚWIEŻE (now) — jeśli ktoś zmienił uprawnienia, zapis zachowa obecne.
                 self.connection.perform({ c -> (SafeWriteMode, RemoteFileInfo?) in
                     let mode = try SafeWrite.write(c, content: bytes, original: now)
                     return (mode, try? SafeWrite.stat(c, path))
                 }) { [weak self] r2 in
                     guard let self else { return }
-                    self.saving = false
                     switch r2 {
-                    case .failure(let e): self.fail(e)
+                    case .failure(let e):
+                        // Brak uprawnień, plik cały → propozycja zapisu przez sudo (SSH).
+                        if let we = e as? SafeWriteError, we.isPermissionDenied, !we.originalMayBeDamaged, self.sudoAvailable,
+                           self.confirm(L("edit.sudo.ask"), yes: L("edit.sudo.yes")) {
+                            self.sudoMode = true
+                            self.sudoSave(bytes, fmt: fmt, path: path, password: nil, retry: false)
+                            return
+                        }
+                        self.saving = false
+                        self.fail(e)
                     case .success(let (mode, after)):
-                        self.opened = after ?? now
-                        self.format = fmt
-                        self.savedBytes = bytes
-                        self.bridge.post(["t": "saved"])
+                        self.saving = false
                         let when = Date().formatted(date: .omitted, time: .standard)
                         switch mode {
-                        case .atomicReplace: self.setStatus(String(format: L("edit.saved"), when))
-                        case .inPlace(let reason): self.setStatus(String(format: L("edit.saved.inplace"), when, L(reason)))
+                        case .atomicReplace: self.saved(bytes, fmt: fmt, info: after ?? now, status: String(format: L("edit.saved"), when))
+                        case .inPlace(let reason): self.saved(bytes, fmt: fmt, info: after ?? now, status: String(format: L("edit.saved.inplace"), when, L(reason)))
                         }
-                        self.finishCloseIfRequested()
                     }
                 }
+            }
+        }
+    }
+
+    private func saved(_ bytes: Data, fmt: TextFileFormat, info: RemoteFileInfo, status: String) {
+        opened = info
+        format = fmt
+        savedBytes = bytes
+        bridge.post(["t": "saved"])
+        setStatus(status)
+        finishCloseIfRequested()
+    }
+
+    /// Zapis przez sudo. Hasło: najpierw zapisane dla sudo, potem hasło logowania (zwykle to samo);
+    /// gdy sudo je odrzuci — pytanie nad edytorem z opcją zapisu w Pęku kluczy.
+    private func sudoSave(_ bytes: Data, fmt: TextFileFormat, path: String, password: String?, retry: Bool) {
+        saving = true
+        setStatus(L("edit.sudo.saving"))
+        let srv = server
+        let pw = password ?? Keychain.password(for: srv.id + ".sudo") ?? Keychain.password(for: srv.id)
+        let env = SshCommand.environment(base: ProcessInfo.processInfo.environment, extra: connection.auth.start())
+            .reduce(into: [String: String]()) { d, kv in
+                if let i = kv.firstIndex(of: "=") { d[String(kv[..<i])] = String(kv[kv.index(after: i)...]) }
+            }
+        connection.perform({ c -> (SudoWrite.Outcome, RemoteFileInfo?) in
+            guard let sftp = c as? SftpClient else { throw SftpError.status(.opUnsupported, "sudo") }
+            let out = try SudoWrite.write(sftp, content: bytes, destination: path, password: pw) { command, stdin in
+                let l = SshCommand.buildExec(srv, command: command, homeDirectory: NSHomeDirectory(),
+                                             fileExists: { FileManager.default.fileExists(atPath: $0) })
+                return try SshExec.run(executable: SshCommand.executable, arguments: l.arguments, environment: env, stdin: stdin)
+            }
+            return (out, try? SafeWrite.stat(c, path))
+        }) { [weak self] r in
+            guard let self else { return }
+            self.connection.auth.stop()
+            switch r {
+            case .success(let (out, info)):
+                self.saving = false
+                let when = Date().formatted(date: .omitted, time: .standard)
+                self.saved(bytes, fmt: fmt, info: info ?? self.opened,
+                           status: String(format: out == .atomicReplace ? L("edit.sudo.saved") : L("edit.sudo.saved.inplace"), when))
+            case .failure(SudoWrite.Failure.sudoDenied):
+                // Pytanie o hasło sudo (to samo okno co przy logowaniu SSH).
+                self.connection.auth.prompt = PendingPrompt(kind: .password,
+                                                            text: String(format: L("edit.sudo.prompt"), srv.username, srv.host),
+                                                            isRetry: retry || pw != nil) { [weak self] value, save in
+                    guard let self else { return }
+                    self.connection.auth.prompt = nil
+                    guard let value else { self.saving = false; self.setStatus(L("edit.fail.short"), error: true); return }
+                    if save { _ = Keychain.save(value, for: srv.id + ".sudo", label: "Waypoint — sudo \(srv.displayName)") }
+                    self.sudoSave(bytes, fmt: fmt, path: path, password: value, retry: true)
+                }
+            case .failure(let e):
+                self.saving = false
+                self.fail(SafeWriteError(originalMayBeDamaged: false, underlying: e))
             }
         }
     }
@@ -268,11 +339,11 @@ final class EditorDocument: Identifiable {
         statusIsError = error
     }
 
-    private func confirm(_ text: String) -> Bool {
+    private func confirm(_ text: String, yes: String = L("edit.yes")) -> Bool {
         let a = NSAlert()
         a.messageText = name
         a.informativeText = text
-        a.addButton(withTitle: L("edit.yes"))
+        a.addButton(withTitle: yes)
         a.addButton(withTitle: L("btn.cancel"))
         return a.runModal() == .alertFirstButtonReturn
     }

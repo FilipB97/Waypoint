@@ -81,7 +81,11 @@ w CI albo lokalnie `WAYPOINT_FTP_TEST=host:user:hasło:portFTP:portFTPS:portFTPS
 
 ## Edytor plików
 
-Pliki → menu „Edytuj w Waypoint" (⌘E). Ta sama strona edytora i ta sama przycięta paczka Monaco co
+Pliki → menu „Edytuj w Waypoint" (⌘E). Pliki roota (i inne bez prawa zapisu) można zapisać przez
+**sudo** (`SudoWrite`): treść idzie przez SFTP do pliku 0600 w /tmp, a jedno polecenie `sudo -S sh -c`
+na serwerze kopiuje właściciela i uprawnienia (`--reference`, GNU) i podmienia plik atomowo; bez GNU
+coreutils — zapis w miejscu z zachowaniem właściciela. Hasło sudo idzie na stdin (nigdy w linii
+poleceń): zapisane dla sudo, potem hasło logowania, a gdy sudo je odrzuci — pytanie z zapisem. Ta sama strona edytora i ta sama przycięta paczka Monaco co
 w wersji Windows (`src/RdpManager/Assets/`), rozpakowane do zasobów `.app` i serwowane przez
 WKURLSchemeHandler (`wpeditor://app`), z nakładką emulującą `window.chrome.webview`. Zapis jak
 w Windows: format pliku zachowany, wykrywanie zmian na serwerze, plik tymczasowy + atomowa

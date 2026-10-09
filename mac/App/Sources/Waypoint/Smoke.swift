@@ -177,6 +177,45 @@ enum Smoke {
                     }
                 }
 
+                // 7. sudo: plik roota → edytor tylko do odczytu → „Edytuj i zapisuj przez sudo" → zapis
+                //    (hasło sudo = hasło logowania z Pęku kluczy) → właściciel root zostaje.
+                if let e = fs.entries.first(where: { $0.name == "root-owned.conf" }) {
+                    var opened = false
+                    fs.readForEdit(e) { payload in
+                        EditorWindowController.show(server: s, entry: e, payload: payload)
+                        opened = true
+                    }
+                    _ = await waitFor(10, { opened ? true : nil })
+                    if let wc = EditorWindowController.open.last {
+                        let doc = wc.doc
+                        _ = await waitFor(20, { doc.ready ? true : nil })
+                        let wasReadOnly = doc.readOnly
+                        try? await Task.sleep(for: .seconds(0.6))
+                        if let w = wc.window { snapshot(w, out.appendingPathComponent("12-edytor-root.png")) }
+                        doc.editWithSudo()
+                        _ = try? await doc.bridge.webView.evaluateJavaScript(
+                            "var m = monaco.editor.getEditors()[0].getModel(); m.setValue(m.getValue() + 'server_name smoke;\\n'); 1")
+                        _ = await waitFor(5, { doc.dirty ? true : nil })
+                        doc.saveFromButton()
+                        _ = await waitFor(30, { (!doc.saving && !doc.dirty) || doc.connection.auth.prompt != nil ? true : nil })
+                        if let p = doc.connection.auth.prompt { note("pytanie sudo: \(p.text)", out); p.answer(nil, false) }
+                        var info: SftpAttributes?
+                        var content: Data?
+                        fs.perform({ c in (try c.stat(e.path), try c.readFile(e.path)) }) { r in
+                            if let v = try? r.get() { info = v.0; content = v.1 }
+                        }
+                        _ = await waitFor(10, { content })
+                        let ok7 = content == Data("listen 80;\nserver_name smoke;\n".utf8) && info?.uid == 0
+                        note(ok7 && wasReadOnly ? "OK: sudo — plik roota zapisany, właściciel root (\(doc.status ?? ""))"
+                                                : "FAIL: sudo ro=\(wasReadOnly) uid=\(info?.uid.map(String.init) ?? "-") treść=\(content.map { String(decoding: $0, as: UTF8.self).debugDescription } ?? "-") status=\(doc.status ?? "-")", out)
+                        ok = ok && ok7 && wasReadOnly
+                        if let w = wc.window { snapshot(w, out.appendingPathComponent("13-edytor-sudo.png")) }
+                        wc.window?.close()
+                    }
+                } else {
+                    note("FAIL: brak root-owned.conf na liście", out); ok = false
+                }
+
                 // Sprzątanie na serwerze testowym.
                 let toDelete = fs.entries.filter { $0.name == name || $0.name == "folder z plikami" || $0.name == conf }
                 fs.delete(toDelete)

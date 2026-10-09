@@ -117,6 +117,9 @@ struct EditorView: View {
                     Image(systemName: "lock.fill")
                     Text(reason).font(.callout).fixedSize(horizontal: false, vertical: true)
                     Spacer()
+                    if doc.sudoAvailable {
+                        Button(L("edit.ro.sudo")) { doc.editWithSudo() }
+                    }
                     Button(L("edit.ro.anyway")) { doc.editAnyway() }
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
@@ -153,6 +156,7 @@ struct EditorView: View {
         parts.append(doc.format.eolLabel)
         parts.append(doc.language)
         if doc.readOnly { parts.append(L("edit.ro.short")) }
+        if doc.sudoMode { parts.append(L("edit.sudo.short")) }
         return parts.joined(separator: "  ·  ")
     }
 }

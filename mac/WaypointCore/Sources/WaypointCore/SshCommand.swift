@@ -24,6 +24,17 @@ public enum SshCommand {
         return l
     }
 
+    /// Polecenie jednorazowe (bez terminala), np. zapis przez sudo: `ssh … -T -- host 'polecenie'`.
+    public static func buildExec(_ s: Server, command: String, homeDirectory: String, fileExists: (String) -> Bool) -> Launch {
+        var noTunnels = s
+        noTunnels.tunnels = []
+        var l = build(noTunnels, homeDirectory: homeDirectory, fileExists: fileExists)
+        let tail = l.arguments.suffix(2)
+        l.arguments.removeLast(2)
+        l.arguments += ["-T", "-o", "ClearAllForwardings=yes"] + tail + [command]
+        return l
+    }
+
     public static func build(_ s: Server, homeDirectory: String, fileExists: (String) -> Bool) -> Launch {
         var args: [String] = []
         var warnings: [String] = []

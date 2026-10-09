@@ -22,6 +22,10 @@ mkdir -p "$OUT"
 echo "== konto testowe"
 sudo sysadminctl -addUser "$USER_NAME" -fullName "Waypoint Test" -password "$PW" -home "/Users/$USER_NAME" -shell /bin/zsh 2>&1 | tail -1 || true
 sudo mkdir -p "/Users/$USER_NAME" && sudo chown "$USER_NAME:staff" "/Users/$USER_NAME"
+# Zapis przez sudo: konto testowe w sudoers i plik roota w jego katalogu domowym.
+echo "$USER_NAME ALL=(ALL) ALL" | sudo tee /etc/sudoers.d/wptest >/dev/null; sudo chmod 440 /etc/sudoers.d/wptest
+printf 'listen 80;\n' | sudo tee "/Users/$USER_NAME/root-owned.conf" >/dev/null
+sudo chown root:wheel "/Users/$USER_NAME/root-owned.conf"; sudo chmod 644 "/Users/$USER_NAME/root-owned.conf"
 # Gdy włączone jest ograniczenie „Zdalne logowanie tylko dla…", sshd sprawdza tę grupę.
 sudo dseditgroup -o edit -a "$USER_NAME" -t user com.apple.access_ssh 2>/dev/null || true
 
@@ -81,6 +85,8 @@ echo "--- sshd.log (koniec)"; sudo tail -20 "$WORK/sshd.log" || true
 cp "$WORK/sshd.log" "$OUT/sshd.log" 2>/dev/null || sudo cat "$WORK/sshd.log" > "$OUT/sshd.log" || true
 ls -la "$OUT"
 
+echo "--- root-owned.conf po teście:"; sudo ls -l "/Users/$USER_NAME/root-owned.conf"; sudo cat "/Users/$USER_NAME/root-owned.conf"
+sudo rm -f /etc/sudoers.d/wptest
 sudo kill "$(cat "$WORK/sshd.pid")" 2>/dev/null || true
 security delete-generic-password -s Waypoint -a "$ID_KEYCHAIN" >/dev/null 2>&1 || true   # gdyby test przerwano
 

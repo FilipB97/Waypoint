@@ -6,11 +6,12 @@ MAC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 W="$(mktemp -d /tmp/wpint.XXXX)"
 
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server openssh-client vsftpd libcurl4-openssl-dev openssl >/dev/null
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server openssh-client vsftpd libcurl4-openssl-dev openssl sudo >/dev/null
 
 PW="Wp-$(openssl rand -hex 6)"
 useradd -m -s /bin/bash wpt
 echo "wpt:$PW" | chpasswd
+echo 'wpt ALL=(ALL) ALL' > /etc/sudoers.d/wpt; chmod 440 /etc/sudoers.d/wpt   # zapis przez sudo
 
 # --- sshd na 127.0.0.1:2222 (klucz)
 ssh-keygen -q -t ed25519 -N '' -f "$W/hostkey"
@@ -57,5 +58,6 @@ for c in plain explicit implicit; do vsftpd "$W/$c.conf" & done
 sleep 1
 
 export WAYPOINT_SFTP_TEST="127.0.0.1:2222:wpt:$W/clientkey:$W/known_hosts"
+export WAYPOINT_SUDO_PASSWORD="$PW"
 export WAYPOINT_FTP_TEST="127.0.0.1:wpt:$PW:2122:2121:2990"
 swift test --package-path "$MAC_DIR/WaypointCore"
