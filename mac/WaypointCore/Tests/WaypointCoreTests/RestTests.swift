@@ -80,6 +80,7 @@ import Testing
     @Test func ladnyJson() {
         #expect(RestHTTP.pretty(#"{"b":1,"a":[1,2]}"#) == "{\n  \"a\" : [\n    1,\n    2\n  ],\n  \"b\" : 1\n}")
         #expect(RestHTTP.pretty("nie json") == "nie json")
+        #expect(RestHTTP.reasonPhrase(200) == "OK" && RestHTTP.reasonPhrase(404) == "Not Found" && RestHTTP.reasonPhrase(299).isEmpty)
     }
 }
 

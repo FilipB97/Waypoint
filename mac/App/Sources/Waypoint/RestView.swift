@@ -15,7 +15,7 @@ struct RestView: View {
 
     var body: some View {
         HSplitView {
-            sidebar.frame(minWidth: 220, idealWidth: 260, maxWidth: 420)
+            sidebar.frame(minWidth: 180, idealWidth: 240, maxWidth: 420)
             Group {
                 if let i = session.selectedIndex {
                     RestRequestPane(session: session, index: i)
@@ -29,7 +29,7 @@ struct RestView: View {
                     }
                 }
             }
-            .frame(minWidth: 480, maxWidth: .infinity, maxHeight: .infinity)
+            .frame(minWidth: 360, maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle(session.server.displayName)
         .navigationSubtitle(session.collection.baseUrl)
@@ -352,12 +352,13 @@ private struct RestRequestPane: View {
                     Text(L("rest.resp.sent")).tag("sent")
                     Text(L("rest.resp.tests")).tag("tests")
                 }
-                .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360)
+                .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 320).layoutPriority(-1)
             }
-            ScrollView([.vertical, .horizontal]) {
+            ScrollView(.vertical) {
                 Text(responseText)
                     .font(.system(.callout, design: .monospaced))
                     .textSelection(.enabled)
+                    .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .padding(8)
             }

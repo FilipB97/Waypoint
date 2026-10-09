@@ -186,7 +186,7 @@ public enum RestHTTP {
             r.elapsedMs = Int(Date().timeIntervalSince(start) * 1000)
             guard let http = resp as? HTTPURLResponse else { r.error = "No HTTP response"; return r }
             r.status = http.statusCode
-            r.reason = HTTPURLResponse.localizedString(forStatusCode: http.statusCode)
+            r.reason = RestHTTP.reasonPhrase(http.statusCode)
             r.headers = http.allHeaderFields.compactMap { k, v in (k as? String).map { ($0, "\(v)") } }
                 .sorted { $0.0.lowercased() < $1.0.lowercased() }
             r.contentType = r.header("Content-Type")
@@ -202,6 +202,20 @@ public enum RestHTTP {
             r.error = (error as NSError).code == NSURLErrorTimedOut ? "Timeout" : error.localizedDescription
         }
         return r
+    }
+
+    /// Standardowe frazy statusu (HTTPURLResponse.localizedString daje np. „no error" dla 200).
+    public static func reasonPhrase(_ code: Int) -> String {
+        let m: [Int: String] = [
+            100: "Continue", 101: "Switching Protocols", 200: "OK", 201: "Created", 202: "Accepted", 204: "No Content",
+            206: "Partial Content", 301: "Moved Permanently", 302: "Found", 303: "See Other", 304: "Not Modified",
+            307: "Temporary Redirect", 308: "Permanent Redirect", 400: "Bad Request", 401: "Unauthorized",
+            403: "Forbidden", 404: "Not Found", 405: "Method Not Allowed", 406: "Not Acceptable", 408: "Request Timeout",
+            409: "Conflict", 410: "Gone", 413: "Payload Too Large", 415: "Unsupported Media Type",
+            422: "Unprocessable Entity", 429: "Too Many Requests", 500: "Internal Server Error", 501: "Not Implemented",
+            502: "Bad Gateway", 503: "Service Unavailable", 504: "Gateway Timeout",
+        ]
+        return m[code] ?? ""
     }
 
     static func decode(_ data: Data, contentType: String) -> String {
