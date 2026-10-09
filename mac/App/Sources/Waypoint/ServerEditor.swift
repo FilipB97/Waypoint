@@ -38,9 +38,31 @@ struct ServerEditor: View {
                             Text(p.supportedOnMac ? p.badge : p.badge + " — " + L("f.protocol.win")).tag(p)
                         }
                     }
-                    TextField(L("f.host"), text: $draft.host, prompt: Text("example.com"))
-                    TextField(L("f.port"), value: $draft.port, format: .number.grouping(.never))
+                    switch draft.proto {
+                    case .serial?:
+                        HStack {
+                            TextField(L("f.device"), text: $draft.host, prompt: Text("/dev/cu.usbserial-0001"))
+                            Menu {
+                                let devs = SerialPort.devices()
+                                if devs.isEmpty { Text(L("f.device.none")) }
+                                ForEach(devs, id: \.self) { d in Button(d) { draft.host = d } }
+                            } label: { Image(systemName: "cable.connector") }
+                                .menuStyle(.borderlessButton)
+                                .fixedSize()
+                                .help(L("f.device.pick"))
+                        }
+                        Picker(L("f.baud"), selection: $draft.port) {
+                            ForEach(SerialPort.commonBauds, id: \.self) { Text(String($0)).tag($0) }
+                            if !SerialPort.commonBauds.contains(draft.port) { Text(String(draft.port)).tag(draft.port) }
+                        }
+                    case .http?:
+                        TextField(L("f.url"), text: $draft.host, prompt: Text("https://grafana.example.com"))
+                    default:
+                        TextField(L("f.host"), text: $draft.host, prompt: Text("example.com"))
+                        TextField(L("f.port"), value: $draft.port, format: .number.grouping(.never))
+                    }
                 }
+                if draft.usesCredentials {
                 Section(L("edit.sec.login")) {
                     if !model.profiles.isEmpty || !draft.credentialProfileId.isEmpty {
                         Picker(L("f.profile"), selection: $draft.credentialProfileId) {
@@ -73,6 +95,7 @@ struct ServerEditor: View {
                         }
                         Toggle(L("f.ftpanon"), isOn: $draft.ftpAnonymous)
                     }
+                }
                 }
                 if draft.proto == .rdp {
                     Section {

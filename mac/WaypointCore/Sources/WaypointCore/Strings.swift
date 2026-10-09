@@ -347,6 +347,24 @@ public enum Strings {
         "connas.remember": "Zapamiętaj jako dane logowania tego serwera",
         "connas.hint": "Bez „Zapamiętaj” login i hasło dotyczą tylko tego połączenia (hasło zostaje w pamięci do zamknięcia aplikacji).",
         "connas.hint.rdp": "Hasło poda Windows App przy łączeniu.",
+
+        "stream.connecting": "Łączenie z %@:%d…",
+        "stream.connected": "Połączono.",
+        "stream.failed": "Nie można połączyć z %@:%d — %@",
+        "stream.closed": "Połączenie zamknięte.",
+        "stream.serial.open": "Port %@ otwarty (%d bodów, 8N1).",
+        "stream.serial.failed": "Nie można otworzyć portu %@ — %@",
+        "stream.serial.baud": "nieobsługiwana prędkość %d",
+
+        "vnc.opened": "Otwarto w Udostępnianiu ekranu",
+        "link.bad": "„%@” nie jest poprawnym adresem.",
+        "f.device": "Urządzenie",
+        "f.device.none": "Nie wykryto portów szeregowych",
+        "f.device.pick": "Wykryte porty szeregowe",
+        "f.baud": "Prędkość (bod)",
+        "f.url": "Adres URL",
+        "edit.err.url": "Podaj adres http:// albo https://",
+        "edit.err.baud": "Wybierz prędkość portu",
     ]
 
     public static let en: [String: String] = [
@@ -690,6 +708,24 @@ public enum Strings {
         "connas.remember": "Remember as this server's credentials",
         "connas.hint": "Without “Remember” the login and password apply to this connection only (the password stays in memory until the app quits).",
         "connas.hint.rdp": "Windows App asks for the password when connecting.",
+
+        "stream.connecting": "Connecting to %@:%d…",
+        "stream.connected": "Connected.",
+        "stream.failed": "Cannot connect to %@:%d — %@",
+        "stream.closed": "Connection closed.",
+        "stream.serial.open": "Port %@ open (%d baud, 8N1).",
+        "stream.serial.failed": "Cannot open port %@ — %@",
+        "stream.serial.baud": "unsupported speed %d",
+
+        "vnc.opened": "Opened in Screen Sharing",
+        "link.bad": "“%@” is not a valid address.",
+        "f.device": "Device",
+        "f.device.none": "No serial ports found",
+        "f.device.pick": "Detected serial ports",
+        "f.baud": "Speed (baud)",
+        "f.url": "URL",
+        "edit.err.url": "Enter an http:// or https:// address",
+        "edit.err.baud": "Choose the port speed",
     ]
 
     /// Język interfejsu: polski, gdy jest pierwszym preferowanym językiem systemu, w przeciwnym razie angielski.

@@ -61,15 +61,23 @@ cat > "$WORK/data/servers.json" <<JSON
   {"Id":"5a0e0000000000000000000000000004","Name":"Baza danych","Host":"db01.example.com","Port":2222,"Username":"postgres","Protocol":"Ssh","Group":"Produkcja"},
   {"Id":"5a0e0000000000000000000000000005","Name":"Serwer plików","Host":"files.example.com","Protocol":"Sftp","Username":"deploy","Group":"Produkcja"},
   {"Id":"5a0e0000000000000000000000000006","Name":"Biuro — pulpit","Host":"rdp.example.com","Protocol":"Rdp","Username":"filip","Domain":"FIRMA","Group":"Klienci"},
-  {"Id":"5a0e0000000000000000000000000007","Name":"Router","Host":"192.168.1.1","Protocol":"Telnet","Port":23}
+  {"Id":"5a0e0000000000000000000000000007","Name":"Router","Host":"192.168.1.1","Protocol":"Telnet","Port":23},
+  {"Id":"5a0e0000000000000000000000000008","Name":"Telnet (nc)","Host":"127.0.0.1","Port":2323,"Protocol":"Telnet","Group":"Testy"},
+  {"Id":"5a0e0000000000000000000000000009","Name":"Konsola COM","Host":"/dev/cu.waypoint-brak","Port":115200,"Protocol":"Serial","Group":"Sprzęt"},
+  {"Id":"5a0e000000000000000000000000000a","Name":"Mac mini (VNC)","Host":"10.0.0.9","Port":5900,"Username":"admin","Protocol":"Vnc","Group":"Sprzęt"},
+  {"Id":"5a0e000000000000000000000000000b","Name":"Grafana","Host":"grafana.example.com/d/abc","Protocol":"Http","Group":"Sprzęt"}
 ]
 JSON
+
+echo "== udawany serwer telnet (nc)"
+# Baner na start; to, co aplikacja wyśle, ląduje w pliku.
+( printf 'WAYPOINT_TELNET_BANNER\r\n'; sleep 120 ) | nc -l 127.0.0.1 2323 > "$WORK/telnet-in.txt" 2>/dev/null &
 
 echo "== aplikacja w trybie testu"
 set +e
 WAYPOINT_DATA_DIR="$WORK/data" WAYPOINT_SMOKE_DIR="$OUT" \
 WAYPOINT_SMOKE_KEYCHAIN_SERVER="$ID_KEYCHAIN" WAYPOINT_SMOKE_PROMPT_SERVER="$ID_PROMPT" \
-WAYPOINT_SMOKE_PASSWORD="$PW" "$APP_BIN" > "$OUT/app-stdout.log" 2>&1 &
+WAYPOINT_SMOKE_PASSWORD="$PW" WAYPOINT_SMOKE_TELNET_IN="$WORK/telnet-in.txt" "$APP_BIN" > "$OUT/app-stdout.log" 2>&1 &
 APP_PID=$!
 # Zrzuty całego ekranu co kilka sekund — pokazują też okna systemowe, których zrzut okna aplikacji nie obejmie.
 ( for i in 1 2 3 4 5; do sleep 8; screencapture -x "$OUT/ekran-$i.png" 2>/dev/null; done ) &

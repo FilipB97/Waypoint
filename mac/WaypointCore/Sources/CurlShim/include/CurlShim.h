@@ -21,4 +21,7 @@ CURLcode wp_get_long(CURL *h, CURLINFO info, long *out);
 CURLcode wp_get_off(CURL *h, CURLINFO info, curl_off_t *out);
 CURLcode wp_get_str(CURL *h, CURLINFO info, const char **out);
 
+/// Otwiera parę pseudo-terminala; zwraca deskryptor mastera i ścieżkę strony slave (testy).
+int wp_open_pty(char *slave_name, int len);
+
 #endif

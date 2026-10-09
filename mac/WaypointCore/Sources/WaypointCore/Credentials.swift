@@ -229,3 +229,16 @@ extension Server {
     /// Login do podpowiedzi w „Połącz jako…": `DOMENA\user` albo `user`.
     public var loginText: String { domain.isEmpty ? username : domain + "\\" + username }
 }
+
+extension Server {
+    /// Czy „Połącz jako…" ma sens: protokoły z loginem (Telnet loguje się w samym terminalu).
+    public var supportsConnectAs: Bool {
+        switch proto {
+        case .ssh?, .sftp?, .ftp?, .rdp?, .vnc?: return true
+        default: return false
+        }
+    }
+
+    /// Czy protokół ma login i hasło w Waypoincie (pola „Użytkownik", profil poświadczeń).
+    public var usesCredentials: Bool { supportsConnectAs }
+}

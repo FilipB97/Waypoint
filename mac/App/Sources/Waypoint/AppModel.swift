@@ -150,9 +150,9 @@ final class AppModel {
 
     func connect(_ server: Server) {
         let s = resolved(server)
-        if s.proto == .ssh || s.proto == .rdp { noteConnected(s) }   // pliki — w openFiles
+        if s.proto != .sftp && s.proto != .ftp && s.proto?.supportedOnMac == true { noteConnected(s) }   // pliki — w openFiles
         switch s.proto {
-        case .ssh?:
+        case .ssh?, .telnet?, .serial?:
             let t = TerminalSession(server: s)
             t.onEnded = { [weak self] code in
                 // 255 = błąd samego ssh (host, uwierzytelnienie); inne kody to wyjście z powłoki.
@@ -175,9 +175,25 @@ final class AppModel {
                     self.alert = AppAlert(title: s.displayName, message: msg)
                 }
             }
+        case .vnc?:
+            openExternal(ExternalLinks.vncURL(s), for: s, opened: L("vnc.opened"))
+        case .http?:
+            openExternal(ExternalLinks.webURL(s.host), for: s, opened: nil)
         default:
             alert = AppAlert(title: s.displayName, message: L("connect.notyet"))
         }
+    }
+
+    /// VNC → Udostępnianie ekranu, WWW → domyślna przeglądarka. W teście dymnym tylko komunikat z adresem
+    /// (otwarcie innej aplikacji na runnerze CI niczego nie sprawdza, a mogłoby zawiesić test).
+    private func openExternal(_ url: URL?, for s: Server, opened: String?) {
+        guard let url else {
+            alert = AppAlert(title: s.displayName, message: String(format: L("link.bad"), s.host))
+            return
+        }
+        if ProcessInfo.processInfo.environment["WAYPOINT_SMOKE_DIR"] != nil { toast = url.absoluteString; return }
+        NSWorkspace.shared.open(url)
+        if let opened { toast = opened }
     }
 
     // MARK: Pliki .rdp

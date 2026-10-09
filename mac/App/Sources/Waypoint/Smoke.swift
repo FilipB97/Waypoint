@@ -371,6 +371,50 @@ enum Smoke {
             try? await Task.sleep(for: .seconds(0.8))
         }
 
+        // 10. Telnet (nc udaje serwer), port szeregowy bez urządzenia, VNC i WWW.
+        if let tel = model.servers.first(where: { $0.proto == .telnet && $0.port == 2323 }) {
+            model.connect(tel)
+            let t = model.activeSession!.terminal!
+            let banner = await waitFor(10, { bufferText(t).contains("WAYPOINT_TELNET_BANNER") ? true : nil })
+            t.view.send(txt: "hello-telnet\r")
+            let sent = await waitFor(6, { () -> Bool? in
+                let got = (try? Data(contentsOf: URL(fileURLWithPath: env["WAYPOINT_SMOKE_TELNET_IN"] ?? "/nonexistent"))) ?? Data()
+                return String(decoding: got, as: UTF8.self).contains("hello-telnet\r\u{0}") ? true : nil
+            })
+            try? await Task.sleep(for: .seconds(0.5))
+            snapshot(window, out.appendingPathComponent("22-telnet.png"))
+            try? bufferText(t).write(to: out.appendingPathComponent("terminal-telnet.txt"), atomically: true, encoding: .utf8)
+            note(banner == true && sent == true ? "OK: Telnet — baner odebrany, wpisany tekst wysłany (CR NUL)"
+                                                : "FAIL: Telnet baner=\(banner == true) wysłane=\(sent == true)", out)
+            ok = ok && banner == true && sent == true
+        }
+        if let ser = model.servers.first(where: { $0.proto == .serial }) {
+            model.connect(ser)
+            let t = model.activeSession!.terminal!
+            let ended = await waitFor(8, { t.state == .ended(StreamHelper.failedExit) ? true : nil })
+            let msg = bufferText(t).contains("cu.waypoint-brak")
+            snapshot(window, out.appendingPathComponent("23-com.png"))
+            note(ended == true && msg ? "OK: port szeregowy — brak urządzenia zgłoszony w karcie" : "FAIL: port szeregowy (\(t.state))", out)
+            ok = ok && ended == true && msg
+        }
+        for (proto, expected) in [(RemoteProtocol.vnc, "vnc://admin@10.0.0.9"), (.http, "https://grafana.example.com/d/abc")] {
+            guard let srv = model.servers.first(where: { $0.proto == proto }) else { continue }
+            model.toast = nil
+            model.connect(srv)
+            let good = model.toast == expected
+            note(good ? "OK: \(proto.badge) → \(expected)" : "FAIL: \(proto.badge) → \(model.toast ?? "nic")", out)
+            ok = ok && good
+        }
+        model.activeSessionID = nil
+        model.selection = model.servers.first(where: { $0.proto == .serial })?.id
+        if let s = model.selected {
+            model.beginEdit(s)
+            try? await Task.sleep(for: .seconds(1.2))
+            if let sheet = window.attachedSheet { snapshot(sheet, out.appendingPathComponent("24-edytor-com.png")) }
+            model.editing = nil
+            try? await Task.sleep(for: .seconds(0.8))
+        }
+
         // Okno Ustawień (⌘,) — tylko zrzut.
         let before = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
         // Pozycja „Ustawienia…" (⌘,) z menu aplikacji — tak, jak kliknąłby użytkownik.

@@ -139,11 +139,21 @@ final class TerminalSession: Identifiable {
     var isRunning: Bool { state == .running }
 
     func start() {
+        state = .running
+        // Telnet i port szeregowy: ten sam plik wykonywalny w trybie pomocniczym (StreamHelper).
+        if server.proto == .telnet || server.proto == .serial {
+            let args = server.proto == .telnet
+                ? StreamHelper.telnetArguments(host: server.host, port: server.port)
+                : StreamHelper.serialArguments(device: server.host, baud: server.port)
+            let env = SshCommand.environment(base: ProcessInfo.processInfo.environment, extra: [:])
+            view.startProcess(executable: Bundle.main.executablePath ?? CommandLine.arguments[0], args: args,
+                              environment: env, execName: server.proto == .telnet ? "telnet" : "serial")
+            return
+        }
         let launch = SshCommand.build(server, homeDirectory: NSHomeDirectory(),
                                       fileExists: { FileManager.default.fileExists(atPath: $0) })
         warnings = launch.warnings
         let extra = auth.start()
-        state = .running
         view.startProcess(executable: SshCommand.executable, args: launch.arguments,
                           environment: SshCommand.environment(base: ProcessInfo.processInfo.environment, extra: extra),
                           execName: "ssh")

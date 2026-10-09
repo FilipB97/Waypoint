@@ -20,7 +20,7 @@ struct ServerDetail: View {
                     if server.proto == .ssh {
                         Button(L("act.files")) { model.openFiles(server) }
                     }
-                    if server.proto?.supportedOnMac == true {
+                    if server.supportsConnectAs {
                         Button(L("act.connectas")) { model.connectAsTarget = server }
                     }
                     Button(L("act.connect")) { model.connect(server) }
