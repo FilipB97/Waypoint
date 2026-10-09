@@ -50,6 +50,11 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | Szybkie połączenie (`user@host:port`, `DOMENA\user@host`) | ✅ | w palecie (⇧⌘N) |
 | Szukanie w terminalu, rozmiar czcionki | ✅ | ⌘F, ⌘+ / ⌘− / ⌘0 |
 | Duplikowanie i przestawianie kart | ✅ | ✅ (menu karty, przeciąganie) |
+| Kropki osiągalności + opóźnienie (sonda TCP w tle) | ✅ | ✅ (Ustawienia ⌘,) |
+| Zwijanie grup, zmiana nazwy grupy, przenoszenie do grupy | ✅ | ✅ (menu nagłówka i serwera) |
+| Kolejność serwerów przeciąganiem | ✅ | ✅ (w obrębie sekcji) |
+| Pulpit: liczniki, ostatnio używane, szybkie połączenie, aktywność | ✅ | ✅ (⇧⌘D, ikona domku) |
+| Dziennik połączeń (`connections.log`, ten sam format) | ✅ | ✅ |
 
 ## Terminal SSH
 
@@ -65,6 +70,18 @@ nigdy nie trafia do askpass, więc zapisanego hasła nie da się wyłudzić.
 
 Skróty: Enter / dwuklik na serwerze — połącz, ⌘W — zamknij kartę, ⌘1…⌘9 — karta, ⌘⇧[ / ⌘⇧] —
 poprzednia/następna.
+
+## Lista serwerów i pulpit
+
+Osiągalność: co `ReachabilityIntervalSec` (5–3600 s, domyślnie 30) nieblokujące TCP connect do
+host:port każdego serwera (najwyżej 32 naraz, limit czasu 1–60 s) — kropka na awatarze i, po
+włączeniu, opóźnienie w ms. Serwery COM/WWW/REST są pomijane, jak w Windows. Grupy zwija się
+strzałką nagłówka (stan zapamiętany), menu nagłówka zmienia nazwę grupy we wszystkich jej
+serwerach, menu serwera przenosi go do innej grupy. Kolejność zmienia się przeciąganiem w obrębie
+sekcji. Pulpit (bez zaznaczonego serwera, ⇧⌘D) pokazuje liczniki, ostatnio używane serwery,
+pole szybkiego połączenia i aktywność z `connections.log` (ten sam format linii co w Windows,
+tylko metadane — bez haseł; wyłączalny w Ustawieniach). Ustawienia zapisują się w `settings.json`
+pod tymi samymi nazwami pól co w Windows.
 
 ## Pliki (SFTP)
 

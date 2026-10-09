@@ -283,6 +283,44 @@ enum Smoke {
         model.activateTab(0)
         try? await Task.sleep(for: .seconds(1))
         snapshot(window, out.appendingPathComponent("06-karty.png"))
+
+        // 8. Lista serwerów: kropki osiągalności (sshd na 2222 osiągalny), dziennik połączeń, grupy, pulpit.
+        model.settings.showLatency = true
+        let online = await waitFor(20, { () -> Bool? in
+            guard let id = keychainServerID, case .online? = model.reach[id] else { return nil }
+            return true
+        })
+        note(online == true ? "OK: osiągalność — lokalny sshd online (\(model.onlineCount)/\(model.reach.count) osiągalnych)"
+                            : "FAIL: brak kropki osiągalności dla lokalnego sshd (\(model.reach))", out)
+        ok = ok && online == true
+        let logLines = ConnectionLog.readLines(dir: model.dataDirectory)
+        try? logLines.joined(separator: "\n").write(to: out.appendingPathComponent("connections.log"), atomically: true, encoding: .utf8)
+        let connects = logLines.filter { $0.contains("  CONNECTED ") }.count
+        note(connects >= 3 ? "OK: dziennik połączeń — \(connects)× CONNECTED, \(logLines.count) linii"
+                           : "FAIL: dziennik połączeń — \(connects)× CONNECTED", out)
+        ok = ok && connects >= 3
+        model.renameGroup("Klienci", to: "Klienci 2026")
+        model.setCollapsed("Produkcja", true)
+        let renamed = model.servers.contains { $0.group == "Klienci 2026" } && !model.servers.contains { $0.group == "Klienci" }
+        note(renamed ? "OK: zmiana nazwy grupy" : "FAIL: zmiana nazwy grupy", out)
+        ok = ok && renamed
+        model.showDashboard()
+        try? await Task.sleep(for: .seconds(1.5))
+        snapshot(window, out.appendingPathComponent("10-pulpit.png"))
+        note(model.recentServers.count >= 2 ? "OK: pulpit — \(model.recentServers.count) ostatnio używanych"
+                                            : "FAIL: pulpit bez ostatnio używanych", out)
+        ok = ok && model.recentServers.count >= 2
+        model.setCollapsed("Produkcja", false)
+        // Okno Ustawień (⌘,) — tylko zrzut.
+        let before = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        if let w = await waitFor(5, { NSApp.windows.first { $0.isVisible && !before.contains(ObjectIdentifier($0)) } }) {
+            try? await Task.sleep(for: .seconds(0.8))
+            snapshot(w, out.appendingPathComponent("11-ustawienia.png"))
+            w.close()
+        } else {
+            note("uwaga: nie otworzyło się okno Ustawień", out)
+        }
         finish(out, ok: ok)
     }
 

@@ -53,6 +53,62 @@ public enum ServerList {
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
+    /// Zmienia nazwę grupy dla wszystkich jej serwerów naraz. Pusta nowa nazwa = bez zmian.
+    public static func renameGroup(_ servers: [Server], from old: String, to new: String) -> [Server] {
+        let n = new.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty, n != old else { return servers }
+        return servers.map { s in
+            var s = s
+            if s.group.trimmingCharacters(in: .whitespaces) == old { s.group = n }
+            return s
+        }
+    }
+
+    /// Przenosi serwery do grupy (pusta nazwa = „Bez grupy").
+    public static func moveToGroup(_ servers: [Server], ids: Set<String>, group: String) -> [Server] {
+        let g = group.trimmingCharacters(in: .whitespaces)
+        return servers.map { s in
+            var s = s
+            if ids.contains(s.id) { s.group = g }
+            return s
+        }
+    }
+
+    /// Zmiana kolejności (przeciąganie): wstawia `id` przed albo za `target`. Jak w Windows upuszczenie
+    /// na wiersz innej grupy przenosi do niej serwer; w „Przypiętych" — przypina go.
+    public static func move(_ servers: [Server], id: String, relativeTo target: String, after: Bool) -> [Server] {
+        guard id != target, let from = servers.firstIndex(where: { $0.id == id }),
+              let t = servers.firstIndex(where: { $0.id == target }) else { return servers }
+        var list = servers
+        var moved = list.remove(at: from)
+        let tgt = servers[t]
+        moved.pinned = tgt.pinned
+        if !tgt.pinned { moved.group = tgt.group }
+        let ti = list.firstIndex(where: { $0.id == target })!
+        list.insert(moved, at: after ? ti + 1 : ti)
+        return list
+    }
+
+    /// Przesunięcie wewnątrz sekcji w układzie `List.onMove` (offsety i indeks docelowy w tej sekcji).
+    public static func move(_ servers: [Server], in section: Section, from offsets: [Int], to dest: Int) -> [Server] {
+        let ids = offsets.sorted().compactMap { section.servers.indices.contains($0) ? section.servers[$0].id : nil }
+        let remaining = section.servers.enumerated().filter { !offsets.contains($0.offset) }.map(\.element.id)
+        // Pozycja docelowa liczona wśród POZOSTAŁYCH wierszy sekcji.
+        let before = section.servers.prefix(dest).filter { !ids.contains($0.id) }.count
+        var list = servers
+        if before < remaining.count {
+            for id in ids { list = move(list, id: id, relativeTo: remaining[before], after: false) }
+        } else if let last = remaining.last {
+            for id in ids.reversed() { list = move(list, id: id, relativeTo: last, after: true) }
+        }
+        return list
+    }
+
+    /// Serwery z listy „ostatnich" (w jej kolejności), bez usuniętych.
+    public static func recents(_ servers: [Server], ids: [String], limit: Int = 8) -> [Server] {
+        Array(ids.compactMap { id in servers.first { $0.id == id } }.prefix(limit))
+    }
+
     static func fold(_ s: String) -> String {
         // „ł" nie ma rozkładu kanonicznego, więc diacriticInsensitive go nie zdejmie — ręcznie.
         s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)

@@ -36,6 +36,12 @@ final class AppModel {
     var snippetPickerOpen = false
     var snippetManagerOpen = false
 
+    /// Wynik ostatniej sondy osiągalności (id serwera → stan); brak wpisu = jeszcze nie sprawdzono.
+    var reach: [String: Reach] = [:]
+    /// Średnie opóźnienie osiągalnych hostów z kolejnych cykli (ostatnie 48) — wykres na pulpicie.
+    var latencySamples: [Double] = []
+    @ObservationIgnored var reachTask: Task<Void, Never>?
+
     var activeSession: SessionTab? { sessions.first { $0.id == activeSessionID } }
 
     var sections: [ServerList.Section] { ServerList.sections(servers, query: query) }
@@ -52,9 +58,10 @@ final class AppModel {
             servers = fallback
             alert = AppAlert(title: L("alert.corrupt.title"), message: String(format: L("alert.corrupt.msg"), path))
         }
+        restartReachability()
     }
 
-    private func persist() {
+    func persist() {
         do { try store.save(servers) }
         catch { alert = AppAlert(title: L("alert.save.title"), message: error.localizedDescription) }
     }
@@ -132,9 +139,15 @@ final class AppModel {
     // MARK: Łączenie i karty
 
     func connect(_ s: Server) {
+        if s.proto == .ssh || s.proto == .rdp { noteConnected(s) }   // pliki — w openFiles
         switch s.proto {
         case .ssh?:
-            add(.terminal(TerminalSession(server: s)))
+            let t = TerminalSession(server: s)
+            t.onEnded = { [weak self] code in
+                // 255 = błąd samego ssh (host, uwierzytelnienie); inne kody to wyjście z powłoki.
+                self?.logConnection(code == 255 ? "FAILED" : "DISCONNECTED", s)
+            }
+            add(.terminal(t))
         case .sftp?, .ftp?:
             openFiles(s)
         case .rdp?:
@@ -191,6 +204,7 @@ final class AppModel {
 
     /// Panel plików SFTP — dla serwerów SFTP i SSH (ten sam login, osobne połączenie).
     func openFiles(_ s: Server) {
+        noteConnected(s)
         let fs = FileSession(server: s)
         fs.onTrustCertificate = { [weak self] updated in
             guard let self, let i = self.servers.firstIndex(where: { $0.id == updated.id }) else { return }
@@ -202,7 +216,7 @@ final class AppModel {
 
     /// Zamyka kartę; działające połączenie wymaga potwierdzenia (jak „Potwierdzaj zamknięcie" w Windows).
     func close(_ session: SessionTab, confirm: Bool = true) {
-        if confirm && session.isRunning {
+        if confirm && settings.confirmCloseConnected && session.isRunning {
             let a = NSAlert()
             a.messageText = String(format: L("close.title"), session.title)
             a.informativeText = L("close.msg")
@@ -310,6 +324,12 @@ final class AppModel {
     func quickConnect(_ text: String) {
         guard let s = QuickConnect.server(from: text) else { return }
         connect(s)
+    }
+
+    /// Pulpit: bez zaznaczenia i bez aktywnej karty.
+    func showDashboard() {
+        selection = nil
+        activeSessionID = nil
     }
 
     func openPalette(seed: String = "") {

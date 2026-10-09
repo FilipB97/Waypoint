@@ -79,7 +79,7 @@ private struct EmptyDetail: View {
                 }
             }
         } else {
-            ContentUnavailableView(L("detail.none"), systemImage: "sidebar.left")
+            Dashboard()
         }
     }
 }

@@ -100,6 +100,8 @@ final class TerminalSession: Identifiable {
     private(set) var warnings: [String] = []
 
     @ObservationIgnored let view: SessionTerminalView
+    /// Koniec procesu ssh (kod wyjścia) — do dziennika połączeń.
+    @ObservationIgnored var onEnded: ((Int32?) -> Void)?
 
     init(server: Server) {
         self.server = server
@@ -143,6 +145,7 @@ final class TerminalSession: Identifiable {
     func processEnded(_ code: Int32?) {
         state = .ended(code)
         auth.stop()
+        onEnded?(code)
     }
 }
 

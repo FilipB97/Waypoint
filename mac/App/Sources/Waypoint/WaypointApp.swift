@@ -12,6 +12,9 @@ struct WaypointApp: App {
                 .frame(minWidth: 760, minHeight: 460)
                 .task { model.load() }
         }
+        Settings {
+            SettingsView().environment(model)
+        }
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(L("menu.newserver")) { model.beginNew() }
@@ -26,6 +29,8 @@ struct WaypointApp: App {
                     .keyboardShortcut("n", modifiers: [.command, .shift])
             }
             CommandMenu(L("menu.go")) {
+                Button(L("dash.title")) { model.showDashboard() }
+                    .keyboardShortcut("d", modifiers: [.command, .shift])
                 Button(L("pal.open")) { model.openPalette() }
                     .keyboardShortcut("k")
             }
