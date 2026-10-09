@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Ikona macOS z mastera logo-export/waypoint-logo.svg: kafel 824 px na płótnie 1024 (siatka ikon
+       Apple — margines na cień), ten sam znak i kolory. PNG: AppIcon-1024.png (render tego pliku). -->
+  <defs>
+    <linearGradient id="g" x1="80" y1="70" x2="430" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5B8CFF"/>
+      <stop offset="1" stop-color="#7C4DFF"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.07"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <g transform="translate(100 100) scale(1.609375)">
+    <rect width="512" height="512" rx="114" fill="#0F1117" filter="url(#shadow)"/>
+    <rect width="512" height="512" rx="114" fill="url(#sheen)"/>
+    <rect x="0.75" y="0.75" width="510.5" height="510.5" rx="113.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
+    <path d="M82 124 L145 374 L205 206 L256 350 L307 206 L367 374 L430 124"
+          fill="none" stroke="url(#g)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="82" cy="124" r="27" fill="#0F1117" stroke="#7AA2FF" stroke-width="12"/>
+    <circle cx="430" cy="124" r="27" fill="#0F1117" stroke="#7AA2FF" stroke-width="12"/>
+    <circle cx="256" cy="350" r="22" fill="#FFFFFF"/>
+  </g>
+</svg>

@@ -1,0 +1,48 @@
+name: macOS
+
+# Wersja na macOS (katalog mac/). Osobny workflow, uruchamiany tylko przy zmianach w mac/,
+# więc build Windows (ci.yml) zostaje bez zmian.
+on:
+  push:
+    branches: ["**"]
+    paths: ["mac/**", ".github/workflows/mac.yml"]
+  pull_request:
+    paths: ["mac/**", ".github/workflows/mac.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: mac-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  core-linux:
+    # Logika (WaypointCore) nie zależy od AppKit — testy na Linuksie są szybkie i tanie.
+    runs-on: ubuntu-latest
+    container: swift:6.4-noble
+    steps:
+      - uses: actions/checkout@v7
+      - name: Testy WaypointCore
+        run: swift test --package-path mac/WaypointCore
+
+  app-macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Wersja Swift / Xcode
+        run: swift --version && xcodebuild -version
+      - name: Testy WaypointCore (macOS)
+        run: swift test --package-path mac/WaypointCore
+      - name: Budowa Waypoint.app
+        env:
+          VERSION: 0.1.0
+          BUILD: ${{ github.run_number }}
+        run: mac/scripts/bundle-app.sh
+      - name: Paczka do pobrania
+        uses: actions/upload-artifact@v4
+        with:
+          name: Waypoint-mac
+          path: mac/dist/Waypoint-mac.zip
+          retention-days: 14
