@@ -20,6 +20,8 @@ final class AppModel {
     var editing: Server?
     var editingIsNew = false
     var alert: AppAlert?
+    /// Krótki komunikat na dole okna (znika sam), np. „Otwarto w Windows App".
+    var toast: String?
 
     /// WAYPOINT_DATA_DIR podmienia katalog danych — dla testu dymnego w CI i do pracy na kopii listy.
     private let store = ServerStore(directory: ProcessInfo.processInfo.environment["WAYPOINT_DATA_DIR"]
@@ -124,9 +126,51 @@ final class AppModel {
             let session = TerminalSession(server: s)
             sessions.append(session)
             activeSessionID = session.id
+        case .rdp?:
+            RdpLauncher.open(s) { [weak self] outcome in
+                guard let self else { return }
+                switch outcome {
+                case .opened:
+                    self.toast = L("rdp.opened")
+                case .appMissing:
+                    self.alert = AppAlert(title: L("rdp.missing.title"), message: L("rdp.missing.msg"),
+                                          actionTitle: L("rdp.missing.store"),
+                                          action: { NSWorkspace.shared.open(RdpLauncher.appStoreURL) })
+                case .failed(let msg):
+                    self.alert = AppAlert(title: s.displayName, message: msg)
+                }
+            }
         default:
             alert = AppAlert(title: s.displayName, message: L("connect.notyet"))
         }
+    }
+
+    // MARK: Pliki .rdp
+
+    func exportRdp(_ s: Server) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = RdpFile.fileName(for: s)
+        panel.allowedContentTypes = [UTType(filenameExtension: "rdp") ?? .data]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do { try Data(RdpFile.serialize(s).utf8).write(to: url, options: .atomic) }
+        catch { alert = AppAlert(title: L("rdp.export"), message: error.localizedDescription) }
+    }
+
+    /// Plik .rdp (np. z portalu firmy) → nowy serwer otwarty w edytorze do sprawdzenia przed zapisem.
+    func importRdp() {
+        let panel = NSOpenPanel()
+        panel.title = L("rdp.import")
+        panel.allowedContentTypes = [UTType(filenameExtension: "rdp") ?? .data]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let text = (try? String(contentsOf: url, encoding: .utf8))
+                ?? (try? String(contentsOf: url, encoding: .utf16)) else {
+            alert = AppAlert(title: L("rdp.import"), message: L("import.err.format")); return
+        }
+        var s = RdpFile.parse(text)
+        if s.host.isEmpty { alert = AppAlert(title: L("rdp.import"), message: L("import.err.format")); return }
+        s.name = url.deletingPathExtension().lastPathComponent
+        editing = s
+        editingIsNew = true
     }
 
     /// Zamyka kartę; działające połączenie wymaga potwierdzenia (jak „Potwierdzaj zamknięcie" w Windows).
@@ -202,4 +246,7 @@ struct AppAlert: Identifiable {
     let id = UUID()
     var title: String
     var message: String
+    /// Opcjonalny drugi przycisk (np. „Otwórz App Store").
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
 }

@@ -35,8 +35,8 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 |---|---|---|
 | 1 | Szkielet, lista serwerów (grupy, przypięte, wyszukiwanie), edytor serwera, import z Windows, CI | ✅ |
 | 2 | Terminal SSH w kartach (SwiftTerm + systemowe `ssh`: agent, `~/.ssh/config`), hasła w Pęku kluczy | ✅ |
-| 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ⏳ |
-| 4 | Panel plików SFTP/FTP: przeglądanie, wysyłanie/pobieranie | — |
+| 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ✅ |
+| 4 | Panel plików SFTP/FTP: przeglądanie, wysyłanie/pobieranie | ⏳ |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | — |
 
 ## Terminal SSH
@@ -53,6 +53,15 @@ nigdy nie trafia do askpass, więc zapisanego hasła nie da się wyłudzić.
 
 Skróty: Enter / dwuklik na serwerze — połącz, ⌘W — zamknij kartę, ⌘1…⌘9 — karta, ⌘⇧[ / ⌘⇧] —
 poprzednia/następna.
+
+## RDP
+
+Na Macu nie ma kontrolki RDP do osadzenia w oknie (mstscax istnieje tylko w Windows), więc „Połącz"
+zapisuje plik `.rdp` (ten sam format i te same pola co w wersji Windows: przekierowania, sesja
+administracyjna, brama RD, RemoteApp) do `~/Library/Caches/Waypoint/rdp/` i otwiera go w darmowej
+aplikacji Microsoft **Windows App**. Gdy jej nie ma — komunikat z przyciskiem do App Store. Hasło
+do RDP podaje się w Windows App (ona je zapamiętuje). Plik `.rdp` z portalu firmy da się
+zaimportować (Plik → Importuj plik .rdp…), a serwer RDP wyeksportować do pliku.
 
 ## Test end-to-end w CI
 

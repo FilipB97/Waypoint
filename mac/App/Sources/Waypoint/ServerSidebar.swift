@@ -63,6 +63,9 @@ struct ServerSidebar: View {
         Button(L("act.duplicate")) { model.duplicate(s) }
         Button(s.pinned ? L("act.unpin") : L("act.pin")) { model.togglePin(s) }
         Divider()
+        if s.proto == .rdp {
+            Button(L("rdp.export")) { model.exportRdp(s) }
+        }
         Button(L("act.copyhost")) {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(s.host, forType: .string)

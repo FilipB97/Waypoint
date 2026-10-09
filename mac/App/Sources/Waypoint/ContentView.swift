@@ -28,8 +28,32 @@ struct ContentView: View {
         .sheet(item: $model.editing) { s in
             ServerEditor(server: s, isNew: model.editingIsNew)
         }
-        .alert(item: $model.alert) { a in
-            Alert(title: Text(a.title), message: Text(a.message))
+        .alert(model.alert?.title ?? "", isPresented: Binding(get: { model.alert != nil },
+                                                               set: { if !$0 { model.alert = nil } }),
+               presenting: model.alert) { a in
+            if let t = a.actionTitle, let act = a.action {
+                Button(t) { act() }
+                Button(L("btn.close"), role: .cancel) {}
+            } else {
+                Button("OK", role: .cancel) {}
+            }
+        } message: { a in
+            Text(a.message)
+        }
+        .overlay(alignment: .bottom) {
+            if let t = model.toast {
+                Text(t)
+                    .font(.callout)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
+                    .shadow(radius: 6)
+                    .padding(.bottom, 18)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task(id: t) {
+                        try? await Task.sleep(for: .seconds(3))
+                        withAnimation { model.toast = nil }
+                    }
+            }
         }
     }
 }
