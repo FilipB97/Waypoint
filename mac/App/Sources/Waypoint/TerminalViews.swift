@@ -98,6 +98,9 @@ struct SessionContainer: View {
             }
         }
         .background(Color(nsColor: TerminalAppearance.background))
+        .navigationTitle(session.title)
+        .navigationSubtitle(session.server.username.isEmpty ? session.server.host
+                            : "\(session.server.username)@\(session.server.host)")
     }
 }
 
@@ -108,6 +111,8 @@ struct TerminalHost: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
+        container.wantsLayer = true
+        container.layer?.backgroundColor = TerminalAppearance.background.cgColor
         attach(to: container)
         return container
     }
@@ -116,11 +121,14 @@ struct TerminalHost: NSViewRepresentable {
         attach(to: container)
     }
 
+    /// Margines wokół tekstu — bez niego pierwsza kolumna dotyka krawędzi okna.
+    static let inset = NSSize(width: 10, height: 6)
+
     private func attach(to container: NSView) {
         let tv = session.view
         if tv.superview !== container {
             tv.removeFromSuperview()
-            tv.frame = container.bounds
+            tv.frame = container.bounds.insetBy(dx: Self.inset.width, dy: Self.inset.height)
             tv.autoresizingMask = [.width, .height]
             container.addSubview(tv)
         }

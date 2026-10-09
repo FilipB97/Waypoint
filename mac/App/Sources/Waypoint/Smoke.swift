@@ -128,12 +128,13 @@ enum Smoke {
         return check()
     }
 
-    /// Zrzut okna z wnętrza aplikacji (bez uprawnienia „Nagrywanie ekranu", którego runner nie ma).
+    /// Zrzut samego okna przez systemowe `screencapture -l` — obejmuje też zawartość terminala, której
+    /// zrzut z wnętrza aplikacji (cacheDisplay) nie łapie, bo SwiftTerm rysuje na warstwach.
     static func snapshot(_ window: NSWindow, _ url: URL) {
-        guard let view = window.contentView?.superview ?? window.contentView else { return }
-        view.layoutSubtreeIfNeeded()
-        guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
-        view.cacheDisplay(in: view.bounds, to: rep)
-        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        p.arguments = ["-x", "-o", "-l", String(window.windowNumber), url.path]
+        try? p.run()
+        p.waitUntilExit()
     }
 }

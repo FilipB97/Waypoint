@@ -189,5 +189,8 @@ enum TerminalAppearance {
         v.caretColor = accent
         v.selectedTextBackgroundColor = accent.withAlphaComponent(0.35)
         v.optionAsMetaKey = false   // Option zostaje do polskich znaków (ą, ś, ł…)
+        // Terminal jest zawsze ciemny, więc i jego pasek przewijania (przy myszy bez gładzika macOS
+        // pokazuje go na stałe — w jasnym motywie byłby to jasny pas przy prawej krawędzi).
+        v.appearance = NSAppearance(named: .darkAqua)
     }
 }
