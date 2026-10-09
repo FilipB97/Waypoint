@@ -313,7 +313,11 @@ enum Smoke {
         model.setCollapsed("Produkcja", false)
         // Okno Ustawień (⌘,) — tylko zrzut.
         let before = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        // Pozycja „Ustawienia…" (⌘,) z menu aplikacji — tak, jak kliknąłby użytkownik.
+        if let appMenu = NSApp.mainMenu?.items.first?.submenu,
+           let i = appMenu.items.firstIndex(where: { $0.keyEquivalent == "," && $0.keyEquivalentModifierMask == .command }) {
+            appMenu.performActionForItem(at: i)
+        }
         if let w = await waitFor(5, { NSApp.windows.first { $0.isVisible && !before.contains(ObjectIdentifier($0)) } }) {
             try? await Task.sleep(for: .seconds(0.8))
             snapshot(w, out.appendingPathComponent("11-ustawienia.png"))

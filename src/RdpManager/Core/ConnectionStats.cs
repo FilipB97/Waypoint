@@ -47,7 +47,10 @@ namespace RdpManager.Core
                 total++;
                 weekday[((int)ts.DayOfWeek + 6) % 7]++;               // .NET: niedziela=0 → nasze: poniedziałek=0
                 string rest = afterTs.Substring(sp).TrimStart();     // "name (host:port) user=…"
-                int par = rest.IndexOf(" (", StringComparison.Ordinal);
+                // Nazwa może sama zawierać „ (" (np. „web (stary)"), więc ostatnie „ (" przed „) user=".
+                int usr = rest.LastIndexOf(") user=", StringComparison.Ordinal);
+                int par = usr > 0 ? rest.LastIndexOf(" (", usr, StringComparison.Ordinal)
+                                  : rest.IndexOf(" (", StringComparison.Ordinal);
                 string name = (par > 0 ? rest.Substring(0, par) : rest).Trim();
                 if (name.Length > 0)
                     byServer[name] = byServer.TryGetValue(name, out var c) ? c + 1 : 1;

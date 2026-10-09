@@ -92,7 +92,9 @@ public struct ConnectionStats: Equatable, Sendable {
             total += 1
             weekday[(cal.component(.weekday, from: ts) + 5) % 7] += 1   // Calendar: niedziela=1
             let rest = after[sp...].drop(while: { $0 == " " })
-            let name = (rest.range(of: " (").map { rest[..<$0.lowerBound] } ?? rest)
+            // Nazwa może sama zawierać „ (" — np. „sshd (Pęk kluczy)" — więc ostatnie „ (" przed „ user=".
+            let head = rest.range(of: ") user=", options: .backwards).map { rest[..<$0.lowerBound] } ?? rest
+            let name = (head.range(of: " (", options: .backwards).map { rest[..<$0.lowerBound] } ?? rest)
                 .trimmingCharacters(in: .whitespaces)
             if !name.isEmpty {
                 let key = name.lowercased()

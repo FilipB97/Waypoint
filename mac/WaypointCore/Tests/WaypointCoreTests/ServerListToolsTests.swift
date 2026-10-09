@@ -49,6 +49,13 @@ import Testing
         #expect(ConnectionStats.compute([line], now: date(2026, 7, 3), days: 1).topServers.first?.name == "web 1")
     }
 
+    @Test func nawiasWNazwie() {
+        let l = ["2026-07-03 09:00:00  CONNECTED    sshd (Pęk kluczy) (127.0.0.1:2222) user=a",
+                 "2026-07-03 09:00:00  CONNECTED    bez portu"]
+        #expect(ConnectionStats.compute(l, now: date(2026, 7, 3), days: 1).topServers.map(\.name).sorted()
+                == ["bez portu", "sshd (Pęk kluczy)"])
+    }
+
     @Test func dopisywanieDoPliku() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("wp-log-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
