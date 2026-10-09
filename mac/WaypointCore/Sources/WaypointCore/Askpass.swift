@@ -89,7 +89,6 @@ public final class AskpassServer: @unchecked Sendable {
     public let socketPath: String
     public let token: String
     private let directory: String
-    private var listenFD: Int32 = -1
     private let lock = NSLock()
     private var stopped = false
     private let handler: @Sendable (Askpass.Request, @escaping @Sendable (Askpass.Reply) -> Void) -> Void
@@ -109,7 +108,6 @@ public final class AskpassServer: @unchecked Sendable {
             throw POSIXError(.EADDRINUSE)
         }
         chmod(socketPath, 0o600)
-        listenFD = fd
         let t = Thread { [weak self] in self?.acceptLoop(fd) }
         t.name = "waypoint.askpass"
         t.start()
@@ -117,18 +115,15 @@ public final class AskpassServer: @unchecked Sendable {
 
     deinit { stop() }
 
+    /// Zatrzymanie. Gniazdo nasłuchujące zamyka WYŁĄCZNIE wątek, który na nim czeka (najpóźniej po
+    /// 250 ms): zamknięcie go stąd zwolniłoby numer deskryptora, system dałby go innemu gniazdu
+    /// (np. kanałowi drugiej karty), a wiszący jeszcze accept() przejąłby cudze połączenie.
     public func stop() {
         lock.lock()
-        let fd = listenFD
         let wasStopped = stopped
         stopped = true
-        listenFD = -1
         lock.unlock()
         if wasStopped { return }
-        if fd >= 0 {
-            shutdown(fd, Int32(SHUT_RDWR))
-            close(fd)
-        }
         unlink(socketPath)
         rmdir(directory)
     }
@@ -147,6 +142,7 @@ public final class AskpassServer: @unchecked Sendable {
     // poll z krótkim limitem zamiast blokującego accept: na macOS zamknięcie gniazda z innego wątku
     // nie budzi wiszącego accept(), więc pętla sama sprawdza, czy serwer zatrzymano.
     private func acceptLoop(_ fd: Int32) {
+        defer { close(fd) }
         while true {
             lock.lock(); let done = stopped; lock.unlock()
             if done { return }
@@ -154,11 +150,11 @@ public final class AskpassServer: @unchecked Sendable {
             let r = poll(&p, 1, 250)
             if r == 0 || (r < 0 && errno == EINTR) { continue }
             if r < 0 { return }
+            lock.lock(); let stoppedNow = stopped; lock.unlock()
+            if stoppedNow { return }
             let client = accept(fd, nil, nil)
             if client < 0 {
-                lock.lock(); let done = stopped; lock.unlock()
-                if done { return }
-                if errno == EINTR { continue }
+                if errno == EINTR || errno == EAGAIN { continue }
                 return
             }
             handle(client)

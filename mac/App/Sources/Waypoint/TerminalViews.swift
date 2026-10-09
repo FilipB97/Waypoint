@@ -10,7 +10,7 @@ struct SessionTabBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
                 ForEach(Array(model.sessions.enumerated()), id: \.element.id) { index, s in
-                    SessionTab(session: s, index: index, active: model.activeSessionID == s.id)
+                    SessionTabView(session: s, index: index, active: model.activeSessionID == s.id)
                 }
             }
             .padding(.horizontal, 8)
@@ -21,9 +21,9 @@ struct SessionTabBar: View {
     }
 }
 
-private struct SessionTab: View {
+private struct SessionTabView: View {
     @Environment(AppModel.self) private var model
-    let session: TerminalSession
+    let session: SessionTab
     let index: Int
     let active: Bool
     @State private var hover = false
@@ -33,6 +33,9 @@ private struct SessionTab: View {
             Circle()
                 .fill(session.isRunning ? Color.green : Color.secondary)
                 .frame(width: 7, height: 7)
+            Image(systemName: session.systemImage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Text(session.title)
                 .lineLimit(1)
                 .frame(maxWidth: 180, alignment: .leading)
@@ -60,6 +63,18 @@ private struct SessionTab: View {
     }
 }
 
+/// Zawartość aktywnej karty.
+struct SessionContent: View {
+    let tab: SessionTab
+
+    var body: some View {
+        switch tab {
+        case .terminal(let t): SessionContainer(session: t)
+        case .files(let f): FilesView(session: f)
+        }
+    }
+}
+
 /// Terminal sesji z nakładkami: ostrzeżenia, pytanie ssh (hasło itd.) i ekran końca połączenia.
 struct SessionContainer: View {
     let session: TerminalSession
@@ -75,7 +90,7 @@ struct SessionContainer: View {
             }
             ZStack {
                 TerminalHost(session: session)
-                if let p = session.prompt {
+                if let p = session.auth.prompt {
                     Color.black.opacity(0.35)
                     PromptCard(prompt: p, serverName: session.server.displayName)
                         .id(p.id)
@@ -83,19 +98,7 @@ struct SessionContainer: View {
                     EndedCard(session: session, code: code)
                 }
             }
-            .overlay(alignment: .top) {
-                if let n = session.notice {
-                    Text(n)
-                        .font(.callout)
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(.regularMaterial, in: Capsule())
-                        .padding(.top, 10)
-                        .task {
-                            try? await Task.sleep(for: .seconds(3))
-                            session.notice = nil
-                        }
-                }
-            }
+            .overlay(alignment: .top) { NoticeBadge(auth: session.auth) }
         }
         .background(Color(nsColor: TerminalAppearance.background))
         .navigationTitle(session.title)
@@ -139,13 +142,13 @@ struct TerminalHost: NSViewRepresentable {
                 tv.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -Self.inset.height),
             ])
         }
-        if session.prompt == nil {
+        if session.auth.prompt == nil {
             DispatchQueue.main.async { tv.window?.makeFirstResponder(tv) }
         }
     }
 }
 
-private struct PromptCard: View {
+struct PromptCard: View {
     let prompt: PendingPrompt
     let serverName: String
     @State private var value = ""
@@ -235,7 +238,7 @@ private struct EndedCard: View {
             Text(code == 0 ? L("ended.clean") : String(format: L("ended.code"), code.map(String.init) ?? "?"))
                 .font(.headline)
             HStack {
-                Button(L("tab.close")) { model.close(session) }
+                Button(L("tab.close")) { model.close(.terminal(session)) }
                 Button(L("tab.reconnect")) { session.reconnect() }
                     .keyboardShortcut(.defaultAction)
             }
@@ -244,5 +247,24 @@ private struct EndedCard: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         .frame(maxHeight: .infinity, alignment: .bottom)
         .padding(.bottom, 24)
+    }
+}
+
+/// Krótka informacja o zapisie hasła nad kartą (znika po 3 s).
+struct NoticeBadge: View {
+    let auth: AuthBroker
+
+    var body: some View {
+        if let n = auth.notice {
+            Text(n)
+                .font(.callout)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(.regularMaterial, in: Capsule())
+                .padding(.top, 10)
+                .task(id: n) {
+                    try? await Task.sleep(for: .seconds(3))
+                    auth.notice = nil
+                }
+        }
     }
 }

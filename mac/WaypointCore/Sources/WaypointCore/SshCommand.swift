@@ -12,6 +12,18 @@ public enum SshCommand {
         public var warnings: [String]
     }
 
+    /// Polecenie dla panelu plików: podsystem sftp przez ten sam ssh (bez tuneli — te otwiera terminal).
+    public static func buildSftp(_ s: Server, homeDirectory: String, fileExists: (String) -> Bool) -> Launch {
+        var noTunnels = s
+        noTunnels.tunnels = []
+        var l = build(noTunnels, homeDirectory: homeDirectory, fileExists: fileExists)
+        // „-- host" → „-T -o ClearAllForwardings=yes -s -- host sftp"
+        let tail = l.arguments.suffix(2)
+        l.arguments.removeLast(2)
+        l.arguments += ["-T", "-o", "ClearAllForwardings=yes", "-s"] + tail + ["sftp"]
+        return l
+    }
+
     public static func build(_ s: Server, homeDirectory: String, fileExists: (String) -> Bool) -> Launch {
         var args: [String] = []
         var warnings: [String] = []

@@ -13,7 +13,7 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 if !model.sessions.isEmpty { SessionTabBar() }
                 if let session = model.activeSession {
-                    SessionContainer(session: session).id(session.id)
+                    SessionContent(tab: session).id(session.id)
                 } else if let s = model.selected {
                     ServerDetail(server: s)
                 } else {
