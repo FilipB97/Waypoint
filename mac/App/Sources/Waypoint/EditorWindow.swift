@@ -8,29 +8,29 @@ import WaypointCore
 final class EditorWindowController: NSWindowController, NSWindowDelegate {
     static var open: [EditorWindowController] = []
 
-    let document: EditorDocument
+    let doc: EditorDocument
 
     static func show(server: Server, entry: SftpEntry, payload: FileSession.EditPayload) {
         // Ten sam plik z tego samego serwera — przywróć okno zamiast otwierać drugie.
-        if let w = open.first(where: { $0.document.server.id == server.id && $0.document.requestedPath == entry.path }) {
+        if let w = open.first(where: { $0.doc.server.id == server.id && $0.doc.requestedPath == entry.path }) {
             w.window?.makeKeyAndOrderFront(nil)
             return
         }
         let doc = EditorDocument(server: server, entry: entry, payload: payload)
-        let wc = EditorWindowController(document: doc)
+        let wc = EditorWindowController(doc: doc)
         open.append(wc)
         wc.showWindow(nil)
         wc.window?.makeKeyAndOrderFront(nil)
     }
 
-    init(document: EditorDocument) {
-        self.document = document
-        let host = NSHostingController(rootView: EditorView(doc: document))
+    init(doc: EditorDocument) {
+        self.doc = doc
+        let host = NSHostingController(rootView: EditorView(doc: doc))
         let w = NSWindow(contentViewController: host)
         w.setContentSize(NSSize(width: 980, height: 680))
         w.minSize = NSSize(width: 560, height: 360)
-        w.title = document.name
-        w.subtitle = "\(document.server.displayName) — \(document.pathLabel)"
+        w.title = doc.name
+        w.subtitle = "\(doc.server.displayName) — \(doc.pathLabel)"
         w.tabbingMode = .preferred   // kilka plików = karty jednego okna (⌘⇧\ pokazuje wszystkie)
         w.center()
         super.init(window: w)
@@ -41,27 +41,27 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
     required init?(coder: NSCoder) { fatalError() }
 
     private func observeTitle() {
-        withObservationTracking { _ = document.dirty } onChange: { [weak self] in
+        withObservationTracking { _ = doc.dirty } onChange: { [weak self] in
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.window?.isDocumentEdited = self.document.dirty   // kropka w czerwonym przycisku
-                self.window?.title = self.document.title
+                self.window?.isDocumentEdited = self.doc.dirty   // kropka w czerwonym przycisku
+                self.window?.title = self.doc.title
                 self.observeTitle()
             }
         }
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        guard document.dirty else { return true }
+        guard doc.dirty else { return true }
         let a = NSAlert()
-        a.messageText = String(format: L("edit.close.ask"), document.name)
+        a.messageText = String(format: L("edit.close.ask"), doc.name)
         a.addButton(withTitle: L("btn.save"))
         a.addButton(withTitle: L("btn.cancel"))
         a.addButton(withTitle: L("edit.discard"))
         switch a.runModal() {
         case .alertFirstButtonReturn:
-            document.closeAfterSave = { [weak sender] in sender?.close() }
-            document.saveFromButton()
+            doc.closeAfterSave = { [weak sender] in sender?.close() }
+            doc.saveFromButton()
             return false
         case .alertThirdButtonReturn:
             return true
@@ -71,13 +71,13 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
-        document.close()
+        doc.close()
         Self.open.removeAll { $0 === self }
     }
 
     /// Zamknięcie aplikacji: jedno pytanie o wszystkie niezapisane pliki.
     static func confirmQuit() -> Bool {
-        let dirty = open.filter { $0.document.dirty }.count
+        let dirty = open.filter { $0.doc.dirty }.count
         guard dirty > 0 else { return true }
         let a = NSAlert()
         a.messageText = L("quit.title")

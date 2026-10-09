@@ -152,7 +152,7 @@ enum Smoke {
                     }
                     _ = await waitFor(10, { opened ? true : nil })
                     if let wc = EditorWindowController.open.last {
-                        let doc = wc.document
+                        let doc = wc.doc
                         let monaco = await waitFor(20, { doc.ready ? true : nil })
                         note(monaco == true ? "Monaco wczytane (\(doc.language), \(doc.format.encodingName), \(doc.format.eolLabel))"
                                             : "FAIL: Monaco nie wstało w WKWebView", out)
