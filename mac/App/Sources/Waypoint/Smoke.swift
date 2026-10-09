@@ -139,8 +139,46 @@ enum Smoke {
                 note(listed == true && downloaded ? "OK: SFTP — wysłanie pliku i folderu, lista, pobranie (treść zgodna)"
                                                   : "FAIL: SFTP lista=\(listed == true) pobranie=\(downloaded) komunikat=\(fs.message ?? "-")", out)
                 ok = ok && listed == true && downloaded
+                // 6. Edytor: plik z CRLF → Monaco w WKWebView → dopisana linia → bezpieczny zapis → CRLF zostaje.
+                let conf = "konfig.conf"
+                try? "a=1\r\nb=2\r\n".write(to: tmp.appendingPathComponent(conf), atomically: true, encoding: .utf8)
+                fs.upload([tmp.appendingPathComponent(conf)])
+                _ = await waitFor(10, { !fs.busy && fs.entries.contains { $0.name == conf } ? true : nil })
+                if let e = fs.entries.first(where: { $0.name == conf }) {
+                    var opened = false
+                    fs.readForEdit(e) { payload in
+                        EditorWindowController.show(server: s, entry: e, payload: payload)
+                        opened = true
+                    }
+                    _ = await waitFor(10, { opened ? true : nil })
+                    if let wc = EditorWindowController.open.last {
+                        let doc = wc.document
+                        let monaco = await waitFor(20, { doc.ready ? true : nil })
+                        note(monaco == true ? "Monaco wczytane (\(doc.language), \(doc.format.encodingName), \(doc.format.eolLabel))"
+                                            : "FAIL: Monaco nie wstało w WKWebView", out)
+                        try? await doc.bridge.webView.evaluateJavaScript(
+                            "var m = monaco.editor.getEditors()[0].getModel(); m.setValue(m.getValue() + 'c=3\\n'); 1")
+                        let dirty = await waitFor(5, { doc.dirty ? true : nil })
+                        try? await Task.sleep(for: .seconds(0.8))
+                        if let w = wc.window { snapshot(w, out.appendingPathComponent("11-edytor.png")) }
+                        doc.saveFromButton()
+                        _ = await waitFor(15, { !doc.saving && !doc.dirty ? true : nil })
+                        var content: Data?
+                        fs.perform({ c in try c.readFile(e.path) }) { r in content = (try? r.get()) ?? Data() }
+                        _ = await waitFor(10, { content })
+                        let expected = Data("a=1\r\nb=2\r\nc=3\r\n".utf8)
+                        let saved = content == expected
+                        note(saved && dirty == true ? "OK: edytor — zapis na serwer, CRLF zachowane (\(doc.status ?? ""))"
+                                                    : "FAIL: edytor dirty=\(dirty == true) treść=\(content.map { String(decoding: $0, as: UTF8.self).debugDescription } ?? "-") status=\(doc.status ?? "-")", out)
+                        ok = ok && monaco == true && saved
+                        wc.window?.close()
+                    } else {
+                        note("FAIL: okno edytora się nie otworzyło (\(fs.message ?? "-"))", out); ok = false
+                    }
+                }
+
                 // Sprzątanie na serwerze testowym.
-                let toDelete = fs.entries.filter { $0.name == name || $0.name == "folder z plikami" }
+                let toDelete = fs.entries.filter { $0.name == name || $0.name == "folder z plikami" || $0.name == conf }
                 fs.delete(toDelete)
                 _ = await waitFor(10, { fs.busy ? nil : true })
             }

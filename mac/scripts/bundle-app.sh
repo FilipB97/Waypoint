@@ -51,6 +51,13 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# Edytor plików: Monaco (ta sama przycięta paczka co w wersji Windows) i ta sama strona edytora,
+# rozpakowane do zasobów — serwuje je WKURLSchemeHandler (EditorWebView.swift).
+REPO_DIR="$(cd "$MAC_DIR/.." && pwd)"
+mkdir -p "$APP/Contents/Resources/monaco"
+unzip -q "$REPO_DIR/src/RdpManager/Assets/monaco/monaco-0.52.2.zip" -d "$APP/Contents/Resources/monaco"
+cp "$REPO_DIR/src/RdpManager/Assets/editor/index.html" "$APP/Contents/Resources/monaco/index.html"
+
 # Ikona: zestaw rozmiarów z jednego PNG 1024 px (sips + iconutil są w każdym macOS).
 ICON_SRC="$MAC_DIR/Resources/AppIcon-1024.png"
 ICONSET="$DIST/AppIcon.iconset"

@@ -38,7 +38,7 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ✅ |
 | 4 | Panel plików SFTP: przeglądanie, wysyłanie/pobieranie (także folderów), zmiana nazwy, usuwanie | ✅ |
 | 4b | FTP/FTPS | ⏳ |
-| 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | — |
+| 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | ✅ |
 
 ## Terminal SSH
 
@@ -65,6 +65,15 @@ transfer nie zostawia połowy pliku. Karta „Pliki" otwiera się dla serwerów 
 „Pliki (SFTP)" — dla serwerów SSH. Wysyłanie: przycisk albo przeciągnięcie z Findera.
 
 Testy klienta na prawdziwym OpenSSH: `WAYPOINT_SFTP_TEST=host:port:user:klucz[:known_hosts] swift test`.
+
+## Edytor plików
+
+Pliki → menu „Edytuj w Waypoint" (⌘E). Ta sama strona edytora i ta sama przycięta paczka Monaco co
+w wersji Windows (`src/RdpManager/Assets/`), rozpakowane do zasobów `.app` i serwowane przez
+WKURLSchemeHandler (`wpeditor://app`), z nakładką emulującą `window.chrome.webview`. Zapis jak
+w Windows: format pliku zachowany, wykrywanie zmian na serwerze, plik tymczasowy + atomowa
+podmiana z zachowaniem uprawnień, właściciela, grupy i dowiązań (`SafeWrite` — macierz przypadków
+sprawdzona na OpenSSH), pliki roota tylko do odczytu. Edytor ma własne połączenie.
 
 ## RDP
 

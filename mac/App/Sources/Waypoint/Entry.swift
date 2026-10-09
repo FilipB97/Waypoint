@@ -20,7 +20,8 @@ enum Entry {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        MainActor.assumeIsolated { AppModel.shared.confirmQuit() } ? .terminateNow : .terminateCancel
+        MainActor.assumeIsolated { EditorWindowController.confirmQuit() && AppModel.shared.confirmQuit() }
+            ? .terminateNow : .terminateCancel
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }

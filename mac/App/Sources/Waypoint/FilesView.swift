@@ -149,6 +149,9 @@ struct FilesView: View {
             let items = session.entries.filter { ids.contains($0.id) }
             if items.count == 1, let e = items.first {
                 Button(e.isDirectory ? L("files.openfolder") : L("files.open")) { session.open(e) }
+                if !e.isDirectory {
+                    Button(L("files.edit")) { edit(e) }
+                }
                 Button(L("files.rename")) { renameText = e.name; renaming = e }
                 Button(L("files.copypath")) {
                     NSPasteboard.general.clearContents()
@@ -168,11 +171,23 @@ struct FilesView: View {
             if let e = session.entries.first(where: { ids.contains($0.id) }) { session.open(e) }
         }
         .onDeleteCommand { if !selected.isEmpty { pendingDelete = selected } }
+        .onKeyPress(characters: ["e"], phases: .down) { press in
+            guard press.modifiers == .command, selected.count == 1, let e = selected.first, !e.isDirectory else { return .ignored }
+            edit(e)
+            return .handled
+        }
         .dropDestination(for: URL.self) { urls, _ in
             let files = urls.filter(\.isFileURL)
             session.upload(files)
             return !files.isEmpty
         } isTargeted: { dropTargeted = $0 }
+    }
+
+    private func edit(_ e: SftpEntry) {
+        let server = session.server
+        session.readForEdit(e) { payload in
+            EditorWindowController.show(server: server, entry: e, payload: payload)
+        }
     }
 
     private func icon(for e: SftpEntry) -> NSImage {

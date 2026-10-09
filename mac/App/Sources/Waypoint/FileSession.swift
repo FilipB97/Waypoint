@@ -31,6 +31,8 @@ final class FileSession: Identifiable {
     var overwriteQuestion: (names: [String], urls: [URL])?
 
     @ObservationIgnored private var client: SftpClient?
+    /// Prace czekające na zakończenie łączenia (true = połączono).
+    @ObservationIgnored private var whenConnected: [(Bool) -> Void] = []
     @ObservationIgnored private let queue = DispatchQueue(label: "waypoint.sftp")
     /// Flaga „Anuluj" czytana z kolejki SFTP — dlatego osobny obiekt z blokadą, nie pole aktora.
     @ObservationIgnored private let cancelFlag = CancelFlag()
@@ -69,14 +71,22 @@ final class FileSession: Identifiable {
                     self.entries = Self.sorted(list)
                     self.state = .ready
                     self.auth.stop()   // zalogowano — kanał askpass nie jest już potrzebny
+                    self.flushWaiting(true)
                 }
             } catch {
                 DispatchQueue.main.async {
                     self?.auth.stop()
                     self?.state = .failed(Self.describe(error))
+                    self?.flushWaiting(false)
                 }
             }
         }
+    }
+
+    private func flushWaiting(_ connected: Bool) {
+        let waiting = whenConnected
+        whenConnected = []
+        waiting.forEach { $0(connected) }
     }
 
     func close() {
@@ -234,6 +244,67 @@ final class FileSession: Identifiable {
     }
 
     func cancelTransfer() { cancelFlag.set(true) }
+
+    // MARK: Edytor
+
+    /// Dane do otwarcia pliku w edytorze: treść, metadane (po rozwiązaniu dowiązań) i uid zalogowanego
+    /// (z właściciela katalogu domowego — SFTP nie mówi „kim jestem").
+    struct EditPayload {
+        var data: Data
+        var info: RemoteFileInfo
+        var myUid: UInt32?
+    }
+
+    static let editMaxBytes: UInt64 = 10 * 1024 * 1024
+
+    func readForEdit(_ e: SftpEntry, completion: @escaping (EditPayload) -> Void) {
+        if e.size > Self.editMaxBytes {
+            show(String(format: L("edit.toobig"), ByteCountFormatter.string(fromByteCount: Int64(Self.editMaxBytes), countStyle: .file)), error: true)
+            return
+        }
+        run(String(format: L("files.downloading"), e.name), work: { c -> EditPayload? in
+            let info = try SafeWrite.stat(c, e.path)
+            guard info.length <= Self.editMaxBytes else { return nil }
+            let data = try c.readFile(info.path, limit: Int(Self.editMaxBytes))
+            let uid = (try? c.stat(try c.realPath(".")))?.uid
+            return EditPayload(data: data, info: info, myUid: uid)
+        }) { [weak self] payload in
+            guard let self else { return }
+            guard let payload else {
+                self.show(String(format: L("edit.toobig"), ByteCountFormatter.string(fromByteCount: Int64(Self.editMaxBytes), countStyle: .file)), error: true)
+                return
+            }
+            if TextFileFormat.looksBinary(payload.data) { self.show(L("edit.binary"), error: true); return }
+            self.message = nil
+            completion(payload)
+        }
+    }
+
+    /// Operacja dla edytora na tym połączeniu (stat przed zapisem, bezpieczny zapis, ponowne wczytanie).
+    /// Błędy wracają do wołającego (edytor pokazuje je po swojemu), a nie na pasek panelu.
+    func perform<T>(_ work: @escaping (SftpClient) throws -> T, completion: @escaping (Result<T, Error>) -> Void) {
+        guard let c = client else {
+            // Połączenie jeszcze wstaje (edytor otwiera własne) albo padło — praca czeka na wynik łączenia.
+            whenConnected.append { [weak self] connected in
+                guard let self, connected else {
+                    completion(.failure(SftpError.disconnected(L("files.err.disconnected"))))
+                    return
+                }
+                self.perform(work, completion: completion)
+            }
+            if case .failed = state { connect() }
+            return
+        }
+        queue.async { [weak self] in
+            let result = Result { try work(c) }
+            DispatchQueue.main.async {
+                if case .failure(let e) = result, case SftpError.disconnected = e {
+                    self?.client?.close(); self?.client = nil; self?.state = .failed(Self.describe(e))
+                }
+                completion(result)
+            }
+        }
+    }
 
     private func startTransfer<T>(_ label: String, total: UInt64,
                                   work: @escaping (SftpClient, @escaping (UInt64) -> Bool) throws -> T,
