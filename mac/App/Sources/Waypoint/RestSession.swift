@@ -183,7 +183,7 @@ final class RestSession: Identifiable {
     var missingVariables: (missing: [String], empty: [String]) {
         guard let i = selectedIndex else { return ([], []) }
         let r = collection.requests[i]
-        let auth = r.authType == RestAuthType.inherit.rawValue
+        let auth: (type: Int, username: String, account: String) = r.authType == RestAuthType.inherit.rawValue
             ? collection.resolveAuth(from: r.folderId, collectionAccount: collectionAccount)
             : (r.authType, r.authUsername, r.keychainAccount)
         return RestBuild.audit(r, secret: auth.type == 0 ? "" : secret(auth.account), username: auth.username, vars: variables)
