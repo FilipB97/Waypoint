@@ -45,6 +45,11 @@ public struct SafeWriteError: Error, Sendable {
     public let originalMayBeDamaged: Bool
     public let underlying: Error
     public var isPermissionDenied: Bool { (underlying as? SftpError)?.code == .permissionDenied }
+
+    public init(originalMayBeDamaged: Bool, underlying: Error) {
+        self.originalMayBeDamaged = originalMayBeDamaged
+        self.underlying = underlying
+    }
 }
 
 /// Bezpieczny zapis pliku przez SFTP — port `SftpSafeWriter.cs` (zachowanie sprawdzone na OpenSSH,
