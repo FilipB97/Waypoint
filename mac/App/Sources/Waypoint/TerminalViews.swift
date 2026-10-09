@@ -58,7 +58,16 @@ private struct SessionTabView: View {
         .help(index < 9 ? "\(session.server.host)  ⌘\(index + 1)" : session.server.host)
         .contextMenu {
             Button(L("tab.reconnect")) { session.reconnect() }.disabled(session.isRunning)
+            Button(L("tab.duplicate")) { model.duplicate(session) }
+            Divider()
             Button(L("tab.close")) { model.close(session) }
+        }
+        // Przeciągnięcie karty na inną zmienia kolejność (jak w Windows).
+        .draggable(session.id.uuidString)
+        .dropDestination(for: String.self) { ids, _ in
+            guard let raw = ids.first, let id = UUID(uuidString: raw) else { return false }
+            model.moveTab(id, before: session.id)
+            return true
         }
     }
 }

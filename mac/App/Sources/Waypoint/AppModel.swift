@@ -24,8 +24,17 @@ final class AppModel {
     var toast: String?
 
     /// WAYPOINT_DATA_DIR podmienia katalog danych — dla testu dymnego w CI i do pracy na kopii listy.
-    private let store = ServerStore(directory: ProcessInfo.processInfo.environment["WAYPOINT_DATA_DIR"]
-        .map { URL(fileURLWithPath: $0, isDirectory: true) } ?? ServerStore.defaultDirectory)
+    let dataDirectory: URL = ProcessInfo.processInfo.environment["WAYPOINT_DATA_DIR"]
+        .map { URL(fileURLWithPath: $0, isDirectory: true) } ?? ServerStore.defaultDirectory
+    private var store: ServerStore { ServerStore(directory: dataDirectory) }
+
+    var settings = MacSettings()
+    var snippets: [CommandSnippet] = []
+    /// Paleta poleceń (⌘K) i jej tekst startowy (np. z „Szybkie połączenie…").
+    var paletteOpen = false
+    var paletteSeed = ""
+    var snippetPickerOpen = false
+    var snippetManagerOpen = false
 
     var activeSession: SessionTab? { sessions.first { $0.id == activeSessionID } }
 
@@ -34,6 +43,8 @@ final class AppModel {
     var groupNames: [String] { ServerList.groupNames(servers) }
 
     func load() {
+        settings = MacSettings.load(from: dataDirectory)
+        snippets = SnippetStore(directory: dataDirectory).load()
         switch store.load() {
         case .ok(let list): servers = list
         case .missing: servers = []
@@ -173,7 +184,7 @@ final class AppModel {
         editingIsNew = true
     }
 
-    private func add(_ tab: SessionTab) {
+    func add(_ tab: SessionTab) {
         sessions.append(tab)
         activeSessionID = tab.id
     }
@@ -236,6 +247,76 @@ final class AppModel {
 
     /// Skróty kart: ⌘W zamyka kartę (zamiast całego okna), ⌘1…⌘9 przełącza, ⌘⇧[ / ⌘⇧] — poprzednia/następna.
     /// Monitor zdarzeń, bo terminal jako pierwszy odbiorca i tak dostałby te klawisze przed menu SwiftUI.
+    // MARK: Ustawienia, snippety, terminal
+
+    func saveSettings() {
+        try? settings.save(to: dataDirectory)
+    }
+
+    func saveSnippets(_ list: [CommandSnippet]) {
+        snippets = SnippetStore.sanitize(list)
+        do { try SnippetStore(directory: dataDirectory).save(snippets) }
+        catch { alert = AppAlert(title: L("snip.title"), message: error.localizedDescription) }
+    }
+
+    var activeTerminal: TerminalSession? { activeSession?.terminal }
+
+    /// Wysyła snippet do aktywnego terminala jak wpisany z klawiatury (zmienne serwera podstawione).
+    func send(_ snippet: CommandSnippet) {
+        guard let t = activeTerminal else { toast = L("snip.noterminal"); return }
+        let text = SnippetVars.keystrokes(SnippetVars.expand(snippet.command, server: t.server), sendEnter: snippet.sendEnter)
+        t.view.send(txt: text)
+        t.view.window?.makeFirstResponder(t.view)
+    }
+
+    func sendSnippet(at index: Int) {
+        guard snippets.indices.contains(index) else { return }
+        send(snippets[index])
+    }
+
+    /// ⌘+ / ⌘− / ⌘0 — czcionka wszystkich terminali (zapamiętana, jak w Windows).
+    func zoomTerminal(_ delta: Int) {
+        settings.terminalFontSize = delta == 0 ? 13 : MacSettings.clampFont(settings.terminalFontSize + delta)
+        saveSettings()
+        for case .terminal(let t) in sessions { TerminalAppearance.setFont(t.view, size: settings.terminalFontSize) }
+    }
+
+    /// ⌘F — pasek szukania w buforze aktywnego terminala (wbudowany w SwiftTerm).
+    func findInTerminal() {
+        guard let t = activeTerminal else { return }
+        let item = NSMenuItem()
+        item.tag = Int(NSTextFinder.Action.showFindInterface.rawValue)
+        t.view.window?.makeFirstResponder(t.view)
+        t.view.performTextFinderAction(item)
+    }
+
+    /// Druga karta tego samego serwera (np. drugi terminal obok logów).
+    func duplicate(_ tab: SessionTab) {
+        switch tab {
+        case .terminal(let t): connect(t.server)
+        case .files(let f): openFiles(f.server)
+        }
+    }
+
+    /// Przeciągnięcie karty na miejsce innej.
+    func moveTab(_ id: SessionTab.ID, before target: SessionTab.ID) {
+        guard id != target, let from = sessions.firstIndex(where: { $0.id == id }) else { return }
+        let tab = sessions.remove(at: from)
+        let to = sessions.firstIndex(where: { $0.id == target }) ?? sessions.count
+        sessions.insert(tab, at: to)
+    }
+
+    /// Szybkie połączenie (bez zapisywania serwera).
+    func quickConnect(_ text: String) {
+        guard let s = QuickConnect.server(from: text) else { return }
+        connect(s)
+    }
+
+    func openPalette(seed: String = "") {
+        paletteSeed = seed
+        paletteOpen = true
+    }
+
     func installKeyMonitor() {
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, event.modifierFlags.contains(.command) else { return event }
@@ -243,6 +324,13 @@ final class AppModel {
             let chars = event.charactersIgnoringModifiers ?? ""
             let isMain = event.window?.isKind(of: NSPanel.self) == false
             guard isMain else { return event }
+            let option = event.modifierFlags.contains(.option)
+            // ⌥⌘1…9 — snippet o tym numerze (⌘⇧3/4/5 to w macOS zrzuty ekranu).
+            if option, !shift, let d = Int(chars), (1...9).contains(d) {
+                self.sendSnippet(at: d - 1)
+                return nil
+            }
+            if option { return event }
             if chars == "w", !shift, let s = self.activeSession {
                 self.close(s)
                 return nil

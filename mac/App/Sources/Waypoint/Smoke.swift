@@ -107,6 +107,35 @@ enum Smoke {
             }
         }
 
+        // 4b. Snippety, paleta, czcionka: snippet ze zmiennymi serwera idzie do terminala A.
+        if model.sessions.count >= 1, let term = model.sessions.first?.terminal {
+            model.activateTab(0)
+            model.saveSnippets([CommandSnippet(name: "Kto i gdzie", command: "echo SNIP_{user}_{port}_$((40+2))")] + model.snippets)
+            try? await Task.sleep(for: .seconds(0.5))
+            model.sendSnippet(at: 0)
+            let got = await waitFor(8, { bufferText(term).contains("SNIP_\(term.server.username)_\(term.server.port)_42") ? true : nil })
+            note(got == true ? "OK: snippet ze zmiennymi wysłany do terminala" : "FAIL: snippet nie dotarł", out)
+            ok = ok && got == true
+            let before = term.view.getTerminal().cols
+            model.zoomTerminal(2)
+            try? await Task.sleep(for: .seconds(0.8))
+            let after = term.view.getTerminal().cols
+            note(after < before ? "OK: powiększenie czcionki (\(before) → \(after) kolumn)" : "FAIL: czcionka bez zmian (\(before) → \(after))", out)
+            ok = ok && after < before
+            model.zoomTerminal(0)
+            model.openPalette(seed: "root@db.example")
+            try? await Task.sleep(for: .seconds(1.2))
+            if let sheet = window.attachedSheet { snapshot(sheet, out.appendingPathComponent("14-paleta.png")) }
+            model.paletteOpen = false
+            try? await Task.sleep(for: .seconds(0.8))
+            model.snippetPickerOpen = true
+            try? await Task.sleep(for: .seconds(1.2))
+            if let sheet = window.attachedSheet { snapshot(sheet, out.appendingPathComponent("15-snippety.png")) }
+            model.snippetPickerOpen = false
+            try? await Task.sleep(for: .seconds(0.8))
+            snapshot(window, out.appendingPathComponent("16-terminal-snippet.png"))
+        }
+
         // 5. Panel plików SFTP (ten sam serwer, hasło z Pęku kluczy): wysłanie, lista, pobranie z porównaniem.
         if let id = keychainServerID, let s = model.servers.first(where: { $0.id == id }) {
             model.openFiles(s)

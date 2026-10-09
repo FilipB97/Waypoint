@@ -202,8 +202,12 @@ enum TerminalAppearance {
     static let foreground = NSColor(srgbRed: 0xE7 / 255.0, green: 0xE8 / 255.0, blue: 0xEE / 255.0, alpha: 1)
     static let accent = NSColor(srgbRed: 0x7A / 255.0, green: 0xA2 / 255.0, blue: 0xFF / 255.0, alpha: 1)
 
+    static func setFont(_ v: TerminalView, size: Int) {
+        v.font = NSFont.monospacedSystemFont(ofSize: CGFloat(size), weight: .regular)
+    }
+
     static func apply(to v: TerminalView) {
-        v.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        setFont(v, size: MainActor.assumeIsolated { AppModel.shared.settings.terminalFontSize })
         v.nativeBackgroundColor = background
         v.nativeForegroundColor = foreground
         v.caretColor = accent
