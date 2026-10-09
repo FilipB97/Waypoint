@@ -126,39 +126,23 @@ final class TerminalSession: Identifiable {
     }
 }
 
-/// Widok terminala jednej sesji. Podklasa tylko po to, żeby zgłaszać koniec procesu i tytuł do sesji
-/// (delegat procesu w SwiftTerm jest słaby, a sesja i tak trzyma widok).
-final class SessionTerminalView: LocalProcessTerminalView, LocalProcessTerminalViewDelegate {
+/// Widok terminala jednej sesji. Zdarzenia procesu (koniec, tytuł) idą przez osobny obiekt-delegata:
+/// metody delegata mają te same nazwy co publiczne (nie-open) metody klasy bazowej, więc sama podklasa
+/// nie może być swoim delegatem.
+final class SessionTerminalView: LocalProcessTerminalView {
     weak var session: TerminalSession?
+    private let bridge = Bridge()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        processDelegate = self
+        bridge.owner = self
+        processDelegate = bridge
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        processDelegate = self
-    }
-
-    func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
-
-    func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
-        let t = title.trimmingCharacters(in: .whitespaces)
-        DispatchQueue.main.async { [weak self] in
-            MainActor.assumeIsolated {
-                guard let s = self?.session else { return }
-                s.title = t.isEmpty ? s.server.displayName : t
-            }
-        }
-    }
-
-    func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
-
-    func processTerminated(source: TerminalView, exitCode: Int32?) {
-        DispatchQueue.main.async { [weak self] in
-            MainActor.assumeIsolated { self?.session?.processEnded(exitCode) }
-        }
+        bridge.owner = self
+        processDelegate = bridge
     }
 
     /// Linki z wyjścia terminala: tylko http/https (treść pochodzi z serwera — jak w wersji Windows).
@@ -166,6 +150,29 @@ final class SessionTerminalView: LocalProcessTerminalView, LocalProcessTerminalV
         guard let url = URL(string: link), let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https" else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    private final class Bridge: LocalProcessTerminalViewDelegate {
+        weak var owner: SessionTerminalView?
+
+        func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
+        func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
+
+        func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
+            let t = title.trimmingCharacters(in: .whitespaces)
+            DispatchQueue.main.async { [weak self] in
+                MainActor.assumeIsolated {
+                    guard let s = self?.owner?.session else { return }
+                    s.title = t.isEmpty ? s.server.displayName : t
+                }
+            }
+        }
+
+        func processTerminated(source: TerminalView, exitCode: Int32?) {
+            DispatchQueue.main.async { [weak self] in
+                MainActor.assumeIsolated { self?.owner?.session?.processEnded(exitCode) }
+            }
+        }
     }
 }
 
