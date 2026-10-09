@@ -40,6 +40,17 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | 4b | FTP/FTPS: ten sam panel plików i edytor | ✅ |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | ✅ |
 
+## Funkcje przeniesione z wersji Windows
+
+| Funkcja | Windows | macOS |
+|---|---|---|
+| Zapis przez sudo w edytorze | ✅ | ✅ |
+| Snippety komend (zmienne serwera, ten sam `snippets.json`) | Ctrl+Shift+K, Ctrl+Shift+1…9 | ⇧⌘K, ⌥⌘1…9 (⇧⌘3/4/5 to zrzuty ekranu w macOS) |
+| Paleta poleceń | Ctrl+P | ⌘K |
+| Szybkie połączenie (`user@host:port`, `DOMENA\user@host`) | ✅ | w palecie (⇧⌘N) |
+| Szukanie w terminalu, rozmiar czcionki | ✅ | ⌘F, ⌘+ / ⌘− / ⌘0 |
+| Duplikowanie i przestawianie kart | ✅ | ✅ (menu karty, przeciąganie) |
+
 ## Terminal SSH
 
 Karta uruchamia systemowe `/usr/bin/ssh` w pseudo-terminalu (SwiftTerm). Dzięki temu działa

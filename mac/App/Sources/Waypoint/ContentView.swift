@@ -28,6 +28,9 @@ struct ContentView: View {
         .sheet(item: $model.editing) { s in
             ServerEditor(server: s, isNew: model.editingIsNew)
         }
+        .sheet(isPresented: $model.paletteOpen) { CommandPaletteView(seed: model.paletteSeed) }
+        .sheet(isPresented: $model.snippetPickerOpen) { SnippetPickerView() }
+        .sheet(isPresented: $model.snippetManagerOpen) { SnippetManagerView() }
         .alert(model.alert?.title ?? "", isPresented: Binding(get: { model.alert != nil },
                                                                set: { if !$0 { model.alert = nil } }),
                presenting: model.alert) { a in
