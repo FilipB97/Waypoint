@@ -34,7 +34,7 @@ enum Smoke {
         guard let window = await waitFor(10, { NSApp.windows.first { $0.isVisible && !($0 is NSPanel) } }) else {
             note("FAIL: brak okna", out); finish(out, ok: false); return
         }
-        window.setContentSize(NSSize(width: 1100, height: 680))
+        window.setContentSize(NSSize(width: 980, height: 640))   // ekran runnera ma 1024×768
         window.center()
         NSApp.activate(ignoringOtherApps: true)
         note("okno: \(window.frame.size), serwery: \(model.servers.count)", out)
@@ -52,8 +52,12 @@ enum Smoke {
             try? await Task.sleep(for: .seconds(1))
         }
 
-        // 2. Logowanie hasłem z Pęku kluczy
-        if let id = env["WAYPOINT_SMOKE_KEYCHAIN_SERVER"], let s = model.servers.first(where: { $0.id == id }) {
+        // 2. Logowanie hasłem z Pęku kluczy. Hasło zapisuje sama aplikacja (jak po „Zapisz w Pęku kluczy")
+        //    — wpis dodany innym programem (np. `security`) wywołałby systemowe pytanie o dostęp.
+        if let id = env["WAYPOINT_SMOKE_KEYCHAIN_SERVER"], let s = model.servers.first(where: { $0.id == id }),
+           let password = env["WAYPOINT_SMOKE_PASSWORD"] {
+            note(Keychain.save(password, for: id, label: "Waypoint — smoke") ? "hasło zapisane w Pęku kluczy" : "FAIL: zapis do Pęku kluczy", out)
+            defer { Keychain.delete(for: id) }
             model.connect(s)
             let session = model.activeSession!
             let prompted = await waitFor(15, { session.prompt != nil ? true : (bufferText(session).contains("$ ") || bufferText(session).contains("% ") ? true : nil) })
