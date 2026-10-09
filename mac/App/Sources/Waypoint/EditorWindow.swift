@@ -45,7 +45,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.window?.isDocumentEdited = self.doc.dirty   // kropka w czerwonym przycisku
-                self.window?.title = self.doc.title
+                self.window?.title = self.doc.name   // kropka niezapisanych zmian jest w przycisku zamykania (macOS)
                 self.observeTitle()
             }
         }

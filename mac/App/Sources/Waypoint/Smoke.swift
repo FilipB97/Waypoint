@@ -156,7 +156,7 @@ enum Smoke {
                         let monaco = await waitFor(20, { doc.ready ? true : nil })
                         note(monaco == true ? "Monaco wczytane (\(doc.language), \(doc.format.encodingName), \(doc.format.eolLabel))"
                                             : "FAIL: Monaco nie wstało w WKWebView", out)
-                        try? await doc.bridge.webView.evaluateJavaScript(
+                        _ = try? await doc.bridge.webView.evaluateJavaScript(
                             "var m = monaco.editor.getEditors()[0].getModel(); m.setValue(m.getValue() + 'c=3\\n'); 1")
                         let dirty = await waitFor(5, { doc.dirty ? true : nil })
                         try? await Task.sleep(for: .seconds(0.8))
