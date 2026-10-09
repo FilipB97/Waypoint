@@ -128,9 +128,16 @@ struct TerminalHost: NSViewRepresentable {
         let tv = session.view
         if tv.superview !== container {
             tv.removeFromSuperview()
-            tv.frame = container.bounds.insetBy(dx: Self.inset.width, dy: Self.inset.height)
-            tv.autoresizingMask = [.width, .height]
+            // Ograniczenia, nie ramka z autoresizing: kontener przy podpięciu ma jeszcze rozmiar 0×0,
+            // a ramka „0×0 minus margines" jest zdegenerowana — terminal liczył z niej 1–2 wiersze.
+            tv.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(tv)
+            NSLayoutConstraint.activate([
+                tv.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: Self.inset.width),
+                tv.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -Self.inset.width),
+                tv.topAnchor.constraint(equalTo: container.topAnchor, constant: Self.inset.height),
+                tv.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -Self.inset.height),
+            ])
         }
         if session.prompt == nil {
             DispatchQueue.main.async { tv.window?.makeFirstResponder(tv) }

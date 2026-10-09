@@ -71,6 +71,10 @@ enum Smoke {
             }
             session.view.send(txt: "echo WAYPOINT_SMOKE_$((40+2)); uname -sm\r")
             let done = await waitFor(8, { bufferText(session).contains("WAYPOINT_SMOKE_42") ? true : nil })
+            try? await Task.sleep(for: .seconds(0.7))   // ostatnie wiersze muszą zdążyć się narysować
+            let t = session.view.getTerminal()
+            note("terminal: \(t.cols)×\(t.rows), widok \(Int(session.view.frame.width))×\(Int(session.view.frame.height))", out)
+            if t.rows < 10 || t.cols < 40 { note("FAIL: terminal za mały", out); ok = false }
             snapshot(window, out.appendingPathComponent("03-terminal.png"))
             try? bufferText(session).write(to: out.appendingPathComponent("terminal-keychain.txt"), atomically: true, encoding: .utf8)
             note(done == true ? "OK: logowanie z Pęku kluczy i komenda" : "FAIL: komenda nie wykonała się", out)
@@ -90,6 +94,7 @@ enum Smoke {
                 p.answer(password, false)
                 session.view.send(txt: "echo WAYPOINT_PROMPT_$((40+2))\r")
                 let done = await waitFor(10, { bufferText(session).contains("WAYPOINT_PROMPT_42") ? true : nil })
+                try? await Task.sleep(for: .seconds(0.7))
                 snapshot(window, out.appendingPathComponent("05-po-zalogowaniu.png"))
                 try? bufferText(session).write(to: out.appendingPathComponent("terminal-prompt.txt"), atomically: true, encoding: .utf8)
                 note(done == true ? "OK: logowanie hasłem wpisanym w karcie" : "FAIL: brak logowania po podaniu hasła", out)
