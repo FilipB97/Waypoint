@@ -85,7 +85,7 @@ struct LocalPaneView: View {
                 Button { newFolder = "" } label: { Image(systemName: "folder.badge.plus") }.help(L("files.newfolder"))
                 Button { pane.showHidden.toggle() } label: { Image(systemName: pane.showHidden ? "eye" : "eye.slash") }
                     .help(L("local.hidden"))
-                Button { upload(pane.selected.map(\.url)) } label: { Label(L("local.send"), systemImage: "arrow.right.circle") }
+                Button { upload(pane.selected.map(\.url)) } label: { Image(systemName: "arrow.right.circle") }
                     .help(L("local.send.help"))
                     .disabled(pane.selected.isEmpty || !canUpload)
             }

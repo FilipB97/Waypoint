@@ -37,7 +37,9 @@ struct ServerDetail: View {
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 8) {
                     row(L("f.protocol"), server.proto?.badge ?? server.protocolName)
                     row(L("f.host"), server.host)
-                    row(L("f.port"), String(server.port))
+                    if server.proto != .http && server.proto != .rest {
+                        row(server.proto == .serial ? L("f.baud") : L("f.port"), String(server.port))
+                    }
                     if let p = model.profile(for: server) {
                         row(L("f.profile"), "\(p.displayName) — \(p.login)")
                     } else {
@@ -86,7 +88,8 @@ struct ServerDetail: View {
     private var address: String {
         let u = model.resolved(server).username
         let user = u.isEmpty ? "" : u + "@"
-        let port = server.port == server.proto?.defaultPort ? "" : ":\(server.port)"
+        let port = server.port == server.proto?.defaultPort || server.proto == .http || server.proto == .rest
+            || server.proto == .serial ? "" : ":\(server.port)"
         return user + server.host + port
     }
 

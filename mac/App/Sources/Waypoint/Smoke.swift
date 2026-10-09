@@ -509,6 +509,7 @@ enum Smoke {
         """#
         try? pm.write(to: pmURL, atomically: true, encoding: .utf8)
         if let restServer = model.importPostman(from: pmURL) {
+            try? await Task.sleep(for: .seconds(0.5))   // zaznaczenie nowego wpisu najpierw pokazuje jego szczegóły
             model.connect(restServer)
             if let rs = model.activeSession?.rest {
                 rs.send()
