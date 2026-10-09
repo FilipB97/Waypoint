@@ -34,6 +34,8 @@ final class FileSession: Identifiable {
     /// Pytanie o nadpisanie przy wysyłaniu (nazwy, które już są w katalogu).
     var overwriteQuestion: (names: [String], urls: [URL])?
 
+    /// Lewy panel (pliki na Macu) — w sesji, żeby katalog przetrwał przełączanie kart.
+    @ObservationIgnored let local = LocalPane()
     @ObservationIgnored private var client: RemoteFS?
     /// Prace czekające na zakończenie łączenia (true = połączono).
     @ObservationIgnored private var whenConnected: [(Bool) -> Void] = []
@@ -297,7 +299,9 @@ final class FileSession: Identifiable {
         }
     }
 
-    func download(_ list: [SftpEntry], to folder: URL) {
+    /// `reveal` — pokaż pobrane w Finderze (pobieranie do wybranego katalogu); w trybie dwóch paneli
+    /// zamiast tego odświeża się lewy panel.
+    func download(_ list: [SftpEntry], to folder: URL, reveal: Bool = true) {
         guard !list.isEmpty else { return }
         let label = list.count == 1 ? list[0].name : String(format: L("files.items"), list.count)
         startTransfer(String(format: L("files.downloading"), label), total: 0, work: { [weak self] c, progress in
@@ -311,7 +315,8 @@ final class FileSession: Identifiable {
             }
         }) { [weak self] in
             self?.show(String(format: L("files.downloaded"), label, folder.path))
-            NSWorkspace.shared.activateFileViewerSelecting(list.map { folder.appendingPathComponent($0.name) })
+            if reveal { NSWorkspace.shared.activateFileViewerSelecting(list.map { folder.appendingPathComponent($0.name) }) }
+            if self?.local.dir.standardizedFileURL == folder.standardizedFileURL { self?.local.refresh() }
         }
     }
 

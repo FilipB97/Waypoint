@@ -69,9 +69,30 @@ cat > "$WORK/data/servers.json" <<JSON
 ]
 JSON
 
-echo "== udawany serwer telnet (nc)"
-# Baner na start; to, co aplikacja wyśle, ląduje w pliku.
-( printf 'WAYPOINT_TELNET_BANNER\r\n'; sleep 120 ) | nc -l 127.0.0.1 2323 > "$WORK/telnet-in.txt" 2>/dev/null &
+echo "== udawany serwer telnet"
+# Każde połączenie dostaje baner, a to, co przyśle, ląduje w pliku. Wiele połączeń (nc obsłużyłby jedno —
+# a pierwsze robi sonda osiągalności z listy serwerów).
+cat > "$WORK/telnet-server.py" <<'PY'
+import socket, sys, threading
+out = sys.argv[1]
+s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(("127.0.0.1", 2323)); s.listen(8)
+def serve(c):
+    try:
+        c.sendall(b"WAYPOINT_TELNET_BANNER\r\n")
+        while True:
+            d = c.recv(4096)
+            if not d: break
+            with open(out, "ab") as f: f.write(d)
+    except OSError:
+        pass
+    finally:
+        c.close()
+while True:
+    c, _ = s.accept()
+    threading.Thread(target=serve, args=(c,), daemon=True).start()
+PY
+python3 "$WORK/telnet-server.py" "$WORK/telnet-in.txt" &
 
 echo "== aplikacja w trybie testu"
 set +e

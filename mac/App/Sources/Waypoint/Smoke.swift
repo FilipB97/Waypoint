@@ -155,17 +155,24 @@ enum Smoke {
                 fs.upload([tmp.appendingPathComponent(name), tmp.appendingPathComponent("folder z plikami")])
                 let listed = await waitFor(20, { !fs.busy && fs.entries.contains { $0.name == name } && fs.entries.contains { $0.name == "folder z plikami" } ? true : nil })
                 fs.selection = Set(fs.entries.filter { $0.name == name }.map(\.id))
+                fs.local.navigate(tmp)   // lewy panel: katalog z wysłanymi plikami
                 try? await Task.sleep(for: .seconds(0.8))
                 snapshot(window, out.appendingPathComponent("10-pliki.png"))
                 var downloaded = false
                 if listed == true, let e = fs.entries.first(where: { $0.name == name }) {
+                    // Dwa panele: „Pobierz do panelu lokalnego" — plik ląduje w katalogu lewego panelu,
+                    // a ten się odświeża.
                     let back = tmp.appendingPathComponent("pobrane")
                     try? FileManager.default.createDirectory(at: back, withIntermediateDirectories: true)
-                    fs.download([e], to: back)
+                    fs.local.navigate(back)
+                    fs.download([e], to: fs.local.dir, reveal: false)
                     _ = await waitFor(20, { fs.busy ? nil : true })
                     downloaded = (try? String(contentsOf: back.appendingPathComponent(name), encoding: .utf8)) == payload
+                        && fs.local.entries.contains { $0.name == name }
+                    try? await Task.sleep(for: .seconds(0.5))
+                    snapshot(window, out.appendingPathComponent("10b-dwa-panele.png"))
                 }
-                note(listed == true && downloaded ? "OK: SFTP — wysłanie pliku i folderu, lista, pobranie (treść zgodna)"
+                note(listed == true && downloaded ? "OK: SFTP — wysłanie pliku i folderu, lista, pobranie do panelu lokalnego (treść zgodna)"
                                                   : "FAIL: SFTP lista=\(listed == true) pobranie=\(downloaded) komunikat=\(fs.message ?? "-")", out)
                 ok = ok && listed == true && downloaded
                 // 6. Edytor: plik z CRLF → Monaco w WKWebView → dopisana linia → bezpieczny zapis → CRLF zostaje.
@@ -442,6 +449,51 @@ enum Smoke {
         let expOK = exported && back == model.servers.count && backProfiles == model.profiles.count
         note(expOK ? "OK: eksport profilu — \(back) serwerów, profile poświadczeń: \(backProfiles)" : "FAIL: eksport profilu (\(back))", out)
         ok = ok && expOK
+
+        // 12. Motywy: preset terminala podąża za trybem aplikacji (ciemny Tokyo Night, jasny Solarized).
+        if let tab = model.sessions.first(where: { $0.terminal?.isRunning == true }), let term = tab.terminal {
+            model.activeSessionID = tab.id
+            func bg() -> String {
+                guard let c = term.view.nativeBackgroundColor.usingColorSpace(.sRGB) else { return "?" }
+                return String(format: "#%02X%02X%02X", Int((c.redComponent * 255).rounded()),
+                              Int((c.greenComponent * 255).rounded()), Int((c.blueComponent * 255).rounded()))
+            }
+            model.settings.themeVariantDark = "TokyoNight"
+            model.settings.theme = AppTheme.dark.rawValue
+            model.applyAppearance()
+            try? await Task.sleep(for: .seconds(1.2))
+            snapshot(window, out.appendingPathComponent("26-motyw-tokyo.png"))
+            let dark = bg()
+            model.settings.themeVariantLight = "Solarized"
+            model.settings.theme = AppTheme.light.rawValue
+            model.applyAppearance()
+            try? await Task.sleep(for: .seconds(1.2))
+            snapshot(window, out.appendingPathComponent("27-motyw-solarized.png"))
+            let light = bg()
+            let themesOK = dark == "#1A1B26" && light == "#FDF6E3"
+            note(themesOK ? "OK: motywy terminala (Tokyo Night \(dark), Solarized \(light))" : "FAIL: motywy terminala \(dark) / \(light)", out)
+            ok = ok && themesOK
+            model.settings.theme = AppTheme.system.rawValue
+            model.settings.themeVariantDark = ThemePreset.defaultId
+            model.settings.themeVariantLight = ThemePreset.defaultId
+            model.applyAppearance()
+        }
+
+        // 13. Karta w osobnym oknie i z powrotem (sesja ta sama — proces działa dalej).
+        if let tab = model.sessions.first(where: { $0.terminal?.isRunning == true }) {
+            let count = model.sessions.count
+            model.detach(tab)
+            try? await Task.sleep(for: .seconds(1.2))
+            let wc = SessionWindowController.open.first { $0.tab.id == tab.id }
+            if let w = wc?.window { snapshot(w, out.appendingPathComponent("28-osobne-okno.png")) }
+            let detachedOK = wc != nil && model.sessions.count == count - 1 && tab.isRunning
+            wc?.reattach()
+            try? await Task.sleep(for: .seconds(0.8))
+            let backOK = model.sessions.count == count && tab.isRunning && SessionWindowController.open.isEmpty
+            note(detachedOK && backOK ? "OK: karta w osobnym oknie i z powrotem (połączenie nie zerwane)"
+                                      : "FAIL: osobne okno odłączono=\(detachedOK) powrót=\(backOK)", out)
+            ok = ok && detachedOK && backOK
+        }
 
         // Okno Ustawień (⌘,) — tylko zrzut.
         let before = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))

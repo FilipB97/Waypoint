@@ -406,6 +406,26 @@ public enum Strings {
         "set.app": "Aplikacja",
         "set.updates": "Sprawdzaj aktualizacje przy starcie",
         "set.version": "Wersja",
+
+        "local.hidden": "Pokaż ukryte pliki",
+        "local.send": "Wyślij na serwer",
+        "local.send.help": "Wyślij zaznaczone do bieżącego katalogu na serwerze (albo przeciągnij na prawy panel)",
+        "local.reveal": "Pokaż w Finderze",
+        "local.trash": "Przenieś do Kosza",
+        "files.download.local": "Pobierz do panelu lokalnego",
+        "files.dualpane": "Panel lokalny (dwa panele)",
+
+        "tab.detach": "Otwórz w nowym oknie",
+        "tab.reattach": "Przywróć do okna głównego",
+        "set.look": "Wygląd",
+        "set.theme": "Motyw",
+        "set.theme.system": "Jak w systemie",
+        "set.theme.light": "Jasny",
+        "set.theme.dark": "Ciemny",
+        "set.term.dark": "Terminal — tryb ciemny",
+        "set.term.light": "Terminal — tryb jasny",
+        "set.accent": "Własny kolor akcentu",
+        "set.fontsize": "Czcionka terminala",
     ]
 
     public static let en: [String: String] = [
@@ -808,6 +828,26 @@ public enum Strings {
         "set.app": "App",
         "set.updates": "Check for updates at launch",
         "set.version": "Version",
+
+        "local.hidden": "Show hidden files",
+        "local.send": "Upload to server",
+        "local.send.help": "Upload the selection to the current server folder (or drag it onto the right pane)",
+        "local.reveal": "Show in Finder",
+        "local.trash": "Move to Trash",
+        "files.download.local": "Download to the local pane",
+        "files.dualpane": "Local pane (two panes)",
+
+        "tab.detach": "Open in new window",
+        "tab.reattach": "Move back to main window",
+        "set.look": "Appearance",
+        "set.theme": "Theme",
+        "set.theme.system": "Match system",
+        "set.theme.light": "Light",
+        "set.theme.dark": "Dark",
+        "set.term.dark": "Terminal — dark mode",
+        "set.term.light": "Terminal — light mode",
+        "set.accent": "Custom accent colour",
+        "set.fontsize": "Terminal font",
     ]
 
     /// Język interfejsu: polski, gdy jest pierwszym preferowanym językiem systemu, w przeciwnym razie angielski.

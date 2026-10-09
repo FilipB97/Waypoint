@@ -64,6 +64,8 @@ struct WaypointApp: App {
                 Divider()
                 Button(L("tab.duplicate")) { if let t = model.activeSession { model.duplicate(t) } }
                     .disabled(model.activeSession == nil)
+                Button(L("tab.detach")) { if let t = model.activeSession { model.detach(t) } }
+                    .disabled(model.activeSession == nil)
             }
         }
     }

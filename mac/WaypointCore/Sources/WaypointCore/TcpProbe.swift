@@ -19,6 +19,13 @@ public enum TcpProbe {
     /// Połączenie TCP z limitem czasu; zwraca gniazdo w trybie blokującym (nil = nie udało się).
     /// Wspólne dla sondy i klienta Telnet.
     public static func connect(host: String, port: Int, timeout: TimeInterval) -> Int32? {
+        var err: Int32 = 0
+        return connect(host: host, port: port, timeout: timeout, error: &err)
+    }
+
+    /// Jak wyżej, z przyczyną niepowodzenia (errno: ECONNREFUSED, ETIMEDOUT…; EAI_* jako ujemne dla DNS).
+    public static func connect(host: String, port: Int, timeout: TimeInterval, error: inout Int32) -> Int32? {
+        error = 0
         let h = host.trimmingCharacters(in: .whitespaces)
         guard !h.isEmpty, (1...65535).contains(port) else { return nil }
         let start = Date()
@@ -30,22 +37,34 @@ public enum TcpProbe {
         hints.ai_socktype = SOCK_STREAM
         #endif
         var res: UnsafeMutablePointer<addrinfo>?
-        guard getaddrinfo(h, String(port), &hints, &res) == 0, let first = res else { return nil }
+        let gai = getaddrinfo(h, String(port), &hints, &res)
+        guard gai == 0, let first = res else { error = gai == 0 ? EHOSTUNREACH : -abs(gai); return nil }
         defer { freeaddrinfo(first) }
 
         var ai: UnsafeMutablePointer<addrinfo>? = first
         while let a = ai {
             let left = timeout - Date().timeIntervalSince(start)
-            if left <= 0 { return nil }
-            if let fd = tryConnect(a.pointee, timeoutMs: Int32(left * 1000)) { return fd }
+            if left <= 0 { error = ETIMEDOUT; return nil }
+            if let fd = tryConnect(a.pointee, timeoutMs: Int32(left * 1000), error: &error) { return fd }
             ai = a.pointee.ai_next
         }
         return nil
     }
 
-    private static func tryConnect(_ a: addrinfo, timeoutMs: Int32) -> Int32? {
+    /// Opis przyczyny z `connect(…, error:)`.
+    public static func describe(_ error: Int32) -> String {
+        guard error < 0 else { return String(cString: strerror(error)) }
+        // Kody EAI_* są dodatnie w macOS, a ujemne w glibc — zapisane zawsze jako ujemne.
+        #if canImport(Glibc)
+        return String(cString: gai_strerror(error))
+        #else
+        return String(cString: gai_strerror(-error))
+        #endif
+    }
+
+    private static func tryConnect(_ a: addrinfo, timeoutMs: Int32, error: inout Int32) -> Int32? {
         let fd = socket(a.ai_family, a.ai_socktype, a.ai_protocol)
-        guard fd >= 0 else { return nil }
+        guard fd >= 0 else { error = errno; return nil }
         #if canImport(Darwin)
         var one: Int32 = 1   // zamknięte gniazdo nie może zabić procesu sygnałem SIGPIPE
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, socklen_t(MemoryLayout<Int32>.size))
@@ -61,7 +80,12 @@ public enum TcpProbe {
                 var err: Int32 = 0
                 var len = socklen_t(MemoryLayout<Int32>.size)
                 ok = getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) == 0 && err == 0
+                if !ok { error = err }
+            } else {
+                error = ETIMEDOUT
             }
+        } else {
+            error = errno
         }
         guard ok else { close(fd); return nil }
         _ = fcntl(fd, F_SETFL, flags)   // z powrotem blokujące

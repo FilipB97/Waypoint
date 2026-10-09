@@ -19,6 +19,15 @@ public struct MacSettings: Codable, Equatable, Sendable {
     public var recentIds: [String] = []
     /// Sprawdzanie nowej wersji przy starcie (jak CheckUpdates w Windows).
     public var checkUpdates: Bool = true
+    /// Panel plików z lokalnym katalogiem po lewej (jak DualFilePanel w Windows).
+    public var filesDualPane: Bool = true
+    /// Wygląd: „System" (domyślnie na Macu — jak reszta systemu), „Light", „Dark".
+    public var theme: String = AppTheme.system.rawValue
+    /// Presety terminala dla trybu ciemnego i jasnego (te same id co w Windows).
+    public var themeVariantDark: String = ThemePreset.defaultId
+    public var themeVariantLight: String = ThemePreset.defaultId
+    /// Własny akcent („#RRGGBB"); pusty = akcent systemu / presetu.
+    public var accentColor: String = ""
 
     public init() {}
 
@@ -27,7 +36,9 @@ public struct MacSettings: Codable, Equatable, Sendable {
         case reachabilityEnabled = "ReachabilityEnabled", reachabilityIntervalSec = "ReachabilityIntervalSec"
         case probeTimeoutSeconds = "ProbeTimeoutSeconds", showLatency = "ShowLatency"
         case connectionLogEnabled = "ConnectionLogEnabled", collapsedGroups = "CollapsedGroups"
-        case recentIds = "RecentIds", checkUpdates = "CheckUpdates"
+        case recentIds = "RecentIds", checkUpdates = "CheckUpdates", filesDualPane = "FilesDualPane"
+        case theme = "Theme", themeVariantDark = "ThemeVariantDark", themeVariantLight = "ThemeVariantLight"
+        case accentColor = "AccentColor"
     }
 
     public init(from decoder: Decoder) throws {
@@ -43,6 +54,12 @@ public struct MacSettings: Codable, Equatable, Sendable {
         collapsedGroups = (try? c.decode([String].self, forKey: .collapsedGroups)) ?? []
         recentIds = (try? c.decode([String].self, forKey: .recentIds)) ?? []
         checkUpdates = (try? c.decode(Bool.self, forKey: .checkUpdates)) ?? true
+        filesDualPane = (try? c.decode(Bool.self, forKey: .filesDualPane)) ?? true
+        theme = AppTheme(rawValue: (try? c.decode(String.self, forKey: .theme)) ?? "")?.rawValue ?? AppTheme.system.rawValue
+        themeVariantDark = (try? c.decode(String.self, forKey: .themeVariantDark)) ?? ThemePreset.defaultId
+        themeVariantLight = (try? c.decode(String.self, forKey: .themeVariantLight)) ?? ThemePreset.defaultId
+        accentColor = RGB(hex: (try? c.decode(String.self, forKey: .accentColor)) ?? "") != nil
+            ? ((try? c.decode(String.self, forKey: .accentColor)) ?? "") : ""
     }
 
     /// Zakresy jak w Windows: interwał sondy 5–3600 s, limit czasu 1–60 s.

@@ -5,6 +5,7 @@ import WaypointCore
 
 /// Panel plików SFTP w karcie.
 struct FilesView: View {
+    @Environment(AppModel.self) private var model
     @Bindable var session: FileSession
     @State private var newFolder: String?
     @State private var renaming: SftpEntry?
@@ -15,6 +16,19 @@ struct FilesView: View {
     private var selected: [SftpEntry] { session.entries.filter { session.selection.contains($0.id) } }
 
     var body: some View {
+        HSplitView {
+            if model.settings.filesDualPane {
+                LocalPaneView(pane: session.local, upload: { session.upload($0) },
+                              canUpload: session.state == .ready && !session.busy)
+                    .frame(minWidth: 280, idealWidth: 400)
+            }
+            remote.frame(minWidth: 360)
+        }
+        .navigationTitle(session.title)
+        .navigationSubtitle(session.path)
+    }
+
+    private var remote: some View {
         VStack(spacing: 0) {
             toolbar
             Divider()
@@ -54,8 +68,6 @@ struct FilesView: View {
             Divider()
             statusBar
         }
-        .navigationTitle(session.title)
-        .navigationSubtitle(session.path)
         .alert(L("files.newfolder"), isPresented: Binding(get: { newFolder != nil }, set: { if !$0 { newFolder = nil } })) {
             TextField(L("files.newfolder.ph"), text: Binding(get: { newFolder ?? "" }, set: { newFolder = $0 }))
             Button(L("btn.cancel"), role: .cancel) {}
@@ -105,12 +117,16 @@ struct FilesView: View {
                 }
             }
             Spacer(minLength: 8)
+            Button { model.settings.filesDualPane.toggle(); model.saveSettings() } label: {
+                Image(systemName: "rectangle.split.2x1")
+            }
+            .help(L("files.dualpane"))
             Group {
                 Button { session.refresh() } label: { Image(systemName: "arrow.clockwise") }.help(L("files.refresh"))
                 Button { newFolder = "" } label: { Image(systemName: "folder.badge.plus") }.help(L("files.newfolder"))
                 Button { chooseUpload() } label: { Image(systemName: "square.and.arrow.up") }.help(L("files.upload"))
-                Button { chooseDownload(selected) } label: { Image(systemName: "square.and.arrow.down") }
-                    .help(L("files.download")).disabled(selected.isEmpty)
+                Button { download(selected) } label: { Image(systemName: model.settings.filesDualPane ? "arrow.left.circle" : "square.and.arrow.down") }
+                    .help(model.settings.filesDualPane ? L("files.download.local") : L("files.download")).disabled(selected.isEmpty)
                 Button { pendingDelete = selected } label: { Image(systemName: "trash") }
                     .help(L("files.delete")).disabled(selected.isEmpty)
             }
@@ -164,6 +180,9 @@ struct FilesView: View {
                 Divider()
             }
             if !items.isEmpty {
+                if model.settings.filesDualPane {
+                    Button(L("files.download.local")) { download(items) }
+                }
                 Button(L("files.download")) { chooseDownload(items) }
                 Button(L("files.delete"), role: .destructive) { pendingDelete = items }
             } else {
@@ -235,6 +254,12 @@ struct FilesView: View {
         panel.allowsMultipleSelection = true
         panel.prompt = L("files.upload.button")
         if panel.runModal() == .OK { session.upload(panel.urls) }
+    }
+
+    /// Dwa panele: do katalogu lewego panelu; jeden panel: wybór katalogu.
+    private func download(_ items: [SftpEntry]) {
+        if model.settings.filesDualPane { session.download(items, to: session.local.dir, reveal: false) }
+        else { chooseDownload(items) }
     }
 
     private func chooseDownload(_ items: [SftpEntry]) {

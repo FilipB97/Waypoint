@@ -59,6 +59,7 @@ private struct SessionTabView: View {
         .contextMenu {
             Button(L("tab.reconnect")) { session.reconnect() }.disabled(session.isRunning)
             Button(L("tab.duplicate")) { model.duplicate(session) }
+            Button(L("tab.detach")) { model.detach(session) }
             Divider()
             Button(L("tab.close")) { model.close(session) }
         }
@@ -86,7 +87,14 @@ struct SessionContent: View {
 
 /// Terminal sesji z nakładkami: ostrzeżenia, pytanie ssh (hasło itd.) i ekran końca połączenia.
 struct SessionContainer: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var scheme
     let session: TerminalSession
+
+    /// Zmiana presetu albo akcentu w Ustawieniach przemalowuje otwarte terminale.
+    private var themeKey: String {
+        [model.settings.themeVariantDark, model.settings.themeVariantLight, model.settings.accentColor].joined(separator: "|")
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -98,7 +106,7 @@ struct SessionContainer: View {
                     .background(Color.orange.opacity(0.15))
             }
             ZStack {
-                TerminalHost(session: session)
+                TerminalHost(session: session, dark: scheme == .dark, themeKey: themeKey)
                 if let p = session.auth.prompt {
                     Color.black.opacity(0.35)
                     PromptCard(prompt: p, serverName: session.server.displayName)
@@ -109,7 +117,7 @@ struct SessionContainer: View {
             }
             .overlay(alignment: .top) { NoticeBadge(auth: session.auth) }
         }
-        .background(Color(nsColor: TerminalAppearance.background))
+        .background(Color(nsColor: TerminalAppearance.background(dark: scheme == .dark)))
         .navigationTitle(session.title)
         .navigationSubtitle(session.server.username.isEmpty ? session.server.host
                             : "\(session.server.username)@\(session.server.host)")
@@ -120,17 +128,25 @@ struct SessionContainer: View {
 /// a ten kontener tylko go podpina.
 struct TerminalHost: NSViewRepresentable {
     let session: TerminalSession
+    let dark: Bool
+    let themeKey: String
 
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
         container.wantsLayer = true
-        container.layer?.backgroundColor = TerminalAppearance.background.cgColor
         attach(to: container)
+        paint(container)
         return container
     }
 
     func updateNSView(_ container: NSView, context: Context) {
         attach(to: container)
+        paint(container)
+    }
+
+    private func paint(_ container: NSView) {
+        container.layer?.backgroundColor = TerminalAppearance.background(dark: dark).cgColor
+        TerminalAppearance.applyColors(session.view, dark: dark)
     }
 
     /// Margines wokół tekstu — bez niego pierwsza kolumna dotyka krawędzi okna.

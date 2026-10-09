@@ -55,6 +55,20 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | Kolejność serwerów przeciąganiem | ✅ | ✅ (w obrębie sekcji) |
 | Pulpit: liczniki, ostatnio używane, szybkie połączenie, aktywność | ✅ | ✅ (⇧⌘D, ikona domku) |
 | Dziennik połączeń (`connections.log`, ten sam format) | ✅ | ✅ |
+| Profile poświadczeń (ten sam `credprofiles.json`, hasło w Pęku kluczy) | ✅ | ✅ (Narzędzia → Profile poświadczeń) |
+| „Połącz jako…" | ✅ | ✅ |
+| Generator haseł / tokenów / GUID | ✅ | ✅ (⌥⌘G) |
+| Telnet, port szeregowy | ✅ | ✅ (terminal karty; `/dev/cu.*`) |
+| VNC | wbudowany | Udostępnianie ekranu macOS (`vnc://`) |
+| Strony WWW | przeglądarka | przeglądarka |
+| Import: mRemoteNG, RDCMan, RDM, FileZilla | ✅ | ✅ (Plik → Importuj z innego programu) |
+| Eksport profilu | ✅ | ✅ (format Windows, bez haseł) |
+| Dwa panele plików (lokalny + zdalny) | ✅ | ✅ |
+| Wake-on-LAN | ✅ | ✅ |
+| Sprawdzanie aktualizacji | ✅ | ✅ (wydania z plikiem `-mac.zip`) |
+| Motywy (jasny/ciemny, presety terminala, akcent) | ✅ | ✅ |
+| Karta w osobnym oknie | ✅ | ✅ |
+| Klient REST | ✅ | — (ostatni krok) |
 
 ## Terminal SSH
 
@@ -82,6 +96,15 @@ sekcji. Pulpit (bez zaznaczonego serwera, ⇧⌘D) pokazuje liczniki, ostatnio u
 pole szybkiego połączenia i aktywność z `connections.log` (ten sam format linii co w Windows,
 tylko metadane — bez haseł; wyłączalny w Ustawieniach). Ustawienia zapisują się w `settings.json`
 pod tymi samymi nazwami pól co w Windows.
+
+## Telnet, port szeregowy, VNC, WWW
+
+Telnet i port szeregowy działają w tym samym terminalu co SSH: karta uruchamia plik wykonywalny
+Waypointa w trybie pomocniczym (`--waypoint-helper telnet|serial …`) w pseudo-terminalu, więc
+karty, szukanie, czcionka i snippety działają tak samo. Telnet negocjuje ECHO i SGA, resztę opcji
+odrzuca (port maszyny stanów z Windows); port szeregowy to 8N1 bez kontroli przepływu, urządzenie
+`/dev/cu.*` wybiera się w edycji serwera, prędkość jest w polu portu (jak w Windows). VNC otwiera
+systemowe Udostępnianie ekranu, strony WWW — domyślną przeglądarkę (tylko http/https).
 
 ## Pliki (SFTP)
 

@@ -59,3 +59,22 @@ import Testing
         #expect(!UpdateCheck.isNewer([1, 0], than: [1, 1]))
     }
 }
+
+@Suite struct ThemeTests {
+    @Test func presety() {
+        #expect(ThemePreset.list(light: false).count == 6 && ThemePreset.list(light: true).count == 6)
+        #expect(ThemePreset.find("TokyoNight", light: false).canvas == "#1A1B26")
+        #expect(ThemePreset.find("TokyoNight", light: true).id == "Waypoint")   // brak jasnego wariantu → baza
+        let t = ThemePreset.find("Nord", light: false).terminal()
+        #expect(t.background == RGB(hex: "#2E3440") && t.cursor == RGB(hex: "#88C0D0") && t.selectionAlpha == 0.34)
+        #expect(ThemePreset.find("Nord", light: false).terminal(accentOverride: "#FF0000").cursor == RGB(hex: "#FF0000"))
+        #expect(RGB(hex: "#80FF0000") == RGB(hex: "#FF0000"))
+        #expect(RGB(hex: "zly") == nil)
+    }
+
+    @Test func ustawieniaWygladu() throws {
+        let d = try JSONDecoder().decode(MacSettings.self, from: Data(#"{"Theme":"Light","ThemeVariantLight":"Solarized","AccentColor":"nie-kolor"}"#.utf8))
+        #expect(d.theme == "Light" && d.themeVariantLight == "Solarized" && d.themeVariantDark == "Waypoint" && d.accentColor.isEmpty)
+        #expect(try JSONDecoder().decode(MacSettings.self, from: Data(#"{"Theme":"Rainbow"}"#.utf8)).theme == "System")
+    }
+}

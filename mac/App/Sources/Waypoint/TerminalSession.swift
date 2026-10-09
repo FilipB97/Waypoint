@@ -171,7 +171,9 @@ final class TerminalSession: Identifiable {
         if isRunning { view.terminate() }
     }
 
-    func processEnded(_ code: Int32?) {
+    func processEnded(_ raw: Int32?) {
+        // SwiftTerm podaje surowy status z waitpid (255 << 8 = 65280) — zamiana na kod wyjścia.
+        let code = raw.map { ($0 & 0x7F) == 0 ? ($0 >> 8) & 0xFF : 128 + ($0 & 0x7F) }
         state = .ended(code)
         auth.stop()
         onEnded?(code)
@@ -230,23 +232,43 @@ final class SessionTerminalView: LocalProcessTerminalView {
 
 /// Wygląd terminala: kolory marki (tło jak kafel ikony), czcionka SF Mono.
 enum TerminalAppearance {
-    static let background = NSColor(srgbRed: 0x0F / 255.0, green: 0x11 / 255.0, blue: 0x17 / 255.0, alpha: 1)
-    static let foreground = NSColor(srgbRed: 0xE7 / 255.0, green: 0xE8 / 255.0, blue: 0xEE / 255.0, alpha: 1)
-    static let accent = NSColor(srgbRed: 0x7A / 255.0, green: 0xA2 / 255.0, blue: 0xFF / 255.0, alpha: 1)
+    /// Kolory z presetu palety dla bieżącego trybu (jasny/ciemny) — jak TerminalTheme w Windows.
+    @MainActor static func colors(dark: Bool) -> TerminalColors {
+        let s = AppModel.shared.settings
+        return ThemePreset.find(dark ? s.themeVariantDark : s.themeVariantLight, light: !dark)
+            .terminal(accentOverride: s.accentColor)
+    }
+
+    @MainActor static var isDark: Bool {
+        NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    }
+
+    static func ns(_ c: RGB, alpha: Double = 1) -> NSColor {
+        NSColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: alpha)
+    }
+
+    @MainActor static func background(dark: Bool) -> NSColor { ns(colors(dark: dark).background) }
 
     static func setFont(_ v: TerminalView, size: Int) {
         v.font = NSFont.monospacedSystemFont(ofSize: CGFloat(size), weight: .regular)
     }
 
+    @MainActor static func applyColors(_ v: TerminalView, dark: Bool) {
+        let c = colors(dark: dark)
+        v.nativeBackgroundColor = ns(c.background)
+        v.nativeForegroundColor = ns(c.foreground)
+        v.caretColor = ns(c.cursor)
+        v.selectedTextBackgroundColor = ns(c.selection, alpha: c.selectionAlpha)
+        // Pasek przewijania w kolorze terminala (przy myszy bez gładzika macOS pokazuje go na stałe).
+        v.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        v.needsDisplay = true
+    }
+
     static func apply(to v: TerminalView) {
-        setFont(v, size: MainActor.assumeIsolated { AppModel.shared.settings.terminalFontSize })
-        v.nativeBackgroundColor = background
-        v.nativeForegroundColor = foreground
-        v.caretColor = accent
-        v.selectedTextBackgroundColor = accent.withAlphaComponent(0.35)
+        MainActor.assumeIsolated {
+            setFont(v, size: AppModel.shared.settings.terminalFontSize)
+            applyColors(v, dark: isDark)
+        }
         v.optionAsMetaKey = false   // Option zostaje do polskich znaków (ą, ś, ł…)
-        // Terminal jest zawsze ciemny, więc i jego pasek przewijania (przy myszy bez gładzika macOS
-        // pokazuje go na stałe — w jasnym motywie byłby to jasny pas przy prawej krawędzi).
-        v.appearance = NSAppearance(named: .darkAqua)
     }
 }

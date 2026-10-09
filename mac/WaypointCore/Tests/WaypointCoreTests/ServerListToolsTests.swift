@@ -116,6 +116,11 @@ import Testing
         #expect(TcpProbe.probe(host: "127.0.0.1", port: 1, timeout: 1) == nil)
         #expect(TcpProbe.probe(host: "", port: 22, timeout: 1) == nil)
         #expect(TcpProbe.probe(host: "nie-ma-takiego-hosta.invalid", port: 22, timeout: 1) == nil)
+        var err: Int32 = 0
+        #expect(TcpProbe.connect(host: "127.0.0.1", port: 1, timeout: 1, error: &err) == nil)
+        #expect(err == ECONNREFUSED && TcpProbe.describe(err).lowercased().contains("refused"))
+        #expect(TcpProbe.connect(host: "nie-ma-takiego-hosta.invalid", port: 22, timeout: 2, error: &err) == nil)
+        #expect(err < 0 && !TcpProbe.describe(err).isEmpty)
     }
 
     @Test func otwartyPort() throws {

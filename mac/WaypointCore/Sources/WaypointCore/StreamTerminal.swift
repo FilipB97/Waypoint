@@ -26,8 +26,9 @@ public enum StreamHelper {
         case "telnet":
             let port = Int(args[3]) ?? 23
             say(String(format: L("stream.connecting"), args[2], port))
-            guard let fd = TcpProbe.connect(host: args[2], port: port, timeout: 15) else {
-                say(String(format: L("stream.failed"), args[2], port, String(cString: strerror(errno))))
+            var err: Int32 = 0
+            guard let fd = TcpProbe.connect(host: args[2], port: port, timeout: 15, error: &err) else {
+                say(String(format: L("stream.failed"), args[2], port, TcpProbe.describe(err)))
                 return failedExit
             }
             say(L("stream.connected"))

@@ -6,6 +6,7 @@ struct ContentView: View {
 
     var body: some View {
         @Bindable var model = model
+        let accent = Color(hex: model.settings.accentColor)
         NavigationSplitView {
             ServerSidebar()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 290, max: 420)
@@ -21,6 +22,7 @@ struct ContentView: View {
                 }
             }
         }
+        .tint(accent)   // nil = akcent systemowy
         // Klik w serwer na liście pokazuje jego szczegóły (karty zostają na pasku i działają dalej).
         .onChange(of: model.selection) { _, new in
             if new != nil { model.activeSessionID = nil }

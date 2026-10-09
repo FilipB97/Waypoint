@@ -66,6 +66,16 @@ final class AppModel {
             alert = AppAlert(title: L("alert.corrupt.title"), message: String(format: L("alert.corrupt.msg"), path))
         }
         restartReachability()
+        applyAppearance()
+    }
+
+    /// Wygląd aplikacji wg ustawień: systemowy, jasny albo ciemny (jak „Motyw" w Windows).
+    func applyAppearance() {
+        switch AppTheme(rawValue: settings.theme) ?? .system {
+        case .system: NSApp.appearance = nil
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
     }
 
     func persist() {
@@ -257,12 +267,23 @@ final class AppModel {
             guard a.runModal() == .alertFirstButtonReturn else { return }
         }
         session.close()
+        removeTab(session)
+    }
+
+    /// Zdejmuje kartę z paska bez zamykania sesji (zamknięcie albo przeniesienie do osobnego okna).
+    private func removeTab(_ session: SessionTab) {
         guard let i = sessions.firstIndex(where: { $0.id == session.id }) else { return }
         sessions.remove(at: i)
         if activeSessionID == session.id {
             // Jak w przeglądarce: aktywna staje się karta po prawej, a gdy jej nie ma — po lewej.
             activeSessionID = sessions.isEmpty ? nil : sessions[min(i, sessions.count - 1)].id
         }
+    }
+
+    /// „Otwórz w nowym oknie": ta sama sesja w osobnym oknie.
+    func detach(_ session: SessionTab) {
+        removeTab(session)
+        SessionWindowController.show(session)
     }
 
     func activateTab(_ index: Int) {
@@ -279,7 +300,8 @@ final class AppModel {
 
     /// ⌘Q przy działających połączeniach: jedno pytanie o wszystkie.
     func confirmQuit() -> Bool {
-        let running = sessions.filter(\.isRunning).count
+        let all = sessions + SessionWindowController.open.map(\.tab)
+        let running = all.filter(\.isRunning).count
         guard running > 0 else { return true }
         let a = NSAlert()
         a.messageText = L("quit.title")
@@ -287,7 +309,7 @@ final class AppModel {
         a.addButton(withTitle: L("quit.confirm"))
         a.addButton(withTitle: L("btn.cancel"))
         guard a.runModal() == .alertFirstButtonReturn else { return false }
-        for s in sessions { s.close() }
+        for s in all { s.close() }
         return true
     }
 
@@ -324,6 +346,10 @@ final class AppModel {
     func zoomTerminal(_ delta: Int) {
         settings.terminalFontSize = delta == 0 ? 13 : MacSettings.clampFont(settings.terminalFontSize + delta)
         saveSettings()
+        applyTerminalFont()
+    }
+
+    func applyTerminalFont() {
         for case .terminal(let t) in sessions { TerminalAppearance.setFont(t.view, size: settings.terminalFontSize) }
     }
 
@@ -369,12 +395,18 @@ final class AppModel {
         paletteOpen = true
     }
 
+    /// Okno główne (lista + karty) — nie panel, nie edytor, nie odłączona karta.
+    static func isMainWindow(_ w: NSWindow) -> Bool {
+        !(w is NSPanel) && !(w.windowController is EditorWindowController) && !(w.windowController is SessionWindowController)
+    }
+
     func installKeyMonitor() {
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, event.modifierFlags.contains(.command) else { return event }
             let shift = event.modifierFlags.contains(.shift)
             let chars = event.charactersIgnoringModifiers ?? ""
-            let isMain = event.window?.isKind(of: NSPanel.self) == false
+            // Skróty kart tylko w oknie głównym — w oknie edytora i karty odłączonej ⌘W zamyka to okno.
+            let isMain = event.window.map(Self.isMainWindow) ?? false
             guard isMain else { return event }
             let option = event.modifierFlags.contains(.option)
             // ⌥⌘1…9 — snippet o tym numerze (⌘⇧3/4/5 to w macOS zrzuty ekranu).
