@@ -10,11 +10,20 @@ struct ContentView: View {
             ServerSidebar()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 290, max: 420)
         } detail: {
-            if let s = model.selected {
-                ServerDetail(server: s)
-            } else {
-                EmptyDetail()
+            VStack(spacing: 0) {
+                if !model.sessions.isEmpty { SessionTabBar() }
+                if let session = model.activeSession {
+                    SessionContainer(session: session).id(session.id)
+                } else if let s = model.selected {
+                    ServerDetail(server: s)
+                } else {
+                    EmptyDetail()
+                }
             }
+        }
+        // Klik w serwer na liście pokazuje jego szczegóły (karty zostają na pasku i działają dalej).
+        .onChange(of: model.selection) { _, new in
+            if new != nil { model.activeSessionID = nil }
         }
         .sheet(item: $model.editing) { s in
             ServerEditor(server: s, isNew: model.editingIsNew)

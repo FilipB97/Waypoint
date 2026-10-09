@@ -16,13 +16,17 @@ BUILD="${BUILD:-1}"
 DIST="$MAC_DIR/dist"
 APP="$DIST/Waypoint.app"
 
-ARCHS=(--arch arm64 --arch x86_64)
-swift build --package-path "$MAC_DIR/App" -c release "${ARCHS[@]}"
-BIN_DIR="$(swift build --package-path "$MAC_DIR/App" -c release "${ARCHS[@]}" --show-bin-path)"
+# Każda architektura osobno, potem lipo. `--arch arm64 --arch x86_64` naraz przełącza SwiftPM na
+# system budowania Xcode, który nie obsługuje wtyczki budowania z pakietu SwiftTerm.
+BINS=()
+for TRIPLE in arm64-apple-macosx14.0 x86_64-apple-macosx14.0; do
+    swift build --package-path "$MAC_DIR/App" -c release --triple "$TRIPLE"
+    BINS+=("$(swift build --package-path "$MAC_DIR/App" -c release --triple "$TRIPLE" --show-bin-path)/Waypoint")
+done
 
 rm -rf "$DIST"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_DIR/Waypoint" "$APP/Contents/MacOS/Waypoint"
+lipo -create "${BINS[@]}" -output "$APP/Contents/MacOS/Waypoint"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

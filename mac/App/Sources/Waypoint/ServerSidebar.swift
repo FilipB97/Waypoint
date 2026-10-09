@@ -14,12 +14,18 @@ struct ServerSidebar: View {
                     ForEach(section.servers) { s in
                         ServerRow(server: s)
                             .tag(s.id)
-                            .contextMenu { menu(for: s) }
                     }
                 }
             }
         }
         .listStyle(.sidebar)
+        // Menu kontekstowe i akcja główna (dwuklik / Enter = połącz) na poziomie listy — dzięki temu
+        // pojedynczy klik zaznacza od razu, bez czekania na rozpoznanie dwukliku.
+        .contextMenu(forSelectionType: Server.ID.self) { ids in
+            if let id = ids.first, let s = model.servers.first(where: { $0.id == id }) { menu(for: s) }
+        } primaryAction: { ids in
+            if let id = ids.first, let s = model.servers.first(where: { $0.id == id }) { model.connect(s) }
+        }
         .searchable(text: $model.query, placement: .sidebar, prompt: Text(L("list.search")))
         .overlay {
             if !model.servers.isEmpty && model.sections.isEmpty {
@@ -31,12 +37,6 @@ struct ServerSidebar: View {
                 Button { model.beginNew() } label: { Label(L("menu.newserver"), systemImage: "plus") }
                     .help(L("menu.newserver"))
             }
-        }
-        // Enter na zaznaczonym = połącz (jak dwuklik w wersji Windows).
-        .onKeyPress(.return) {
-            guard let s = model.selected else { return .ignored }
-            model.connect(s)
-            return .handled
         }
         .confirmationDialog(L("del.title"), isPresented: Binding(get: { pendingDelete != nil },
                                                                  set: { if !$0 { pendingDelete = nil } }),

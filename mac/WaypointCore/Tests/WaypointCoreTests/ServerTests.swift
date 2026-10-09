@@ -189,13 +189,15 @@ let windowsServer = """
     @Test func szukanieBezPolskichZnakowIWielkosciLiter() {
         #expect(ServerList.sections(servers, query: "LODZ").flatMap(\.servers).map(\.name) == ["Łódź web"])
         #expect(ServerList.sections(servers, query: "prod web").flatMap(\.servers).map(\.name) == ["Łódź web"])
-        #expect(ServerList.sections(servers, query: "rdp").flatMap(\.servers).map(\.name) == ["Baza", "Baza"])
+        #expect(ServerList.sections(servers, query: "rdp").flatMap(\.servers).map(\.name) == ["Baza"])
         #expect(ServerList.sections(servers, query: "nic-takiego").isEmpty)
     }
 
     @Test func ukladSekcji() {
         let s = ServerList.sections(servers)
-        #expect(s.map(\.kind) == [.pinned, .group("Klienci"), .group("Produkcja"), .group("produkcja2"), .ungrouped])
+        // „Baza" (Produkcja) jest przypięta — grupa Produkcja nie ma więc sekcji, a serwer nie powtarza się.
+        #expect(s.map(\.kind) == [.pinned, .group("Klienci"), .group("produkcja2"), .ungrouped])
+        #expect(s.flatMap(\.servers).count == servers.count)
         #expect(s[0].servers.map(\.name) == ["Baza"])
         #expect(s.last?.servers.map(\.name) == ["Router"])
     }

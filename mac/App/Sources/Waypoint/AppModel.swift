@@ -8,7 +8,12 @@ import WaypointCore
 @MainActor
 @Observable
 final class AppModel {
+    static let shared = AppModel()
+
     var servers: [Server] = []
+    /// Otwarte karty SSH. Aktywna karta zasłania szczegóły serwera; nil = widać szczegóły zaznaczonego.
+    var sessions: [TerminalSession] = []
+    var activeSessionID: TerminalSession.ID?
     var query = ""
     var selection: Server.ID?
     /// Wpis otwarty w edytorze (arkusz). `isNew` rozróżnia „Dodaj" od „Edytuj".
@@ -16,7 +21,11 @@ final class AppModel {
     var editingIsNew = false
     var alert: AppAlert?
 
-    private let store = ServerStore(directory: ServerStore.defaultDirectory)
+    /// WAYPOINT_DATA_DIR podmienia katalog danych — dla testu dymnego w CI i do pracy na kopii listy.
+    private let store = ServerStore(directory: ProcessInfo.processInfo.environment["WAYPOINT_DATA_DIR"]
+        .map { URL(fileURLWithPath: $0, isDirectory: true) } ?? ServerStore.defaultDirectory)
+
+    var activeSession: TerminalSession? { sessions.first { $0.id == activeSessionID } }
 
     var sections: [ServerList.Section] { ServerList.sections(servers, query: query) }
     var selected: Server? { servers.first { $0.id == selection } }
@@ -79,6 +88,7 @@ final class AppModel {
 
     func delete(_ s: Server) {
         servers.removeAll { $0.id == s.id }
+        Keychain.delete(for: s.id)   // hasło usuniętego serwera nie zostaje osierocone w Pęku kluczy
         if selection == s.id { selection = nil }
         persist()
     }
@@ -106,21 +116,84 @@ final class AppModel {
         }
     }
 
-    // MARK: Łączenie
+    // MARK: Łączenie i karty
 
-    /// Na tym etapie SSH otwiera się w systemowym Terminalu (adres ssh://). Wbudowany terminal
-    /// w karcie Waypointa to następny krok — wtedy ta ścieżka zniknie.
     func connect(_ s: Server) {
         switch s.proto {
         case .ssh?:
-            var c = URLComponents()
-            c.scheme = "ssh"
-            c.host = s.host
-            if !s.username.isEmpty { c.user = s.username }
-            if s.port != 22 { c.port = s.port }
-            if let url = c.url { NSWorkspace.shared.open(url) }
+            let session = TerminalSession(server: s)
+            sessions.append(session)
+            activeSessionID = session.id
         default:
             alert = AppAlert(title: s.displayName, message: L("connect.notyet"))
+        }
+    }
+
+    /// Zamyka kartę; działające połączenie wymaga potwierdzenia (jak „Potwierdzaj zamknięcie" w Windows).
+    func close(_ session: TerminalSession, confirm: Bool = true) {
+        if confirm && session.isRunning {
+            let a = NSAlert()
+            a.messageText = String(format: L("close.title"), session.title)
+            a.informativeText = L("close.msg")
+            a.addButton(withTitle: L("close.confirm"))
+            a.addButton(withTitle: L("btn.cancel"))
+            guard a.runModal() == .alertFirstButtonReturn else { return }
+        }
+        session.close()
+        guard let i = sessions.firstIndex(where: { $0.id == session.id }) else { return }
+        sessions.remove(at: i)
+        if activeSessionID == session.id {
+            // Jak w przeglądarce: aktywna staje się karta po prawej, a gdy jej nie ma — po lewej.
+            activeSessionID = sessions.isEmpty ? nil : sessions[min(i, sessions.count - 1)].id
+        }
+    }
+
+    func activateTab(_ index: Int) {
+        guard sessions.indices.contains(index) else { return }
+        activeSessionID = sessions[index].id
+    }
+
+    func cycleTab(_ delta: Int) {
+        guard !sessions.isEmpty else { return }
+        let cur = sessions.firstIndex { $0.id == activeSessionID } ?? -1
+        let next = ((cur + delta) % sessions.count + sessions.count) % sessions.count
+        activeSessionID = sessions[next].id
+    }
+
+    /// ⌘Q przy działających połączeniach: jedno pytanie o wszystkie.
+    func confirmQuit() -> Bool {
+        let running = sessions.filter(\.isRunning).count
+        guard running > 0 else { return true }
+        let a = NSAlert()
+        a.messageText = L("quit.title")
+        a.informativeText = String(format: L("quit.msg"), running)
+        a.addButton(withTitle: L("quit.confirm"))
+        a.addButton(withTitle: L("btn.cancel"))
+        guard a.runModal() == .alertFirstButtonReturn else { return false }
+        for s in sessions { s.close() }
+        return true
+    }
+
+    /// Skróty kart: ⌘W zamyka kartę (zamiast całego okna), ⌘1…⌘9 przełącza, ⌘⇧[ / ⌘⇧] — poprzednia/następna.
+    /// Monitor zdarzeń, bo terminal jako pierwszy odbiorca i tak dostałby te klawisze przed menu SwiftUI.
+    func installKeyMonitor() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, event.modifierFlags.contains(.command) else { return event }
+            let shift = event.modifierFlags.contains(.shift)
+            let chars = event.charactersIgnoringModifiers ?? ""
+            let isMain = event.window?.isKind(of: NSPanel.self) == false
+            guard isMain else { return event }
+            if chars == "w", !shift, let s = self.activeSession {
+                self.close(s)
+                return nil
+            }
+            if !shift, let d = Int(chars), (1...9).contains(d), !self.sessions.isEmpty {
+                self.activateTab(d == 9 ? self.sessions.count - 1 : d - 1)
+                return nil
+            }
+            if shift, chars == "]" || chars == "}" { self.cycleTab(1); return nil }
+            if shift, chars == "[" || chars == "{" { self.cycleTab(-1); return nil }
+            return event
         }
     }
 }

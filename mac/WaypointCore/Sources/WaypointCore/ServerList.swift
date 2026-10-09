@@ -32,9 +32,11 @@ public enum ServerList {
         let pinned = visible.filter(\.pinned)
         if !pinned.isEmpty { result.append(Section(kind: .pinned, servers: pinned)) }
 
+        // Przypięty serwer jest tylko w „Przypiętych" — nie powtarza się w swojej grupie. Dwa wiersze
+        // z tym samym identyfikatorem na liście oznaczały podwójne zaznaczenie przy jednym kliknięciu.
         var groups: [String: [Server]] = [:]
         var ungrouped: [Server] = []
-        for s in visible {
+        for s in visible where !s.pinned {
             let g = s.group.trimmingCharacters(in: .whitespaces)
             if g.isEmpty { ungrouped.append(s) } else { groups[g, default: []].append(s) }
         }

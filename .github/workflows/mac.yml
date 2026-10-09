@@ -46,3 +46,13 @@ jobs:
           name: Waypoint-mac
           path: mac/dist/Waypoint-mac.zip
           retention-days: 14
+      # Prawdziwe logowanie SSH z aplikacji (lokalny sshd, Pęk kluczy, pytanie o hasło) + zrzuty okna.
+      - name: Test end-to-end (SSH)
+        run: mac/scripts/smoke-test.sh
+      - name: Zrzuty ekranu i logi testu
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Waypoint-mac-smoke
+          path: mac/dist/smoke
+          retention-days: 14

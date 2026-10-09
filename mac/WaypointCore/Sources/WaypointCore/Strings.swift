@@ -79,6 +79,37 @@ public enum Strings {
         "alert.save.title": "Nie udało się zapisać listy serwerów",
 
         "connect.notyet": "Łączenie tym protokołem pojawi się w jednym z kolejnych kroków.",
+
+        "ssh.warn.winkey": "Ścieżka klucza pochodzi z Windows i nie istnieje na tym Macu — ssh spróbuje kluczy z agenta i domyślnych. Popraw ją w edycji serwera.",
+        "ssh.warn.nokey": "Nie znaleziono pliku klucza wskazanego w serwerze — ssh spróbuje kluczy z agenta i domyślnych.",
+        "ssh.warn.tunnel": "Pominięto tunel o niepoprawnym formacie (oczekiwane portLokalny:host:portZdalny).",
+
+        "tab.close": "Zamknij kartę",
+        "tab.reconnect": "Połącz ponownie",
+        "close.title": "Zamknąć „%@”?",
+        "close.msg": "Połączenie jest aktywne — zostanie zakończone.",
+        "close.confirm": "Zamknij",
+        "quit.title": "Zakończyć Waypoint?",
+        "quit.msg": "Aktywne połączenia: %ld. Wszystkie zostaną zakończone.",
+        "quit.confirm": "Zakończ",
+        "ended.clean": "Połączenie zakończone",
+        "ended.code": "Połączenie przerwane (kod %@)",
+
+        "prompt.password": "Hasło do %@",
+        "prompt.passphrase": "Hasło klucza prywatnego",
+        "prompt.hostkey": "Nieznany klucz serwera",
+        "prompt.other": "%@ pyta",
+        "prompt.retry": "Poprzednie hasło zostało odrzucone.",
+        "prompt.save": "Zapisz w Pęku kluczy",
+        "prompt.login": "Zaloguj",
+        "prompt.yes": "Ufaj i połącz",
+        "prompt.no": "Przerwij",
+        "prompt.saved": "Hasło zapisane w Pęku kluczy",
+        "prompt.savefail": "Nie udało się zapisać hasła w Pęku kluczy",
+
+        "detail.password": "Hasło",
+        "detail.password.saved": "zapisane w Pęku kluczy",
+        "detail.password.forget": "Zapomnij",
     ]
 
     public static let en: [String: String] = [
@@ -154,6 +185,37 @@ public enum Strings {
         "alert.save.title": "Could not save the server list",
 
         "connect.notyet": "Connecting with this protocol is coming in one of the next steps.",
+
+        "ssh.warn.winkey": "The key path comes from Windows and does not exist on this Mac — ssh will try agent and default keys. Fix it in the server settings.",
+        "ssh.warn.nokey": "The key file set for this server was not found — ssh will try agent and default keys.",
+        "ssh.warn.tunnel": "Skipped a tunnel with an invalid format (expected localPort:host:remotePort).",
+
+        "tab.close": "Close Tab",
+        "tab.reconnect": "Reconnect",
+        "close.title": "Close “%@”?",
+        "close.msg": "The connection is active and will be ended.",
+        "close.confirm": "Close",
+        "quit.title": "Quit Waypoint?",
+        "quit.msg": "Active connections: %ld. All of them will be ended.",
+        "quit.confirm": "Quit",
+        "ended.clean": "Connection closed",
+        "ended.code": "Connection lost (code %@)",
+
+        "prompt.password": "Password for %@",
+        "prompt.passphrase": "Private key passphrase",
+        "prompt.hostkey": "Unknown server key",
+        "prompt.other": "%@ asks",
+        "prompt.retry": "The previous password was rejected.",
+        "prompt.save": "Save in Keychain",
+        "prompt.login": "Log In",
+        "prompt.yes": "Trust and Connect",
+        "prompt.no": "Cancel",
+        "prompt.saved": "Password saved in Keychain",
+        "prompt.savefail": "Could not save the password in Keychain",
+
+        "detail.password": "Password",
+        "detail.password.saved": "saved in Keychain",
+        "detail.password.forget": "Forget",
     ]
 
     /// Język interfejsu: polski, gdy jest pierwszym preferowanym językiem systemu, w przeciwnym razie angielski.
