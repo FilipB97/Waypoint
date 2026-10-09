@@ -9,7 +9,7 @@ z powrotem bez zmian.
 
 | Katalog | Co | Gdzie się buduje |
 |---|---|---|
-| `WaypointCore/` | logika: model serwera, magazyn, import, wyszukiwanie, teksty pl/en | macOS **i Linux** (`swift test`) |
+| `WaypointCore/` | logika: model serwera, magazyn, import, SSH/askpass, SFTP, FTP (libcurl), edytor, teksty pl/en | macOS **i Linux** (`swift test`) |
 | `App/` | interfejs SwiftUI, zależy od `WaypointCore` | tylko macOS |
 | `scripts/bundle-app.sh` | składa `dist/Waypoint.app` (uniwersalna, podpis ad-hoc) i `Waypoint-mac.zip` | macOS |
 | `Resources/` | ikona (`AppIcon.svg` → `AppIcon-1024.png`) | — |
@@ -37,7 +37,7 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | 2 | Terminal SSH w kartach (SwiftTerm + systemowe `ssh`: agent, `~/.ssh/config`), hasła w Pęku kluczy | ✅ |
 | 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ✅ |
 | 4 | Panel plików SFTP: przeglądanie, wysyłanie/pobieranie (także folderów), zmiana nazwy, usuwanie | ✅ |
-| 4b | FTP/FTPS | ⏳ |
+| 4b | FTP/FTPS: ten sam panel plików i edytor | ✅ |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | ✅ |
 
 ## Terminal SSH
@@ -65,6 +65,19 @@ transfer nie zostawia połowy pliku. Karta „Pliki" otwiera się dla serwerów 
 „Pliki (SFTP)" — dla serwerów SSH. Wysyłanie: przycisk albo przeciągnięcie z Findera.
 
 Testy klienta na prawdziwym OpenSSH: `WAYPOINT_SFTP_TEST=host:port:user:klucz[:known_hosts] swift test`.
+
+## FTP / FTPS
+
+Klient FTP (`FtpClient`) stoi na libcurl — systemowej bibliotece macOS — bo FTPS wymaga przełączenia
+gotowego połączenia na TLS (AUTH TLS) i wznowienia sesji TLS na kanale danych, czego Network.framework
+nie daje. Jeden uchwyt curl na kartę (połączenie sterujące trwa między operacjami), lista z `LIST`
+(format uniksowy i IIS — vsftpd nie ma `MLSD`), TLS 1.2 (serwery wymagające wznowienia sesji losowo
+odrzucają transfery przy TLS 1.3). Hasło z Pęku kluczy albo pytanie w karcie; certyfikat
+samopodpisany wymaga świadomej zgody, zapamiętanej dla serwera. Edycja przez FTP zapisuje w miejscu
+(FTP nie ma atomowej podmiany ani odczytu uprawnień) i mówi o tym.
+
+Testy na prawdziwym vsftpd (zwykły FTP, FTPS jawne i niejawne): `scripts/core-integration-linux.sh`
+w CI albo lokalnie `WAYPOINT_FTP_TEST=host:user:hasło:portFTP:portFTPS:portFTPSniejawny swift test`.
 
 ## Edytor plików
 

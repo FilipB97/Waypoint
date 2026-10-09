@@ -211,6 +211,13 @@ public enum Strings {
         "edit.binary": "To plik binarny — edytor obsługuje tylko pliki tekstowe.",
         "edit.pos": "Wiersz %ld, kol. %ld",
         "edit.sel": "(zaznaczono %ld)",
+
+        "edit.fb.ftp": "FTP nie ma atomowej podmiany",
+        "files.err.cancelledLogin": "Logowanie anulowane.",
+        "files.err.login": "Serwer odrzucił login lub hasło.",
+        "files.err.cert": "Nie można zweryfikować certyfikatu serwera (%@). Jeśli to Twój serwer z certyfikatem samopodpisanym, możesz mu zaufać.",
+        "files.cert.trust": "Ufaj certyfikatowi tego serwera",
+        "files.cert.trust.help": "Połączenie dalej będzie szyfrowane, ale bez sprawdzania, kto wystawił certyfikat. Zgoda dotyczy tylko tego serwera.",
     ]
 
     public static let en: [String: String] = [
@@ -418,6 +425,13 @@ public enum Strings {
         "edit.binary": "This is a binary file — the editor only handles text files.",
         "edit.pos": "Ln %ld, Col %ld",
         "edit.sel": "(%ld selected)",
+
+        "edit.fb.ftp": "FTP has no atomic replace",
+        "files.err.cancelledLogin": "Login cancelled.",
+        "files.err.login": "The server rejected the login or password.",
+        "files.err.cert": "The server certificate cannot be verified (%@). If this is your server with a self-signed certificate, you can trust it.",
+        "files.cert.trust": "Trust This Server's Certificate",
+        "files.cert.trust.help": "The connection stays encrypted, but without checking who issued the certificate. Applies to this server only.",
     ]
 
     /// Język interfejsu: polski, gdy jest pierwszym preferowanym językiem systemu, w przeciwnym razie angielski.

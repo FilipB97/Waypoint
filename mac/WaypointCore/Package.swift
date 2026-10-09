@@ -10,7 +10,9 @@ let package = Package(
         .library(name: "WaypointCore", targets: ["WaypointCore"])
     ],
     targets: [
-        .target(name: "WaypointCore"),
+        // libcurl (FTP/FTPS) — systemowa na macOS; na Linuksie: libcurl4-openssl-dev.
+        .target(name: "CurlShim", linkerSettings: [.linkedLibrary("curl")]),
+        .target(name: "WaypointCore", dependencies: ["CurlShim"]),
         .testTarget(name: "WaypointCoreTests", dependencies: ["WaypointCore"])
     ]
 )

@@ -64,6 +64,13 @@ public extension Server {
         get { extraInt("GatewayUsageMethod", 0) }
         set { extra["GatewayUsageMethod"] = .number(Double(min(max(newValue, 0), 2))) }
     }
+    /// FTPS: zgoda użytkownika na certyfikat, którego nie da się zweryfikować (samopodpisany). Pole tylko
+    /// z wersji na Macu — Windows ma własne przypinanie certyfikatów, a to pole zachowa jako nieznane.
+    var ftpAcceptInvalidCertificate: Bool {
+        get { extraBool("MacFtpAcceptInvalidCertificate", false) }
+        set { extra["MacFtpAcceptInvalidCertificate"] = .bool(newValue) }
+    }
+
     /// Logowanie bieżącym kontem Windows — na Macu nie ma sensu, ale pole szanujemy przy eksporcie.
     var rdpUseWindowsAccount: Bool { extraBool("UseWindowsAccount", false) }
 }

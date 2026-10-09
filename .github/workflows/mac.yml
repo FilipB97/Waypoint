@@ -24,15 +24,17 @@ jobs:
     container: swift:6.4-noble
     steps:
       - uses: actions/checkout@v7
-      - name: Testy WaypointCore
-        run: swift test --package-path mac/WaypointCore
+      # Testy logiki + integracyjne na prawdziwych serwerach: OpenSSH (SFTP, bezpieczny zapis)
+      # i vsftpd (FTP, FTPS jawne i niejawne) uruchamianych w kontenerze.
+      - name: Testy WaypointCore (z serwerami SFTP i FTP)
+        run: mac/scripts/core-integration-linux.sh
 
   app-macos:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
       - name: Wersja Swift / Xcode
-        run: swift --version && xcodebuild -version
+        run: swift --version && xcodebuild -version && curl --version | head -1
       - name: Testy WaypointCore (macOS)
         run: swift test --package-path mac/WaypointCore
       - name: Budowa Waypoint.app

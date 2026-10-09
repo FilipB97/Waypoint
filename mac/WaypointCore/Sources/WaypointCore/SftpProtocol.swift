@@ -74,6 +74,10 @@ public enum SftpError: Error, Equatable, Sendable, CustomStringConvertible {
     case disconnected(String)
     case protocolViolation(String)
     case cancelled
+    /// Serwer odrzucił login lub hasło (FTP — tam nie ma askpass, aplikacja pyta sama).
+    case authenticationFailed(String)
+    /// Certyfikatu TLS serwera nie da się zweryfikować (FTPS z certyfikatem samopodpisanym).
+    case certificateUntrusted(String)
 
     public var description: String {
         switch self {
@@ -81,6 +85,8 @@ public enum SftpError: Error, Equatable, Sendable, CustomStringConvertible {
         case .disconnected(let d): return d.isEmpty ? "Połączenie zamknięte" : d
         case .protocolViolation(let m): return "SFTP: \(m)"
         case .cancelled: return "Anulowano"
+        case .authenticationFailed(let m): return m.isEmpty ? "Logowanie odrzucone" : m
+        case .certificateUntrusted(let m): return m.isEmpty ? "Niezaufany certyfikat" : m
         }
     }
 

@@ -31,6 +31,10 @@ struct FilesView: View {
                         Text(msg).textSelection(.enabled)
                     } actions: {
                         Button(L("tab.reconnect")) { session.connect() }.buttonStyle(.borderedProminent)
+                        if session.certificateProblem {
+                            Button(L("files.cert.trust")) { session.trustCertificate() }
+                                .help(L("files.cert.trust.help"))
+                        }
                     }
                 }
                 if let p = session.auth.prompt {

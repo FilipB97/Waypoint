@@ -52,13 +52,33 @@ public struct SafeWriteError: Error, Sendable {
 public enum SafeWrite {
     static let staleAfter: TimeInterval = 10 * 60
 
-    public static func stat(_ c: SftpClient, _ path: String) throws -> RemoteFileInfo {
+    public static func stat(_ c: RemoteFS, _ path: String) throws -> RemoteFileInfo {
         let real = try c.realPath(path)
         let a = try c.stat(real)
         return RemoteFileInfo(path: real, length: a.size ?? 0, modified: a.modifyTime ?? 0, mode: a.mode, uid: a.uid, gid: a.gid)
     }
 
-    public static func write(_ c: SftpClient, content: Data, original: RemoteFileInfo) throws -> SafeWriteMode {
+    public static func write(_ fs: RemoteFS, content: Data, original: RemoteFileInfo) throws -> SafeWriteMode {
+        guard let c = fs as? SftpClient else {
+            // FTP: zapis w miejscu (STOR). Podmiana przez RNFR/RNTO zależy od serwera, a plik tymczasowy
+            // dostałby uprawnienia z umask serwera zamiast oryginalnych, których FTP nie odczyta.
+            guard let ftp = fs as? FtpClient else { throw SftpError.status(.opUnsupported, "") }
+            do { try ftp.writeFile(original.path, data: content) }
+            catch {
+                // Odmowa (brak uprawnień, logowanie) pada przed wysłaniem treści — plik cały.
+                let safe: Bool
+                switch error as? SftpError {
+                case .status(.permissionDenied, _)?, .authenticationFailed?, .certificateUntrusted?, .disconnected?: safe = true
+                default: safe = false
+                }
+                throw SafeWriteError(originalMayBeDamaged: !safe, underlying: error)
+            }
+            return .inPlace(reasonKey: "edit.fb.ftp")
+        }
+        return try writeSftp(c, content: content, original: original)
+    }
+
+    private static func writeSftp(_ c: SftpClient, content: Data, original: RemoteFileInfo) throws -> SafeWriteMode {
         let real = original.path
         let dir = RemotePath.parent(real)
         let prefix = "." + RemotePath.name(real) + ".waypoint-"
