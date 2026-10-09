@@ -26,6 +26,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
     init(doc: EditorDocument) {
         self.doc = doc
         let host = NSHostingController(rootView: EditorView(doc: doc))
+        // Bez tego okno przyjmuje „naturalną" wysokość WebView (zrzut z CI: 2362 px, poza ekranem).
+        host.sizingOptions = []
         let w = NSWindow(contentViewController: host)
         w.setContentSize(NSSize(width: 980, height: 680))
         w.minSize = NSSize(width: 560, height: 360)
