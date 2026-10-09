@@ -7,12 +7,20 @@ let package = Package(
     name: "Waypoint",
     platforms: [.macOS(.v14)],
     dependencies: [
-        .package(path: "../WaypointCore")
+        .package(path: "../WaypointCore"),
+        // Emulator terminala (AppKit) — ten sam autor co terminal w Visual Studio for Mac.
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm", exact: "1.20.0"),
     ],
     targets: [
         .executableTarget(
             name: "Waypoint",
-            dependencies: [.product(name: "WaypointCore", package: "WaypointCore")]
+            dependencies: [
+                .product(name: "WaypointCore", package: "WaypointCore"),
+                .product(name: "SwiftTerm", package: "SwiftTerm"),
+            ]
         )
-    ]
+    ],
+    // Interfejs w trybie Swift 5: AppKit i SwiftTerm nie są jeszcze w pełni oznaczone pod ścisłą
+    // współbieżność Swift 6. Logika (WaypointCore) jest kompilowana w trybie Swift 6.
+    swiftLanguageModes: [.v5]
 )

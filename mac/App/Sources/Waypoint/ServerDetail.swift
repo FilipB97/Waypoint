@@ -4,6 +4,7 @@ import WaypointCore
 struct ServerDetail: View {
     @Environment(AppModel.self) private var model
     let server: Server
+    @State private var hasPassword = false
 
     var body: some View {
         ScrollView {
@@ -34,6 +35,19 @@ struct ServerDetail: View {
                     if !server.username.isEmpty { row(L("f.user"), server.username) }
                     if !server.domain.isEmpty { row(L("f.domain"), server.domain) }
                     if !server.privateKeyPath.isEmpty { row(L("f.key"), server.privateKeyPath) }
+                    if hasPassword {
+                        GridRow {
+                            Text(L("detail.password")).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                            HStack {
+                                Text(L("detail.password.saved"))
+                                Button(L("detail.password.forget")) {
+                                    Keychain.delete(for: server.id)
+                                    hasPassword = false
+                                }
+                                .buttonStyle(.link)
+                            }
+                        }
+                    }
                     if !server.group.isEmpty { row(L("f.group"), server.group) }
                     if !server.tags.isEmpty { row(L("f.tags"), server.tags.joined(separator: ", ")) }
                     if !server.tunnels.isEmpty { row(L("f.tunnels"), server.tunnels.joined(separator: "\n")) }
@@ -53,6 +67,7 @@ struct ServerDetail: View {
             .frame(maxWidth: 720, alignment: .leading)
         }
         .navigationTitle(server.displayName)
+        .task(id: server.id) { hasPassword = Keychain.hasPassword(for: server.id) }
     }
 
     private var address: String {

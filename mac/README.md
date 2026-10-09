@@ -34,9 +34,29 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | Krok | Zakres | Stan |
 |---|---|---|
 | 1 | Szkielet, lista serwerów (grupy, przypięte, wyszukiwanie), edytor serwera, import z Windows, CI | ✅ |
-| 2 | Terminal SSH w kartach (SwiftTerm + systemowe `ssh`: agent, `~/.ssh/config`), hasła w Pęku kluczy | ⏳ |
-| 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | — |
+| 2 | Terminal SSH w kartach (SwiftTerm + systemowe `ssh`: agent, `~/.ssh/config`), hasła w Pęku kluczy | ✅ |
+| 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ⏳ |
 | 4 | Panel plików SFTP/FTP: przeglądanie, wysyłanie/pobieranie | — |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | — |
 
-Do czasu kroku 2 „Połącz" dla SSH otwiera połączenie w systemowym Terminalu (`ssh://`).
+## Terminal SSH
+
+Karta uruchamia systemowe `/usr/bin/ssh` w pseudo-terminalu (SwiftTerm). Dzięki temu działa
+wszystko, co działa w Terminalu: `~/.ssh/config` (aliasy, ProxyJump), agent i klucze, `known_hosts`.
+
+Hasła: ssh pyta o nie Waypointa przez `SSH_ASKPASS` (ten sam plik wykonywalny w trybie askpass,
+gniazdo Unix 0600 w prywatnym katalogu + losowy token). Pierwsza prośba o hasło dostaje hasło
+z Pęku kluczy bez okna; kolejna (odrzucone hasło) albo brak zapisanego → pytanie nad kartą
+z opcją „Zapisz w Pęku kluczy". Ten sam kanał obsługuje passphrase klucza, potwierdzenie
+nieznanego klucza hosta i pytania 2FA. Monit wypisany przez serwer po zalogowaniu (np. `sudo`)
+nigdy nie trafia do askpass, więc zapisanego hasła nie da się wyłudzić.
+
+Skróty: Enter / dwuklik na serwerze — połącz, ⌘W — zamknij kartę, ⌘1…⌘9 — karta, ⌘⇧[ / ⌘⇧] —
+poprzednia/następna.
+
+## Test end-to-end w CI
+
+`scripts/smoke-test.sh` (tylko runner CI — tworzy konto): konto testowe, własny `sshd` na
+127.0.0.1:2222, hasło w Pęku kluczy; aplikacja w trybie testu (`WAYPOINT_SMOKE_DIR`, `Smoke.swift`)
+loguje się raz z Pęku kluczy, raz przez pytanie w karcie, wykonuje komendy i zapisuje zrzuty okna.
+Zrzuty i logi są w artefakcie **Waypoint-mac-smoke**.

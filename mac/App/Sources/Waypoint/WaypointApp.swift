@@ -1,9 +1,9 @@
 import SwiftUI
 import WaypointCore
 
-@main
 struct WaypointApp: App {
-    @State private var model = AppModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var model = AppModel.shared
 
     var body: some Scene {
         WindowGroup("Waypoint") {
