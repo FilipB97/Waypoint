@@ -47,6 +47,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSHumanReadableCopyright</key><string>© 2026 Filip Benklewski · MIT</string>
+    <!-- Klient REST łączy się z dowolnymi adresami, także http:// (API w sieci firmowej, localhost). -->
+    <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
 </dict>
 </plist>
 PLIST

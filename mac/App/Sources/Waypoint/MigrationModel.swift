@@ -98,3 +98,51 @@ extension AppModel {
         }
     }
 }
+
+/// Import kolekcji Postmana: nowy wpis REST z kolekcją, sekrety do Pęku kluczy (jak w Windows).
+extension AppModel {
+    func importPostman() {
+        let panel = NSOpenPanel()
+        panel.title = L("rest.import.title")
+        panel.message = L("rest.import.msg")
+        panel.allowedContentTypes = [.json]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        importPostman(from: url)
+    }
+
+    @discardableResult
+    func importPostman(from url: URL) -> Server? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        if PostmanImport.looksLikeEnvironment(data), let (env, blanked) = try? PostmanImport.parseEnvironment(data) {
+            let st = EnvironmentStore(directory: dataDirectory)
+            try? st.save(st.load() + [env])
+            var msg = String(format: L("rest.import.env"), env.name)
+            if !blanked.isEmpty { msg += "\n" + String(format: L("rest.env.secrets"), blanked.joined(separator: ", ")) }
+            alert = AppAlert(title: L("rest.import.title"), message: msg)
+            return nil
+        }
+        guard let r = try? PostmanImport.parse(data) else {
+            alert = AppAlert(title: L("rest.import.title"), message: L("rest.import.bad"))
+            return nil
+        }
+        var coll = r.collection
+        let base = coll.environments.first?.dictionary["base_url"] ?? coll.environments.first?.dictionary["baseUrl"] ?? ""
+        let s = Server(name: r.name, host: base.isEmpty ? r.name : base, proto: .rest, group: "REST")
+        coll.baseUrl = base
+        // Środowisko z kolekcji trafia do wspólnej listy (jak w Windows po migracji środowisk).
+        if !coll.environments.isEmpty {
+            let st = EnvironmentStore(directory: dataDirectory)
+            try? st.save(st.load() + coll.environments)
+            st.activeId = coll.activeEnvironmentId
+        }
+        do { try RestStore(directory: dataDirectory).put(coll, for: s.id) }
+        catch { alert = AppAlert(title: L("rest.import.title"), message: error.localizedDescription); return nil }
+        for (account, secret) in r.secrets { Keychain.save(secret, for: account, label: "Waypoint — REST \(r.name)") }
+        if let cs = r.collectionSecret { Keychain.save(cs, for: "restcoll:" + s.id, label: "Waypoint — REST \(r.name)") }
+        servers.append(ServerValidation.normalized(s))
+        persist()
+        selection = s.id
+        toast = String(format: L("rest.import.done"), r.requestCount)
+        return s
+    }
+}

@@ -126,6 +126,13 @@ final class AppModel {
     func delete(_ s: Server) {
         servers.removeAll { $0.id == s.id }
         Keychain.delete(for: s.id)   // hasło usuniętego serwera nie zostaje osierocone w Pęku kluczy
+        if s.proto == .rest {   // kolekcja REST i jej sekrety też
+            let coll = RestStore(directory: dataDirectory).collection(for: s.id)
+            coll.requests.forEach { Keychain.delete(for: $0.keychainAccount) }
+            coll.folders.forEach { Keychain.delete(for: $0.keychainAccount) }
+            Keychain.delete(for: "restcoll:" + s.id)
+            try? RestStore(directory: dataDirectory).remove(s.id)
+        }
         if selection == s.id { selection = nil }
         persist()
     }
@@ -164,7 +171,7 @@ final class AppModel {
 
     func connect(_ server: Server) {
         let s = resolved(server)
-        if s.proto != .sftp && s.proto != .ftp && s.proto?.supportedOnMac == true { noteConnected(s) }   // pliki — w openFiles
+        if s.proto != .sftp && s.proto != .ftp && s.proto != .rest && s.proto?.supportedOnMac == true { noteConnected(s) }   // pliki — w openFiles
         switch s.proto {
         case .ssh?, .telnet?, .serial?:
             let t = TerminalSession(server: s)
@@ -189,6 +196,10 @@ final class AppModel {
                     self.alert = AppAlert(title: s.displayName, message: msg)
                 }
             }
+        case .rest?:
+            // Jedna konsola na kolekcję — druga karta tej samej kolekcji nadpisywałaby zmiany pierwszej.
+            if let open = sessions.first(where: { $0.rest?.server.id == s.id }) { activeSessionID = open.id }
+            else { add(.rest(RestSession(server: s, dataDirectory: dataDirectory))) }
         case .vnc?:
             openExternal(ExternalLinks.vncURL(s), for: s, opened: L("vnc.opened"))
         case .http?:
@@ -367,6 +378,7 @@ final class AppModel {
         switch tab {
         case .terminal(let t): connect(t.server)
         case .files(let f): openFiles(f.server)
+        case .rest(let r): connect(r.server)
         }
     }
 

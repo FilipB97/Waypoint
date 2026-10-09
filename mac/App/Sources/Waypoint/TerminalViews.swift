@@ -81,6 +81,7 @@ struct SessionContent: View {
         switch tab {
         case .terminal(let t): SessionContainer(session: t)
         case .files(let f): FilesView(session: f)
+        case .rest(let r): RestView(session: r)
         }
     }
 }

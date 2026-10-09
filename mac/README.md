@@ -68,7 +68,8 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | Sprawdzanie aktualizacji | ✅ | ✅ (wydania z plikiem `-mac.zip`) |
 | Motywy (jasny/ciemny, presety terminala, akcent) | ✅ | ✅ |
 | Karta w osobnym oknie | ✅ | ✅ |
-| Klient REST | ✅ | — (ostatni krok) |
+| Klient REST (kolekcje, foldery, środowiska, Bearer/Basic z dziedziczeniem, skrypty pm.*, historia) | ✅ | ✅ (ten sam `rest.json` i `environments.json`) |
+| Import kolekcji i środowisk Postmana | ✅ | ✅ (Plik → Importuj kolekcję Postman) |
 
 ## Terminal SSH
 
@@ -105,6 +106,15 @@ karty, szukanie, czcionka i snippety działają tak samo. Telnet negocjuje ECHO 
 odrzuca (port maszyny stanów z Windows); port szeregowy to 8N1 bez kontroli przepływu, urządzenie
 `/dev/cu.*` wybiera się w edycji serwera, prędkość jest w polu portu (jak w Windows). VNC otwiera
 systemowe Udostępnianie ekranu, strony WWW — domyślną przeglądarkę (tylko http/https).
+
+## Klient REST
+
+Wpis z protokołem REST otwiera konsolę: drzewo żądań i folderów, metoda, adres, parametry,
+nagłówki, treść (JSON/tekst/formularz), uwierzytelnianie Bearer/Basic dziedziczone po folderach
+i kolekcji, skrypty pre-request i testy w API Postmana (`pm.*`, JavaScriptCore, limit 5 s),
+odpowiedź (treść sformatowana, nagłówki, „Wysłane", wyniki testów) i historia. Kolekcje leżą
+w `rest.json`, środowiska w `environments.json` — te same pliki co w Windows; sekrety
+uwierzytelniania w Pęku kluczy.
 
 ## Pliki (SFTP)
 

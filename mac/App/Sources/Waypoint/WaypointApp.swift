@@ -32,6 +32,7 @@ struct WaypointApp: App {
                         Button(L("migr.item." + src.rawValue)) { model.importExternal(src) }
                     }
                 }
+                Button(L("rest.import.menu")) { model.importPostman() }
                 Button(L("export.menu")) { model.exportProfile() }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
                 Divider()

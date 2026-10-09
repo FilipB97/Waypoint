@@ -57,6 +57,8 @@ struct ServerEditor: View {
                         }
                     case .http?:
                         TextField(L("f.url"), text: $draft.host, prompt: Text("https://grafana.example.com"))
+                    case .rest?:
+                        TextField(L("rest.baseurl"), text: $draft.host, prompt: Text("https://api.example.com"))
                     default:
                         TextField(L("f.host"), text: $draft.host, prompt: Text("example.com"))
                         TextField(L("f.port"), value: $draft.port, format: .number.grouping(.never))

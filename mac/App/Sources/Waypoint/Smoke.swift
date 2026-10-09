@@ -495,6 +495,43 @@ enum Smoke {
             ok = ok && detachedOK && backOK
         }
 
+        // 14. Klient REST: import kolekcji Postmana (zmienna base_url → środowisko, token Bearer → Pęk kluczy),
+        //     wysyłka do lokalnego serwera HTTP, skrypt testów zapisuje zmienną do środowiska.
+        let pmURL = FileManager.default.temporaryDirectory.appendingPathComponent("wp-smoke-postman.json")
+        let pm = #"""
+        {"info":{"name":"Smoke API"},"variable":[{"key":"base_url","value":"http://127.0.0.1:8088"}],
+         "item":[{"name":"Kto ja","request":{"method":"GET","url":{"raw":"{{base_url}}/api/me?x=1","query":[{"key":"x","value":"1"}]},
+                  "auth":{"type":"bearer","bearer":[{"key":"token","value":"abc123"}]}},
+                  "event":[{"listen":"test","script":{"exec":[
+                    "pm.test('status 200', function(){ pm.expect(pm.response.code).to.equal(200); });",
+                    "pm.test('token', function(){ pm.expect(pm.response.json().auth).to.equal('Bearer abc123'); });",
+                    "pm.environment.set('got', pm.response.json().token);"]}}]}]}
+        """#
+        try? pm.write(to: pmURL, atomically: true, encoding: .utf8)
+        if let restServer = model.importPostman(from: pmURL) {
+            model.connect(restServer)
+            if let rs = model.activeSession?.rest {
+                rs.send()
+                let got = await waitFor(15, { !rs.sending && rs.response != nil ? true : nil })
+                try? await Task.sleep(for: .seconds(0.8))
+                snapshot(window, out.appendingPathComponent("29-rest.png"))
+                let r = rs.response
+                let tests = rs.testOutcome.tests
+                let envVar = rs.activeEnvironment?.dictionary["got"]
+                let restOK = got == true && r?.status == 200 && r?.body.contains("Bearer abc123") == true
+                    && tests.count == 2 && tests.allSatisfy { $0.passed } && envVar == "WAYPOINT_REST_42"
+                    && rs.collection.history.first?.status == 200
+                note(restOK ? "OK: REST — import Postmana, Bearer z Pęku kluczy, testy 2/2, zmienna ze skryptu w środowisku"
+                            : "FAIL: REST status=\(r?.status ?? -1) błąd=\(r?.error ?? "-") testy=\(tests.map { "\($0.name):\($0.passed)" }) env=\(envVar ?? "nil") \(rs.testOutcome.error)", out)
+                ok = ok && restOK
+                rs.collection.requests.forEach { Keychain.delete(for: $0.keychainAccount) }
+            } else {
+                note("FAIL: REST — brak karty konsoli", out); ok = false
+            }
+        } else {
+            note("FAIL: REST — import Postmana", out); ok = false
+        }
+
         // Okno Ustawień (⌘,) — tylko zrzut.
         let before = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
         // Pozycja „Ustawienia…" (⌘,) z menu aplikacji — tak, jak kliknąłby użytkownik.
