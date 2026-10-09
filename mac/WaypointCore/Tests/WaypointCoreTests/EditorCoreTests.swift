@@ -96,6 +96,16 @@ struct SafeWriteIntegrationTests {
     // komendy nigdy by nie wrócił. To pułapka samego testu — aplikacja nie uruchamia takich komend.
     @discardableResult
     static func shOut(_ cmd: String) -> String {
+        #if os(macOS)
+        let p = Process(), pipe = Pipe()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", cmd]
+        p.standardOutput = pipe
+        try? p.run()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        #else
         guard let f = popen(cmd + " 2>/dev/null", "r") else { return "" }
         var out = Data()
         var buf = [UInt8](repeating: 0, count: 4096)
@@ -106,6 +116,7 @@ struct SafeWriteIntegrationTests {
         }
         pclose(f)
         return String(decoding: out, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        #endif
     }
 
     static func sh(_ cmd: String) { shOut(cmd) }
