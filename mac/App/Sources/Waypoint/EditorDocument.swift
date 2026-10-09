@@ -24,7 +24,9 @@ final class EditorDocument: Identifiable {
     private(set) var ready = false
     var readOnly: Bool
     var wrap = false
-    var line = 1, column = 1, selected = 0
+    var line = 1
+    var column = 1
+    var selected = 0
     var status: String?
     var statusIsError = false
     /// Właściciel/uprawnienia do paska „tylko do odczytu".
