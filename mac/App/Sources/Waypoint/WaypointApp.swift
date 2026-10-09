@@ -16,6 +16,9 @@ struct WaypointApp: App {
             SettingsView().environment(model)
         }
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button(L("upd.menu")) { model.checkForUpdates(manual: true) }
+            }
             CommandGroup(replacing: .newItem) {
                 Button(L("menu.newserver")) { model.beginNew() }
                     .keyboardShortcut("n")

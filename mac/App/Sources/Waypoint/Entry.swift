@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainActor.assumeIsolated {
             AppModel.shared.installKeyMonitor()
             Smoke.startIfRequested()
+            AppModel.shared.checkForUpdates(manual: false)
         }
     }
 }

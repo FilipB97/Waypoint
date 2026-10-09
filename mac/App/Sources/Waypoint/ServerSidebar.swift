@@ -97,6 +97,9 @@ struct ServerSidebar: View {
         Divider()
         Button(L("act.edit")) { model.beginEdit(s) }
         Button(L("act.duplicate")) { model.duplicate(s) }
+        if WakeOnLan.parseMac(s.macAddress) != nil {
+            Button(L("wol.menu")) { model.wake(s) }
+        }
         Button(s.pinned ? L("act.unpin") : L("act.pin")) { model.togglePin(s) }
         Menu(L("group.moveto")) {
             ForEach(model.groupNames.filter { $0 != s.group }, id: \.self) { g in

@@ -21,6 +21,11 @@ struct SettingsView: View {
                 Toggle(L("set.latency"), isOn: $model.settings.showLatency)
                     .disabled(!model.settings.reachabilityEnabled)
             }
+            Section(L("set.app")) {
+                Toggle(L("set.updates"), isOn: $model.settings.checkUpdates)
+                LabeledContent(L("set.version"), value: AppModel.currentVersion)
+                Button(L("upd.menu")) { model.checkForUpdates(manual: true) }
+            }
             Section(L("set.connections")) {
                 Toggle(L("set.confirmclose"), isOn: $model.settings.confirmCloseConnected)
                 Toggle(L("set.log"), isOn: $model.settings.connectionLogEnabled)

@@ -60,6 +60,7 @@ struct ServerEditor: View {
                     default:
                         TextField(L("f.host"), text: $draft.host, prompt: Text("example.com"))
                         TextField(L("f.port"), value: $draft.port, format: .number.grouping(.never))
+                        TextField(L("f.mac"), text: $draft.macAddress, prompt: Text(L("f.mac.ph")))
                     }
                 }
                 if draft.usesCredentials {
@@ -92,6 +93,7 @@ struct ServerEditor: View {
                             Text(L("f.ftpenc.explicit")).tag(0)
                             Text(L("f.ftpenc.implicit")).tag(1)
                             Text(L("f.ftpenc.none")).tag(2)
+                            Text(L("f.ftpenc.auto")).tag(3)
                         }
                         Toggle(L("f.ftpanon"), isOn: $draft.ftpAnonymous)
                     }

@@ -17,6 +17,8 @@ public struct MacSettings: Codable, Equatable, Sendable {
     public var collapsedGroups: [String] = []
     /// Ostatnio używane serwery (id), najnowszy pierwszy.
     public var recentIds: [String] = []
+    /// Sprawdzanie nowej wersji przy starcie (jak CheckUpdates w Windows).
+    public var checkUpdates: Bool = true
 
     public init() {}
 
@@ -25,7 +27,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         case reachabilityEnabled = "ReachabilityEnabled", reachabilityIntervalSec = "ReachabilityIntervalSec"
         case probeTimeoutSeconds = "ProbeTimeoutSeconds", showLatency = "ShowLatency"
         case connectionLogEnabled = "ConnectionLogEnabled", collapsedGroups = "CollapsedGroups"
-        case recentIds = "RecentIds"
+        case recentIds = "RecentIds", checkUpdates = "CheckUpdates"
     }
 
     public init(from decoder: Decoder) throws {
@@ -40,6 +42,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         connectionLogEnabled = (try? c.decode(Bool.self, forKey: .connectionLogEnabled)) ?? true
         collapsedGroups = (try? c.decode([String].self, forKey: .collapsedGroups)) ?? []
         recentIds = (try? c.decode([String].self, forKey: .recentIds)) ?? []
+        checkUpdates = (try? c.decode(Bool.self, forKey: .checkUpdates)) ?? true
     }
 
     /// Zakresy jak w Windows: interwał sondy 5–3600 s, limit czasu 1–60 s.

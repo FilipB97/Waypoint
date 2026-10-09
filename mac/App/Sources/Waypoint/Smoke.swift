@@ -424,7 +424,7 @@ enum Smoke {
         </Folder></Servers></FileZilla3>
         """
         try? fzXML.write(to: fzURL, atomically: true, encoding: .utf8)
-        let before = model.servers.count
+        let countBefore = model.servers.count
         let imp = model.importExternal(.fileZilla, from: fzURL)
         try? await Task.sleep(for: .seconds(1))
         snapshot(window, out.appendingPathComponent("25-import-filezilla.png"))
@@ -432,7 +432,7 @@ enum Smoke {
         let ftpID = model.servers.first { $0.host == "ftp.klient-x.example" }?.id
         let pwOK = ftpID.map { Keychain.password(for: $0) == "sekret" } ?? false
         model.servers.filter { $0.group == "Klient X" }.forEach { Keychain.delete(for: $0.id) }
-        let impOK = imp?.added == 2 && imp?.passwords == 1 && pwOK && model.servers.count == before + 2
+        let impOK = imp?.added == 2 && imp?.passwords == 1 && pwOK && model.servers.count == countBefore + 2
         note(impOK ? "OK: import z FileZilli — 2 serwery, hasło w Pęku kluczy" : "FAIL: import z FileZilli \(String(describing: imp)) hasło=\(pwOK)", out)
         ok = ok && impOK
         let exportURL = out.appendingPathComponent("profil-eksport.json")

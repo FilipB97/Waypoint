@@ -63,3 +63,38 @@ extension AppModel {
         }
     }
 }
+
+/// Wake-on-LAN i sprawdzanie aktualizacji.
+extension AppModel {
+    func wake(_ s: Server) {
+        guard let mac = WakeOnLan.parseMac(s.macAddress) else {
+            alert = AppAlert(title: L("wol.title"), message: String(format: L("wol.badmac"), s.macAddress))
+            return
+        }
+        if let err = WakeOnLan.send(mac) { alert = AppAlert(title: L("wol.title"), message: err) }
+        else { toast = String(format: L("wol.sent"), s.displayName) }
+    }
+
+    static var currentVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+    }
+
+    /// Przy starcie (gdy włączone) cicho; z menu — zawsze z odpowiedzią.
+    func checkForUpdates(manual: Bool) {
+        if !manual && (!settings.checkUpdates || ProcessInfo.processInfo.environment["WAYPOINT_SMOKE_DIR"] != nil) { return }
+        var req = URLRequest(url: UpdateCheck.latestURL, timeoutInterval: 8)
+        req.setValue("Waypoint-mac", forHTTPHeaderField: "User-Agent")
+        Task {
+            let data = try? await URLSession.shared.data(for: req).0
+            let release = data.flatMap(UpdateCheck.parseRelease)
+            if let r = UpdateCheck.update(from: release, current: Self.currentVersion) {
+                alert = AppAlert(title: L("upd.title"), message: String(format: L("upd.available"), r.versionText, Self.currentVersion),
+                                 actionTitle: L("upd.download"),
+                                 action: { NSWorkspace.shared.open(r.pageURL ?? r.macZipURL!) })
+            } else if manual {
+                alert = AppAlert(title: L("upd.title"),
+                                 message: data == nil ? L("upd.failed") : String(format: L("upd.current"), Self.currentVersion))
+            }
+        }
+    }
+}

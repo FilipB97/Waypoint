@@ -32,6 +32,9 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      version: ${{ steps.ver.outputs.version }}
 
     steps:
       - name: Checkout
@@ -197,6 +200,9 @@ jobs:
           $sw.WriteLine("Download the ``Waypoint-...-win-x64.exe`` asset below and run it - self-contained,")
           $sw.WriteLine("no .NET install required (Windows 10/11 x64).")
           $sw.WriteLine("")
+          $sw.WriteLine("**macOS** (14+, Apple silicon and Intel): ``Waypoint-...-mac.zip`` - unzip and move to Applications.")
+          $sw.WriteLine("Not notarized yet, so on first launch right-click the app -> *Open*.")
+          $sw.WriteLine("")
           if ($env:SIGNED -eq "true") {
             $sw.WriteLine("This build is Authenticode-signed. The certificate is self-signed, so SmartScreen")
             $sw.WriteLine("may still warn on first run (*More info -> Run anyway*); in-app auto-update verifies")
@@ -220,3 +226,27 @@ jobs:
             --title "Waypoint $VERSION" \
             --target "$SHA" \
             --notes-file notes.md
+
+  # Wersja na macOS do tego samego wydania (uniwersalna .app, podpis ad-hoc). Osobne zadanie po
+  # utworzeniu wydania — nieudana budowa Maca nie blokuje wydania Windows.
+  mac:
+    needs: release
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Budowa Waypoint.app
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+          BUILD: ${{ github.run_number }}
+        run: mac/scripts/bundle-app.sh
+      - name: Dołączenie do wydania
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release.outputs.tag }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          cp mac/dist/Waypoint-mac.zip "mac/dist/Waypoint-$VERSION-mac.zip"
+          gh release upload "$TAG" "mac/dist/Waypoint-$VERSION-mac.zip" --repo "$GITHUB_REPOSITORY"

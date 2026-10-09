@@ -366,6 +366,7 @@ public enum Strings {
         "edit.err.url": "Podaj adres http:// albo https://",
         "edit.err.baud": "Wybierz prędkość portu",
 
+        "f.ftpenc.auto": "Auto — FTPS, jeśli serwer obsługuje",
         "migr.menu": "Importuj z innego programu",
         "migr.item.mRemoteNG": "mRemoteNG (confCons.xml)…",
         "migr.item.rdcMan": "Remote Desktop Connection Manager (.rdg)…",
@@ -388,6 +389,23 @@ public enum Strings {
         "export.title": "Eksport profilu",
         "export.msg": "Serwery i profile poświadczeń bez haseł — do importu w Waypoint dla Windows albo na innym Macu.",
         "export.done": "Wyeksportowano serwery: %d",
+
+        "wol.menu": "Wybudź (Wake-on-LAN)",
+        "wol.title": "Wake-on-LAN",
+        "wol.badmac": "„%@” nie jest poprawnym adresem MAC.",
+        "wol.sent": "Wysłano pakiet budzący do %@",
+        "f.mac": "Adres MAC",
+        "f.mac.ph": "do Wake-on-LAN, np. AA:BB:CC:DD:EE:FF",
+        "edit.err.mac": "Niepoprawny adres MAC",
+        "upd.menu": "Sprawdź aktualizacje…",
+        "upd.title": "Aktualizacja",
+        "upd.available": "Dostępna jest wersja %@ (masz %@).",
+        "upd.download": "Pobierz",
+        "upd.current": "Masz najnowszą wersję (%@).",
+        "upd.failed": "Nie udało się sprawdzić — brak połączenia z GitHubem.",
+        "set.app": "Aplikacja",
+        "set.updates": "Sprawdzaj aktualizacje przy starcie",
+        "set.version": "Wersja",
     ]
 
     public static let en: [String: String] = [
@@ -750,6 +768,7 @@ public enum Strings {
         "edit.err.url": "Enter an http:// or https:// address",
         "edit.err.baud": "Choose the port speed",
 
+        "f.ftpenc.auto": "Auto — FTPS if the server supports it",
         "migr.menu": "Import from another app",
         "migr.item.mRemoteNG": "mRemoteNG (confCons.xml)…",
         "migr.item.rdcMan": "Remote Desktop Connection Manager (.rdg)…",
@@ -772,6 +791,23 @@ public enum Strings {
         "export.title": "Export profile",
         "export.msg": "Servers and credential profiles without passwords — to import into Waypoint for Windows or on another Mac.",
         "export.done": "Exported servers: %d",
+
+        "wol.menu": "Wake (Wake-on-LAN)",
+        "wol.title": "Wake-on-LAN",
+        "wol.badmac": "“%@” is not a valid MAC address.",
+        "wol.sent": "Wake-up packet sent to %@",
+        "f.mac": "MAC address",
+        "f.mac.ph": "for Wake-on-LAN, e.g. AA:BB:CC:DD:EE:FF",
+        "edit.err.mac": "Invalid MAC address",
+        "upd.menu": "Check for updates…",
+        "upd.title": "Update",
+        "upd.available": "Version %@ is available (you have %@).",
+        "upd.download": "Download",
+        "upd.current": "You have the latest version (%@).",
+        "upd.failed": "Could not check — no connection to GitHub.",
+        "set.app": "App",
+        "set.updates": "Check for updates at launch",
+        "set.version": "Version",
     ]
 
     /// Język interfejsu: polski, gdy jest pierwszym preferowanym językiem systemu, w przeciwnym razie angielski.
