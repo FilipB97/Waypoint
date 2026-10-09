@@ -41,7 +41,7 @@ jobs:
           BUILD: ${{ github.run_number }}
         run: mac/scripts/bundle-app.sh
       - name: Paczka do pobrania
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Waypoint-mac
           path: mac/dist/Waypoint-mac.zip
