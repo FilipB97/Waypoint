@@ -124,7 +124,7 @@ final class AppModel {
         switch s.proto {
         case .ssh?:
             add(.terminal(TerminalSession(server: s)))
-        case .sftp?:
+        case .sftp?, .ftp?:
             openFiles(s)
         case .rdp?:
             RdpLauncher.open(s) { [weak self] outcome in
@@ -180,7 +180,13 @@ final class AppModel {
 
     /// Panel plików SFTP — dla serwerów SFTP i SSH (ten sam login, osobne połączenie).
     func openFiles(_ s: Server) {
-        add(.files(FileSession(server: s)))
+        let fs = FileSession(server: s)
+        fs.onTrustCertificate = { [weak self] updated in
+            guard let self, let i = self.servers.firstIndex(where: { $0.id == updated.id }) else { return }
+            self.servers[i].ftpAcceptInvalidCertificate = updated.ftpAcceptInvalidCertificate
+            self.persist()
+        }
+        add(.files(fs))
     }
 
     /// Zamyka kartę; działające połączenie wymaga potwierdzenia (jak „Potwierdzaj zamknięcie" w Windows).

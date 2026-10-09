@@ -17,9 +17,13 @@ final class FileSession: Identifiable {
     }
 
     let id = UUID()
-    let server: Server
+    private(set) var server: Server
     let auth: AuthBroker
     private(set) var state: State = .connecting
+    /// FTPS: certyfikatu nie da się zweryfikować — karta proponuje świadomą zgodę dla tego serwera.
+    private(set) var certificateProblem = false
+    /// Zapis zgody na certyfikat w liście serwerów (robi to AppModel — sesja ma tylko kopię serwera).
+    @ObservationIgnored var onTrustCertificate: ((Server) -> Void)?
     private(set) var path = ""
     private(set) var entries: [SftpEntry] = []
     var selection = Set<SftpEntry.ID>()
@@ -30,7 +34,7 @@ final class FileSession: Identifiable {
     /// Pytanie o nadpisanie przy wysyłaniu (nazwy, które już są w katalogu).
     var overwriteQuestion: (names: [String], urls: [URL])?
 
-    @ObservationIgnored private var client: SftpClient?
+    @ObservationIgnored private var client: RemoteFS?
     /// Prace czekające na zakończenie łączenia (true = połączono).
     @ObservationIgnored private var whenConnected: [(Bool) -> Void] = []
     @ObservationIgnored private let queue = DispatchQueue(label: "waypoint.sftp")
@@ -50,6 +54,8 @@ final class FileSession: Identifiable {
 
     func connect() {
         state = .connecting
+        certificateProblem = false
+        if server.proto == .ftp { connectFtp(); return }
         let srv = server
         let extra = auth.start()
         let launch = SshCommand.buildSftp(srv, homeDirectory: NSHomeDirectory(),
@@ -81,6 +87,66 @@ final class FileSession: Identifiable {
                 }
             }
         }
+    }
+
+    // MARK: FTP
+
+    /// FTP nie ma askpass — hasło bierzemy z Pęku kluczy, a gdy go nie ma (albo zostało odrzucone),
+    /// pytamy w karcie tym samym oknem co przy SSH.
+    private func connectFtp(retry: Bool = false) {
+        if server.ftpAnonymous { startFtp(user: "anonymous", password: "waypoint@", save: false); return }
+        if !retry, let saved = Keychain.password(for: server.id) {
+            startFtp(user: server.username, password: saved, save: false)
+            return
+        }
+        let text = "\(server.username)@\(server.host)"
+        auth.prompt = PendingPrompt(kind: .password, text: text, isRetry: retry) { [weak self] value, save in
+            guard let self else { return }
+            self.auth.prompt = nil
+            guard let value else { self.state = .failed(L("files.err.cancelledLogin")); self.flushWaiting(false); return }
+            self.startFtp(user: self.server.username, password: value, save: save)
+        }
+    }
+
+    private func startFtp(user: String, password: String, save: Bool) {
+        let srv = server
+        queue.async { [weak self] in
+            do {
+                let c = try FtpClient(host: srv.host, port: srv.port, user: user, password: password,
+                                      encryption: FtpEncryption(rawValue: srv.ftpEncryption) ?? .explicitTLS,
+                                      acceptInvalidCertificate: srv.ftpAcceptInvalidCertificate)
+                let home = try c.realPath(".")
+                let list = try c.list(home)
+                DispatchQueue.main.async {
+                    guard let self else { c.close(); return }
+                    if save {
+                        let ok = Keychain.save(password, for: srv.id, label: "Waypoint — \(srv.displayName)")
+                        self.auth.notice = ok ? L("prompt.saved") : L("prompt.savefail")
+                    }
+                    self.client = c
+                    self.path = home
+                    self.entries = Self.sorted(list)
+                    self.state = .ready
+                    self.flushWaiting(true)
+                }
+            } catch SftpError.authenticationFailed {
+                DispatchQueue.main.async { self?.connectFtp(retry: true) }
+            } catch {
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if case SftpError.certificateUntrusted = error { self.certificateProblem = true }
+                    self.state = .failed(Self.describe(error))
+                    self.flushWaiting(false)
+                }
+            }
+        }
+    }
+
+    /// Świadoma zgoda na certyfikat, którego nie da się zweryfikować — zapamiętana dla tego serwera.
+    func trustCertificate() {
+        server.ftpAcceptInvalidCertificate = true
+        onTrustCertificate?(server)
+        connect()
     }
 
     private func flushWaiting(_ connected: Bool) {
@@ -116,6 +182,8 @@ final class FileSession: Identifiable {
             case .status(.permissionDenied, _): return L("files.err.denied")
             case .status(.noSuchFile, _): return L("files.err.missing")
             case .disconnected(let d): return d.isEmpty ? L("files.err.disconnected") : d
+            case .certificateUntrusted(let d): return String(format: L("files.err.cert"), d)
+            case .authenticationFailed: return L("files.err.login")
             default: return e.description
             }
         }
@@ -128,7 +196,7 @@ final class FileSession: Identifiable {
     }
 
     /// Wykonuje pracę na kolejce SFTP; wynik (albo błąd) wraca na wątek główny.
-    private func run<T>(_ label: String?, work: @escaping (SftpClient) throws -> T, done: @escaping (T) -> Void) {
+    private func run<T>(_ label: String?, work: @escaping (RemoteFS) throws -> T, done: @escaping (T) -> Void) {
         guard let c = client, !busy else { return }
         busy = true
         if let label { show(label) }
@@ -282,7 +350,7 @@ final class FileSession: Identifiable {
 
     /// Operacja dla edytora na tym połączeniu (stat przed zapisem, bezpieczny zapis, ponowne wczytanie).
     /// Błędy wracają do wołającego (edytor pokazuje je po swojemu), a nie na pasek panelu.
-    func perform<T>(_ work: @escaping (SftpClient) throws -> T, completion: @escaping (Result<T, Error>) -> Void) {
+    func perform<T>(_ work: @escaping (RemoteFS) throws -> T, completion: @escaping (Result<T, Error>) -> Void) {
         guard let c = client else {
             // Połączenie jeszcze wstaje (edytor otwiera własne) albo padło — praca czeka na wynik łączenia.
             whenConnected.append { [weak self] connected in
@@ -307,7 +375,7 @@ final class FileSession: Identifiable {
     }
 
     private func startTransfer<T>(_ label: String, total: UInt64,
-                                  work: @escaping (SftpClient, @escaping (UInt64) -> Bool) throws -> T,
+                                  work: @escaping (RemoteFS, @escaping (UInt64) -> Bool) throws -> T,
                                   done: @escaping (T) -> Void) {
         cancelFlag.set(false)
         let flag = cancelFlag
