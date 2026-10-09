@@ -625,7 +625,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.edit.save">Save</sys:String>
     <sys:String x:Key="S.edit.loading">Loading editor…</sys:String>
     <sys:String x:Key="S.edit.nowebview">Could not start the editor (WebView2).</sys:String>
-    <sys:String x:Key="S.edit.ro.text">The file belongs to {0} with permissions {1} — you most likely cannot write to it, so it was opened read-only. Saving with sudo will come in a later version; until then you can save a copy to disk.</sys:String>
+    <sys:String x:Key="S.edit.ro.text">The file belongs to {0} with permissions {1} — your account most likely cannot change it, so it was opened read-only. Over SSH you can edit and save with sudo, or save a copy to disk.</sys:String>
     <sys:String x:Key="S.edit.ro.anyway">Edit anyway</sys:String>
     <sys:String x:Key="S.edit.ro.status">The file is open read-only.</sys:String>
     <sys:String x:Key="S.edit.ro.short">read-only</sys:String>
@@ -644,7 +644,7 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.edit.fb.group">a replace would change the file group</sys:String>
     <sys:String x:Key="S.edit.fb.rename">the server does not support atomic replace</sys:String>
     <sys:String x:Key="S.edit.fb.ftp">FTP has no atomic replace</sys:String>
-    <sys:String x:Key="S.edit.fail.denied">You do not have permission to write this file. The file on the server is untouched and your changes are still in the editor.&#10;&#10;Saving with sudo will come in a later version. For now you can save a copy to disk.</sys:String>
+    <sys:String x:Key="S.edit.fail.denied">You do not have permission to write this file. The file on the server is untouched and your changes are still in the editor.&#10;&#10;On SSH servers you can save with sudo. You can also save a copy to disk.</sys:String>
     <sys:String x:Key="S.edit.fail.safe">Could not save: {0}&#10;&#10;The file on the server is untouched. Your changes are still in the editor — you can retry (Ctrl+S).</sys:String>
     <sys:String x:Key="S.edit.fail.damaged">Saving was interrupted: {0}&#10;&#10;The file on the server may have been truncated! Your full version is in the editor — save again (Ctrl+S) once the connection is back, or save a copy to disk.</sys:String>
     <sys:String x:Key="S.edit.fail.short">Not saved — the file on the server is untouched.</sys:String>
@@ -655,6 +655,12 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.edit.reloading">Loading from server…</sys:String>
     <sys:String x:Key="S.edit.reloaded">Reloaded from server {0}.</sys:String>
     <sys:String x:Key="S.edit.close.ask">Save changes to “{0}” before closing?</sys:String>
+    <sys:String x:Key="S.edit.ro.sudo">Edit and save with sudo</sys:String>
+    <sys:String x:Key="S.edit.sudo.ask">Your account cannot write this file. Save it as root with sudo? The file owner and permissions are kept.</sys:String>
+    <sys:String x:Key="S.edit.sudo.saving">Saving with sudo…</sys:String>
+    <sys:String x:Key="S.edit.sudo.saved">Saved {0} with sudo.</sys:String>
+    <sys:String x:Key="S.edit.sudo.saved.inplace">Saved {0} with sudo — in place (server without GNU coreutils or no room for a file next to it).</sys:String>
+    <sys:String x:Key="S.edit.sudo.prompt">sudo password (your account password on the server):</sys:String>
     <sys:String x:Key="S.edit.toobig">The file is too large to edit (limit {0}). Use preview or download it.</sys:String>
     <sys:String x:Key="S.edit.binary">This is a binary file — the editor only handles text files. Use preview.</sys:String>
     <sys:String x:Key="S.edit.pos">Ln {0}, Col {1}</sys:String>

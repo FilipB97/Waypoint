@@ -79,6 +79,9 @@ namespace RdpManager
         }
 
         // Lokalnie: plik tymczasowy obok + File.Replace (podmiana z zachowaniem atrybutów i ACL celu).
+        public bool SupportsSudo => false;
+        public Core.SudoOutcome WriteFileSudo(byte[] content, string path, string password) => throw new NotSupportedException();
+
         public SafeWriteResult WriteFileSafe(byte[] content, Core.RemoteFileInfo original)
         {
             string real = Denorm(original.Path);

@@ -948,7 +948,8 @@ namespace RdpManager
             { SetStatus(L("S.edit.binary"), error: true); return; }
 
             SetStatus("");
-            FileEditorWindow.OpenFile(Window.GetWindow(this), _factory, r.FullName, r.Name, info, data, myUid);
+            FileEditorWindow.OpenFile(Window.GetWindow(this), _factory, r.FullName, r.Name, info, data, myUid,
+                                      sudoCapable: _fs?.SupportsSudo == true);
         }
 
         // ---------- Filtr listy ----------

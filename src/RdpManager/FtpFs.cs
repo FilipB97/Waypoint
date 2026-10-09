@@ -144,6 +144,9 @@ namespace RdpManager
         /// odmawia, część nadpisuje), a plik tymczasowy dostałby uprawnienia z umask serwera zamiast
         /// oryginalnych, których przez FTP nie odczytamy. Uczciwiej nadpisać i powiedzieć o tym.
         /// </summary>
+        public bool SupportsSudo => false;
+        public Core.SudoOutcome WriteFileSudo(byte[] content, string path, string password) => throw new NotSupportedException();
+
         public SafeWriteResult WriteFileSafe(byte[] content, Core.RemoteFileInfo original)
         {
             try

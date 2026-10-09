@@ -179,6 +179,8 @@ namespace RdpManager.Tests
             public void Rename(string fullPath, string newFullPath) => throw new NotSupportedException();
             public RdpManager.Core.RemoteFileInfo Stat(string path) => throw new NotSupportedException();
             public SafeWriteResult WriteFileSafe(byte[] content, RdpManager.Core.RemoteFileInfo original) => throw new NotSupportedException();
+            public bool SupportsSudo => false;
+            public RdpManager.Core.SudoOutcome WriteFileSudo(byte[] content, string path, string password) => throw new NotSupportedException();
             public void Dispose() { }
         }
     }

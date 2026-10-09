@@ -46,6 +46,15 @@ namespace RdpManager
         /// która mówi, czy oryginał mógł ucierpieć. <paramref name="original"/> pochodzi z <see cref="Stat"/>.
         /// </summary>
         SafeWriteResult WriteFileSafe(byte[] content, Core.RemoteFileInfo original);
+
+        /// <summary>Czy da się zapisać przez sudo (tylko SSH — FTP i dysk lokalny nie wykonują poleceń).</summary>
+        bool SupportsSudo { get; }
+
+        /// <summary>
+        /// Zapis jako root przez sudo (<see cref="SftpSudoWriter"/>). <paramref name="password"/> null =
+        /// hasło logowania tej sesji. Rzuca <see cref="Core.SudoException"/> (Denied = odmowa sudo).
+        /// </summary>
+        Core.SudoOutcome WriteFileSudo(byte[] content, string path, string password);
     }
 
     /// <summary>
@@ -63,9 +72,24 @@ namespace RdpManager
     public sealed class SftpFs : IRemoteFs
     {
         private readonly Func<SftpClient> _make;
+        private readonly Func<SshClient> _makeSsh;
+        private readonly Func<string> _loginPassword;
         private SftpClient _c;
 
-        public SftpFs(Func<SftpClient> make) { _make = make; }
+        public SftpFs(Func<SftpClient> make, Func<SshClient> makeSsh = null, Func<string> loginPassword = null)
+        {
+            _make = make;
+            _makeSsh = makeSsh;
+            _loginPassword = loginPassword;
+        }
+
+        public bool SupportsSudo => _makeSsh != null;
+
+        public Core.SudoOutcome WriteFileSudo(byte[] content, string path, string password)
+        {
+            if (_makeSsh == null) throw new NotSupportedException();
+            return SftpSudoWriter.Write(_c, _makeSsh, content, path, password ?? _loginPassword?.Invoke());
+        }
 
         public bool IsConnected => _c != null && _c.IsConnected;
 
