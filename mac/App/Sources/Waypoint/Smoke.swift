@@ -107,6 +107,33 @@ enum Smoke {
             }
         }
 
+        // 4. RDP: plik .rdp powstaje, a bez Windows App (runner jej nie ma) — komunikat z App Store.
+        if let rdp = model.servers.first(where: { $0.proto == .rdp }) {
+            model.activeSessionID = nil
+            model.selection = rdp.id
+            try? await Task.sleep(for: .seconds(0.8))
+            snapshot(window, out.appendingPathComponent("07-rdp-szczegoly.png"))
+            model.connect(rdp)
+            let shown = await waitFor(5, { model.alert != nil || model.toast != nil ? true : nil })
+            try? await Task.sleep(for: .seconds(0.8))
+            snapshot(window, out.appendingPathComponent("08-rdp-polacz.png"))
+            let file = RdpLauncher.directory.appendingPathComponent(RdpFile.fileName(for: rdp))
+            let content = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+            try? content.write(to: out.appendingPathComponent("rdp-plik.rdp"), atomically: true, encoding: .utf8)
+            let fileOK = content.contains("full address:s:\(rdp.host)")
+            note(fileOK && shown == true ? "OK: RDP — plik .rdp i komunikat (\(RdpLauncher.isWindowsAppInstalled ? "Windows App" : "brak Windows App"))"
+                                         : "FAIL: RDP plik=\(fileOK) komunikat=\(shown == true)", out)
+            ok = ok && fileOK && shown == true
+            model.alert = nil
+            if let s = model.servers.first(where: { $0.proto == .rdp }) {
+                model.beginEdit(s)
+                try? await Task.sleep(for: .seconds(1.2))
+                if let sheet = window.attachedSheet { snapshot(sheet, out.appendingPathComponent("09-rdp-edytor.png")) }
+                model.editing = nil
+                try? await Task.sleep(for: .seconds(0.8))
+            }
+        }
+
         // Kilka kart: zrzut paska kart z aktywną pierwszą.
         model.activateTab(0)
         try? await Task.sleep(for: .seconds(1))

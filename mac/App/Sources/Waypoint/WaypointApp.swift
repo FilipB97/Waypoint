@@ -20,6 +20,7 @@ struct WaypointApp: App {
             CommandGroup(after: .newItem) {
                 Button(L("menu.import")) { model.importProfile() }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
+                Button(L("rdp.import")) { model.importRdp() }
             }
         }
     }

@@ -110,6 +110,26 @@ public enum Strings {
         "detail.password": "Hasło",
         "detail.password.saved": "zapisane w Pęku kluczy",
         "detail.password.forget": "Zapomnij",
+
+        "rdp.opened": "Otwarto w Windows App — hasło podaj tam (Windows App zapamięta je u siebie).",
+        "rdp.missing.title": "Brak aplikacji Windows App",
+        "rdp.missing.msg": "Na Macu połączenia RDP otwiera darmowa aplikacja Microsoft Windows App (dawniej Microsoft Remote Desktop). Zainstaluj ją z App Store i połącz ponownie.",
+        "rdp.missing.store": "Otwórz App Store",
+        "rdp.export": "Eksportuj plik .rdp…",
+        "rdp.import": "Importuj plik .rdp…",
+        "btn.close": "Zamknij",
+        "edit.sec.rdp": "Pulpit zdalny",
+        "f.rdp.clipboard": "Udostępniaj schowek",
+        "f.rdp.drives": "Udostępniaj dyski",
+        "f.rdp.admin": "Sesja administracyjna (/admin)",
+        "f.rdp.auth": "Certyfikat serwera",
+        "f.rdp.auth.warn": "Ostrzegaj (zalecane)",
+        "f.rdp.auth.require": "Wymagaj poprawnego",
+        "f.rdp.auth.none": "Nie sprawdzaj",
+        "f.rdp.gateway": "Brama RD",
+        "f.rdp.app": "RemoteApp",
+        "f.rdp.app.ph": "program albo ||alias (puste = pulpit)",
+        "f.rdp.hint": "Połączenie otwiera Microsoft Windows App. Te same ustawienia czyta wersja Windows.",
     ]
 
     public static let en: [String: String] = [
@@ -216,6 +236,26 @@ public enum Strings {
         "detail.password": "Password",
         "detail.password.saved": "saved in Keychain",
         "detail.password.forget": "Forget",
+
+        "rdp.opened": "Opened in Windows App — enter the password there (Windows App remembers it).",
+        "rdp.missing.title": "Windows App is not installed",
+        "rdp.missing.msg": "On a Mac, RDP connections are opened by the free Microsoft Windows App (formerly Microsoft Remote Desktop). Install it from the App Store and connect again.",
+        "rdp.missing.store": "Open App Store",
+        "rdp.export": "Export .rdp File…",
+        "rdp.import": "Import .rdp File…",
+        "btn.close": "Close",
+        "edit.sec.rdp": "Remote desktop",
+        "f.rdp.clipboard": "Share clipboard",
+        "f.rdp.drives": "Share drives",
+        "f.rdp.admin": "Administrative session (/admin)",
+        "f.rdp.auth": "Server certificate",
+        "f.rdp.auth.warn": "Warn (recommended)",
+        "f.rdp.auth.require": "Require valid",
+        "f.rdp.auth.none": "Do not check",
+        "f.rdp.gateway": "RD Gateway",
+        "f.rdp.app": "RemoteApp",
+        "f.rdp.app.ph": "program or ||alias (empty = desktop)",
+        "f.rdp.hint": "The connection opens in Microsoft Windows App. The Windows version reads the same settings.",
     ]
 
     /// Język interfejsu: polski, gdy jest pierwszym preferowanym językiem systemu, w przeciwnym razie angielski.

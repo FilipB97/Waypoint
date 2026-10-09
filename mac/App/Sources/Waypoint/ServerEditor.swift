@@ -61,6 +61,24 @@ struct ServerEditor: View {
                         Toggle(L("f.ftpanon"), isOn: $draft.ftpAnonymous)
                     }
                 }
+                if draft.proto == .rdp {
+                    Section {
+                        Toggle(L("f.rdp.clipboard"), isOn: $draft.rdpRedirectClipboard)
+                        Toggle(L("f.rdp.drives"), isOn: $draft.rdpRedirectDrives)
+                        Toggle(L("f.rdp.admin"), isOn: $draft.rdpAdminSession)
+                        Picker(L("f.rdp.auth"), selection: $draft.rdpAuthenticationLevel) {
+                            Text(L("f.rdp.auth.warn")).tag(2)
+                            Text(L("f.rdp.auth.require")).tag(1)
+                            Text(L("f.rdp.auth.none")).tag(0)
+                        }
+                        TextField(L("f.rdp.gateway"), text: $draft.rdpGatewayHostname, prompt: Text("rdg.example.com"))
+                        TextField(L("f.rdp.app"), text: $draft.rdpRemoteAppProgram, prompt: Text(L("f.rdp.app.ph")))
+                    } header: {
+                        Text(L("edit.sec.rdp"))
+                    } footer: {
+                        Text(L("f.rdp.hint")).foregroundStyle(.secondary)
+                    }
+                }
                 Section(L("edit.sec.org")) {
                     HStack {
                         TextField(L("f.group"), text: $draft.group, prompt: Text(L("f.group.ph")))
