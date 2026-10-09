@@ -29,6 +29,12 @@ final class AppModel {
     private var store: ServerStore { ServerStore(directory: dataDirectory) }
 
     var settings = MacSettings()
+    /// Współdzielone profile poświadczeń (`credprofiles.json`, jak w Windows).
+    var profiles: [CredentialProfile] = []
+    var profileManagerOpen = false
+    var generatorOpen = false
+    /// Serwer w arkuszu „Połącz jako…".
+    var connectAsTarget: Server?
     var snippets: [CommandSnippet] = []
     /// Paleta poleceń (⌘K) i jej tekst startowy (np. z „Szybkie połączenie…").
     var paletteOpen = false
@@ -51,6 +57,7 @@ final class AppModel {
     func load() {
         settings = MacSettings.load(from: dataDirectory)
         snippets = SnippetStore(directory: dataDirectory).load()
+        profiles = CredentialProfileStore(directory: dataDirectory).load()
         switch store.load() {
         case .ok(let list): servers = list
         case .missing: servers = []
@@ -138,7 +145,11 @@ final class AppModel {
 
     // MARK: Łączenie i karty
 
-    func connect(_ s: Server) {
+    /// Serwer z loginem z profilu poświadczeń (o ile wskazuje istniejący profil).
+    func resolved(_ s: Server) -> Server { Credentials.resolve(s, profiles: profiles) }
+
+    func connect(_ server: Server) {
+        let s = resolved(server)
         if s.proto == .ssh || s.proto == .rdp { noteConnected(s) }   // pliki — w openFiles
         switch s.proto {
         case .ssh?:
@@ -203,7 +214,8 @@ final class AppModel {
     }
 
     /// Panel plików SFTP — dla serwerów SFTP i SSH (ten sam login, osobne połączenie).
-    func openFiles(_ s: Server) {
+    func openFiles(_ server: Server) {
+        let s = resolved(server)
         noteConnected(s)
         let fs = FileSession(server: s)
         fs.onTrustCertificate = { [weak self] updated in

@@ -20,6 +20,9 @@ struct ServerDetail: View {
                     if server.proto == .ssh {
                         Button(L("act.files")) { model.openFiles(server) }
                     }
+                    if server.proto?.supportedOnMac == true {
+                        Button(L("act.connectas")) { model.connectAsTarget = server }
+                    }
                     Button(L("act.connect")) { model.connect(server) }
                         .buttonStyle(.borderedProminent)
                         .keyboardShortcut(.defaultAction)
@@ -35,16 +38,20 @@ struct ServerDetail: View {
                     row(L("f.protocol"), server.proto?.badge ?? server.protocolName)
                     row(L("f.host"), server.host)
                     row(L("f.port"), String(server.port))
-                    if !server.username.isEmpty { row(L("f.user"), server.username) }
-                    if !server.domain.isEmpty { row(L("f.domain"), server.domain) }
+                    if let p = model.profile(for: server) {
+                        row(L("f.profile"), "\(p.displayName) — \(p.login)")
+                    } else {
+                        if !server.username.isEmpty { row(L("f.user"), server.username) }
+                        if !server.domain.isEmpty { row(L("f.domain"), server.domain) }
+                    }
                     if !server.privateKeyPath.isEmpty { row(L("f.key"), server.privateKeyPath) }
                     if hasPassword {
                         GridRow {
                             Text(L("detail.password")).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
                             HStack {
-                                Text(L("detail.password.saved"))
+                                Text(L(model.profile(for: server) == nil ? "detail.password.saved" : "detail.password.profile"))
                                 Button(L("detail.password.forget")) {
-                                    Keychain.delete(for: server.id)
+                                    Keychain.delete(for: account)
                                     hasPassword = false
                                 }
                                 .buttonStyle(.link)
@@ -70,11 +77,15 @@ struct ServerDetail: View {
             .frame(maxWidth: 720, alignment: .leading)
         }
         .navigationTitle(server.displayName)
-        .task(id: server.id) { hasPassword = Keychain.hasPassword(for: server.id) }
+        .task(id: account) { hasPassword = Keychain.hasPassword(for: account) }
     }
 
+    /// Konto hasła w Pęku kluczy: profilu albo serwera.
+    private var account: String { model.resolved(server).keychainAccount }
+
     private var address: String {
-        let user = server.username.isEmpty ? "" : server.username + "@"
+        let u = model.resolved(server).username
+        let user = u.isEmpty ? "" : u + "@"
         let port = server.port == server.proto?.defaultPort ? "" : ":\(server.port)"
         return user + server.host + port
     }

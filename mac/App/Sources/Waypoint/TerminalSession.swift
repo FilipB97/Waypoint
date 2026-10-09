@@ -13,6 +13,24 @@ struct PendingPrompt: Identifiable {
     let answer: (String?, Bool) -> Void   // (odpowiedź albo nil = anuluj, zapisać w Pęku kluczy?)
 }
 
+/// Hasła podane w tej sesji aplikacji (pytanie w karcie, „Połącz jako…") — tylko w pamięci, do
+/// zamknięcia aplikacji, jak hasło sesji w Windows. Dzięki temu panel plików i edytor otwarte po
+/// zalogowaniu w terminalu nie pytają drugi raz. Klucz: konto hasła (serwer albo profil) + login.
+@MainActor
+enum SessionPasswords {
+    private static var store: [String: String] = [:]
+    private static func key(_ s: Server) -> String { s.keychainAccount + "\n" + s.username }
+    static func get(_ s: Server) -> String? { store[key(s)] }
+    static func set(_ password: String, for s: Server) { store[key(s)] = password }
+    static func clear(_ s: Server) { store.removeValue(forKey: key(s)) }
+
+    /// Opis wpisu w Pęku kluczy: profil albo serwer.
+    static func label(_ s: Server) -> String {
+        s.credentialProfileId.isEmpty ? "Waypoint — \(s.displayName)"
+            : "Waypoint — profil \(AppModel.shared.profiles.first { $0.id == s.credentialProfileId }?.displayName ?? s.username)"
+    }
+}
+
 /// Logowanie dla procesu ssh (terminal albo panel plików): kanał askpass, hasło z Pęku kluczy przy
 /// pierwszej prośbie, pytania dla użytkownika i zapis hasła. Jeden obiekt na jedno uruchomienie ssh.
 @MainActor
@@ -66,7 +84,7 @@ final class AuthBroker {
             // Pierwsza prośba o hasło: zapisane w Pęku kluczy idzie od razu, bez okna.
             if !storedPasswordTried {
                 storedPasswordTried = true
-                if let saved = Keychain.password(for: server.id) {
+                if let saved = SessionPasswords.get(server) ?? Keychain.password(for: server.keychainAccount) {
                     reply(saved)
                     return
                 }
@@ -77,8 +95,9 @@ final class AuthBroker {
             reply(value)
             guard let self else { return }
             self.prompt = nil
+            if kind == .password, let value, !value.isEmpty { SessionPasswords.set(value, for: self.server) }
             if save, kind == .password, let value, !value.isEmpty {
-                let ok = Keychain.save(value, for: self.server.id, label: "Waypoint — \(self.server.displayName)")
+                let ok = Keychain.save(value, for: self.server.keychainAccount, label: SessionPasswords.label(self.server))
                 self.notice = ok ? L("prompt.saved") : L("prompt.savefail")
             }
             self.onAnswered?()

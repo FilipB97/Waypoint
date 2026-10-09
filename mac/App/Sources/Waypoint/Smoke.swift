@@ -311,6 +311,66 @@ enum Smoke {
                                             : "FAIL: pulpit bez ostatnio używanych", out)
         ok = ok && model.recentServers.count >= 2
         model.setCollapsed("Produkcja", false)
+        // 9. Profil poświadczeń: serwer bez własnego hasła loguje się hasłem z profilu (Pęk kluczy, bez
+        //    pytania); potem „Połącz jako…" i zrzuty menedżera profili, generatora i edycji serwera.
+        if let id = env["WAYPOINT_SMOKE_PROMPT_SERVER"], let password = env["WAYPOINT_SMOKE_PASSWORD"],
+           let base = model.servers.first(where: { $0.id == id }) {
+            var p = CredentialProfile(name: "CI — konto testowe", username: base.username)
+            p.domain = ""
+            profileAccount = p.keychainAccount
+            model.saveProfiles([p], passwords: [p.id: password])
+            var srv = base
+            srv.username = "ktos-inny"   // login serwera ma zostać zastąpiony loginem z profilu
+            srv.credentialProfileId = p.id
+            model.commit(srv)
+            let resolved = model.resolved(srv)
+            let viaProfile = resolved.username == base.username && resolved.keychainAccount == p.keychainAccount
+            SessionPasswords.clear(resolved)   // hasło z kroku 3 nie może pomóc — ma przyjść z profilu
+            model.connect(srv)
+            let session = model.activeSession!.terminal!
+            _ = await waitFor(15, { session.auth.prompt != nil || shellReady(session) ? true : nil })
+            session.view.send(txt: "echo WAYPOINT_PROFILE_$((40+2))\r")
+            let done = await waitFor(15, { session.auth.prompt != nil ? false : (bufferText(session).contains("WAYPOINT_PROFILE_42") ? true : nil) })
+            if session.auth.prompt != nil { session.auth.prompt?.answer(nil, false) }
+            note(done == true && viaProfile ? "OK: logowanie loginem i hasłem z profilu poświadczeń"
+                                            : "FAIL: profil poświadczeń (login z profilu=\(viaProfile), wynik=\(String(describing: done)))", out)
+            ok = ok && done == true && viaProfile
+            try? await Task.sleep(for: .seconds(0.5))
+            snapshot(window, out.appendingPathComponent("17-profil-terminal.png"))
+
+            // „Połącz jako…" z jednorazowym hasłem.
+            model.connectAsTarget = srv
+            try? await Task.sleep(for: .seconds(1.2))
+            if let sheet = window.attachedSheet { snapshot(sheet, out.appendingPathComponent("18-polacz-jako.png")) }
+            model.connectAsTarget = nil
+            try? await Task.sleep(for: .seconds(0.8))
+            model.connectAs(srv, login: base.username, password: password, remember: false)
+            let asTerm = model.activeSession!.terminal!
+            _ = await waitFor(15, { asTerm.auth.prompt != nil || shellReady(asTerm) ? true : nil })
+            asTerm.view.send(txt: "echo WAYPOINT_AS_$((40+2))\r")
+            let asDone = await waitFor(15, { asTerm.auth.prompt != nil ? false : (bufferText(asTerm).contains("WAYPOINT_AS_42") ? true : nil) })
+            if asTerm.auth.prompt != nil { asTerm.auth.prompt?.answer(nil, false) }
+            note(asDone == true ? "OK: „Połącz jako…” z hasłem tylko dla tego połączenia" : "FAIL: „Połącz jako…”", out)
+            ok = ok && asDone == true
+
+            model.activeSessionID = nil
+            model.beginEdit(srv)
+            try? await Task.sleep(for: .seconds(1.2))
+            if let sheet = window.attachedSheet { snapshot(sheet, out.appendingPathComponent("19-edytor-profil.png")) }
+            model.editing = nil
+            try? await Task.sleep(for: .seconds(0.8))
+            model.profileManagerOpen = true
+            try? await Task.sleep(for: .seconds(1.2))
+            if let sheet = window.attachedSheet { snapshot(sheet, out.appendingPathComponent("20-profile.png")) }
+            model.profileManagerOpen = false
+            try? await Task.sleep(for: .seconds(0.8))
+            model.generatorOpen = true
+            try? await Task.sleep(for: .seconds(1.2))
+            if let sheet = window.attachedSheet { snapshot(sheet, out.appendingPathComponent("21-generator.png")) }
+            model.generatorOpen = false
+            try? await Task.sleep(for: .seconds(0.8))
+        }
+
         // Okno Ustawień (⌘,) — tylko zrzut.
         let before = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
         // Pozycja „Ustawienia…" (⌘,) z menu aplikacji — tak, jak kliknąłby użytkownik.
@@ -329,12 +389,19 @@ enum Smoke {
     }
 
     private static var keychainServerID: String?
+    private static var profileAccount: String?
 
     private static func finish(_ out: URL, ok: Bool) {
         if let id = keychainServerID { Keychain.delete(for: id) }
+        if let a = profileAccount { Keychain.delete(for: a) }
         try? (ok ? "OK" : "FAIL").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
         for s in AppModel.shared.sessions { s.close() }
         exit(ok ? 0 : 1)
+    }
+
+    static func shellReady(_ s: TerminalSession) -> Bool {
+        let t = bufferText(s)
+        return t.contains("$ ") || t.contains("% ")
     }
 
     static func bufferText(_ s: TerminalSession) -> String {

@@ -88,6 +88,9 @@ struct ServerSidebar: View {
     @ViewBuilder
     private func menu(for s: Server) -> some View {
         Button(L("act.connect")) { model.connect(s) }
+        if s.proto?.supportedOnMac == true {
+            Button(L("act.connectas")) { model.connectAsTarget = s }
+        }
         if s.proto == .ssh {
             Button(L("act.files")) { model.openFiles(s) }
         }

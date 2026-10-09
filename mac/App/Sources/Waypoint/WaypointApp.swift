@@ -34,6 +34,11 @@ struct WaypointApp: App {
                 Button(L("pal.open")) { model.openPalette() }
                     .keyboardShortcut("k")
             }
+            CommandMenu(L("menu.tools")) {
+                Button(L("cred.menu")) { model.profileManagerOpen = true }
+                Button(L("gen.menu")) { model.generatorOpen = true }
+                    .keyboardShortcut("g", modifiers: [.command, .option])
+            }
             CommandMenu(L("menu.terminal")) {
                 Button(L("snip.menu.pick")) { model.snippetPickerOpen = true }
                     .keyboardShortcut("k", modifiers: [.command, .shift])

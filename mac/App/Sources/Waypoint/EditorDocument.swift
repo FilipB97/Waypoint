@@ -221,7 +221,8 @@ final class EditorDocument: Identifiable {
         saving = true
         setStatus(L("edit.sudo.saving"))
         let srv = server
-        let pw = password ?? Keychain.password(for: srv.id + ".sudo") ?? Keychain.password(for: srv.id)
+        let pw = password ?? Keychain.password(for: srv.id + ".sudo")
+            ?? SessionPasswords.get(srv) ?? Keychain.password(for: srv.keychainAccount)
         let env = SshCommand.environment(base: ProcessInfo.processInfo.environment, extra: connection.auth.start())
             .reduce(into: [String: String]()) { d, kv in
                 if let i = kv.firstIndex(of: "=") { d[String(kv[..<i])] = String(kv[kv.index(after: i)...]) }

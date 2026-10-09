@@ -95,7 +95,7 @@ final class FileSession: Identifiable {
     /// pytamy w karcie tym samym oknem co przy SSH.
     private func connectFtp(retry: Bool = false) {
         if server.ftpAnonymous { startFtp(user: "anonymous", password: "waypoint@", save: false); return }
-        if !retry, let saved = Keychain.password(for: server.id) {
+        if !retry, let saved = SessionPasswords.get(server) ?? Keychain.password(for: server.keychainAccount) {
             startFtp(user: server.username, password: saved, save: false)
             return
         }
@@ -119,8 +119,9 @@ final class FileSession: Identifiable {
                 let list = try c.list(home)
                 DispatchQueue.main.async {
                     guard let self else { c.close(); return }
+                    if !srv.ftpAnonymous { SessionPasswords.set(password, for: srv) }
                     if save {
-                        let ok = Keychain.save(password, for: srv.id, label: "Waypoint — \(srv.displayName)")
+                        let ok = Keychain.save(password, for: srv.keychainAccount, label: SessionPasswords.label(srv))
                         self.auth.notice = ok ? L("prompt.saved") : L("prompt.savefail")
                     }
                     self.client = c
@@ -130,7 +131,10 @@ final class FileSession: Identifiable {
                     self.flushWaiting(true)
                 }
             } catch SftpError.authenticationFailed {
-                DispatchQueue.main.async { self?.connectFtp(retry: true) }
+                DispatchQueue.main.async {
+                    SessionPasswords.clear(srv)   // odrzucone — nie podsuwać go kolejnym połączeniom
+                    self?.connectFtp(retry: true)
+                }
             } catch {
                 DispatchQueue.main.async {
                     guard let self else { return }

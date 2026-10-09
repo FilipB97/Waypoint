@@ -42,9 +42,22 @@ struct ServerEditor: View {
                     TextField(L("f.port"), value: $draft.port, format: .number.grouping(.never))
                 }
                 Section(L("edit.sec.login")) {
-                    TextField(L("f.user"), text: $draft.username)
-                    if draft.proto == .rdp {
-                        TextField(L("f.domain"), text: $draft.domain)
+                    if !model.profiles.isEmpty || !draft.credentialProfileId.isEmpty {
+                        Picker(L("f.profile"), selection: $draft.credentialProfileId) {
+                            Text(L("f.profile.none")).tag("")
+                            ForEach(model.profiles) { p in Text("\(p.displayName) — \(p.login)").tag(p.id) }
+                            if !draft.credentialProfileId.isEmpty && model.profile(for: draft) == nil {
+                                Text(L("f.profile.missing")).tag(draft.credentialProfileId)
+                            }
+                        }
+                    }
+                    if let p = model.profile(for: draft) {
+                        LabeledContent(L("f.user"), value: p.login)
+                    } else {
+                        TextField(L("f.user"), text: $draft.username)
+                        if draft.proto == .rdp {
+                            TextField(L("f.domain"), text: $draft.domain)
+                        }
                     }
                     if draft.proto == .ssh || draft.proto == .sftp {
                         HStack {

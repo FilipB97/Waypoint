@@ -31,6 +31,11 @@ struct ContentView: View {
         .sheet(isPresented: $model.paletteOpen) { CommandPaletteView(seed: model.paletteSeed) }
         .sheet(isPresented: $model.snippetPickerOpen) { SnippetPickerView() }
         .sheet(isPresented: $model.snippetManagerOpen) { SnippetManagerView() }
+        .sheet(isPresented: $model.profileManagerOpen) { ProfileManagerView() }
+        .sheet(isPresented: $model.generatorOpen) { PasswordGeneratorView() }
+        .sheet(item: $model.connectAsTarget) { s in
+            ConnectAsView(server: s, login: model.resolved(s).loginText)
+        }
         .alert(model.alert?.title ?? "", isPresented: Binding(get: { model.alert != nil },
                                                                set: { if !$0 { model.alert = nil } }),
                presenting: model.alert) { a in

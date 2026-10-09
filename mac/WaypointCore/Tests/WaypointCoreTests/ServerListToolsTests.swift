@@ -147,3 +147,86 @@ private let SOCK_STREAM_VALUE = SOCK_STREAM.rawValue
 #else
 private let SOCK_STREAM_VALUE = SOCK_STREAM
 #endif
+
+@Suite struct CredentialsTests {
+    @Test func plikZWindows() throws {
+        let json = #"[{"Id":"p1","Name":"ACME admin","Domain":"ACME","Username":"admin","Nowe":1}]"#
+        let list = try CredentialProfileStore.decode(Data(json.utf8))
+        #expect(list.count == 1 && list[0].login == "ACME\\admin" && list[0].keychainAccount == "profile:p1")
+        let back = String(decoding: try JSONEncoder().encode(list), as: UTF8.self)
+        #expect(back.contains("\"Nowe\":1") && back.contains("\"Username\":\"admin\""))
+    }
+
+    @Test func zapisIOdczyt() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("wp-cred-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let st = CredentialProfileStore(directory: dir)
+        #expect(st.load().isEmpty)
+        try st.save([CredentialProfile(id: "a", name: "A", username: "u")])
+        try st.save([CredentialProfile(id: "a", name: "A", username: "u"), CredentialProfile(id: "b")])
+        #expect(st.load().map(\.id) == ["a", "b"])
+    }
+
+    @Test func rozwiazanieLoginu() {
+        var s = Server(id: "s1", name: "web", host: "h", username: "wlasny", proto: .rdp)
+        s.credentialProfileId = "p1"
+        let p = CredentialProfile(id: "p1", name: "ACME", domain: "ACME", username: "admin")
+        let r = Credentials.resolve(s, profiles: [p])
+        #expect(r.username == "admin" && r.domain == "ACME" && r.keychainAccount == "profile:p1")
+        // Usunięty profil → własny login serwera i własne hasło.
+        let gone = Credentials.resolve(s, profiles: [])
+        #expect(gone.username == "wlasny" && gone.keychainAccount == "s1")
+        let a = Credentials.connectAs(s, user: " root ", domain: "")
+        #expect(a.username == "root" && a.credentialProfileId.isEmpty && a.keychainAccount == "s1")
+        #expect(Credentials.splitLogin("FIRMA\\jan") == ("jan", "FIRMA"))
+        let d = Credentials.detach([s, Server(id: "x")], profileId: "p1")
+        #expect(d.changed == 1 && d.servers[0].credentialProfileId.isEmpty)
+        // Pole zapisuje się pod nazwą z Windows.
+        let json = String(decoding: try! ServerStore.encode([s]), as: UTF8.self)
+        #expect(json.contains("\"CredentialProfileId\" : \"p1\""))
+    }
+
+    @Test func scalanieImportu() {
+        let r = CredentialProfileStore.merge([CredentialProfile(id: "a", name: "stary")],
+                                             [CredentialProfile(id: "a", name: "nowy"), CredentialProfile(id: "b")])
+        #expect(r.added == 1 && r.updated == 1 && r.list[0].name == "nowy")
+    }
+}
+
+/// Te same własności co PasswordGenTests w Windows.
+@Suite struct PasswordGenTests {
+    @Test func dlugoscIKlasy() {
+        var o = PasswordGen.Options()
+        o.length = 4
+        for _ in 0..<200 {
+            let p = PasswordGen.password(o)
+            #expect(p.count == 4)
+            #expect(p.contains(where: PasswordGen.upper.contains) && p.contains(where: PasswordGen.lower.contains)
+                    && p.contains(where: PasswordGen.digits.contains) && p.contains(where: PasswordGen.symbols.contains))
+        }
+    }
+
+    @Test func bezMylacych() {
+        var o = PasswordGen.Options()
+        o.length = 200; o.excludeAmbiguous = true
+        #expect(!PasswordGen.password(o).contains(where: PasswordGen.ambiguous.contains))
+    }
+
+    @Test func brzegowe() {
+        var o = PasswordGen.Options()
+        o.upper = false; o.lower = false; o.digits = false; o.symbols = false
+        #expect(PasswordGen.password(o).isEmpty)
+        o.digits = true; o.length = 0
+        #expect(PasswordGen.password(o).isEmpty)
+        #expect(PasswordGen.hexToken(bytes: 16).count == 32)
+        #expect(PasswordGen.hexToken(bytes: 16).allSatisfy { "0123456789abcdef".contains($0) })
+        #expect(PasswordGen.guid().count == 36)
+        #expect(abs(PasswordGen.entropyBits(length: 10, poolSize: 64) - 60) < 0.001)
+        #expect(PasswordGen.entropyBits(length: 10, poolSize: 1) == 0)
+    }
+
+    @Test func rozne() {
+        let o = PasswordGen.Options()
+        #expect(Set((0..<50).map { _ in PasswordGen.password(o) }).count == 50)
+    }
+}
