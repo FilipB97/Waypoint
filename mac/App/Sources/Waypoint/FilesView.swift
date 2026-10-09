@@ -127,23 +127,23 @@ struct FilesView: View {
                     if e.attributes.isSymlink { Image(systemName: "arrow.turn.up.right").font(.caption2).foregroundStyle(.secondary) }
                 }
             }
-            .width(min: 180, ideal: 320)
+            .width(min: 140)   // bez „ideal" — nazwa bierze resztę szerokości
             TableColumn(L("files.col.size")) { e in
                 Text(e.isDirectory ? "—" : ByteCountFormatter.string(fromByteCount: Int64(e.size), countStyle: .file))
                     .foregroundStyle(.secondary).monospacedDigit()
             }
-            .width(min: 60, ideal: 90)
+            .width(min: 60, ideal: 76, max: 110)
             TableColumn(L("files.col.modified")) { e in
                 Text(e.attributes.modified.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "")
                     .foregroundStyle(.secondary)
             }
-            .width(min: 100, ideal: 150)
+            .width(min: 100, ideal: 150, max: 190)
             TableColumn(L("files.col.mode")) { e in
                 Text(e.attributes.mode.map { UnixPermissions.symbolic(Int($0), directory: e.attributes.isDirectory) } ?? "")
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
-            .width(min: 90, ideal: 110)
+            .width(min: 86, ideal: 96, max: 120)
         }
         .contextMenu(forSelectionType: SftpEntry.ID.self) { ids in
             let items = session.entries.filter { ids.contains($0.id) }
