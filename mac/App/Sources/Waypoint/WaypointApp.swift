@@ -24,6 +24,13 @@ struct WaypointApp: App {
                 Button(L("menu.import")) { model.importProfile() }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
                 Button(L("rdp.import")) { model.importRdp() }
+                Menu(L("migr.menu")) {
+                    ForEach(ExternalImport.Source.allCases, id: \.self) { src in
+                        Button(L("migr.item." + src.rawValue)) { model.importExternal(src) }
+                    }
+                }
+                Button(L("export.menu")) { model.exportProfile() }
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
                 Divider()
                 Button(L("pal.quickmenu")) { model.openPalette() }
                     .keyboardShortcut("n", modifiers: [.command, .shift])

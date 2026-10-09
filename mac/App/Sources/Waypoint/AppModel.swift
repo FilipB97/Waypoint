@@ -130,10 +130,14 @@ final class AppModel {
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            let imported = try ProfileImport.parse(Data(contentsOf: url))
+            let data = try Data(contentsOf: url)
+            let imported = try ProfileImport.parse(data)
             let r = ProfileImport.merge(existing: servers, imported: imported)
             servers = r.servers
             persist()
+            // Eksport z Maca niesie też profile poświadczeń (bez haseł).
+            let creds = ProfileExport.credentialProfiles(in: data)
+            if !creds.isEmpty { saveProfiles(CredentialProfileStore.merge(profiles, creds).list, passwords: [:]) }
             alert = AppAlert(title: L("import.done.title"),
                              message: String(format: L("import.done.msg"), r.added, r.updated))
         } catch ProfileImport.Failure.noServers {

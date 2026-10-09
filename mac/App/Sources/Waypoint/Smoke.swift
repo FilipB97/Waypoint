@@ -415,6 +415,34 @@ enum Smoke {
             try? await Task.sleep(for: .seconds(0.8))
         }
 
+        // 11. Przenosiny: import z FileZilli (z hasłem do Pęku kluczy) i eksport profilu.
+        let fzURL = FileManager.default.temporaryDirectory.appendingPathComponent("wp-smoke-sitemanager.xml")
+        let fzXML = """
+        <?xml version="1.0"?><FileZilla3><Servers><Folder>Klient X
+        <Server><Host>ftp.klient-x.example</Host><Port>21</Port><Protocol>0</Protocol><User>ania</User><Pass encoding="base64">c2VrcmV0</Pass><Logontype>1</Logontype><Name>FTP klienta</Name></Server>
+        <Server><Host>sftp.klient-x.example</Host><Port>22</Port><Protocol>1</Protocol><User>ania</User><Logontype>1</Logontype><Name>SFTP klienta</Name></Server>
+        </Folder></Servers></FileZilla3>
+        """
+        try? fzXML.write(to: fzURL, atomically: true, encoding: .utf8)
+        let before = model.servers.count
+        let imp = model.importExternal(.fileZilla, from: fzURL)
+        try? await Task.sleep(for: .seconds(1))
+        snapshot(window, out.appendingPathComponent("25-import-filezilla.png"))
+        model.alert = nil
+        let ftpID = model.servers.first { $0.host == "ftp.klient-x.example" }?.id
+        let pwOK = ftpID.map { Keychain.password(for: $0) == "sekret" } ?? false
+        model.servers.filter { $0.group == "Klient X" }.forEach { Keychain.delete(for: $0.id) }
+        let impOK = imp?.added == 2 && imp?.passwords == 1 && pwOK && model.servers.count == before + 2
+        note(impOK ? "OK: import z FileZilli — 2 serwery, hasło w Pęku kluczy" : "FAIL: import z FileZilli \(String(describing: imp)) hasło=\(pwOK)", out)
+        ok = ok && impOK
+        let exportURL = out.appendingPathComponent("profil-eksport.json")
+        let exported = model.exportProfile(to: exportURL)
+        let back = (try? ProfileImport.parse(Data(contentsOf: exportURL)))?.count ?? -1
+        let backProfiles = ((try? Data(contentsOf: exportURL)).map(ProfileExport.credentialProfiles(in:)) ?? []).count
+        let expOK = exported && back == model.servers.count && backProfiles == model.profiles.count
+        note(expOK ? "OK: eksport profilu — \(back) serwerów, profile poświadczeń: \(backProfiles)" : "FAIL: eksport profilu (\(back))", out)
+        ok = ok && expOK
+
         // Okno Ustawień (⌘,) — tylko zrzut.
         let before = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
         // Pozycja „Ustawienia…" (⌘,) z menu aplikacji — tak, jak kliknąłby użytkownik.

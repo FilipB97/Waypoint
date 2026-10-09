@@ -112,7 +112,9 @@ import Glibc
         var buf = [UInt8](repeating: 0, count: 16)
         let n = read(fd, &buf, 16)
         #expect(Array(buf[0..<max(0, n)]) == Array("AT\r".utf8))   // surowo — bez zamiany CR
+        #if !canImport(Darwin)   // macOS przyjmuje dowolną prędkość, Linux tylko stałe B…
         if case .failure = SerialPort.open(path, baud: 123) {} else { Issue.record("dziwna prędkość powinna być odrzucona na Linuksie") }
+        #endif
         if case .success = SerialPort.open("/dev/nie-ma-takiego", baud: 9600) { Issue.record("nieistniejące urządzenie") }
     }
 }

@@ -6,6 +6,7 @@ public enum FtpEncryption: Int, Sendable {
     case explicitTLS = 0   // FTP + AUTH TLS (FTPS jawne) — zalecane
     case implicitTLS = 1   // FTPS niejawne (zwykle port 990)
     case none = 2          // zwykły FTP — hasło idzie jawnym tekstem
+    case auto = 3          // FTPS, jeśli serwer umie, inaczej zwykły FTP (jak „Auto" w Windows / FileZilla)
 }
 
 /// Klient FTP/FTPS na libcurl (systemowa biblioteka macOS). libcurl, a nie własna implementacja, bo FTPS
@@ -102,6 +103,7 @@ public final class FtpClient: RemoteFS, @unchecked Sendable {
         case .explicitTLS: _ = wp_set_long(h, CURLOPT_USE_SSL, Int(CURLUSESSL_ALL.rawValue))
         case .implicitTLS: break   // ftps:// — TLS od pierwszego bajtu
         case .none: _ = wp_set_long(h, CURLOPT_USE_SSL, Int(CURLUSESSL_NONE.rawValue))
+        case .auto: _ = wp_set_long(h, CURLOPT_USE_SSL, Int(CURLUSESSL_TRY.rawValue))
         }
         if encryption != .none {
             // TLS 1.2: serwery FTPS wymagające wznowienia sesji TLS na kanale danych (vsftpd, proftpd)

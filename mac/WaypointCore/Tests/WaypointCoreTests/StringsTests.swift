@@ -33,6 +33,10 @@ import Testing
             }
         }
         #expect(used.count > 20, "nie znaleziono źródeł aplikacji pod \(root.path)")
+        // Klucze składane w kodzie (np. "migr.title." + źródło).
+        for src in ExternalImport.Source.allCases {
+            used.formUnion(["migr.title.", "migr.hint.", "migr.item."].map { $0 + src.rawValue })
+        }
         let missing = used.subtracting(Strings.pl.keys).sorted()
         #expect(missing.isEmpty, "brak tekstów: \(missing)")
     }
