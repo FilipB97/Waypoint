@@ -7,7 +7,10 @@ public enum ServerValidation {
         var out: [String] = []
         if s.host.trimmingCharacters(in: .whitespaces).isEmpty { out.append("edit.err.host") }
         else if s.host.contains(where: { $0.isWhitespace }) { out.append("edit.err.hostspace") }
-        if s.proto != .serial && !(1...65535).contains(s.port) { out.append("edit.err.port") }
+        else if s.proto == .http && ExternalLinks.webURL(s.host) == nil { out.append("edit.err.url") }
+        if !s.macAddress.isEmpty && WakeOnLan.parseMac(s.macAddress) == nil { out.append("edit.err.mac") }
+        if s.proto == .serial { if s.port <= 0 { out.append("edit.err.baud") } }
+        else if s.proto != .http && s.proto != .rest && !(1...65535).contains(s.port) { out.append("edit.err.port") }
         return out
     }
 

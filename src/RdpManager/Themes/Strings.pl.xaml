@@ -625,7 +625,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.edit.save">Zapisz</sys:String>
     <sys:String x:Key="S.edit.loading">Wczytywanie edytora…</sys:String>
     <sys:String x:Key="S.edit.nowebview">Nie udało się uruchomić edytora (WebView2).</sys:String>
-    <sys:String x:Key="S.edit.ro.text">Plik należy do {0} i ma uprawnienia {1} — najpewniej nie masz prawa zapisu, więc otwarto go tylko do odczytu. Zapis z sudo pojawi się w jednej z kolejnych wersji; do tego czasu możesz zapisać kopię na dysku.</sys:String>
+    <sys:String x:Key="S.edit.ro.text">Plik należy do {0} i ma uprawnienia {1} — Twoje konto najpewniej nie może go zmienić, więc otwarto go tylko do odczytu. Przy SSH możesz edytować i zapisywać przez sudo albo zapisać kopię na dysku.</sys:String>
     <sys:String x:Key="S.edit.ro.anyway">Edytuj mimo to</sys:String>
     <sys:String x:Key="S.edit.ro.status">Plik jest otwarty tylko do odczytu.</sys:String>
     <sys:String x:Key="S.edit.ro.short">tylko odczyt</sys:String>
@@ -644,7 +644,7 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.edit.fb.group">podmiana zmieniłaby grupę pliku</sys:String>
     <sys:String x:Key="S.edit.fb.rename">serwer nie obsługuje atomowej podmiany</sys:String>
     <sys:String x:Key="S.edit.fb.ftp">FTP nie ma atomowej podmiany</sys:String>
-    <sys:String x:Key="S.edit.fail.denied">Brak uprawnień do zapisu tego pliku. Plik na serwerze jest nietknięty, a Twoje zmiany zostały w edytorze.&#10;&#10;Zapis z sudo pojawi się w jednej z kolejnych wersji. Na razie możesz zapisać kopię na dysku.</sys:String>
+    <sys:String x:Key="S.edit.fail.denied">Brak uprawnień do zapisu tego pliku. Plik na serwerze jest nietknięty, a Twoje zmiany zostały w edytorze.&#10;&#10;Przy serwerach SSH możesz zapisać przez sudo. Możesz też zapisać kopię na dysku.</sys:String>
     <sys:String x:Key="S.edit.fail.safe">Nie udało się zapisać: {0}&#10;&#10;Plik na serwerze jest nietknięty. Twoje zmiany zostały w edytorze — możesz ponowić zapis (Ctrl+S).</sys:String>
     <sys:String x:Key="S.edit.fail.damaged">Zapis przerwał się w trakcie: {0}&#10;&#10;Plik na serwerze mógł zostać ucięty! Twoja pełna wersja jest w edytorze — ponów zapis (Ctrl+S), gdy połączenie wróci, albo zapisz kopię na dysku.</sys:String>
     <sys:String x:Key="S.edit.fail.short">Nie zapisano — plik na serwerze nietknięty.</sys:String>
@@ -655,6 +655,12 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.edit.reloading">Wczytywanie z serwera…</sys:String>
     <sys:String x:Key="S.edit.reloaded">Wczytano z serwera {0}.</sys:String>
     <sys:String x:Key="S.edit.close.ask">Zapisać zmiany w „{0}” przed zamknięciem?</sys:String>
+    <sys:String x:Key="S.edit.ro.sudo">Edytuj i zapisuj przez sudo</sys:String>
+    <sys:String x:Key="S.edit.sudo.ask">Twoje konto nie może zapisać tego pliku. Zapisać go jako root przez sudo? Właściciel i uprawnienia pliku zostaną zachowane.</sys:String>
+    <sys:String x:Key="S.edit.sudo.saving">Zapisywanie przez sudo…</sys:String>
+    <sys:String x:Key="S.edit.sudo.saved">Zapisano {0} przez sudo.</sys:String>
+    <sys:String x:Key="S.edit.sudo.saved.inplace">Zapisano {0} przez sudo — w miejscu (serwer bez GNU coreutils albo bez miejsca na plik obok).</sys:String>
+    <sys:String x:Key="S.edit.sudo.prompt">Hasło sudo (hasło Twojego konta na serwerze):</sys:String>
     <sys:String x:Key="S.edit.toobig">Plik jest za duży do edycji (limit {0}). Użyj podglądu albo pobierz go.</sys:String>
     <sys:String x:Key="S.edit.binary">To plik binarny — edytor obsługuje tylko pliki tekstowe. Użyj podglądu.</sys:String>
     <sys:String x:Key="S.edit.pos">Wiersz {0}, kol. {1}</sys:String>

@@ -57,6 +57,14 @@ namespace RdpManager.Tests
         }
 
         [Fact]
+        public void Compute_NameWithParentheses_KeepsWholeName()
+        {
+            var lines = new[] { "2026-07-03 09:00:00  CONNECTED    web (stary) (10.0.0.1:3389) user=a" };
+            var s = ConnectionStats.Compute(lines, new DateTime(2026, 7, 3, 12, 0, 0), 7);
+            Assert.Equal("web (stary)", s.TopServers[0].Key);
+        }
+
+        [Fact]
         public void Compute_IgnoresEventsOutsideDayWindow()
         {
             var now = new DateTime(2026, 7, 3, 12, 0, 0);

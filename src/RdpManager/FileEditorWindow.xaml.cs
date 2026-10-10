@@ -54,14 +54,20 @@ namespace RdpManager
         private CoreWebView2Environment _env;
         private TaskCompletionSource<string> _textRequest;
         private bool _ready, _dirty, _readOnly, _wrap, _saving, _forceClose, _closed;
+        private readonly bool _sudoCapable;   // SSH: zapis przez sudo możliwy
+        private bool _sudoMode;               // zapisy idą przez sudo (wybór użytkownika)
+        private string _sudoPassword;         // hasło sudo podane w tym oknie (tylko w pamięci)
         private int _ln = 1, _col = 1, _sel;
 
         private static string L(string key) => LocalizationManager.S(key);
 
-        private FileEditorWindow(Func<IRemoteFs> factory, string requestedPath, string name, RemoteFileInfo info, byte[] data, int? myUid)
+        private FileEditorWindow(Func<IRemoteFs> factory, string requestedPath, string name, RemoteFileInfo info, byte[] data, int? myUid,
+                                 bool sudoCapable)
         {
             InitializeComponent();
             _factory = factory;
+            _sudoCapable = sudoCapable;
+            SudoBtn.Visibility = sudoCapable ? Visibility.Visible : Visibility.Collapsed;
             _requestedPath = requestedPath;
             _name = name ?? "";
             _opened = info;
@@ -98,9 +104,9 @@ namespace RdpManager
         /// połączeniem, którym właśnie przegląda katalog, więc otwarcie nie czeka na nowe logowanie.
         /// </summary>
         public static void OpenFile(Window owner, Func<IRemoteFs> factory, string requestedPath, string name,
-                                    RemoteFileInfo info, byte[] data, int? myUid)
+                                    RemoteFileInfo info, byte[] data, int? myUid, bool sudoCapable = false)
         {
-            var w = new FileEditorWindow(factory, requestedPath, name, info, data, myUid);
+            var w = new FileEditorWindow(factory, requestedPath, name, info, data, myUid, sudoCapable);
             // Bez Owner: edytor ma własny przycisk na pasku zadań i nie wisi nad oknem głównym
             // (terminal obok ma być widoczny). Startową pozycję liczymy więc sami — środek właściciela.
             if (owner != null && owner.WindowState != WindowState.Minimized)
@@ -401,9 +407,23 @@ namespace RdpManager
                     return false;
                 }
 
+                if (_sudoMode) return await SudoSaveAsync(bytes, fmt, path);
+
                 // Metadane ŚWIEŻE (now), nie z otwarcia — jeśli ktoś w międzyczasie zmienił uprawnienia,
                 // zapis ma zachować obecne, a nie przywrócić stare.
-                var result = await Io(fs => fs.WriteFileSafe(bytes, now));
+                SafeWriteResult result;
+                try { result = await Io(fs => fs.WriteFileSafe(bytes, now)); }
+                catch (SafeWriteException ex) when (_sudoCapable && !ex.OriginalMayBeDamaged
+                                                    && ex.InnerException is SftpPermissionDeniedException)
+                {
+                    // Brak uprawnień, plik cały — propozycja zapisu przez sudo; „Nie" = zwykły komunikat błędu.
+                    if (MessageBox.Show(this, L("S.edit.sudo.ask"), L("S.edit.title"),
+                            MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                        throw;
+                    _sudoMode = true;
+                    UpdateInfo();
+                    return await SudoSaveAsync(bytes, fmt, path);
+                }
 
                 try { _opened = await Io(fs => fs.Stat(path)); }
                 catch { _opened = now; _opened.Length = bytes.Length; _opened.ModifiedUtc = DateTime.UtcNow; }
@@ -442,6 +462,47 @@ namespace RdpManager
                 _saving = false;
                 SaveBtn.IsEnabled = _ready && !_readOnly;
             }
+        }
+
+        /// <summary>
+        /// Zapis przez sudo. Hasło: podane wcześniej w tym oknie, a na początku hasło logowania sesji
+        /// (zwykle to samo); gdy sudo je odrzuci — pytanie. Plik na serwerze jest nietknięty przy odmowie.
+        /// </summary>
+        private async Task<bool> SudoSaveAsync(byte[] bytes, TextFileFormat fmt, string path)
+        {
+            SetStatus(L("S.edit.sudo.saving"));
+            string pw = _sudoPassword;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                try
+                {
+                    var outcome = await Io(fs => fs.WriteFileSudo(bytes, path, pw));
+                    if (pw != null) _sudoPassword = pw;
+                    try { _opened = await Io(fs => fs.Stat(path)); } catch { }
+                    _format = fmt;
+                    _savedBytes = bytes;
+                    Post(new { t = "saved" });
+                    string when = DateTime.Now.ToString("HH:mm:ss");
+                    SetStatus(string.Format(outcome == SudoOutcome.AtomicReplace ? L("S.edit.sudo.saved") : L("S.edit.sudo.saved.inplace"), when));
+                    UpdateInfo();
+                    return true;
+                }
+                catch (SudoException ex) when (ex.Denied)
+                {
+                    var dlg = new InputDialog(L("S.edit.title"), L("S.edit.sudo.prompt"), "", masked: true) { Owner = this };
+                    if (dlg.ShowDialog() != true) { SetStatus(L("S.edit.fail.short"), error: true); return false; }
+                    pw = dlg.Value;
+                }
+                catch (Exception ex)
+                {
+                    SetStatus(L("S.edit.fail.short"), error: true);
+                    MessageBox.Show(this, string.Format(L("S.edit.fail.safe"), ex.Message), L("S.edit.title"),
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+            }
+            SetStatus(L("S.edit.fail.short"), error: true);
+            return false;
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e) => await SaveTextAsync(await GetTextAsync());
@@ -499,6 +560,13 @@ namespace RdpManager
             Post(new { t = "wrap", v = _wrap });
         }
 
+        private void EditWithSudo_Click(object sender, RoutedEventArgs e)
+        {
+            _sudoMode = true;
+            EditAnyway_Click(sender, e);
+            UpdateInfo();
+        }
+
         private void EditAnyway_Click(object sender, RoutedEventArgs e)
         {
             _readOnly = false;
@@ -550,6 +618,7 @@ namespace RdpManager
             parts.Add(_format.EolLabel);
             parts.Add(_lang);
             if (_readOnly) parts.Add(L("S.edit.ro.short"));
+            if (_sudoMode) parts.Add("sudo");
             InfoText.Text = string.Join("  ·  ", parts);
         }
 

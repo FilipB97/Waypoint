@@ -115,7 +115,9 @@
   if (host) host.addEventListener('message', function (ev) { handle(ev.data); });
 
   // Pełny adres, nie „/vs": worker ładuje moduły przez fetch, a ten w workerze nie zna adresu bazowego.
-  require.config({ paths: { vs: location.origin + '/vs' } });
+  // protocol + host zamiast location.origin: na Macu strona jest pod własnym schematem (wpeditor://app),
+  // dla którego origin jest nieprzezroczysty („null"); w Windows (https) wynik jest ten sam.
+  require.config({ paths: { vs: location.protocol + '//' + location.host + '/vs' } });
   require(['vs/editor/editor.main'], function () { send({ t: 'ready' }); });
 })();
 </script>

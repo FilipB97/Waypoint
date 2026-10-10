@@ -16,13 +16,17 @@ BUILD="${BUILD:-1}"
 DIST="$MAC_DIR/dist"
 APP="$DIST/Waypoint.app"
 
-ARCHS=(--arch arm64 --arch x86_64)
-swift build --package-path "$MAC_DIR/App" -c release "${ARCHS[@]}"
-BIN_DIR="$(swift build --package-path "$MAC_DIR/App" -c release "${ARCHS[@]}" --show-bin-path)"
+# Każda architektura osobno, potem lipo. `--arch arm64 --arch x86_64` naraz przełącza SwiftPM na
+# system budowania Xcode, który nie obsługuje wtyczki budowania z pakietu SwiftTerm.
+BINS=()
+for TRIPLE in arm64-apple-macosx14.0 x86_64-apple-macosx14.0; do
+    swift build --package-path "$MAC_DIR/App" -c release --triple "$TRIPLE"
+    BINS+=("$(swift build --package-path "$MAC_DIR/App" -c release --triple "$TRIPLE" --show-bin-path)/Waypoint")
+done
 
 rm -rf "$DIST"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_DIR/Waypoint" "$APP/Contents/MacOS/Waypoint"
+lipo -create "${BINS[@]}" -output "$APP/Contents/MacOS/Waypoint"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -43,9 +47,18 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSHumanReadableCopyright</key><string>© 2026 Filip Benklewski · MIT</string>
+    <!-- Klient REST łączy się z dowolnymi adresami, także http:// (API w sieci firmowej, localhost). -->
+    <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
 </dict>
 </plist>
 PLIST
+
+# Edytor plików: Monaco (ta sama przycięta paczka co w wersji Windows) i ta sama strona edytora,
+# rozpakowane do zasobów — serwuje je WKURLSchemeHandler (EditorWebView.swift).
+REPO_DIR="$(cd "$MAC_DIR/.." && pwd)"
+mkdir -p "$APP/Contents/Resources/monaco"
+unzip -q "$REPO_DIR/src/RdpManager/Assets/monaco/monaco-0.52.2.zip" -d "$APP/Contents/Resources/monaco"
+cp "$REPO_DIR/src/RdpManager/Assets/editor/index.html" "$APP/Contents/Resources/monaco/index.html"
 
 # Ikona: zestaw rozmiarów z jednego PNG 1024 px (sips + iconutil są w każdym macOS).
 ICON_SRC="$MAC_DIR/Resources/AppIcon-1024.png"

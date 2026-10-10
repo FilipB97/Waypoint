@@ -55,3 +55,34 @@ public enum ProfileImport {
         return MergeResult(servers: result, added: added, updated: updated)
     }
 }
+
+/// Eksport profilu: ten sam kształt co „Eksportuj profil…" w Windows (`Version`, `Servers`), więc plik
+/// importuje się w obu wersjach. Bez `Settings` — import w Windows podmienia ustawienia tylko wtedy,
+/// gdy plik je ma, a ustawienia Maca nie pasują do Windows. Dodatkowo `CredentialProfiles` (Windows
+/// to pole pomija, Mac je wczytuje). Hasła nigdy nie trafiają do pliku.
+public enum ProfileExport {
+    private struct Profile: Codable {
+        var version = 1
+        var servers: [Server]
+        var credentialProfiles: [CredentialProfile]?
+        enum CodingKeys: String, CodingKey {
+            case version = "Version", servers = "Servers", credentialProfiles = "CredentialProfiles"
+        }
+    }
+
+    public static func serialize(servers: [Server], profiles: [CredentialProfile]) throws -> Data {
+        let e = JSONEncoder()
+        e.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        return try e.encode(Profile(servers: servers, credentialProfiles: profiles.isEmpty ? nil : profiles))
+    }
+
+    /// Profile poświadczeń z pliku profilu (eksport z Maca); pusta lista dla plików z Windows.
+    public static func credentialProfiles(in data: Data) -> [CredentialProfile] {
+        (try? JSONDecoder().decode(Profile.self, from: data))?.credentialProfiles ?? []
+    }
+
+    public static func fileName(date: Date = Date()) -> String {
+        let c = Calendar(identifier: .gregorian).dateComponents(in: .current, from: date)
+        return String(format: "waypoint-profil-%04d-%02d-%02d.json", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+}

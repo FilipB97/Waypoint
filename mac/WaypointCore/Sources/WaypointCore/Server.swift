@@ -37,8 +37,7 @@ public enum RemoteProtocol: String, CaseIterable, Sendable {
     /// z Windows niczego nie gubił), ale łączenie pojawi się w kolejnych krokach albo wcale (COM).
     public var supportedOnMac: Bool {
         switch self {
-        case .ssh, .sftp, .ftp, .rdp: return true
-        default: return false
+        case .ssh, .sftp, .ftp, .rdp, .telnet, .serial, .vnc, .http, .rest: return true
         }
     }
 }

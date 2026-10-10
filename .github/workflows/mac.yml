@@ -20,19 +20,40 @@ permissions:
 jobs:
   core-linux:
     # Logika (WaypointCore) nie zależy od AppKit — testy na Linuksie są szybkie i tanie.
-    runs-on: ubuntu-latest
-    container: swift:6.4-noble
+    # Toolchain z download.swift.org, nie obraz swift:… z Docker Hub — ten na runnerach GitHuba
+    # regularnie odbija się od limitu anonimowych pobrań („toomanyrequests").
+    runs-on: ubuntu-24.04
+    env:
+      SWIFT_DIR: swift-6.4.0-RELEASE-ubuntu24.04
     steps:
       - uses: actions/checkout@v7
-      - name: Testy WaypointCore
-        run: swift test --package-path mac/WaypointCore
+      - name: Toolchain Swift (pamięć podręczna)
+        id: swift-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/${{ env.SWIFT_DIR }}
+          key: ${{ env.SWIFT_DIR }}
+      - name: Pobranie Swift 6.4.0
+        if: steps.swift-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL "https://download.swift.org/swift-6.4.0-release/ubuntu2404/swift-6.4.0-RELEASE/$SWIFT_DIR.tar.gz" \
+            | tar xz -C "$RUNNER_TEMP"
+      - name: Biblioteki dla toolchainu
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq binutils libc6-dev libgcc-13-dev libstdc++-13-dev \
+            libcurl4-openssl-dev libxml2-dev libncurses-dev libedit2 libsqlite3-0 libz3-dev pkg-config zlib1g-dev >/dev/null
+      # Testy logiki + integracyjne na prawdziwych serwerach: OpenSSH (SFTP, bezpieczny zapis), vsftpd
+      # (FTP, FTPS jawne i niejawne) i sudo. Skrypt zakłada konta i serwery, więc jako root.
+      - name: Testy WaypointCore (z serwerami SFTP i FTP)
+        run: sudo env "PATH=$RUNNER_TEMP/$SWIFT_DIR/usr/bin:$PATH" bash mac/scripts/core-integration-linux.sh
 
   app-macos:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
       - name: Wersja Swift / Xcode
-        run: swift --version && xcodebuild -version
+        run: swift --version && xcodebuild -version && curl --version | head -1
       - name: Testy WaypointCore (macOS)
         run: swift test --package-path mac/WaypointCore
       - name: Budowa Waypoint.app
@@ -45,4 +66,14 @@ jobs:
         with:
           name: Waypoint-mac
           path: mac/dist/Waypoint-mac.zip
+          retention-days: 14
+      # Prawdziwe logowanie SSH z aplikacji (lokalny sshd, Pęk kluczy, pytanie o hasło) + zrzuty okna.
+      - name: Test end-to-end (SSH)
+        run: mac/scripts/smoke-test.sh
+      - name: Zrzuty ekranu i logi testu
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Waypoint-mac-smoke
+          path: mac/dist/smoke
           retention-days: 14

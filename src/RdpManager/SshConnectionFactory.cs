@@ -77,8 +77,16 @@ namespace RdpManager
             return c;
         }
 
+        /// <summary>Nowy, ROZŁĄCZONY klient SSH do poleceń (zapis przez sudo) — te same poświadczenia.</summary>
+        public SshClient NewSshClient()
+        {
+            var c = new SshClient(BuildConnectionInfo());
+            Attach(c);
+            return c;
+        }
+
         /// <summary>Zdalny system plików SFTP (dla panelu plików) — rozłączony; Connect łączy.</summary>
-        public IRemoteFs NewFs() => new SftpFs(NewSftpClient);
+        public IRemoteFs NewFs() => new SftpFs(NewSftpClient, NewSshClient, () => _password);
 
         // TOFU: znany klucz → OK; nowy → pytanie (domyślnie ufaj); ZMIENIONY → pytanie z ostrzeżeniem (domyślnie odrzuć).
         private void OnHostKey(object sender, HostKeyEventArgs e)

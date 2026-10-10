@@ -67,8 +67,12 @@
                 <ui:SymbolIcon Symbol="LockClosed24" Foreground="{DynamicResource TextPrim}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <TextBlock x:Name="BannerText" Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextPrim}"/>
-                <ui:Button x:Name="BannerBtn" Grid.Column="2" Appearance="Secondary" Margin="10,0,0,0"
-                           Click="EditAnyway_Click" Content="{DynamicResource S.edit.ro.anyway}"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <ui:Button x:Name="SudoBtn" Appearance="Secondary" Margin="10,0,0,0" Visibility="Collapsed"
+                               Click="EditWithSudo_Click" Content="{DynamicResource S.edit.ro.sudo}"/>
+                    <ui:Button x:Name="BannerBtn" Appearance="Secondary" Margin="8,0,0,0"
+                               Click="EditAnyway_Click" Content="{DynamicResource S.edit.ro.anyway}"/>
+                </StackPanel>
             </Grid>
         </Border>
 

@@ -38,13 +38,51 @@ struct ServerEditor: View {
                             Text(p.supportedOnMac ? p.badge : p.badge + " — " + L("f.protocol.win")).tag(p)
                         }
                     }
-                    TextField(L("f.host"), text: $draft.host, prompt: Text("example.com"))
-                    TextField(L("f.port"), value: $draft.port, format: .number.grouping(.never))
+                    switch draft.proto {
+                    case .serial?:
+                        HStack {
+                            TextField(L("f.device"), text: $draft.host, prompt: Text("/dev/cu.usbserial-0001"))
+                            Menu {
+                                let devs = SerialPort.devices()
+                                if devs.isEmpty { Text(L("f.device.none")) }
+                                ForEach(devs, id: \.self) { d in Button(d) { draft.host = d } }
+                            } label: { Image(systemName: "cable.connector") }
+                                .menuStyle(.borderlessButton)
+                                .fixedSize()
+                                .help(L("f.device.pick"))
+                        }
+                        Picker(L("f.baud"), selection: $draft.port) {
+                            ForEach(SerialPort.commonBauds, id: \.self) { Text(String($0)).tag($0) }
+                            if !SerialPort.commonBauds.contains(draft.port) { Text(String(draft.port)).tag(draft.port) }
+                        }
+                    case .http?:
+                        TextField(L("f.url"), text: $draft.host, prompt: Text("https://grafana.example.com"))
+                    case .rest?:
+                        TextField(L("rest.baseurl"), text: $draft.host, prompt: Text("https://api.example.com"))
+                    default:
+                        TextField(L("f.host"), text: $draft.host, prompt: Text("example.com"))
+                        TextField(L("f.port"), value: $draft.port, format: .number.grouping(.never))
+                        TextField(L("f.mac"), text: $draft.macAddress, prompt: Text(L("f.mac.ph")))
+                    }
                 }
+                if draft.usesCredentials {
                 Section(L("edit.sec.login")) {
-                    TextField(L("f.user"), text: $draft.username)
-                    if draft.proto == .rdp {
-                        TextField(L("f.domain"), text: $draft.domain)
+                    if !model.profiles.isEmpty || !draft.credentialProfileId.isEmpty {
+                        Picker(L("f.profile"), selection: $draft.credentialProfileId) {
+                            Text(L("f.profile.none")).tag("")
+                            ForEach(model.profiles) { p in Text("\(p.displayName) — \(p.login)").tag(p.id) }
+                            if !draft.credentialProfileId.isEmpty && model.profile(for: draft) == nil {
+                                Text(L("f.profile.missing")).tag(draft.credentialProfileId)
+                            }
+                        }
+                    }
+                    if let p = model.profile(for: draft) {
+                        LabeledContent(L("f.user"), value: p.login)
+                    } else {
+                        TextField(L("f.user"), text: $draft.username)
+                        if draft.proto == .rdp {
+                            TextField(L("f.domain"), text: $draft.domain)
+                        }
                     }
                     if draft.proto == .ssh || draft.proto == .sftp {
                         HStack {
@@ -57,8 +95,28 @@ struct ServerEditor: View {
                             Text(L("f.ftpenc.explicit")).tag(0)
                             Text(L("f.ftpenc.implicit")).tag(1)
                             Text(L("f.ftpenc.none")).tag(2)
+                            Text(L("f.ftpenc.auto")).tag(3)
                         }
                         Toggle(L("f.ftpanon"), isOn: $draft.ftpAnonymous)
+                    }
+                }
+                }
+                if draft.proto == .rdp {
+                    Section {
+                        Toggle(L("f.rdp.clipboard"), isOn: $draft.rdpRedirectClipboard)
+                        Toggle(L("f.rdp.drives"), isOn: $draft.rdpRedirectDrives)
+                        Toggle(L("f.rdp.admin"), isOn: $draft.rdpAdminSession)
+                        Picker(L("f.rdp.auth"), selection: $draft.rdpAuthenticationLevel) {
+                            Text(L("f.rdp.auth.warn")).tag(2)
+                            Text(L("f.rdp.auth.require")).tag(1)
+                            Text(L("f.rdp.auth.none")).tag(0)
+                        }
+                        TextField(L("f.rdp.gateway"), text: $draft.rdpGatewayHostname, prompt: Text("rdg.example.com"))
+                        TextField(L("f.rdp.app"), text: $draft.rdpRemoteAppProgram, prompt: Text(L("f.rdp.app.ph")))
+                    } header: {
+                        Text(L("edit.sec.rdp"))
+                    } footer: {
+                        Text(L("f.rdp.hint")).foregroundStyle(.secondary)
                     }
                 }
                 Section(L("edit.sec.org")) {

@@ -4,6 +4,7 @@ import WaypointCore
 struct ServerDetail: View {
     @Environment(AppModel.self) private var model
     let server: Server
+    @State private var hasPassword = false
 
     var body: some View {
         ScrollView {
@@ -16,6 +17,12 @@ struct ServerDetail: View {
                     }
                     Spacer()
                     Button(L("act.edit")) { model.beginEdit(server) }
+                    if server.proto == .ssh {
+                        Button(L("act.files")) { model.openFiles(server) }
+                    }
+                    if server.supportsConnectAs {
+                        Button(L("act.connectas")) { model.connectAsTarget = server }
+                    }
                     Button(L("act.connect")) { model.connect(server) }
                         .buttonStyle(.borderedProminent)
                         .keyboardShortcut(.defaultAction)
@@ -30,10 +37,29 @@ struct ServerDetail: View {
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 8) {
                     row(L("f.protocol"), server.proto?.badge ?? server.protocolName)
                     row(L("f.host"), server.host)
-                    row(L("f.port"), String(server.port))
-                    if !server.username.isEmpty { row(L("f.user"), server.username) }
-                    if !server.domain.isEmpty { row(L("f.domain"), server.domain) }
+                    if server.proto != .http && server.proto != .rest {
+                        row(server.proto == .serial ? L("f.baud") : L("f.port"), String(server.port))
+                    }
+                    if let p = model.profile(for: server) {
+                        row(L("f.profile"), "\(p.displayName) — \(p.login)")
+                    } else {
+                        if !server.username.isEmpty { row(L("f.user"), server.username) }
+                        if !server.domain.isEmpty { row(L("f.domain"), server.domain) }
+                    }
                     if !server.privateKeyPath.isEmpty { row(L("f.key"), server.privateKeyPath) }
+                    if hasPassword {
+                        GridRow {
+                            Text(L("detail.password")).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                            HStack {
+                                Text(L(model.profile(for: server) == nil ? "detail.password.saved" : "detail.password.profile"))
+                                Button(L("detail.password.forget")) {
+                                    Keychain.delete(for: account)
+                                    hasPassword = false
+                                }
+                                .buttonStyle(.link)
+                            }
+                        }
+                    }
                     if !server.group.isEmpty { row(L("f.group"), server.group) }
                     if !server.tags.isEmpty { row(L("f.tags"), server.tags.joined(separator: ", ")) }
                     if !server.tunnels.isEmpty { row(L("f.tunnels"), server.tunnels.joined(separator: "\n")) }
@@ -53,11 +79,17 @@ struct ServerDetail: View {
             .frame(maxWidth: 720, alignment: .leading)
         }
         .navigationTitle(server.displayName)
+        .task(id: account) { hasPassword = Keychain.hasPassword(for: account) }
     }
 
+    /// Konto hasła w Pęku kluczy: profilu albo serwera.
+    private var account: String { model.resolved(server).keychainAccount }
+
     private var address: String {
-        let user = server.username.isEmpty ? "" : server.username + "@"
-        let port = server.port == server.proto?.defaultPort ? "" : ":\(server.port)"
+        let u = model.resolved(server).username
+        let user = u.isEmpty ? "" : u + "@"
+        let port = server.port == server.proto?.defaultPort || server.proto == .http || server.proto == .rest
+            || server.proto == .serial ? "" : ":\(server.port)"
         return user + server.host + port
     }
 
