@@ -530,7 +530,11 @@ term.attachCustomKeyEventHandler(ev => {
     if (s) window.chrome.webview.postMessage({ t:'copy', d:s });
     return false;
   }
+  // Wklejanie idzie przez C# (schowek → term.paste). preventDefault jest konieczne: samo
+  // return false blokuje tylko obsługę klawisza w xterm.js, a przeglądarka i tak wysyła swoje
+  // zdarzenie paste do pola xterm.js — tekst wklejał się wtedy DWA razy.
   if (ev.ctrlKey && ev.shiftKey && ev.code === 'KeyV') {
+    ev.preventDefault();
     window.chrome.webview.postMessage({ t:'paste' });
     return false;
   }
@@ -541,6 +545,7 @@ term.attachCustomKeyEventHandler(ev => {
   // takiej ścieżki nie ma — i stąd cała ta różnica.
   if ((ev.ctrlKey && !ev.shiftKey && !ev.altKey && ev.code === 'KeyV') ||
       (ev.shiftKey && !ev.ctrlKey && !ev.altKey && ev.code === 'Insert')) {
+    ev.preventDefault();
     window.chrome.webview.postMessage({ t:'paste' });
     return false;
   }
