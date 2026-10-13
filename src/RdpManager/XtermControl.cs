@@ -531,8 +531,8 @@ term.attachCustomKeyEventHandler(ev => {
     return false;
   }
   // Wklejanie idzie przez C# (schowek → term.paste). preventDefault jest konieczne: samo
-  // „return false" blokuje tylko obsługę klawisza w xterm.js, a przeglądarka i tak wysyła swoje
-  // zdarzenie „paste" do pola xterm.js — tekst wklejał się wtedy DWA razy.
+  // return false blokuje tylko obsługę klawisza w xterm.js, a przeglądarka i tak wysyła swoje
+  // zdarzenie paste do pola xterm.js — tekst wklejał się wtedy DWA razy.
   if (ev.ctrlKey && ev.shiftKey && ev.code === 'KeyV') {
     ev.preventDefault();
     window.chrome.webview.postMessage({ t:'paste' });
