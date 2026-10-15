@@ -7,7 +7,8 @@ the official Microsoft ActiveX control (`mstscax`); SSH / Telnet / serial run on
 **xterm.js terminal**. It aims to be a comfortable daily replacement for `mstsc.exe`, PuTTY, WinSCP and
 Postman — and a modern alternative to dated connection managers.
 
-> Status: early but usable. See the [roadmap](docs/ROADMAP.md) for what's next.
+> Status: actively developed; Windows and **macOS** builds in every release. See the
+> [roadmap](docs/ROADMAP.md) for what's next.
 
 ## Download
 
