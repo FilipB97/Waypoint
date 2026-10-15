@@ -1,87 +1,69 @@
 # Roadmap
 
-Goal: a modern, lightweight **RDP + SSH** connection manager that replaces `mstsc.exe` day to
-day and gives users of dated managers (mRemoteNG, RDCMan) an easy way over. Order reflects
-current priorities.
+Goal: one modern app for every remote connection, replacing `mstsc.exe`, PuTTY, WinSCP and Postman
+day to day, with an easy way over from dated managers (mRemoteNG, RDCMan). Order reflects current
+priorities. Last updated for **v1.9.4**.
 
-## Done (v1.1)
+## Done
 
-- ✅ **Tabbed RDP sessions** — live control per tab, switch without disconnecting; duplicate
-  tab, middle-click close, drag-and-drop tab reorder, `Ctrl+Tab` / `Alt+1..9` / `Ctrl+W`.
-- ✅ **Embedded SSH terminal** — WebView2 + xterm.js (bundled offline) + SSH.NET; password
-  and private-key auth, keyboard-interactive; copy-on-select, `Ctrl+Shift+C/V`,
-  Ctrl+wheel font size; local status lines printed in-terminal.
-- ✅ **SSH host-key verification (TOFU)** — SHA256 fingerprint prompt on first connect,
-  stored in `known_hosts.json`; changed key = loud warning, defaults to reject.
-- ✅ **Migration imports** — mstsc registry history, `.rdp` files (multi-select),
-  **mRemoteNG** `confCons.xml` (RDP + SSH, folder paths preserved), **RDCMan** `.rdg`
-  (inherited credentials); dedup by host:port; passwords intentionally not migrated.
-- ✅ **Multi-monitor, mstsc-style** — standalone session windows (drag to a monitor, go
-  full screen; maximizing a session window = full screen); tear-off a tab ↔ dock back.
-- ✅ **Focus mode** — maximized main window hides all chrome except the tab strip;
-  window controls move onto the strip. Distinct from true full screen (F11).
-- ✅ **Full-screen** with auto-hiding, draggable, pinnable bar + "other connections" flyout.
-- ✅ **Dynamic resolution** — session = window/monitor physical pixels, DPI-safe; optionally a
-  fixed resolution, plus remote desktop scaling 50–200% (session DPI above 100%, oversized
-  desktop scaled into the window below it).
-- ✅ **Credentials in Windows Credential Manager** (DPAPI); prompt at connect; "connect as".
-- ✅ **Server tree** — groups, favorites (pinned), collapsible groups, one-click group
-  rename, search, drag-and-drop reorder, background reachability dots.
-- ✅ **Quick connect** (`host`, `host:port`, `user@host`, `DOMAIN\user@host`).
-- ✅ **Per-server RDP options** — port, domain/Windows account, redirections
-  (clipboard/drives/printers/audio), server-identity verification, RD Gateway.
-- ✅ **Themes** (dark / light / system) and **localization** (English / Polish), both
-  switchable live.
-- ✅ **Dashboard, recents, connection audit log, per-server TCP diagnostics, profile
-  export/import, UI zoom, single-instance guard.**
-- ✅ **Packaging** — self-contained single-file exe; GitHub Actions release workflow
-  (`v*` tag or manual dispatch); `scripts/release.ps1`.
+### Windows (v1.1 → v1.9.4)
+
+- ✅ **Protocols** — tabbed **RDP** (official `mstscax`, dynamic resolution, RD Gateway, RemoteApp,
+  `/admin` session), **SSH**, **Telnet** and **serial** on an embedded xterm.js terminal, **VNC**,
+  web links.
+- ✅ **SSH** — host-key verification (TOFU), key passphrase prompt, keyboard-interactive,
+  **port-forward tunnels**, search, links, **transcript** export, terminal themes that follow the app.
+- ✅ **Files** — dual-pane **SFTP / FTP / FTPS** manager (recursive transfers, preview, filter),
+  FTPS certificate pinning.
+- ✅ **File editor** — Monaco editor for remote files with safe atomic save (encoding, line endings,
+  owner/permissions preserved) and **save via sudo** for root-owned files.
+- ✅ **REST / API client** — collections and folders, environments with `{{variables}}`,
+  Bearer/Basic with inheritance, pre-request and test scripts (`pm.*`), history, **Postman import**.
+- ✅ **Organisation** — groups, tags, pinned servers, drag-and-drop, reachability dots
+  and latency, dashboard and recents, connection log, command palette, snippets.
+- ✅ **Credentials** — Windows Credential Manager, shared **credential profiles**, "connect as",
+  password generator.
+- ✅ **Migration** — imports from mstsc history, `.rdp`, **mRemoteNG**, **RDCMan**,
+  **Remote Desktop Manager**, **FileZilla**; profile export/import.
+- ✅ **App** — multi-monitor session windows, focus mode, full screen, themes and palette presets,
+  English / Polish, tray icon and global quick-connect hotkey, Wake-on-LAN, **auto-update**,
+  optional Authenticode signing in the release workflow.
+
+### macOS (new in v1.9.4)
+
+- ✅ **Native SwiftUI app** (`mac/`, universal Apple silicon + Intel, macOS 14+) with feature parity:
+  SSH (system `ssh`, Keychain), RDP via Microsoft Windows App, SFTP/FTP/FTPS with dual pane,
+  Monaco file editor with sudo save, Telnet/serial, VNC via Screen Sharing, REST client,
+  credential profiles, imports, themes. Shares data formats with Windows (`servers.json`,
+  `credprofiles.json`, `rest.json`, …) and ships as `Waypoint-<version>-mac.zip` in every release.
+  Details: [mac/README.md](../mac/README.md).
 
 ## Next
 
-- **Publish v1.1** — merge to `master`, tag, GitHub Release; then a **winget** manifest
-  (`winget install waypoint`) for low-friction installs.
-- **SSH tunnels / port forwarding** — local forwards per server (SSH.NET supports it);
-  the killer feature for "database behind a jump host" workflows.
-- **Auto-update** — check GitHub Releases, offer one-click update (important while unsigned).
-- **SSH key passphrase** + OpenSSH agent / Pageant support; import OpenSSH `known_hosts`
-  (see [REVIEW.md](REVIEW.md) D2).
-- **Code signing** — Azure Trusted Signing or SignPath (OSS) to remove the SmartScreen warning.
-- **Tray icon + global Quick Connect hotkey.**
-- **RDP admin/console session** (`/admin`) and **Wake-on-LAN**.
+- **Trusted code signing** — today the exe is optionally self-signed (SmartScreen still warns);
+  Azure Trusted Signing or SignPath (OSS). On macOS: Developer ID + notarization (no right-click →
+  Open on first launch).
+- **Connection diagnostics** — DNS, ping, port and protocol banner in one click (today: TCP port check).
+- **winget** manifest (`winget install waypoint`).
+- **ARM64 build** for Windows on ARM.
+- **Screen capture & recording** of sessions.
 
-## Hardening & polish (from the 2026-07 review)
+## Hardening & polish
 
-Full write-up: [REVIEW.md](REVIEW.md). IDs below refer to its findings. Everything in §7's
-suggested order is done except B1/B2 (see "Known issue" below) — landed across PRs #105–#112:
-security (H1/H2/M1/M4/L2), resilience (A1/A2/A3/A4/A5/A6/A7/A8/A9/A11 + C3 tests), accessibility
-(1.1/1.2/1.3/1.5/3.1), visual consistency (2.1/2.2/2.4/2.5/5.1/3.4), terminal theming (D5), and
-`SchemaVersion` on the JSON stores (B5).
+Full write-up: [REVIEW.md](REVIEW.md). The 2026-07 review items are done (PRs #105–#112), except:
 
-**Known issue — deliberately deferred**
-- **B1/B2** — `MainWindow.xaml.cs` is a god object (~5100 lines, ~200 methods: update/bootstrap,
-  tray/hotkey, fullscreen/focus state machines, the settings form, profile CRUD, the dashboard,
-  tree rendering + drag/drop, the tab strip/groups/split, lifecycle for 8 protocols,
-  reachability/WOL). Fix: extract `UpdateService`, `SessionManager`, `ServerTreeController`,
-  `FullscreenController`/`FocusModeController`, `TabStripController` (mechanical move-method, not
-  an MVVM rewrite). Deliberately not attempted in an assistant-driven session: it's a large,
-  structurally invasive change to the app's central file that can't be interactively regression-
-  tested here (WPF app, no way to click through it) — unit tests won't catch subtle bugs in event-
-  wiring order or closure captures. Do this very incrementally, one controller extraction per PR,
-  building after every step, with manual regression testing before each merge.
-
-**Not yet started (lower priority, deferred by design)**
-- **M2** — FTP "Auto" encryption mode silently allows plaintext fallback.
-- **M3** — REST variables have no "secret" type (plaintext in `rest.json`, same as scripts).
-- New features: SSH agent/Pageant support (D3), session logging (D4), REST per-request
-  timeout (D7).
+- **B1/B2 — `MainWindow.xaml.cs` size.** In progress: `SessionManager`, `ServerTreeController`,
+  `TabStripController`, `FullscreenController`, `UpdateService` and `ReachabilityService` are
+  extracted (≈5100 → ≈3400 lines). Continue one controller per PR with manual regression testing
+  ([REFACTOR-MAINWINDOW.md](REFACTOR-MAINWINDOW.md)).
+- **M2** — FTP "Auto" falls back to plaintext without a warning (also D6: one-time plaintext warning).
+- **M3** — REST variables have no "secret" type (plaintext in `environments.json`).
+- **D3** — SSH agent / Pageant support (macOS already uses the system agent via `ssh`).
+- **D4** — continuous session logging (today: manual transcript export) and configurable scrollback.
+- **D7** — per-request / per-collection REST timeout (today a fixed 60 s).
 
 ## Later / ideas
 
-- SFTP file browser attached to SSH sessions.
-- Sub-groups / tags in the server tree; shared credential profiles.
-- Light terminal theme following the app theme; terminal font/color settings
-  (see [REVIEW.md](REVIEW.md) D5).
-- Session logging (SSH transcript), configurable scrollback (see [REVIEW.md](REVIEW.md) D4).
 - Portable mode (settings next to the exe).
-- ARM64 build.
+- Tabs in multiple main windows on macOS (today: a tab can be moved to its own window).
+- Embedded VNC viewer on macOS (today: Screen Sharing).
