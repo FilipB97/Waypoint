@@ -910,6 +910,7 @@ namespace RdpManager.Controllers
             };
             s.Rdp.OnDisconnected += (o, a) =>
             {
+                if (_owner._closing) return;   // zamykanie aplikacji — UI zamykanego okna nie jest już przebudowywane (#238)
                 bool wasLoggedIn = s.LoggedIn;
                 // dedup B3/B4: Connected/LoggedIn=false + log DISCONNECTED/FAILED + wyczyść hasło (gdy nie zapisane w CredMan)
                 s.MarkDisconnected(wasLoggedIn);
@@ -927,6 +928,7 @@ namespace RdpManager.Controllers
             };
             s.Rdp.OnFatalError += (o, a) =>
             {
+                if (_owner._closing) return;
                 s.Connected = false;
                 _owner.SetTabStatus(s, SessionState.Failed);
                 SetSessionStatus(s, string.Format(L("S.st.fatal"), a.errorCode), StatusKind.Error);

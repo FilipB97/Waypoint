@@ -73,6 +73,8 @@ namespace RdpManager
         // kontroler czyta/pisze ją przez _owner._isFullscreen.
         internal Controllers.FullscreenController _fs;
         internal bool _isFullscreen;
+        /// <summary>Aplikacja się zamyka — zdarzenia RDP (OnDisconnected itp.) nie dotykają już UI (#238).</summary>
+        internal bool _closing;
 
         // Cykl życia sesji 8 protokołów (fabryka/łączenie/rozłączanie/kanwa/toolbar/split/tear-off/status)
         // — logika w Controllers/SessionManager (PR 6). Współdzielony rdzeń (_sessions/_active/panele) ZOSTAJE tu.
@@ -1073,17 +1075,17 @@ namespace RdpManager
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
             try { UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId); } catch { }
 
+            _closing = true;
             foreach (var s in _sessions)
             {
                 if (s.IsTerm) { try { s.Term.DisposeTerminal(); } catch { } continue; }
                 if (s.IsVnc) { var vc = s.Vnc.Client; s.Vnc.Client = null; try { vc?.Close(); } catch { } try { s.Host.Dispose(); } catch { } continue; }
                 try { s.Resizer?.Dispose(); } catch { }
-                try { s.Rdp.Disconnect(); } catch { }
-                try { s.Host.Dispose(); } catch { }
+                RdpShutdown.Release(s.Rdp);
             }
             foreach (var w in _sessionWindows.ToList())
             {
-                try { w.Close(); } catch { }
+                try { w.CloseForShutdown(); } catch { }
             }
         }
 

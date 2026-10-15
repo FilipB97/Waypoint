@@ -17,6 +17,19 @@ namespace RdpManager
         [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         private const int SW_RESTORE = 9;
 
+        protected override void OnExit(ExitEventArgs e)
+        {
+            base.OnExit(e);
+            // Po Exit WPF zamyka dispatcher i niszczy wtedy każdy HwndHost — także hosty kontrolek RDP,
+            // których celowo nie niszczyliśmy przy zamykaniu okna (#238): to ten sam Dispose, który potrafił
+            // zawiesić zamykanie. Ustawienia i lista serwerów są już zapisane, więc proces kończy się tu.
+            if (RdpShutdown.HostsLeftAlive)
+            {
+                Core.PersistLog.Write(SettingsStore.Dir, "exit: RDP hosts left to the OS");
+                Environment.Exit(e.ApplicationExitCode);
+            }
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
