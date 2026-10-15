@@ -44,6 +44,7 @@ namespace RdpManager
 
         // Pełny ekran (bezramkowy na bieżącym monitorze) + auto-chowany pasek.
         private bool _fs;
+        private bool _appExiting;   // zamykanie razem z aplikacją — bez niszczenia kontrolki ActiveX (#238)
         private bool _fsPinned;   // pasek „przypięty" — nie chowa się automatycznie
         private WindowStyle _pStyle; private ResizeMode _pResize; private bool _pTopmost;
         private double _pL, _pT, _pW, _pH, _fsBarOffset;
@@ -174,6 +175,7 @@ namespace RdpManager
             _rdp.OnLoginComplete += (o, a) => { _loggedIn = true; _resizer?.ApplyInitial(); try { _rdp.Focus(); } catch { } };
             _rdp.OnDisconnected += (o, a) =>
             {
+                if (_appExiting) return;   // okno się zamyka — nie przebudowuj nakładki (#238)
                 bool was = _loggedIn;
                 _session.Connected = false; _loggedIn = false;
                 string ext = ""; try { ext = ((uint)_rdp.ExtendedDisconnectReason).ToString(); } catch { }
@@ -366,10 +368,18 @@ namespace RdpManager
             else if (e.Key == Key.Escape && _fs) ExitFs();
         }
 
+        /// <summary>Zamknięcie okna w ramach wyjścia z aplikacji (MainWindow.Window_Closing).</summary>
+        internal void CloseForShutdown()
+        {
+            _appExiting = true;
+            Close();
+        }
+
         private void Window_Closing(object sender, CancelEventArgs e)
         {
             try { _fsPoll.Stop(); _fsDelay.Stop(); } catch { }   // Alt+F4 w pełnym ekranie nie woła ExitFs
             try { _resizer?.Dispose(); } catch { }
+            if (_appExiting) { RdpShutdown.Release(_rdp); return; }
             try { _rdp.Disconnect(); } catch { }
             try { _host.Dispose(); } catch { }
         }
