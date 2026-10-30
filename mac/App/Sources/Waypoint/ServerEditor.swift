@@ -9,6 +9,10 @@ struct ServerEditor: View {
     @State private var draft: Server
     @State private var tagsText: String
     @State private var tunnelsText: String
+    /// Nowe hasło do Pęku kluczy (puste = bez zmian). Importy z Windows nie niosą haseł — tu je uzupełnisz.
+    @State private var password = ""
+    @State private var hasPassword = false
+    @State private var profilesOpen = false
     private let isNew: Bool
 
     init(server: Server, isNew: Bool) {
@@ -66,8 +70,8 @@ struct ServerEditor: View {
                     }
                 }
                 if draft.usesCredentials {
-                Section(L("edit.sec.login")) {
-                    if !model.profiles.isEmpty || !draft.credentialProfileId.isEmpty {
+                Section {
+                    HStack {
                         Picker(L("f.profile"), selection: $draft.credentialProfileId) {
                             Text(L("f.profile.none")).tag("")
                             ForEach(model.profiles) { p in Text("\(p.displayName) — \(p.login)").tag(p.id) }
@@ -75,6 +79,9 @@ struct ServerEditor: View {
                                 Text(L("f.profile.missing")).tag(draft.credentialProfileId)
                             }
                         }
+                        // Nowy profil bez zamykania edytora (arkusz nad arkuszem).
+                        Button { profilesOpen = true } label: { Image(systemName: "person.badge.key") }
+                            .help(L("cred.menu"))
                     }
                     if let p = model.profile(for: draft) {
                         LabeledContent(L("f.user"), value: p.login)
@@ -82,6 +89,10 @@ struct ServerEditor: View {
                         TextField(L("f.user"), text: $draft.username)
                         if draft.proto == .rdp {
                             TextField(L("f.domain"), text: $draft.domain)
+                        }
+                        if draft.proto != .serial {
+                            SecureField(L("f.password"), text: $password,
+                                        prompt: Text(L(hasPassword ? "f.password.saved" : "f.password.none")))
                         }
                     }
                     if draft.proto == .ssh || draft.proto == .sftp {
@@ -99,6 +110,10 @@ struct ServerEditor: View {
                         }
                         Toggle(L("f.ftpanon"), isOn: $draft.ftpAnonymous)
                     }
+                } header: {
+                    Text(L("edit.sec.login"))
+                } footer: {
+                    Text(L(model.profile(for: draft) == nil ? "f.password.hint" : "f.profile.hint")).foregroundStyle(.secondary)
                 }
                 }
                 if draft.proto == .rdp {
@@ -165,13 +180,25 @@ struct ServerEditor: View {
                 Spacer()
                 Button(L("btn.cancel"), role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button(isNew ? L("btn.add") : L("btn.save")) { model.commit(result) }
+                Button(isNew ? L("btn.add") : L("btn.save")) { save() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!problems.isEmpty)
             }
             .padding(16)
         }
         .frame(width: 520, height: 600)
+        .sheet(isPresented: $profilesOpen) { ProfileManagerView() }
+        .task(id: draft.credentialProfileId) { hasPassword = Keychain.hasPassword(for: draft.keychainAccount) }
+    }
+
+    private func save() {
+        let s = result
+        // Hasło serwera (nie profilu — to ustawia się w profilu) prosto do Pęku kluczy.
+        if !password.isEmpty, s.credentialProfileId.isEmpty, s.usesCredentials {
+            _ = Keychain.save(password, for: s.keychainAccount, label: SessionPasswords.label(s))
+            SessionPasswords.clear(s)
+        }
+        model.commit(s)
     }
 
     /// Zmiana protokołu podmienia port tylko wtedy, gdy był domyślny dla poprzedniego —

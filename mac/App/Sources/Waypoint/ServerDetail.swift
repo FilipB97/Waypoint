@@ -59,6 +59,16 @@ struct ServerDetail: View {
                                 .buttonStyle(.link)
                             }
                         }
+                    } else if server.usesCredentials && server.proto != .serial && server.privateKeyPath.isEmpty {
+                        // Np. po imporcie z Windows — hasła nie przechodzą; jedno kliknięcie do edytora.
+                        GridRow {
+                            Text(L("detail.password")).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                            HStack {
+                                Text(L("f.password.none")).foregroundStyle(.secondary)
+                                Button(L("detail.password.set")) { model.beginEdit(server) }
+                                    .buttonStyle(.link)
+                            }
+                        }
                     }
                     if !server.group.isEmpty { row(L("f.group"), server.group) }
                     if !server.tags.isEmpty { row(L("f.tags"), server.tags.joined(separator: ", ")) }

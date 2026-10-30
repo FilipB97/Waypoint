@@ -36,6 +36,8 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | 1 | Szkielet, lista serwerów (grupy, przypięte, wyszukiwanie), edytor serwera, import z Windows, CI | ✅ |
 | 2 | Terminal SSH w kartach (SwiftTerm + systemowe `ssh`: agent, `~/.ssh/config`), hasła w Pęku kluczy | ✅ |
 | 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ✅ |
+| 3b | Wbudowany klient RDP (FreeRDP) w karcie: hasło z Pęku kluczy, certyfikat, rozdzielczość okna, klawiatura, mysz | ✅ |
+| 3c | RDP: schowek tekstowy, pełny ekran, dyski i dźwięk | w toku |
 | 4 | Panel plików SFTP: przeglądanie, wysyłanie/pobieranie (także folderów), zmiana nazwy, usuwanie | ✅ |
 | 4b | FTP/FTPS: ten sam panel plików i edytor | ✅ |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | ✅ |
@@ -55,7 +57,9 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | Kolejność serwerów przeciąganiem | ✅ | ✅ (w obrębie sekcji) |
 | Pulpit: liczniki, ostatnio używane, szybkie połączenie, aktywność | ✅ | ✅ (⇧⌘D, ikona domku) |
 | Dziennik połączeń (`connections.log`, ten sam format) | ✅ | ✅ |
-| Profile poświadczeń (ten sam `credprofiles.json`, hasło w Pęku kluczy) | ✅ | ✅ (Narzędzia → Profile poświadczeń) |
+| Profile poświadczeń (ten sam `credprofiles.json`, hasło w Pęku kluczy) | ✅ | ✅ (ikona klucza na pasku, Narzędzia → Profile poświadczeń, edytor serwera) |
+| Hasło serwera w edytorze | ✅ | ✅ (Pęk kluczy) |
+| RDP w karcie | mstscax | FreeRDP (albo Microsoft Windows App — wybór w edycji serwera) |
 | „Połącz jako…" | ✅ | ✅ |
 | Generator haseł / tokenów / GUID | ✅ | ✅ (⌥⌘G) |
 | Telnet, port szeregowy | ✅ | ✅ (terminal karty; `/dev/cu.*`) |
@@ -155,12 +159,26 @@ sprawdzona na OpenSSH), pliki roota tylko do odczytu. Edytor ma własne połącz
 
 ## RDP
 
-Na Macu nie ma kontrolki RDP do osadzenia w oknie (mstscax istnieje tylko w Windows), więc „Połącz"
-zapisuje plik `.rdp` (ten sam format i te same pola co w wersji Windows: przekierowania, sesja
-administracyjna, brama RD, RemoteApp) do `~/Library/Caches/Waypoint/rdp/` i otwiera go w darmowej
-aplikacji Microsoft **Windows App**. Gdy jej nie ma — komunikat z przyciskiem do App Store. Hasło
-do RDP podaje się w Windows App (ona je zapamiętuje). Plik `.rdp` z portalu firmy da się
-zaimportować (Plik → Importuj plik .rdp…), a serwer RDP wyeksportować do pliku.
+Domyślnie pulpit otwiera się **w karcie Waypointa** — wbudowany klient na FreeRDP 3
+(`WaypointCore/Sources/RdpShim` + `WaypointRDP`), statycznie wlinkowany (FreeRDP + OpenSSL budowane
+przez `scripts/build-freerdp.sh`, w CI z pamięci podręcznej). Hasło bierze z Pęku kluczy (serwera
+albo profilu poświadczeń) — pytanie nad kartą pojawia się tylko, gdy go brak albo serwer je odrzuci
+(z opcją zapisu). Certyfikat serwera: przy pierwszym połączeniu karta z odciskiem
+(„Zaufaj zawsze / Tylko teraz / Nie łącz"), zmiana certyfikatu to wyraźne ostrzeżenie; poziom
+„nie sprawdzaj" z edycji serwera pomija pytanie. Rozdzielczość sesji = rozmiar karty (Retina 200%),
+zmiana rozmiaru okna zmienia ją w locie (Display Control). Klawiatura: ⌘ działa jak Ctrl (⌘C/⌘V
+w sesji), polskie znaki z Option idą jako Unicode, Option z klawiszami specjalnymi = Alt; ⌘W, ⌘Q,
+⌘1–9 zostają przy Waypoincie. Brama RD (te same dane logowania), sesja administracyjna, schowek.
+
+W edycji serwera można zamiast tego wybrać Microsoft **Windows App**: „Połącz" zapisuje wtedy plik
+`.rdp` (te same pola co w wersji Windows) do `~/Library/Caches/Waypoint/rdp/` i otwiera go tam.
+RemoteApp zawsze idzie tą drogą. Plik `.rdp` z portalu firmy da się zaimportować
+(Plik → Importuj plik .rdp…), a serwer RDP wyeksportować do pliku.
+
+Testy: na Linuksie w CI prawdziwy serwer xrdp — połączenie, TLS, kolory pikseli, zmiana
+rozdzielczości, wejście, odrzucony certyfikat, zamknięty port. Budowa lokalna z klientem:
+`mac/scripts/build-freerdp.sh ~/freerdp && WAYPOINT_FREERDP=~/freerdp mac/scripts/bundle-app.sh`
+(bez `WAYPOINT_FREERDP` RDP otwiera Windows App).
 
 ## Test end-to-end w CI
 
