@@ -103,6 +103,10 @@ struct ServerEditor: View {
                 }
                 if draft.proto == .rdp {
                     Section {
+                        Picker(L("f.rdp.client"), selection: $draft.rdpUsesWindowsApp) {
+                            Text(L("f.rdp.client.builtin")).tag(false)
+                            Text(L("f.rdp.client.windowsapp")).tag(true)
+                        }
                         Toggle(L("f.rdp.clipboard"), isOn: $draft.rdpRedirectClipboard)
                         Toggle(L("f.rdp.drives"), isOn: $draft.rdpRedirectDrives)
                         Toggle(L("f.rdp.admin"), isOn: $draft.rdpAdminSession)

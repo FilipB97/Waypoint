@@ -16,7 +16,8 @@ if let p = freerdp {
     rdpLink = [
         .unsafeFlags(["-L\(p)/lib"]),
         .linkedLibrary("freerdp-client3"), .linkedLibrary("freerdp3"), .linkedLibrary("winpr3"),
-        // Statyczna budowa na macOS: OpenSSL i zlib oraz frameworki systemowe, których używa WinPR.
+        // Statyczna budowa (build-freerdp.sh, macOS): OpenSSL z tej samej instalacji i frameworki
+        // systemowe, których używa WinPR. Na Linuksie biblioteki dzielone same ciągną zależności.
         .linkedLibrary("ssl", .when(platforms: [.macOS])), .linkedLibrary("crypto", .when(platforms: [.macOS])),
         .linkedLibrary("z", .when(platforms: [.macOS])),
         .linkedFramework("CoreFoundation", .when(platforms: [.macOS])),
