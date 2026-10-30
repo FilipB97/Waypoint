@@ -1,6 +1,7 @@
 import AppKit
 import SwiftTerm
 import WaypointCore
+import WaypointRDP
 
 /// Test dymny dla CI (runner macOS nie ma człowieka, który by kliknął): przy WAYPOINT_SMOKE_DIR
 /// aplikacja sama przechodzi przez główne ekrany, łączy się z lokalnym sshd i zapisuje zrzuty okna,
@@ -259,13 +260,16 @@ enum Smoke {
             }
         }
 
-        // 4. RDP: plik .rdp powstaje, a bez Windows App (runner jej nie ma) — komunikat z App Store.
+        // 4. RDP przez Windows App (ustawienie serwera): plik .rdp powstaje, a bez Windows App (runner
+        //    jej nie ma) — komunikat z App Store. Potem wbudowany klient: karta, pytanie o hasło, błąd połączenia.
         if let rdp = model.servers.first(where: { $0.proto == .rdp }) {
             model.activeSessionID = nil
             model.selection = rdp.id
             try? await Task.sleep(for: .seconds(0.8))
             snapshot(window, out.appendingPathComponent("07-rdp-szczegoly.png"))
-            model.connect(rdp)
+            var viaApp = rdp
+            viaApp.rdpUsesWindowsApp = true
+            model.connect(viaApp)
             let shown = await waitFor(5, { model.alert != nil || model.toast != nil ? true : nil })
             try? await Task.sleep(for: .seconds(0.8))
             snapshot(window, out.appendingPathComponent("08-rdp-polacz.png"))
@@ -277,6 +281,34 @@ enum Smoke {
                                          : "FAIL: RDP plik=\(fileOK) komunikat=\(shown == true)", out)
             ok = ok && fileOK && shown == true
             model.alert = nil
+
+            // Wbudowany klient (FreeRDP): nikt nie słucha na porcie 1 — karta, pytanie o hasło, potem błąd.
+            var local = rdp
+            local.host = "127.0.0.1"
+            local.port = 1
+            if RdpConnection.isAvailable {
+                model.connect(local)
+                let tab = await waitFor(5, { model.sessions.last?.rdp })
+                let asked = await waitFor(8, { tab?.prompt })
+                try? await Task.sleep(for: .seconds(0.6))
+                snapshot(window, out.appendingPathComponent("08b-rdp-haslo.png"))
+                asked?.answer("nie-to-haslo", false)
+                let ended = await waitFor(20, { () -> String? in
+                    if case .ended(let m)? = tab?.state { return m ?? "" }
+                    return nil
+                })
+                try? await Task.sleep(for: .seconds(0.6))
+                snapshot(window, out.appendingPathComponent("08c-rdp-blad.png"))
+                let rdpOK = tab != nil && asked != nil && ended?.isEmpty == false
+                note(rdpOK ? "OK: RDP wbudowany — karta, pytanie o hasło, błąd: \(ended ?? "")"
+                           : "FAIL: RDP wbudowany karta=\(tab != nil) hasło=\(asked != nil) koniec=\(ended ?? "brak")", out)
+                ok = ok && rdpOK
+                if let t = model.sessions.last, t.rdp != nil { model.close(t, confirm: false) }
+            } else {
+                note("FAIL: RDP — aplikacja zbudowana bez FreeRDP (WAYPOINT_FREERDP)", out)
+                ok = false
+            }
+
             if let s = model.servers.first(where: { $0.proto == .rdp }) {
                 model.beginEdit(s)
                 try? await Task.sleep(for: .seconds(1.2))

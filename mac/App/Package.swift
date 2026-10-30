@@ -16,6 +16,7 @@ let package = Package(
             name: "Waypoint",
             dependencies: [
                 .product(name: "WaypointCore", package: "WaypointCore"),
+                .product(name: "WaypointRDP", package: "WaypointCore"),
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
             ]
         )

@@ -82,6 +82,7 @@ struct SessionContent: View {
         case .terminal(let t): SessionContainer(session: t)
         case .files(let f): FilesView(session: f)
         case .rest(let r): RestView(session: r)
+        case .rdp(let d): RdpSessionView(session: d)
         }
     }
 }

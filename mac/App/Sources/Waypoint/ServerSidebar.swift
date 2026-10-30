@@ -52,6 +52,14 @@ struct ServerSidebar: View {
                 Button { model.beginNew() } label: { Label(L("menu.newserver"), systemImage: "plus") }
                     .help(L("menu.newserver"))
             }
+            ToolbarItem {
+                Button { model.profileManagerOpen = true } label: { Label(L("cred.menu"), systemImage: "person.badge.key") }
+                    .help(L("cred.menu"))
+            }
+            ToolbarItem {
+                SettingsLink { Label(L("toolbar.settings"), systemImage: "gearshape") }
+                    .help(L("toolbar.settings") + " (⌘,)")
+            }
         }
         .confirmationDialog(L("del.title"), isPresented: Binding(get: { pendingDelete != nil },
                                                                  set: { if !$0 { pendingDelete = nil } }),

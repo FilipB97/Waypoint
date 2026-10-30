@@ -54,6 +54,19 @@ jobs:
       - uses: actions/checkout@v7
       - name: Wersja Swift / Xcode
         run: swift --version && xcodebuild -version && curl --version | head -1
+      # Wbudowany klient RDP: statyczne FreeRDP + OpenSSL (uniwersalne arm64/x86_64), budowane raz
+      # na wersję skryptu — potem z pamięci podręcznej.
+      - name: FreeRDP (pamięć podręczna)
+        id: freerdp-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/freerdp
+          key: freerdp-macos-${{ hashFiles('mac/scripts/build-freerdp.sh') }}
+      - name: Budowa FreeRDP
+        if: steps.freerdp-cache.outputs.cache-hit != 'true'
+        run: mac/scripts/build-freerdp.sh "$RUNNER_TEMP/freerdp"
+      - name: Ścieżka FreeRDP
+        run: echo "WAYPOINT_FREERDP=$RUNNER_TEMP/freerdp" >> "$GITHUB_ENV"
       - name: Testy WaypointCore (macOS)
         run: swift test --package-path mac/WaypointCore
       - name: Budowa Waypoint.app

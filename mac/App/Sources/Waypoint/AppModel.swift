@@ -2,6 +2,7 @@ import AppKit
 import Observation
 import UniformTypeIdentifiers
 import WaypointCore
+import WaypointRDP
 
 /// Stan aplikacji: lista serwerów, wyszukiwanie, zaznaczenie, edytowany wpis i komunikaty.
 /// Każda zmiana listy jest od razu zapisywana na dysk (jak w wersji Windows).
@@ -183,18 +184,14 @@ final class AppModel {
         case .sftp?, .ftp?:
             openFiles(s)
         case .rdp?:
-            RdpLauncher.open(s) { [weak self] outcome in
-                guard let self else { return }
-                switch outcome {
-                case .opened:
-                    self.toast = L("rdp.opened")
-                case .appMissing:
-                    self.alert = AppAlert(title: L("rdp.missing.title"), message: L("rdp.missing.msg"),
-                                          actionTitle: L("rdp.missing.store"),
-                                          action: { NSWorkspace.shared.open(RdpLauncher.appStoreURL) })
-                case .failed(let msg):
-                    self.alert = AppAlert(title: s.displayName, message: msg)
-                }
+            // Wbudowany klient (FreeRDP) w karcie; Windows App, gdy serwer tak ustawiono albo to RemoteApp
+            // (pojedynczy program — tego wbudowany klient jeszcze nie pokazuje).
+            if RdpConnection.isAvailable && !s.rdpUsesWindowsApp && s.rdpRemoteAppProgram.isEmpty {
+                let d = RdpSession(server: s)
+                d.onEnded = { [weak self] failed in self?.logConnection(failed ? "FAILED" : "DISCONNECTED", s) }
+                add(.rdp(d))
+            } else {
+                openInWindowsApp(s)
             }
         case .rest?:
             // Jedna konsola na kolekcję — druga karta tej samej kolekcji nadpisywałaby zmiany pierwszej.
@@ -206,6 +203,23 @@ final class AppModel {
             openExternal(ExternalLinks.webURL(s.host), for: s, opened: nil)
         default:
             alert = AppAlert(title: s.displayName, message: L("connect.notyet"))
+        }
+    }
+
+    /// Microsoft Windows App przez plik .rdp (hasło podaje się tam).
+    private func openInWindowsApp(_ s: Server) {
+        RdpLauncher.open(s) { [weak self] outcome in
+            guard let self else { return }
+            switch outcome {
+            case .opened:
+                self.toast = L("rdp.opened")
+            case .appMissing:
+                self.alert = AppAlert(title: L("rdp.missing.title"), message: L("rdp.missing.msg"),
+                                      actionTitle: L("rdp.missing.store"),
+                                      action: { NSWorkspace.shared.open(RdpLauncher.appStoreURL) })
+            case .failed(let msg):
+                self.alert = AppAlert(title: s.displayName, message: msg)
+            }
         }
     }
 
@@ -379,6 +393,7 @@ final class AppModel {
         case .terminal(let t): connect(t.server)
         case .files(let f): openFiles(f.server)
         case .rest(let r): connect(r.server)
+        case .rdp(let d): connect(d.server)
         }
     }
 

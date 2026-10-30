@@ -3,7 +3,8 @@
 # ikona z mac/Resources/AppIcon-1024.png i podpis ad-hoc. Wynik: mac/dist/Waypoint.app i Waypoint-mac.zip.
 #
 # Użycie (na macOS z Xcode / Command Line Tools):   mac/scripts/bundle-app.sh
-# Zmienne: VERSION (np. 0.1.0), BUILD (numer kompilacji).
+# Zmienne: VERSION (np. 0.1.0), BUILD (numer kompilacji), WAYPOINT_FREERDP (prefiks z
+# scripts/build-freerdp.sh — wbudowany klient RDP; bez niej RDP otwiera Microsoft Windows App).
 #
 # Podpis ad-hoc wystarcza do uruchomienia na własnym Macu. Pobrana paczka bez podpisu Developer ID
 # i notaryzacji jest blokowana przez Gatekeeper — pierwsze uruchomienie: prawy klik → Otwórz
