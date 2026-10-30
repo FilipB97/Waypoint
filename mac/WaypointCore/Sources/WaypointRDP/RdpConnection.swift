@@ -67,6 +67,8 @@ public final class RdpConnection: @unchecked Sendable {
     public var onVerifyCertificate: (@Sendable (Certificate) -> CertificateAnswer)?
     /// Brak lub odrzucone hasło: nowe dane albo nil = przerwij.
     public var onAuthenticate: (@Sendable (_ gateway: Bool, _ username: String, _ domain: String) -> Credentials?)?
+    /// Tekst skopiowany w sesji (końce linii już jako \n). Wątek kanału.
+    public var onClipboardText: (@Sendable (String) -> Void)?
 
     private var handle: OpaquePointer?
     private let lock = NSLock()
@@ -158,6 +160,10 @@ public final class RdpConnection: @unchecked Sendable {
             put(cred.domain, dBuf, dLen)
             return 1
         }
+        cb.clipboard_text = { user, text in
+            guard let text else { return }
+            RdpConnection.from(user).onClipboardText?(String(cString: text).replacingOccurrences(of: "\r\n", with: "\n"))
+        }
         let h = wp_rdp_start(&cfg, &cb)
         lock.lock(); handle = h; lock.unlock()
         return h != nil
@@ -196,6 +202,13 @@ public final class RdpConnection: @unchecked Sendable {
         if let h = current { wp_rdp_resize(h, Int32(width), Int32(height), Int32(scalePercent)) }
     }
     public func syncLocks(_ flags: UInt32) { if let h = current { wp_rdp_sync_locks(h, flags) } }
+    /// Tekst ze schowka Maca dla sesji (nil = pusty schowek / nie tekst). Końce linii → \r\n jak w Windows.
+    public func setClipboardText(_ text: String?) {
+        guard let h = current else { return }
+        guard let text, !text.isEmpty else { wp_rdp_set_clipboard_text(h, nil); return }
+        let crlf = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\n", with: "\r\n")
+        wp_rdp_set_clipboard_text(h, crlf)
+    }
 }
 
 /// Flagi myszy i klawiatury RDP (wartości z protokołu, jak PTR_FLAGS_* w FreeRDP).

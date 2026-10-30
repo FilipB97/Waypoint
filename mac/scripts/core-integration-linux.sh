@@ -7,7 +7,7 @@ W="$(mktemp -d /tmp/wpint.XXXX)"
 
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server openssh-client vsftpd libcurl4-openssl-dev openssl sudo \
-    xrdp xorgxrdp x11-xserver-utils freerdp3-dev >/dev/null
+    xrdp xorgxrdp x11-xserver-utils xclip freerdp3-dev >/dev/null
 
 PW="Wp-$(openssl rand -hex 6)"
 useradd -m -s /bin/bash wpt
@@ -61,7 +61,16 @@ sleep 1
 # --- xrdp na 127.0.0.1:3389: sesja Xorg z jednolitym tłem #336699 (test sprawdza kolory pikseli)
 useradd -m -s /bin/bash wprdp
 echo "wprdp:$PW" | chpasswd
-printf '#!/bin/sh\nxsetroot -solid "#336699"\nexec sleep infinity\n' > /etc/xrdp/startwm.sh
+# Echo schowka dla testu: „WP:x" → „ECHO:x" (serwer pobiera tekst klienta, potem ogłasza własny).
+cat > /etc/xrdp/startwm.sh <<'WM'
+#!/bin/sh
+xsetroot -solid "#336699"
+while true; do
+  t="$(xclip -o -selection clipboard 2>/dev/null)"
+  case "$t" in WP:*) printf 'ECHO:%s' "${t#WP:}" | xclip -i -selection clipboard ;; esac
+  sleep 0.3
+done
+WM
 chmod 755 /etc/xrdp/startwm.sh
 systemctl stop xrdp xrdp-sesman 2>/dev/null || true
 /usr/sbin/xrdp-sesman && /usr/sbin/xrdp
@@ -71,6 +80,7 @@ export WAYPOINT_FREERDP=/usr
 export WAYPOINT_RDP_TEST="127.0.0.1:3389:wprdp:$PW"
 export WAYPOINT_RDP_TEST_COLOR=336699
 export WAYPOINT_RDP_TEST_RESIZE=1
+export WAYPOINT_RDP_TEST_CLIPBOARD=1
 export WAYPOINT_SFTP_TEST="127.0.0.1:2222:wpt:$W/clientkey:$W/known_hosts"
 export WAYPOINT_SUDO_PASSWORD="$PW"
 export WAYPOINT_FTP_TEST="127.0.0.1:wpt:$PW:2122:2121:2990"

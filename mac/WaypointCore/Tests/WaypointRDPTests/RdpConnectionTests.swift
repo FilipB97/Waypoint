@@ -18,6 +18,7 @@ final class Recorder: @unchecked Sendable {
     var frames = 0
     var sizes: [(Int, Int)] = []
     var certificates: [RdpConnection.Certificate] = []
+    var clipboard: [String] = []
     func add(_ f: () -> Void) { lock.lock(); f(); lock.unlock() }
     func read<T>(_ f: () -> T) -> T { lock.lock(); defer { lock.unlock() }; return f() }
 }
@@ -69,27 +70,32 @@ struct RdpConnectionTests {
         #expect(waitUntil(15) { rec.read { rec.frames } > 0 })
         let size = c.withFrame { _, w, h, _ in (w, h) }
         #expect(size.0 == 1024 && size.1 == 768)
-        let nonBlack = c.withFrame { data, w, h, stride -> Int in
-            guard let data else { return 0 }
-            var n = 0
-            for y in Swift.stride(from: 0, to: h, by: 16) {
-                for x in Swift.stride(from: 0, to: w, by: 16) {
-                    let p = data + y * stride + x * 4
-                    if p[0] != 0 || p[1] != 0 || p[2] != 0 { n += 1 }
+        // Sesja X na świeżej maszynie startuje chwilę — pierwsze klatki bywają czarne, zanim xsetroot pomaluje tło.
+        func nonBlack() -> Int {
+            c.withFrame { data, w, h, stride -> Int in
+                guard let data else { return 0 }
+                var n = 0
+                for y in Swift.stride(from: 0, to: h, by: 16) {
+                    for x in Swift.stride(from: 0, to: w, by: 16) {
+                        let p = data + y * stride + x * 4
+                        if p[0] != 0 || p[1] != 0 || p[2] != 0 { n += 1 }
+                    }
                 }
+                return n
             }
-            return n
         }
-        #expect(nonBlack > 10, "obraz pusty")
+        #expect(waitUntil(20) { nonBlack() > 10 }, "obraz pusty")
         // Tło sesji testowej #336699 (xsetroot) — piksel w BGRA: 0x99 0x66 0x33. Kolejność bajtów
         // musi się zgadzać, bo widok na macOS tworzy z tego bufora CGImage bez konwersji.
         if ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_COLOR"] == "336699" {
-            let px = c.withFrame { data, w, h, stride -> [UInt8] in
-                guard let data else { return [] }
-                let p = data + (h / 2) * stride + (w / 2) * 4
-                return [p[0], p[1], p[2]]
+            func center() -> [UInt8] {
+                c.withFrame { data, w, h, stride -> [UInt8] in
+                    guard let data else { return [] }
+                    let p = data + (h / 2) * stride + (w / 2) * 4
+                    return [p[0], p[1], p[2]]
+                }
             }
-            #expect(px == [0x99, 0x66, 0x33], "środek obrazu: \(px)")
+            #expect(waitUntil(10) { center() == [0x99, 0x66, 0x33] }, "środek obrazu: \(center())")
         }
         // Zmiana rozdzielczości w trakcie sesji (Display Control) — jeśli serwer ją obsługuje.
         // Jak w aplikacji: zmiana rozmiaru dopiero gdy sesja się ustabilizuje (okno wysyła ją z opóźnieniem).
@@ -108,6 +114,29 @@ struct RdpConnectionTests {
         #expect(!rec.read { rec.states.contains { if case .disconnected = $0 { return true }; return false } }, "stany: \(rec.read { rec.states })")
         c.stop()
         // Po stop() wątek się skończył; ponowny stop jest bezpieczny.
+        c.stop()
+    }
+
+    /// Schowek w obie strony: sesja testowa (startwm.sh w CI) odsyła tekst „WP:x" jako „ECHO:x" —
+    /// serwer pobiera nasz tekst (prośba o dane) i ogłasza swój (my go pobieramy).
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_CLIPBOARD"] == "1"))
+    func schowekWObieStrony() {
+        let t = rdpTarget!
+        let rec = Recorder()
+        let c = RdpConnection()
+        c.onState = { s in rec.add { rec.states.append(s) } }
+        c.onVerifyCertificate = { _ in .acceptOnce }
+        c.onClipboardText = { text in rec.add { rec.clipboard.append(text) } }
+        var cfg = RdpConnection.Config(host: t.host)
+        cfg.port = t.port; cfg.username = t.user; cfg.password = t.password
+        cfg.configDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("wp-rdp-\(UUID().uuidString)").path
+        #expect(c.start(cfg))
+        #expect(waitUntil(20) { rec.read { rec.states.contains(.connected) } })
+        Thread.sleep(forTimeInterval: 1.5)
+        let token = "zażółć gęślą € \(Int.random(in: 1000...9999))"
+        c.setClipboardText("WP:" + token)
+        let echoed = waitUntil(15) { rec.read { rec.clipboard.contains("ECHO:" + token) } }
+        #expect(echoed, "schowek: \(rec.read { rec.clipboard })")
         c.stop()
     }
 

@@ -34,6 +34,9 @@ final class RdpSession: Identifiable {
     @ObservationIgnored private var password: String?
     @ObservationIgnored private var passwordRejected = false
     @ObservationIgnored var onEnded: ((Bool) -> Void)?   // true = błąd (do dziennika: FAILED)
+    /// Schowek: licznik zmian NSPasteboard — nowy tekst z Maca idzie do sesji, nasz zapis nie wraca.
+    @ObservationIgnored private var pasteboardCount = -1
+    @ObservationIgnored private var clipboardTimer: Timer?
 
     init(server: Server) {
         self.server = server
@@ -87,6 +90,17 @@ final class RdpSession: Identifiable {
         }
         let ticker = view.ticker
         c.onFrame = { _ in ticker.tick() }
+        if s.rdpRedirectClipboard {
+            c.onClipboardText = { [weak self] text in
+                DispatchQueue.main.async {
+                    guard let self, c === self.connection else { return }
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(text, forType: .string)
+                    self.pasteboardCount = pb.changeCount
+                }
+            }
+        }
         c.onVerifyCertificate = { [weak self] info in
             // Wątek połączenia czeka na odpowiedź użytkownika.
             let done = DispatchSemaphore(value: 0)
@@ -133,8 +147,10 @@ final class RdpSession: Identifiable {
         case .connected:
             state = .connected
             passwordRejected = false
+            startClipboardSync()
             view.window?.makeFirstResponder(view)
         case .disconnected(let error, let message):
+            stopClipboardSync()
             connection?.stop()
             connection = nil
             view.connection = nil
@@ -177,7 +193,32 @@ final class RdpSession: Identifiable {
         connect()
     }
 
+    // MARK: Schowek
+
+    private func startClipboardSync() {
+        guard server.rdpRedirectClipboard, clipboardTimer == nil else { return }
+        pasteboardCount = -1
+        syncPasteboard()
+        // NSPasteboard nie ma powiadomień o zmianie — sprawdzanie licznika jest tanie.
+        clipboardTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.syncPasteboard() }
+        }
+    }
+
+    private func stopClipboardSync() {
+        clipboardTimer?.invalidate()
+        clipboardTimer = nil
+    }
+
+    private func syncPasteboard() {
+        let pb = NSPasteboard.general
+        guard pb.changeCount != pasteboardCount, let c = connection else { return }
+        pasteboardCount = pb.changeCount
+        c.setClipboardText(pb.string(forType: .string))
+    }
+
     func close() {
+        stopClipboardSync()
         certificate?.answer(.reject)
         prompt?.answer(nil, false)
         let c = connection

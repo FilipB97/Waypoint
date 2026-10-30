@@ -14,6 +14,7 @@ void wp_rdp_mouse(wp_rdp *r, uint16_t f, int x, int y) { (void)r; (void)f; (void
 void wp_rdp_mouse_extended(wp_rdp *r, uint16_t f, int x, int y) { (void)r; (void)f; (void)x; (void)y; }
 void wp_rdp_resize(wp_rdp *r, int w, int h, int s) { (void)r; (void)w; (void)h; (void)s; }
 void wp_rdp_sync_locks(wp_rdp *r, uint32_t f) { (void)r; (void)f; }
+void wp_rdp_set_clipboard_text(wp_rdp *r, const char *t) { (void)r; (void)t; }
 uint32_t wp_rdp_scancode_from_mac_keycode(uint32_t k) { (void)k; return 0; }
 int wp_rdp_error_is_auth(uint32_t e) { (void)e; return 0; }
 
@@ -28,6 +29,8 @@ int wp_rdp_error_is_auth(uint32_t e) { (void)e; return 0; }
 #include <freerdp/client/channels.h>
 #include <freerdp/client/disp.h>
 #include <freerdp/channels/disp.h>
+#include <freerdp/client/cliprdr.h>
+#include <freerdp/channels/cliprdr.h>
 #include <freerdp/gdi/gdi.h>
 #include <freerdp/codecs.h>
 #include <freerdp/input.h>
@@ -35,6 +38,8 @@ int wp_rdp_error_is_auth(uint32_t e) { (void)e; return 0; }
 #include <freerdp/log.h>
 #include <winpr/synch.h>
 #include <winpr/input.h>
+#include <winpr/string.h>
+#include <winpr/user.h>
 
 typedef struct {
     rdpClientContext common;   // musi być pierwsze — wspólna obsługa kanałów (RDPGFX itd.) rzutuje na nie
@@ -54,6 +59,12 @@ struct wp_rdp {
     pthread_mutex_t disp_lock;
     DispClientContext *disp;
     int pending_w, pending_h, pending_scale;   // prośba o zmianę rozdzielczości (wysyła wątek połączenia)
+
+    // Schowek (tylko tekst) — pod disp_lock. Lista formatów idzie z wątku połączenia (clip_pending).
+    CliprdrClientContext *clip;
+    int clip_ready;            // po MonitorReady — wcześniej serwer nie przyjmie listy formatów
+    int clip_pending;          // tekst z Maca zmienił się, trzeba ogłosić nową listę formatów
+    char *clip_text;           // tekst z Maca (UTF-8) — oddawany na prośbę serwera
 
     volatile int stopping;
 };
@@ -136,6 +147,122 @@ static BOOL wp_keyboard_indicators(rdpContext *context, UINT16 flags) { (void)co
 static BOOL wp_ime_status(rdpContext *c, UINT16 a, UINT32 b, UINT32 d) { (void)c; (void)a; (void)b; (void)d; return TRUE; }
 static BOOL wp_play_sound(rdpContext *c, const PLAY_SOUND_UPDATE *p) { (void)c; (void)p; return TRUE; }
 
+// --- Schowek (cliprdr, tekst Unicode) ---
+
+static UINT clip_send_format_list(CliprdrClientContext *clip, int has_text) {
+    CLIPRDR_FORMAT fmt = { .formatId = CF_UNICODETEXT, .formatName = NULL };
+    CLIPRDR_FORMAT_LIST list = { 0 };
+    list.common.msgType = CB_FORMAT_LIST;
+    list.numFormats = has_text ? 1 : 0;
+    list.formats = has_text ? &fmt : NULL;
+    return clip->ClientFormatList(clip, &list);
+}
+
+static UINT clip_monitor_ready(CliprdrClientContext *clip, const CLIPRDR_MONITOR_READY *m) {
+    (void)m;
+    wp_rdp *r = (wp_rdp *)clip->custom;
+    CLIPRDR_GENERAL_CAPABILITY_SET general = { .capabilitySetType = CB_CAPSTYPE_GENERAL,
+        .capabilitySetLength = CB_CAPSTYPE_GENERAL_LEN, .version = CB_CAPS_VERSION_2,
+        .generalFlags = CB_USE_LONG_FORMAT_NAMES };
+    CLIPRDR_CAPABILITIES caps = { 0 };
+    caps.common.msgType = CB_CLIP_CAPS;
+    caps.cCapabilitiesSets = 1;
+    caps.capabilitySets = (CLIPRDR_CAPABILITY_SET *)&general;
+    UINT rc = clip->ClientCapabilities(clip, &caps);
+    if (rc != CHANNEL_RC_OK) return rc;
+    pthread_mutex_lock(&r->disp_lock);
+    int has = r->clip_text != NULL;
+    r->clip_ready = 1;
+    r->clip_pending = 0;
+    pthread_mutex_unlock(&r->disp_lock);
+    return clip_send_format_list(clip, has);
+}
+
+static UINT clip_server_caps(CliprdrClientContext *clip, const CLIPRDR_CAPABILITIES *c) {
+    (void)clip; (void)c;
+    return CHANNEL_RC_OK;
+}
+
+static UINT clip_server_format_list(CliprdrClientContext *clip, const CLIPRDR_FORMAT_LIST *list) {
+    CLIPRDR_FORMAT_LIST_RESPONSE resp = { 0 };
+    resp.common.msgType = CB_FORMAT_LIST_RESPONSE;
+    resp.common.msgFlags = CB_RESPONSE_OK;
+    UINT rc = clip->ClientFormatListResponse(clip, &resp);
+    if (rc != CHANNEL_RC_OK) return rc;
+    for (UINT32 i = 0; i < list->numFormats; i++) {
+        if (list->formats[i].formatId == CF_UNICODETEXT) {
+            // Od razu pobieramy tekst — schowek Maca nie ma „leniwego" dostarczania między procesami.
+            CLIPRDR_FORMAT_DATA_REQUEST req = { 0 };
+            req.common.msgType = CB_FORMAT_DATA_REQUEST;
+            req.requestedFormatId = CF_UNICODETEXT;
+            return clip->ClientFormatDataRequest(clip, &req);
+        }
+    }
+    return CHANNEL_RC_OK;
+}
+
+static UINT clip_server_format_list_response(CliprdrClientContext *clip, const CLIPRDR_FORMAT_LIST_RESPONSE *r) {
+    (void)clip; (void)r;
+    return CHANNEL_RC_OK;
+}
+
+static UINT clip_server_data_request(CliprdrClientContext *clip, const CLIPRDR_FORMAT_DATA_REQUEST *req) {
+    wp_rdp *r = (wp_rdp *)clip->custom;
+    WCHAR *data = NULL;
+    size_t chars = 0;
+    if (req->requestedFormatId == CF_UNICODETEXT) {
+        pthread_mutex_lock(&r->disp_lock);
+        if (r->clip_text) data = ConvertUtf8ToWCharAlloc(r->clip_text, &chars);
+        pthread_mutex_unlock(&r->disp_lock);
+    }
+    CLIPRDR_FORMAT_DATA_RESPONSE resp = { 0 };
+    resp.common.msgType = CB_FORMAT_DATA_RESPONSE;
+    resp.common.msgFlags = data ? CB_RESPONSE_OK : CB_RESPONSE_FAIL;
+    resp.common.dataLen = data ? (UINT32)((chars + 1) * sizeof(WCHAR)) : 0;   // z kończącym zerem
+    resp.requestedFormatData = (const BYTE *)data;
+    UINT rc = clip->ClientFormatDataResponse(clip, &resp);
+    free(data);
+    return rc;
+}
+
+static UINT clip_server_data_response(CliprdrClientContext *clip, const CLIPRDR_FORMAT_DATA_RESPONSE *resp) {
+    wp_rdp *r = (wp_rdp *)clip->custom;
+    if (!(resp->common.msgFlags & CB_RESPONSE_OK) || !resp->requestedFormatData || resp->common.dataLen < 2)
+        return CHANNEL_RC_OK;
+    size_t wlen = resp->common.dataLen / sizeof(WCHAR);
+    const WCHAR *w = (const WCHAR *)resp->requestedFormatData;
+    while (wlen > 0 && w[wlen - 1] == 0) wlen--;
+    char *utf8 = ConvertWCharNToUtf8Alloc(w, wlen, NULL);
+    if (utf8 && r->cb.clipboard_text) r->cb.clipboard_text(r->cb.user, utf8);
+    free(utf8);
+    return CHANNEL_RC_OK;
+}
+
+static void clip_attach(wp_rdp *r, CliprdrClientContext *clip) {
+    clip->custom = r;
+    clip->MonitorReady = clip_monitor_ready;
+    clip->ServerCapabilities = clip_server_caps;
+    clip->ServerFormatList = clip_server_format_list;
+    clip->ServerFormatListResponse = clip_server_format_list_response;
+    clip->ServerFormatDataRequest = clip_server_data_request;
+    clip->ServerFormatDataResponse = clip_server_data_response;
+    pthread_mutex_lock(&r->disp_lock);
+    r->clip = clip;
+    r->clip_ready = 0;
+    pthread_mutex_unlock(&r->disp_lock);
+}
+
+/// Nowy tekst z Maca → nowa lista formatów (wątek połączenia, jak zmiana rozdzielczości).
+static void send_pending_clipboard(wp_rdp *r) {
+    pthread_mutex_lock(&r->disp_lock);
+    CliprdrClientContext *clip = (r->clip_pending && r->clip_ready) ? r->clip : NULL;
+    int has = r->clip_text != NULL;
+    if (clip) r->clip_pending = 0;
+    pthread_mutex_unlock(&r->disp_lock);
+    if (clip) (void)clip_send_format_list(clip, has);
+}
+
+
 // --- Kanały ---
 
 static void on_channel_connected(void *context, const ChannelConnectedEventArgs *e) {
@@ -144,6 +271,8 @@ static void on_channel_connected(void *context, const ChannelConnectedEventArgs 
         pthread_mutex_lock(&wc->owner->disp_lock);
         wc->owner->disp = (DispClientContext *)e->pInterface;
         pthread_mutex_unlock(&wc->owner->disp_lock);
+    } else if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0) {
+        clip_attach(wc->owner, (CliprdrClientContext *)e->pInterface);
     } else {
         freerdp_client_OnChannelConnectedEventHandler(&wc->common, e);
     }
@@ -154,6 +283,11 @@ static void on_channel_disconnected(void *context, const ChannelDisconnectedEven
     if (strcmp(e->name, DISP_DVC_CHANNEL_NAME) == 0) {
         pthread_mutex_lock(&wc->owner->disp_lock);
         wc->owner->disp = NULL;
+        pthread_mutex_unlock(&wc->owner->disp_lock);
+    } else if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0) {
+        pthread_mutex_lock(&wc->owner->disp_lock);
+        wc->owner->clip = NULL;
+        wc->owner->clip_ready = 0;
         pthread_mutex_unlock(&wc->owner->disp_lock);
     } else {
         freerdp_client_OnChannelDisconnectedEventHandler(&wc->common, e);
@@ -299,6 +433,7 @@ static void *run(void *arg) {
             break;
         }
         send_pending_resize(r);
+        send_pending_clipboard(r);
     }
     UINT32 err = r->stopping ? 0 : freerdp_get_last_error(r->context);
     // Wylogowanie i rozłączenie zlecone przez użytkownika (w sesji albo z innego połączenia) to nie błąd.
@@ -399,6 +534,7 @@ void wp_rdp_stop(wp_rdp *r) {
     pthread_mutex_unlock(&r->frame_lock);
     pthread_mutex_destroy(&r->frame_lock);
     pthread_mutex_destroy(&r->disp_lock);
+    free(r->clip_text);
     free(r);
 }
 
@@ -463,6 +599,16 @@ uint32_t wp_rdp_scancode_from_mac_keycode(uint32_t keycode) {
     DWORD vk = GetVirtualKeyCodeFromKeycode(keycode, WINPR_KEYCODE_TYPE_APPLE);
     if (!vk) return 0;
     return GetVirtualScanCodeFromVirtualKeyCode(vk, WINPR_KBD_TYPE_IBM_ENHANCED);
+}
+
+void wp_rdp_set_clipboard_text(wp_rdp *r, const char *utf8) {
+    if (!r) return;
+    char *copy = (utf8 && *utf8) ? strdup(utf8) : NULL;
+    pthread_mutex_lock(&r->disp_lock);
+    free(r->clip_text);
+    r->clip_text = copy;
+    r->clip_pending = 1;
+    pthread_mutex_unlock(&r->disp_lock);
 }
 
 #endif

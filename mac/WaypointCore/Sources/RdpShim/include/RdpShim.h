@@ -35,6 +35,8 @@ typedef struct {
     /// Brak hasła (albo odrzucone przy bramie) — wypełnij bufory i zwróć 1, albo 0 = przerwij.
     int (*authenticate)(void *user, char *username, int username_len, char *password, int password_len,
                         char *domain, int domain_len, int gateway);
+    /// Tekst ze schowka sesji (UTF-8) — po skopiowaniu czegoś po stronie serwera. Wątek kanału.
+    void (*clipboard_text)(void *user, const char *utf8);
 } wp_rdp_callbacks;
 
 typedef struct {
@@ -80,6 +82,8 @@ void wp_rdp_mouse_extended(wp_rdp *r, uint16_t flags, int x, int y);
 void wp_rdp_resize(wp_rdp *r, int width, int height, int scale_percent);
 /// Synchronizacja stanu Caps/Num/Scroll Lock (bity KBD_SYNC_*).
 void wp_rdp_sync_locks(wp_rdp *r, uint32_t flags);
+/// Tekst ze schowka Maca dla sesji (UTF-8; NULL/pusty = brak). Serwer pobierze go przy wklejeniu.
+void wp_rdp_set_clipboard_text(wp_rdp *r, const char *utf8);
 
 /// Czy kod błędu FreeRDP oznacza odrzucone poświadczenia (złe hasło, konto zablokowane itp.).
 int wp_rdp_error_is_auth(uint32_t error);

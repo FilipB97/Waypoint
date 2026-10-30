@@ -36,8 +36,8 @@ notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Ot
 | 1 | Szkielet, lista serwerów (grupy, przypięte, wyszukiwanie), edytor serwera, import z Windows, CI | ✅ |
 | 2 | Terminal SSH w kartach (SwiftTerm + systemowe `ssh`: agent, `~/.ssh/config`), hasła w Pęku kluczy | ✅ |
 | 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ✅ |
-| 3b | Wbudowany klient RDP (FreeRDP) w karcie: hasło z Pęku kluczy, certyfikat, rozdzielczość okna, klawiatura, mysz | ✅ |
-| 3c | RDP: schowek tekstowy, pełny ekran, dyski i dźwięk | w toku |
+| 3b | Wbudowany klient RDP (FreeRDP) w karcie: hasło z Pęku kluczy, certyfikat, rozdzielczość okna, klawiatura, mysz, schowek tekstowy | ✅ |
+| 3c | RDP: pełny ekran, dyski i dźwięk | w toku |
 | 4 | Panel plików SFTP: przeglądanie, wysyłanie/pobieranie (także folderów), zmiana nazwy, usuwanie | ✅ |
 | 4b | FTP/FTPS: ten sam panel plików i edytor | ✅ |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | ✅ |
@@ -168,7 +168,7 @@ albo profilu poświadczeń) — pytanie nad kartą pojawia się tylko, gdy go br
 „nie sprawdzaj" z edycji serwera pomija pytanie. Rozdzielczość sesji = rozmiar karty (Retina 200%),
 zmiana rozmiaru okna zmienia ją w locie (Display Control). Klawiatura: ⌘ działa jak Ctrl (⌘C/⌘V
 w sesji), polskie znaki z Option idą jako Unicode, Option z klawiszami specjalnymi = Alt; ⌘W, ⌘Q,
-⌘1–9 zostają przy Waypoincie. Brama RD (te same dane logowania), sesja administracyjna, schowek.
+⌘1–9 zostają przy Waypoincie. Brama RD (te same dane logowania), sesja administracyjna, schowek tekstowy w obie strony.
 
 W edycji serwera można zamiast tego wybrać Microsoft **Windows App**: „Połącz" zapisuje wtedy plik
 `.rdp` (te same pola co w wersji Windows) do `~/Library/Caches/Waypoint/rdp/` i otwiera go tam.
@@ -176,7 +176,7 @@ RemoteApp zawsze idzie tą drogą. Plik `.rdp` z portalu firmy da się zaimporto
 (Plik → Importuj plik .rdp…), a serwer RDP wyeksportować do pliku.
 
 Testy: na Linuksie w CI prawdziwy serwer xrdp — połączenie, TLS, kolory pikseli, zmiana
-rozdzielczości, wejście, odrzucony certyfikat, zamknięty port. Budowa lokalna z klientem:
+rozdzielczości, wejście, schowek w obie strony, odrzucony certyfikat, zamknięty port. Budowa lokalna z klientem:
 `mac/scripts/build-freerdp.sh ~/freerdp && WAYPOINT_FREERDP=~/freerdp mac/scripts/bundle-app.sh`
 (bez `WAYPOINT_FREERDP` RDP otwiera Windows App).
 

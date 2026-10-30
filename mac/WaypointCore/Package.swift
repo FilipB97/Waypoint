@@ -20,6 +20,12 @@ if let p = freerdp {
         // systemowe, których używa WinPR. Na Linuksie biblioteki dzielone same ciągną zależności.
         .linkedLibrary("ssl", .when(platforms: [.macOS])), .linkedLibrary("crypto", .when(platforms: [.macOS])),
         .linkedLibrary("z", .when(platforms: [.macOS])),
+        .linkedLibrary("rdpsnd-common", .when(platforms: [.macOS])),
+        .linkedLibrary("remdesk-common", .when(platforms: [.macOS])),
+        .linkedFramework("AudioToolbox", .when(platforms: [.macOS])),
+        .linkedFramework("CoreAudio", .when(platforms: [.macOS])),
+        .linkedFramework("AVFoundation", .when(platforms: [.macOS])),
+        .linkedFramework("Carbon", .when(platforms: [.macOS])),   // TIS — układ klawiatury
         .linkedFramework("CoreFoundation", .when(platforms: [.macOS])),
         .linkedFramework("Security", .when(platforms: [.macOS])),
         .linkedFramework("SystemConfiguration", .when(platforms: [.macOS])),

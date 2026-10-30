@@ -72,10 +72,12 @@ rm -rf "$OUT/include" "$OUT/lib"
 mkdir -p "$OUT/lib"
 first="$(echo $ARCHS | awk '{print $1}')"
 cp -R "$WORK/prefix-$first/include" "$OUT/include"
-for lib in "$WORK/prefix-$first"/lib/*.a; do
+# Biblioteki pomocnicze kanałów (rdpsnd-common, remdesk-common) leżą w lib/freerdp3 — spłaszczamy.
+for lib in "$WORK/prefix-$first"/lib/*.a "$WORK/prefix-$first"/lib/freerdp3/*.a; do
     name="$(basename "$lib")"
+    rel="${lib#"$WORK/prefix-$first/"}"
     if [ "$(echo $ARCHS | wc -w)" -gt 1 ]; then
-        lipo -create $(for a in $ARCHS; do echo "$WORK/prefix-$a/lib/$name"; done) -output "$OUT/lib/$name"
+        lipo -create $(for a in $ARCHS; do echo "$WORK/prefix-$a/$rel"; done) -output "$OUT/lib/$name"
     else
         cp "$lib" "$OUT/lib/$name"
     fi
