@@ -129,6 +129,7 @@ set -e
 
 echo "== wynik"
 cat "$OUT/smoke.log" 2>/dev/null || echo "(brak smoke.log)"
+echo "--- FreeRDP (app-stdout.log)"; grep -i "freerdp" "$OUT/app-stdout.log" | tail -30 || true
 echo "--- sshd.log (koniec)"; sudo tail -20 "$WORK/sshd.log" || true
 cp "$WORK/sshd.log" "$OUT/sshd.log" 2>/dev/null || sudo cat "$WORK/sshd.log" > "$OUT/sshd.log" || true
 ls -la "$OUT"

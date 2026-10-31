@@ -28,6 +28,11 @@ public struct MacSettings: Codable, Equatable, Sendable {
     public var themeVariantLight: String = ThemePreset.defaultId
     /// Własny akcent („#RRGGBB"); pusty = akcent systemu / presetu.
     public var accentColor: String = ""
+    /// Pulpit zdalny (wbudowany klient RDP): rozdzielczość („fit" albo „1920x1080"), skala w % (0 = auto)
+    /// i piksele Retina przy dopasowaniu do okna (ostrzej; bez nich — jak domyślnie w Windows App).
+    public var rdpResolution: String = RdpDisplay.fit
+    public var rdpScale: Int = 0
+    public var rdpRetina: Bool = true
 
     public init() {}
 
@@ -39,6 +44,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         case recentIds = "RecentIds", checkUpdates = "CheckUpdates", filesDualPane = "FilesDualPane"
         case theme = "Theme", themeVariantDark = "ThemeVariantDark", themeVariantLight = "ThemeVariantLight"
         case accentColor = "AccentColor"
+        case rdpResolution = "MacRdpResolution", rdpScale = "MacRdpScale", rdpRetina = "MacRdpRetina"
     }
 
     public init(from decoder: Decoder) throws {
@@ -60,6 +66,10 @@ public struct MacSettings: Codable, Equatable, Sendable {
         themeVariantLight = (try? c.decode(String.self, forKey: .themeVariantLight)) ?? ThemePreset.defaultId
         accentColor = RGB(hex: (try? c.decode(String.self, forKey: .accentColor)) ?? "") != nil
             ? ((try? c.decode(String.self, forKey: .accentColor)) ?? "") : ""
+        let res = (try? c.decode(String.self, forKey: .rdpResolution)) ?? RdpDisplay.fit
+        rdpResolution = RdpDisplay.parse(res) != nil ? res : RdpDisplay.fit
+        rdpScale = (try? c.decode(Int.self, forKey: .rdpScale)).flatMap { RdpDisplay.scales.contains($0) ? $0 : nil } ?? 0
+        rdpRetina = (try? c.decode(Bool.self, forKey: .rdpRetina)) ?? true
     }
 
     /// Zakresy jak w Windows: interwał sondy 5–3600 s, limit czasu 1–60 s.

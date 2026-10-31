@@ -88,12 +88,32 @@ extension AppModel {
             let data = try? await URLSession.shared.data(for: req).0
             let release = data.flatMap(UpdateCheck.parseRelease)
             if let r = UpdateCheck.update(from: release, current: Self.currentVersion) {
-                alert = AppAlert(title: L("upd.title"), message: String(format: L("upd.available"), r.versionText, Self.currentVersion),
-                                 actionTitle: L("upd.download"),
-                                 action: { NSWorkspace.shared.open(r.pageURL ?? r.macZipURL!) })
+                // Podmiana w miejscu, gdy się da; inaczej (np. aplikacja poza zapisywalnym folderem) — strona wydania.
+                let inPlace = Updater.blocker() == nil
+                var msg = String(format: L("upd.available"), r.versionText, Self.currentVersion)
+                if let b = Updater.blocker() { msg += "\n\n" + (b.errorDescription ?? "") }
+                alert = AppAlert(title: L("upd.title"), message: msg,
+                                 actionTitle: L(inPlace ? "upd.install" : "upd.download"),
+                                 action: { [weak self] in
+                                     if inPlace { self?.installUpdate(r) } else { NSWorkspace.shared.open(r.pageURL ?? r.macZipURL!) }
+                                 })
             } else if manual {
                 alert = AppAlert(title: L("upd.title"),
                                  message: data == nil ? L("upd.failed") : String(format: L("upd.current"), Self.currentVersion))
+            }
+        }
+    }
+}
+
+extension AppModel {
+    func installUpdate(_ r: UpdateCheck.Release) {
+        Task {
+            do {
+                try await Updater.install(r) { [weak self] text in self?.toast = text }
+            } catch {
+                alert = AppAlert(title: L("upd.title"), message: String(format: L("upd.err"), error.localizedDescription),
+                                 actionTitle: L("upd.download"),
+                                 action: { NSWorkspace.shared.open(r.pageURL ?? r.macZipURL!) })
             }
         }
     }

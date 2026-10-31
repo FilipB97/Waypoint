@@ -293,7 +293,9 @@ enum Smoke {
                 try? await Task.sleep(for: .seconds(0.6))
                 snapshot(window, out.appendingPathComponent("08b-rdp-haslo.png"))
                 asked?.answer("nie-to-haslo", false)
-                let ended = await waitFor(20, { () -> String? in
+                // Na macOS WinPR nie widzi od razu odrzuconego połączenia — każda próba (NLA/TLS/RDP)
+                // czeka na limit 15 s, więc koniec przychodzi po kilkudziesięciu sekundach.
+                let ended = await waitFor(90, { () -> String? in
                     if case .ended(let m)? = tab?.state { return m ?? "" }
                     return nil
                 })
@@ -301,7 +303,7 @@ enum Smoke {
                 snapshot(window, out.appendingPathComponent("08c-rdp-blad.png"))
                 let rdpOK = tab != nil && asked != nil && ended?.isEmpty == false
                 note(rdpOK ? "OK: RDP wbudowany — karta, pytanie o hasło, błąd: \(ended ?? "")"
-                           : "FAIL: RDP wbudowany karta=\(tab != nil) hasło=\(asked != nil) koniec=\(ended ?? "brak")", out)
+                           : "FAIL: RDP wbudowany karta=\(tab != nil) hasło=\(asked != nil) koniec=\(ended ?? "brak") stan=\(String(describing: tab?.state))", out)
                 ok = ok && rdpOK
                 if let t = model.sessions.last, t.rdp != nil { model.close(t, confirm: false) }
             } else {

@@ -1,4 +1,5 @@
 import AppKit
+import WaypointCore
 import WaypointRDP
 
 /// Pulpit zdalny: obraz z FreeRDP jako zawartość warstwy (CGImage z bufora BGRA) i wejście
@@ -22,6 +23,7 @@ final class RdpDisplayView: NSView {
     private var altSent = false                  // Option wysłany jako Alt (dopiero przy klawiszu specjalnym)
     private var scrollY: CGFloat = 0, scrollX: CGFloat = 0
     private var started = false
+    var lastMode: RdpDisplay.Mode?            // ostatnio wysłany tryb (bez zbędnych zmian rozdzielczości)
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -40,13 +42,30 @@ final class RdpDisplayView: NSView {
     // MARK: Rozmiar sesji
 
     var backing: CGFloat { window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2 }
-    /// Skala pulpitu zdalnego: Retina = 200% (ostry tekst w pikselach fizycznych).
-    var scalePercent: Int { backing >= 2 ? 200 : 100 }
 
-    func sessionPixelSize() -> (width: Int, height: Int) {
-        let w = Int(bounds.width * backing), h = Int(bounds.height * backing)
-        guard w >= 320, h >= 240 else { return (Int(1280 * backing), Int(800 * backing)) }
-        return (min(w, 8192) & ~1, min(h, 8192))
+    /// Rozdzielczość i skala sesji: Ustawienia (⌘,) albo nadpisanie w edycji serwera.
+    func displayMode() -> RdpDisplay.Mode {
+        let st = AppModel.shared.settings
+        let srv = session?.server
+        let res = srv.map { $0.macRdpResolution.isEmpty ? st.rdpResolution : $0.macRdpResolution } ?? st.rdpResolution
+        let scale = srv.map { $0.macRdpScale == 0 ? st.rdpScale : $0.macRdpScale } ?? st.rdpScale
+        return RdpDisplay.mode(points: (Double(bounds.width), Double(bounds.height)), backing: Double(backing),
+                               resolution: res, scale: scale, retina: st.rdpRetina)
+    }
+
+    /// Nowy tryb do sesji (zmiana okna albo ustawień) — tylko gdy coś się zmieniło.
+    func applyDisplayMode() {
+        guard let s = session, s.state == .connected else { return }
+        let m = displayMode()
+        guard m != lastMode else { return }
+        lastMode = m
+        s.requestResize(width: m.width, height: m.height, scale: m.scalePercent)
+    }
+
+    /// Okno przeniesione między ekranem Retina a zwykłym.
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        applyDisplayMode()
     }
 
     override func viewDidMoveToWindow() {
@@ -59,11 +78,7 @@ final class RdpDisplayView: NSView {
         startIfReady()
         // Nowa rozdzielczość dopiero po ustabilizowaniu okna (przeciąganie krawędzi = wiele zmian).
         resizeWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in
-            guard let self, let s = self.session else { return }
-            let px = self.sessionPixelSize()
-            s.requestResize(width: px.width, height: px.height, scale: self.scalePercent)
-        }
+        let work = DispatchWorkItem { [weak self] in self?.applyDisplayMode() }
         resizeWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
     }
