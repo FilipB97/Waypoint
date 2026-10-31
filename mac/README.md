@@ -29,6 +29,11 @@ i macOS, potem budowa `.app`. Gotowa paczka jest w artefakcie **Waypoint-mac** p
 notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Otwórz** → Otwórz
 (albo `xattr -dr com.apple.quarantine Waypoint.app`).
 
+**Aktualizacje:** Waypoint sam sprawdza nowe wydania; „Zainstaluj i uruchom ponownie" pobiera
+paczkę, podmienia `Waypoint.app` w miejscu i uruchamia nową wersję — bez kwarantanny, więc bez
+ponownego zatwierdzania w Ustawieniach prywatności. Warunek: aplikacja w zapisywalnym folderze
+(np. Programy), nie uruchamiana prosto z Pobranych.
+
 ## Plan
 
 | Krok | Zakres | Stan |
@@ -168,7 +173,9 @@ albo profilu poświadczeń) — pytanie nad kartą pojawia się tylko, gdy go br
 „nie sprawdzaj" z edycji serwera pomija pytanie. Rozdzielczość sesji = rozmiar karty (Retina 200%),
 zmiana rozmiaru okna zmienia ją w locie (Display Control). Klawiatura: ⌘ działa jak Ctrl (⌘C/⌘V
 w sesji), polskie znaki z Option idą jako Unicode, Option z klawiszami specjalnymi = Alt; ⌘W, ⌘Q,
-⌘1–9 zostają przy Waypoincie. Brama RD (te same dane logowania), sesja administracyjna, schowek tekstowy w obie strony.
+⌘1–9 zostają przy Waypoincie. Rozdzielczość (dopasowanie do okna albo stała), skalowanie
+i pełna rozdzielczość Retina — w Ustawieniach (⌘,) → Pulpit zdalny, z nadpisaniem w edycji serwera;
+zmiana działa od razu w otwartych kartach. Brama RD (te same dane logowania), sesja administracyjna, schowek tekstowy w obie strony.
 
 W edycji serwera można zamiast tego wybrać Microsoft **Windows App**: „Połącz" zapisuje wtedy plik
 `.rdp` (te same pola co w wersji Windows) do `~/Library/Caches/Waypoint/rdp/` i otwiera go tam.

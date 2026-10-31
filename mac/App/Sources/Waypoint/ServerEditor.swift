@@ -122,6 +122,17 @@ struct ServerEditor: View {
                             Text(L("f.rdp.client.builtin")).tag(false)
                             Text(L("f.rdp.client.windowsapp")).tag(true)
                         }
+                        Picker(L("set.rdp.res"), selection: $draft.macRdpResolution) {
+                            Text(L("f.rdp.default")).tag("")
+                            Text(L("set.rdp.res.fit")).tag(RdpDisplay.fit)
+                            ForEach(RdpDisplay.resolutions, id: \.self) { Text($0.replacingOccurrences(of: "x", with: " × ")).tag($0) }
+                        }
+                        .disabled(draft.rdpUsesWindowsApp)
+                        Picker(L("set.rdp.scale"), selection: $draft.macRdpScale) {
+                            Text(L("f.rdp.default")).tag(0)
+                            ForEach(RdpDisplay.scales.filter { $0 > 0 }, id: \.self) { Text("\($0)%").tag($0) }
+                        }
+                        .disabled(draft.rdpUsesWindowsApp)
                         Toggle(L("f.rdp.clipboard"), isOn: $draft.rdpRedirectClipboard)
                         Toggle(L("f.rdp.drives"), isOn: $draft.rdpRedirectDrives)
                         Toggle(L("f.rdp.admin"), isOn: $draft.rdpAdminSession)

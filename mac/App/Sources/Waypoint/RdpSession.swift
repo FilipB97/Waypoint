@@ -61,15 +61,16 @@ final class RdpSession: Identifiable {
         let c = RdpConnection()
         connection = c
         view.connection = c
-        let size = view.sessionPixelSize()
+        let mode = view.displayMode()
+        view.lastMode = mode
         var cfg = RdpConnection.Config(host: s.host)
         cfg.port = s.port
         cfg.username = s.username
         cfg.domain = s.domain
         cfg.password = pw
-        cfg.width = size.width
-        cfg.height = size.height
-        cfg.scalePercent = view.scalePercent
+        cfg.width = mode.width
+        cfg.height = mode.height
+        cfg.scalePercent = mode.scalePercent
         cfg.adminSession = s.rdpAdminSession
         cfg.redirectClipboard = s.rdpRedirectClipboard
         cfg.ignoreCertificate = s.rdpAuthenticationLevel == 0   // jak „połącz bez ostrzeżenia” w mstsc

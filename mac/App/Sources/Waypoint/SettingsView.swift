@@ -56,6 +56,21 @@ struct SettingsView: View {
                 LabeledContent(L("set.version"), value: AppModel.currentVersion)
                 Button(L("upd.menu")) { model.checkForUpdates(manual: true) }
             }
+            Section {
+                Picker(L("set.rdp.res"), selection: $model.settings.rdpResolution) {
+                    Text(L("set.rdp.res.fit")).tag(RdpDisplay.fit)
+                    ForEach(RdpDisplay.resolutions, id: \.self) { Text($0.replacingOccurrences(of: "x", with: " × ")).tag($0) }
+                }
+                Picker(L("set.rdp.scale"), selection: $model.settings.rdpScale) {
+                    ForEach(RdpDisplay.scales, id: \.self) { v in Text(v == 0 ? L("set.rdp.scale.auto") : "\(v)%").tag(v) }
+                }
+                Toggle(L("set.rdp.retina"), isOn: $model.settings.rdpRetina)
+                    .disabled(model.settings.rdpResolution != RdpDisplay.fit)
+            } header: {
+                Text(L("set.rdp"))
+            } footer: {
+                Text(L("set.rdp.hint")).foregroundStyle(.secondary)
+            }
             Section(L("set.connections")) {
                 Toggle(L("set.confirmclose"), isOn: $model.settings.confirmCloseConnected)
                 Toggle(L("set.log"), isOn: $model.settings.connectionLogEnabled)
@@ -69,6 +84,9 @@ struct SettingsView: View {
             model.saveSettings()
             if old.theme != new.theme { model.applyAppearance() }
             if old.terminalFontSize != new.terminalFontSize { model.applyTerminalFont() }
+            if old.rdpResolution != new.rdpResolution || old.rdpScale != new.rdpScale || old.rdpRetina != new.rdpRetina {
+                for case .rdp(let d) in model.sessions { d.view.applyDisplayMode() }   // w locie, bez rozłączania
+            }
             if old.reachabilityEnabled != new.reachabilityEnabled
                 || old.reachabilityIntervalSec != new.reachabilityIntervalSec
                 || old.probeTimeoutSeconds != new.probeTimeoutSeconds {
