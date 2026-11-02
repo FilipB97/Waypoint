@@ -472,6 +472,8 @@ final class AppModel {
             }
             if shift, chars == "]" || chars == "}" { self.cycleTab(1); return nil }
             if shift, chars == "[" || chars == "{" { self.cycleTab(-1); return nil }
+            // Pulpit zdalny z fokusem: ⌘C/⌘V/⌘A… do sesji, zanim przechwyci je menu Edycja.
+            if let rdp = event.window?.firstResponder as? RdpDisplayView, rdp.handleCommandKey(event) { return nil }
             return event
         }
     }
