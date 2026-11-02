@@ -244,7 +244,7 @@ final class RdpSession: Identifiable {
     /// Pliki skopiowane w sesji: pobranie od razu do pamięci podręcznej, potem do schowka Maca
     /// (schowek Finderu chce gotowych plików). Nowa kopia w sesji przerywa poprzednie pobieranie.
     private func receiveFiles(_ files: [RdpConnection.RemoteFile], from c: RdpConnection) {
-        download?.cancel()
+        download?.set(true)
         guard !files.isEmpty else { return }
         let flag = CancelFlag()
         download = flag
@@ -264,7 +264,7 @@ final class RdpSession: Identifiable {
                                       ByteCountFormatter.string(fromByteCount: done, countStyle: .file),
                                       ByteCountFormatter.string(fromByteCount: total, countStyle: .file))
                     DispatchQueue.main.async { if self?.download === flag { self?.transfer = text } }
-                }, isCancelled: { flag.isCancelled })
+                }, isCancelled: { flag.value })
                 DispatchQueue.main.async {
                     guard let self, self.download === flag else { return }
                     self.download = nil
@@ -280,7 +280,7 @@ final class RdpSession: Identifiable {
                     guard let self, self.download === flag else { return }
                     self.download = nil
                     self.transfer = nil
-                    if !flag.isCancelled { self.notice = String(format: L("rdp.files.failed"), "\(error)") }
+                    if !flag.value { self.notice = String(format: L("rdp.files.failed"), "\(error)") }
                 }
             }
         }
@@ -302,7 +302,7 @@ final class RdpSession: Identifiable {
     }
 
     func cancelTransfer() {
-        download?.cancel()
+        download?.set(true)
         download = nil
         transfer = nil
     }
@@ -335,10 +335,3 @@ extension Server {
     }
 }
 
-/// Przerwanie pobierania z innego wątku.
-final class CancelFlag: @unchecked Sendable {
-    private let lock = NSLock()
-    private var cancelled = false
-    var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return cancelled }
-    func cancel() { lock.lock(); cancelled = true; lock.unlock() }
-}
