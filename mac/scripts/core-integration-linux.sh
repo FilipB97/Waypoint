@@ -61,17 +61,38 @@ sleep 1
 # --- xrdp na 127.0.0.1:3389: sesja Xorg z jednolitym tłem #336699 (test sprawdza kolory pikseli)
 useradd -m -s /bin/bash wprdp
 echo "wprdp:$PW" | chpasswd
-# Echo schowka dla testu: „WP:x" → „ECHO:x" (serwer pobiera tekst klienta, potem ogłasza własny).
+# Sesja testowa: tło #336699, echo schowka (tekst, pliki w obie strony) i odczyt udostępnionego dysku.
 cat > /etc/xrdp/startwm.sh <<'WM'
 #!/bin/sh
 xsetroot -solid "#336699"
+# Echo schowka dla testu: „WP:x" → „ECHO:x"; „WPFILE:x" → dwa pliki z /tmp/wpclip-$USER/x w schowku jako text/uri-list (xrdp nie podaje folderów).
 while true; do
   t="$(xclip -o -selection clipboard 2>/dev/null)"
-  case "$t" in WP:*) printf 'ECHO:%s' "${t#WP:}" | xclip -i -selection clipboard ;; esac
+  case "$t" in
+    WP:*) printf 'ECHO:%s' "${t#WP:}" | xclip -i -selection clipboard ;;
+    WPFILE:*) n="${t#WPFILE:}"; d="/tmp/wpclip-$USER"; mkdir -p "$d/$n"
+      printf 'zawartość %s\n' "$n" > "$d/$n/a.txt"; head -c 3000000 /dev/urandom > "$d/$n/duzy.bin"
+      printf 'file://%s/%s/a.txt\nfile://%s/%s/duzy.bin\n' "$d" "$n" "$d" "$n" | xclip -i -selection clipboard -t text/uri-list ;;
+  esac
+  # Pliki z klienta (xrdp podaje je przez FUSE w ~/thinclient_drives/.clipboard) → kopia w /tmp/wpclip-out-$USER.
+  u="$(xclip -o -selection clipboard -t text/uri-list 2>/dev/null)"
+  case "$u" in *thinclient_drives*)
+    o="/tmp/wpclip-out-$USER"; rm -rf "$o.tmp"; mkdir -p "$o.tmp"
+    printf '%s\n' "$u" | while read -r f; do p="${f#file://}"; [ -n "$p" ] && cp -r "$p" "$o.tmp/"; done
+    rm -rf "$o"; mv "$o.tmp" "$o"; printf 'COPIED' | xclip -i -selection clipboard ;;
+  esac
+  # Dysk udostępniony przez klienta (xrdp: ~/thinclient_drives/<nazwa>) → „DRIVE:<treść probe.txt>".
+  pr="$HOME/thinclient_drives/WPDRIVE/probe.txt"
+  if [ -f "$pr" ]; then c="$(cat "$pr")"
+    if [ "$c" != "$(cat "/tmp/wpdrive-last-$USER" 2>/dev/null)" ]; then
+      printf '%s' "$c" > "/tmp/wpdrive-last-$USER"; printf 'DRIVE:%s' "$c" | xclip -i -selection clipboard; fi
+  fi
   sleep 0.3
 done
 WM
 chmod 755 /etc/xrdp/startwm.sh
+# Pliki w schowku i dyski xrdp podaje sesji przez FUSE (~/thinclient_drives) — urządzenie dla użytkownika.
+[ -e /dev/fuse ] && chmod 666 /dev/fuse && export WAYPOINT_RDP_TEST_FILES_OUT=/tmp/wpclip-out-wprdp
 systemctl stop xrdp xrdp-sesman 2>/dev/null || true
 /usr/sbin/xrdp-sesman && /usr/sbin/xrdp
 sleep 1

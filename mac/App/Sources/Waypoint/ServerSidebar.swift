@@ -53,6 +53,27 @@ struct ServerSidebar: View {
                     .help(L("menu.newserver"))
             }
             ToolbarItem {
+                // Jak przycisk narzędzi na pasku bocznym w Windows — tu wszystko z menu Narzędzia/Terminal.
+                Menu {
+                    Button(L("gen.menu")) { model.generatorOpen = true }
+                    Button(L("cred.menu")) { model.profileManagerOpen = true }
+                    Divider()
+                    Button(L("snip.menu.manage")) { model.snippetManagerOpen = true }
+                    Button(L("pal.open")) { model.openPalette() }
+                    Divider()
+                    Button(L("menu.import")) { model.importProfile() }
+                    Menu(L("migr.menu")) {
+                        ForEach(ExternalImport.Source.allCases, id: \.self) { src in
+                            Button(L("migr.item." + src.rawValue)) { model.importExternal(src) }
+                        }
+                    }
+                    Button(L("export.menu")) { model.exportProfile() }
+                } label: {
+                    Label(L("menu.tools"), systemImage: "wrench.and.screwdriver")
+                }
+                .help(L("toolbar.tools"))
+            }
+            ToolbarItem {
                 Button { model.profileManagerOpen = true } label: { Label(L("cred.menu"), systemImage: "person.badge.key") }
                     .help(L("cred.menu"))
             }

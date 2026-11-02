@@ -32,6 +32,7 @@ final class RdpDisplayView: NSView {
         layer?.contentsGravity = .resizeAspect
         layer?.magnificationFilter = .linear
         layer?.minificationFilter = .linear
+        registerForDraggedTypes([.fileURL])
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -122,11 +123,51 @@ final class RdpDisplayView: NSView {
         CATransaction.commit()
     }
 
+    // MARK: Przeciąganie plików z Findera
+
+    private func droppedFiles(_ info: NSDraggingInfo) -> [URL] {
+        (info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        connection != nil && !droppedFiles(sender).isEmpty ? .copy : []
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard connection != nil else { return [] }
+        let (x, y) = desktopPoint(window: sender.draggingLocation)
+        connection?.mouse(flags: RdpMouse.move, x: x, y: y)   // kursor w sesji pokazuje, gdzie trafią pliki
+        return .copy
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let urls = droppedFiles(sender)
+        guard !urls.isEmpty, let s = session else { return false }
+        window?.makeFirstResponder(self)
+        s.dropFiles(urls, at: desktopPoint(window: sender.draggingLocation))
+        return true
+    }
+
+    /// Klik w miejscu upuszczenia (fokus na oknie / folderze pod kursorem) i Ctrl+V.
+    func pasteAt(_ point: (Int, Int)) {
+        guard let c = connection else { return }
+        let (x, y) = point
+        c.mouse(flags: RdpMouse.move, x: x, y: y)
+        c.mouse(flags: RdpMouse.down | RdpMouse.left, x: x, y: y)
+        c.mouse(flags: RdpMouse.left, x: x, y: y)
+        c.key(down: true, scancode: 0x1D)    // Ctrl
+        c.key(down: true, scancode: 0x2F)    // V
+        c.key(down: false, scancode: 0x2F)
+        c.key(down: false, scancode: 0x1D)
+    }
+
     // MARK: Mysz
 
     /// Prostokąt obrazu w widoku (proporcje zachowane, jak .resizeAspect) i przeliczenie punktu.
-    private func desktopPoint(_ event: NSEvent) -> (Int, Int) {
-        let p = convert(event.locationInWindow, from: nil)
+    private func desktopPoint(_ event: NSEvent) -> (Int, Int) { desktopPoint(window: event.locationInWindow) }
+
+    private func desktopPoint(window location: NSPoint) -> (Int, Int) {
+        let p = convert(location, from: nil)
         guard desktop.width > 0, desktop.height > 0, bounds.width > 0, bounds.height > 0 else { return (0, 0) }
         let scale = min(bounds.width / desktop.width, bounds.height / desktop.height)
         let w = desktop.width * scale, h = desktop.height * scale

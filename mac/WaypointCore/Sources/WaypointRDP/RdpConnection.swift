@@ -25,6 +25,9 @@ public final class RdpConnection: @unchecked Sendable {
         public var gatewaySameCredentials = true
         /// Tylko testy — normalnie certyfikat potwierdza użytkownik (`onVerifyCertificate`).
         public var ignoreCertificate = false
+        /// Folder Maca jako dysk w sesji (pusty = bez udostępniania).
+        public var drivePath = ""
+        public var driveName = "Mac"
         public init(host: String) { self.host = host }
     }
 
@@ -69,6 +72,31 @@ public final class RdpConnection: @unchecked Sendable {
     public var onAuthenticate: (@Sendable (_ gateway: Bool, _ username: String, _ domain: String) -> Credentials?)?
     /// Tekst skopiowany w sesji (końce linii już jako \n). Wątek kanału.
     public var onClipboardText: (@Sendable (String) -> Void)?
+    /// Pliki skopiowane w sesji (lista; treść przez `downloadClipboardFiles`). Wątek kanału.
+    public var onClipboardFiles: (@Sendable ([RemoteFile]) -> Void)?
+
+    /// Plik w schowku sesji: ścieżka względna z „/", rozmiar (nil = nieznany), katalog.
+    public struct RemoteFile: Equatable, Sendable {
+        public var path: String
+        public var size: Int64?
+        public var isDirectory: Bool
+        public init(path: String, size: Int64?, isDirectory: Bool) { self.path = path; self.size = size; self.isDirectory = isDirectory }
+    }
+
+    /// Plik z Maca dla schowka sesji: nazwa względna („folder/plik.txt"), pełna ścieżka, rozmiar.
+    public struct LocalFile: Equatable, Sendable {
+        public var name: String
+        public var path: String
+        public var size: Int64
+        public var isDirectory: Bool
+    }
+
+    public enum TransferError: Error, Equatable { case notConnected, failed(String), cancelled, timeout }
+
+    // Jedna prośba o fragment pliku naraz (FileContents) — odpowiedź z wątku kanału.
+    private let fileLock = NSLock()
+    private var fileWait: (stream: UInt32, done: DispatchSemaphore, ok: Bool, data: Data)?
+    private var nextStream: UInt32 = 1
 
     private var handle: OpaquePointer?
     private let lock = NSLock()
@@ -118,6 +146,8 @@ public final class RdpConnection: @unchecked Sendable {
         cfg.gateway_password = s(c.gatewayPassword)
         cfg.gateway_same_credentials = c.gatewaySameCredentials ? 1 : 0
         cfg.ignore_certificate = c.ignoreCertificate ? 1 : 0
+        cfg.drive_path = s(c.drivePath)
+        cfg.drive_name = s(c.driveName)
 
         var cb = wp_rdp_callbacks()
         cb.user = Unmanaged.passUnretained(self).toOpaque()
@@ -164,6 +194,26 @@ public final class RdpConnection: @unchecked Sendable {
             guard let text else { return }
             RdpConnection.from(user).onClipboardText?(String(cString: text).replacingOccurrences(of: "\r\n", with: "\n"))
         }
+        cb.clipboard_files = { user, count, names, sizes, dirs in
+            guard let names, let sizes, let dirs else { return }
+            var list: [RemoteFile] = []
+            for i in 0..<Int(count) {
+                guard let n = names[i] else { continue }
+                list.append(RemoteFile(path: String(cString: n), size: sizes[i] >= 0 ? sizes[i] : nil, isDirectory: dirs[i] != 0))
+            }
+            RdpConnection.from(user).onClipboardFiles?(list)
+        }
+        cb.clipboard_file_data = { user, stream, ok, data, length in
+            let me = RdpConnection.from(user)
+            me.fileLock.lock()
+            if var w = me.fileWait, w.stream == stream {
+                w.ok = ok != 0
+                w.data = (ok != 0 && data != nil) ? Data(bytes: data!, count: Int(length)) : Data()
+                me.fileWait = w
+                w.done.signal()
+            }
+            me.fileLock.unlock()
+        }
         let h = wp_rdp_start(&cfg, &cb)
         lock.lock(); handle = h; lock.unlock()
         return h != nil
@@ -202,6 +252,122 @@ public final class RdpConnection: @unchecked Sendable {
         if let h = current { wp_rdp_resize(h, Int32(width), Int32(height), Int32(scalePercent)) }
     }
     public func syncLocks(_ flags: UInt32) { if let h = current { wp_rdp_sync_locks(h, flags) } }
+    /// Pliki z Maca do wklejenia w sesji (zastępuje tekst w schowku sesji).
+    public func setClipboardFiles(_ files: [LocalFile]) {
+        guard let h = current else { return }
+        var owned: [UnsafeMutablePointer<CChar>?] = []
+        defer { owned.forEach { free($0) } }
+        let names = files.map { f -> UnsafePointer<CChar>? in let p = strdup(f.name); owned.append(p); return UnsafePointer(p) }
+        let paths = files.map { f -> UnsafePointer<CChar>? in let p = strdup(f.path); owned.append(p); return UnsafePointer(p) }
+        let sizes = files.map { $0.size }
+        let dirs = files.map { Int32($0.isDirectory ? 1 : 0) }
+        names.withUnsafeBufferPointer { n in
+            paths.withUnsafeBufferPointer { p in
+                wp_rdp_set_clipboard_files(h, Int32(files.count), n.baseAddress, p.baseAddress, sizes, dirs)
+            }
+        }
+    }
+
+    /// Lista do schowka sesji z zaznaczonych w Finderze plików i folderów (foldery z zawartością,
+    /// katalog przed swoimi plikami — tak oczekuje Eksplorator). Dowiązania symboliczne pomijane.
+    public static func clipboardEntries(for urls: [URL]) -> [LocalFile] {
+        var out: [LocalFile] = []
+        let fm = FileManager.default
+        func add(_ url: URL, name: String) {
+            guard let attrs = try? fm.attributesOfItem(atPath: url.path) else { return }
+            let type = attrs[.type] as? FileAttributeType
+            if type == .typeSymbolicLink { return }
+            if type == .typeDirectory {
+                out.append(LocalFile(name: name, path: url.path, size: 0, isDirectory: true))
+                let children = ((try? fm.contentsOfDirectory(atPath: url.path)) ?? []).sorted()
+                for c in children { add(url.appendingPathComponent(c), name: name + "/" + c) }
+            } else if type == .typeRegular {
+                let size = (attrs[.size] as? NSNumber)?.int64Value ?? 0
+                out.append(LocalFile(name: name, path: url.path, size: size, isDirectory: false))
+            }
+        }
+        for u in urls where u.isFileURL { add(u.standardizedFileURL, name: u.lastPathComponent) }
+        return out
+    }
+
+    /// Ścieżka z sesji → bezpieczna ścieżka względna (bez „..", „." i pustych członów); nil = odrzucona.
+    public static func safeRelativePath(_ remote: String) -> String? {
+        let parts = remote.replacingOccurrences(of: "\\", with: "/").split(separator: "/")
+            .map(String.init).filter { !$0.isEmpty && $0 != "." }
+        guard !parts.isEmpty, !parts.contains("..") else { return nil }
+        return parts.joined(separator: "/")
+    }
+
+    /// Pobiera pliki ze schowka sesji do `directory` (blokuje — wołać poza wątkiem głównym).
+    /// Zwraca elementy najwyższego poziomu (do schowka Finderu). `progress(pobrane, razem)`.
+    public func downloadClipboardFiles(_ files: [RemoteFile], to directory: URL, chunk: Int = 1 << 20,
+                                       progress: (Int64, Int64) -> Void = { _, _ in },
+                                       isCancelled: () -> Bool = { false }) throws -> [URL] {
+        let fm = FileManager.default
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        var total: Int64 = files.reduce(0) { $0 + ($1.isDirectory ? 0 : ($1.size ?? 0)) }
+        var done: Int64 = 0
+        var top: [URL] = []
+        for (index, f) in files.enumerated() {
+            if isCancelled() { throw TransferError.cancelled }
+            guard let rel = Self.safeRelativePath(f.path) else { continue }
+            let dest = directory.appendingPathComponent(rel)
+            if !rel.contains("/") { top.append(dest) }
+            if f.isDirectory {
+                try fm.createDirectory(at: dest, withIntermediateDirectories: true)
+                continue
+            }
+            try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+            var size = f.size ?? -1
+            if size < 0 {
+                let d = try fileRequest(index: index, sizeOnly: true, position: 0, length: 8)
+                guard d.count >= 8 else { throw TransferError.failed(f.path) }
+                size = d.withUnsafeBytes { Int64(littleEndian: $0.loadUnaligned(as: Int64.self)) }
+                total += size
+            }
+            guard fm.createFile(atPath: dest.path, contents: nil), let out = FileHandle(forWritingAtPath: dest.path) else {
+                throw TransferError.failed(dest.path)
+            }
+            defer { try? out.close() }
+            var pos: Int64 = 0
+            while pos < size {
+                if isCancelled() { throw TransferError.cancelled }
+                let want = Int(min(Int64(chunk), size - pos))
+                let d = try fileRequest(index: index, sizeOnly: false, position: UInt64(pos), length: UInt32(want))
+                if d.isEmpty { throw TransferError.failed(f.path) }
+                try out.write(contentsOf: d)
+                pos += Int64(d.count)
+                done += Int64(d.count)
+                progress(done, total)
+            }
+        }
+        return top
+    }
+
+    private func fileRequest(index: Int, sizeOnly: Bool, position: UInt64, length: UInt32) throws -> Data {
+        guard let h = current else { throw TransferError.notConnected }
+        let sem = DispatchSemaphore(value: 0)
+        fileLock.lock()
+        let stream = nextStream
+        nextStream &+= 1
+        fileWait = (stream, sem, false, Data())
+        fileLock.unlock()
+        defer { fileLock.lock(); fileWait = nil; fileLock.unlock() }
+        // Prośba czeka, aż wątek połączenia wyśle poprzednią (jedna naraz).
+        var sent = false
+        for _ in 0..<200 {
+            if wp_rdp_clipboard_request_file(h, stream, Int32(index), sizeOnly ? 1 : 0, position, length) != 0 { sent = true; break }
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        guard sent else { throw TransferError.notConnected }
+        guard sem.wait(timeout: .now() + 60) == .success else { throw TransferError.timeout }
+        fileLock.lock()
+        let w = fileWait
+        fileLock.unlock()
+        guard let w, w.ok else { throw TransferError.failed("FileContents") }
+        return w.data
+    }
+
     /// Tekst ze schowka Maca dla sesji (nil = pusty schowek / nie tekst). Końce linii → \r\n jak w Windows.
     public func setClipboardText(_ text: String?) {
         guard let h = current else { return }

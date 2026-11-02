@@ -37,6 +37,11 @@ typedef struct {
                         char *domain, int domain_len, int gateway);
     /// Tekst ze schowka sesji (UTF-8) — po skopiowaniu czegoś po stronie serwera. Wątek kanału.
     void (*clipboard_text)(void *user, const char *utf8);
+    /// Pliki w schowku sesji (skopiowane w Eksploratorze): ścieżki względne z '/', rozmiar (-1 = nieznany),
+    /// katalog. Treść pobiera się przez wp_rdp_clipboard_request_file. Wątek kanału.
+    void (*clipboard_files)(void *user, int count, const char *const *names, const int64_t *sizes, const int *is_dir);
+    /// Odpowiedź na wp_rdp_clipboard_request_file (ok = 0: błąd). Rozmiar: 8 bajtów little-endian.
+    void (*clipboard_file_data)(void *user, uint32_t stream_id, int ok, const uint8_t *data, uint32_t length);
 } wp_rdp_callbacks;
 
 typedef struct {
@@ -58,7 +63,10 @@ typedef struct {
     const char *gateway_domain;
     const char *gateway_password;
     int gateway_same_credentials;
-    int ignore_certificate;     // tylko testy
+    int ignore_certificate;
+    /// Folder Maca widoczny w sesji jako dysk (Ten komputer → „<nazwa> na <Mac>"); NULL = bez.
+    const char *drive_path;
+    const char *drive_name;     // tylko testy
 } wp_rdp_config;
 
 int wp_rdp_available(void);
@@ -84,6 +92,13 @@ void wp_rdp_resize(wp_rdp *r, int width, int height, int scale_percent);
 void wp_rdp_sync_locks(wp_rdp *r, uint32_t flags);
 /// Tekst ze schowka Maca dla sesji (UTF-8; NULL/pusty = brak). Serwer pobierze go przy wklejeniu.
 void wp_rdp_set_clipboard_text(wp_rdp *r, const char *utf8);
+/// Pliki z Maca dla sesji (wklejenie w Eksploratorze): nazwy względne z '/' (katalogi przed zawartością),
+/// pełne ścieżki, rozmiary, katalog = 1. Zastępuje tekst w schowku.
+void wp_rdp_set_clipboard_files(wp_rdp *r, int count, const char *const *names, const char *const *paths,
+                                const int64_t *sizes, const int *is_dir);
+/// Prośba o rozmiar (size_only) albo fragment pliku `index` z listy sesji; jedna naraz. 0 = nie wysłano.
+int wp_rdp_clipboard_request_file(wp_rdp *r, uint32_t stream_id, int index, int size_only,
+                                  uint64_t position, uint32_t length);
 
 /// Czy kod błędu FreeRDP oznacza odrzucone poświadczenia (złe hasło, konto zablokowane itp.).
 int wp_rdp_error_is_auth(uint32_t error);

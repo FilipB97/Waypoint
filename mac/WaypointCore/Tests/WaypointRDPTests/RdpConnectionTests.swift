@@ -19,6 +19,7 @@ final class Recorder: @unchecked Sendable {
     var sizes: [(Int, Int)] = []
     var certificates: [RdpConnection.Certificate] = []
     var clipboard: [String] = []
+    var files: [[RdpConnection.RemoteFile]] = []
     func add(_ f: () -> Void) { lock.lock(); f(); lock.unlock() }
     func read<T>(_ f: () -> T) -> T { lock.lock(); defer { lock.unlock() }; return f() }
 }
@@ -30,6 +31,24 @@ func waitUntil(_ seconds: Double, _ cond: () -> Bool) -> Bool {
 }
 
 @Suite struct RdpUnitTests {
+    @Test func bezpieczneSciezkiZSesji() {
+        #expect(RdpConnection.safeRelativePath("a\\b\\c.txt") == "a/b/c.txt")
+        #expect(RdpConnection.safeRelativePath("../etc/passwd") == nil)
+        #expect(RdpConnection.safeRelativePath("/abs/./x") == "abs/x")
+        #expect(RdpConnection.safeRelativePath("") == nil)
+    }
+
+    @Test func listaPlikowZMaca() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("wp-src-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("dir/sub"), withIntermediateDirectories: true)
+        try Data("abc".utf8).write(to: root.appendingPathComponent("dir/sub/x.txt"))
+        try Data("12345".utf8).write(to: root.appendingPathComponent("plik.bin"))
+        let list = RdpConnection.clipboardEntries(for: [root.appendingPathComponent("dir"), root.appendingPathComponent("plik.bin")])
+        #expect(list.map(\.name) == ["dir", "dir/sub", "dir/sub/x.txt", "plik.bin"])
+        #expect(list.map(\.isDirectory) == [true, true, false, false])
+        #expect(list.last?.size == 5)
+    }
+
     @Test func flagiKolka() {
         #expect(RdpMouse.wheelFlags(delta: 120) == 0x0200 | 120)
         #expect(RdpMouse.wheelFlags(delta: -120) == 0x0200 | 0x0100 | 0x88)   // -120 w 9 bitach
@@ -137,6 +156,96 @@ struct RdpConnectionTests {
         c.setClipboardText("WP:" + token)
         let echoed = waitUntil(15) { rec.read { rec.clipboard.contains("ECHO:" + token) } }
         #expect(echoed, "schowek: \(rec.read { rec.clipboard })")
+        c.stop()
+    }
+
+    /// Pliki z sesji: startwm.sh po „WPFILE:x" wkłada do schowka dwa pliki (mały i 3 MB) jako
+    /// text/uri-list; xrdp ogłasza FileGroupDescriptorW, a my pobieramy treść przez FileContents.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_CLIPBOARD"] == "1"))
+    func plikiZSesji() throws {
+        let t = rdpTarget!
+        let rec = Recorder()
+        let c = RdpConnection()
+        c.onState = { s in rec.add { rec.states.append(s) } }
+        c.onVerifyCertificate = { _ in .acceptOnce }
+        c.onClipboardFiles = { list in rec.add { rec.files.append(list) } }
+        var cfg = RdpConnection.Config(host: t.host)
+        cfg.port = t.port; cfg.username = t.user; cfg.password = t.password
+        cfg.configDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("wp-rdp-\(UUID().uuidString)").path
+        #expect(c.start(cfg))
+        #expect(waitUntil(20) { rec.read { rec.states.contains(.connected) } })
+        Thread.sleep(forTimeInterval: 1.5)
+        let name = "folder\(Int.random(in: 1000...9999))"
+        c.setClipboardText("WPFILE:" + name)
+        #expect(waitUntil(15) { rec.read { rec.files.contains { $0.map(\.path).sorted() == ["a.txt", "duzy.bin"] } } },
+                "pliki: \(rec.read { rec.files })")
+        let list = try #require(rec.read { rec.files.last })
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("wp-clip-\(UUID().uuidString)/\(name)")
+        var last: (Int64, Int64) = (0, 0)
+        let top = try c.downloadClipboardFiles(list, to: dir, progress: { last = ($0, $1) })
+        #expect(top.map(\.lastPathComponent).sorted() == ["a.txt", "duzy.bin"])
+        let small = try String(contentsOf: dir.appendingPathComponent("a.txt"), encoding: .utf8)
+        #expect(small == "zawartość \(name)\n")
+        let big = try FileManager.default.attributesOfItem(atPath: dir.appendingPathComponent("duzy.bin").path)
+        #expect((big[.size] as? NSNumber)?.intValue == 3_000_000)
+        #expect(last.0 == last.1 && last.0 >= 3_000_000)
+        c.stop()
+    }
+
+    /// Pliki z Maca do sesji: lista FileGroupDescriptorW i treść na prośby FileContents. Sesja testowa
+    /// (startwm.sh) kopiuje wklejone pliki z FUSE xrdp do /tmp/wpclip-out-<użytkownik> i odpowiada „COPIED".
+    /// xrdp przenosi tylko pliki (foldery pomija) — foldery sprawdza test listy plików.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_FILES_OUT"] != nil))
+    func plikiDoSesji() throws {
+        let t = rdpTarget!
+        let out = URL(fileURLWithPath: ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_FILES_OUT"]!)
+        try? FileManager.default.removeItem(at: out)
+        let src = FileManager.default.temporaryDirectory.appendingPathComponent("wp-src-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: src, withIntermediateDirectories: true)
+        try Data("zażółć".utf8).write(to: src.appendingPathComponent("maly.txt"))
+        let big = Data((0..<700_000).map { UInt8($0 % 251) })
+        try big.write(to: src.appendingPathComponent("plik.bin"))
+
+        let rec = Recorder()
+        let c = RdpConnection()
+        c.onState = { s in rec.add { rec.states.append(s) } }
+        c.onVerifyCertificate = { _ in .acceptOnce }
+        c.onClipboardText = { text in rec.add { rec.clipboard.append(text) } }
+        var cfg = RdpConnection.Config(host: t.host)
+        cfg.port = t.port; cfg.username = t.user; cfg.password = t.password
+        cfg.configDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("wp-rdp-\(UUID().uuidString)").path
+        #expect(c.start(cfg))
+        #expect(waitUntil(20) { rec.read { rec.states.contains(.connected) } })
+        Thread.sleep(forTimeInterval: 1.5)
+        c.setClipboardFiles(RdpConnection.clipboardEntries(for: [src.appendingPathComponent("maly.txt"), src.appendingPathComponent("plik.bin")]))
+        #expect(waitUntil(20) { rec.read { rec.clipboard.contains("COPIED") } }, "schowek: \(rec.read { rec.clipboard })")
+        #expect((try? Data(contentsOf: out.appendingPathComponent("plik.bin"))) == big)
+        #expect((try? String(contentsOf: out.appendingPathComponent("maly.txt"), encoding: .utf8)) == "zażółć")
+        c.stop()
+    }
+
+    /// Folder Maca jako dysk w sesji (rdpdr/drive): sesja testowa czyta probe.txt z dysku „WPDRIVE"
+    /// i odsyła treść przez schowek.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_FILES_OUT"] != nil))
+    func dyskWSesji() throws {
+        let t = rdpTarget!
+        let share = FileManager.default.temporaryDirectory.appendingPathComponent("wp-drive-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: share, withIntermediateDirectories: true)
+        let token = "dysk-\(Int.random(in: 100000...999999))"
+        try Data(token.utf8).write(to: share.appendingPathComponent("probe.txt"))
+        let rec = Recorder()
+        let c = RdpConnection()
+        c.onState = { s in rec.add { rec.states.append(s) } }
+        c.onVerifyCertificate = { _ in .acceptOnce }
+        c.onClipboardText = { text in rec.add { rec.clipboard.append(text) } }
+        var cfg = RdpConnection.Config(host: t.host)
+        cfg.port = t.port; cfg.username = t.user; cfg.password = t.password
+        cfg.drivePath = share.path
+        cfg.driveName = "WPDRIVE"
+        cfg.configDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("wp-rdp-\(UUID().uuidString)").path
+        #expect(c.start(cfg))
+        #expect(waitUntil(20) { rec.read { rec.states.contains(.connected) } })
+        #expect(waitUntil(20) { rec.read { rec.clipboard.contains("DRIVE:" + token) } }, "schowek: \(rec.read { rec.clipboard })")
         c.stop()
     }
 
