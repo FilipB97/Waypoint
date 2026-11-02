@@ -489,20 +489,23 @@ typedef struct {
     uint8_t *bgra;
 } wpPointer;
 
+/// Nigdy nie zwraca FALSE: błąd tutaj FreeRDP traktuje jak błąd protokołu i zrywa sesję (Windows
+/// wysyła np. na ekranie logowania kursory bez maski, których konwersja się nie udaje). Kursor, którego
+/// nie umiemy pokazać, staje się zwykłą strzałką.
 static BOOL wp_pointer_new(rdpContext *context, rdpPointer *pointer) {
     wpPointer *p = (wpPointer *)pointer;
+    p->bgra = NULL;
     size_t size = (size_t)pointer->width * pointer->height * 4;
-    if (size == 0) return TRUE;
-    p->bgra = calloc(1, size);
-    if (!p->bgra) return FALSE;
-    if (!freerdp_image_copy_from_pointer_data(p->bgra, PIXEL_FORMAT_BGRA32, pointer->width * 4, 0, 0,
-                                              pointer->width, pointer->height, pointer->xorMaskData,
-                                              pointer->lengthXorMask, pointer->andMaskData, pointer->lengthAndMask,
-                                              pointer->xorBpp, context->gdi ? &context->gdi->palette : NULL)) {
-        free(p->bgra);
-        p->bgra = NULL;
-        return FALSE;
-    }
+    if (size == 0 || pointer->width > 512 || pointer->height > 512) return TRUE;
+    uint8_t *bgra = calloc(1, size);
+    if (!bgra) return TRUE;
+    if (freerdp_image_copy_from_pointer_data(bgra, PIXEL_FORMAT_BGRA32, pointer->width * 4, 0, 0,
+                                             pointer->width, pointer->height, pointer->xorMaskData,
+                                             pointer->lengthXorMask, pointer->andMaskData, pointer->lengthAndMask,
+                                             pointer->xorBpp, context->gdi ? &context->gdi->palette : NULL))
+        p->bgra = bgra;
+    else
+        free(bgra);
     return TRUE;
 }
 
@@ -516,9 +519,12 @@ static void wp_pointer_free(rdpContext *context, rdpPointer *pointer) {
 static BOOL wp_pointer_set(rdpContext *context, rdpPointer *pointer) {
     wp_rdp *r = owner_of(context);
     wpPointer *p = (wpPointer *)pointer;
-    if (r && r->cb.cursor && p->bgra)
+    if (!r || !r->cb.cursor) return TRUE;
+    if (p->bgra)
         r->cb.cursor(r->cb.user, WP_CURSOR_IMAGE, (int)pointer->width, (int)pointer->height,
                      (int)pointer->xPos, (int)pointer->yPos, p->bgra);
+    else
+        r->cb.cursor(r->cb.user, WP_CURSOR_DEFAULT, 0, 0, 0, 0, NULL);
     return TRUE;
 }
 
@@ -730,11 +736,9 @@ wp_rdp *wp_rdp_start(const wp_rdp_config *c, const wp_rdp_callbacks *cb) {
         && freerdp_settings_set_bool(s, FreeRDP_RedirectClipboard, c->redirect_clipboard ? TRUE : FALSE)
         && freerdp_settings_set_bool(s, FreeRDP_ConsoleSession, c->admin_session ? TRUE : FALSE)
         && freerdp_settings_set_bool(s, FreeRDP_AutoReconnectionEnabled, TRUE)
-        // Pełne wrażenia jak mstsc w sieci LAN. Domyślnie FreeRDP wyłącza kompozycję pulpitu i animacje —
-        // Windows rysuje wtedy uproszczony interfejs: bez podświetleń, przejść i animowanych wskaźników
-        // ładowania (Fluent/WinUI korzystają z kompozycji).
-        && freerdp_settings_set_uint32(s, FreeRDP_ConnectionType, CONNECTION_TYPE_LAN)
-        && freerdp_settings_set_bool(s, FreeRDP_NetworkAutoDetect, FALSE)
+        // Pełne wrażenia jak mstsc w sieci LAN (flagi wydajności w Client Info). Domyślnie FreeRDP wyłącza
+        // kompozycję pulpitu i animacje — Windows rysuje wtedy uproszczony interfejs: bez podświetleń,
+        // przejść i animowanych wskaźników ładowania (Fluent/WinUI korzystają z kompozycji).
         && freerdp_settings_set_bool(s, FreeRDP_AllowFontSmoothing, TRUE)
         && freerdp_settings_set_bool(s, FreeRDP_AllowDesktopComposition, TRUE)
         && freerdp_settings_set_bool(s, FreeRDP_DisableWallpaper, FALSE)
