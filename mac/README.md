@@ -185,7 +185,9 @@ albo profilu poświadczeń) — pytanie nad kartą pojawia się tylko, gdy go br
 „nie sprawdzaj" z edycji serwera pomija pytanie. Rozdzielczość sesji = rozmiar karty (Retina 200%),
 zmiana rozmiaru okna zmienia ją w locie (Display Control). Klawiatura: ⌘ działa jak Ctrl (⌘C/⌘V
 w sesji), polskie znaki z Option idą jako Unicode, Option z klawiszami specjalnymi = Alt; ⌘W, ⌘Q,
-⌘1–9 zostają przy Waypoincie. Rozdzielczość (dopasowanie do okna albo stała), skalowanie
+⌘1–9 zostają przy Waypoincie. Kursor pochodzi z sesji (zajęty, ładowanie, tekstowy, zmiana
+rozmiaru). Wrażenia jak mstsc w sieci LAN: kompozycja pulpitu, animacje, wygładzanie czcionek,
+motywy i tapeta — bez nich Windows rysuje uproszczony interfejs (bez podświetleń i animacji). Rozdzielczość (dopasowanie do okna albo stała), skalowanie
 i pełna rozdzielczość Retina — w Ustawieniach (⌘,) → Pulpit zdalny, z nadpisaniem w edycji serwera;
 zmiana działa od razu w otwartych kartach. Brama RD (te same dane logowania), sesja administracyjna, schowek tekstowy w obie strony.
 

@@ -75,6 +75,13 @@ public final class RdpConnection: @unchecked Sendable {
     /// Pliki skopiowane w sesji (lista; treść przez `downloadClipboardFiles`). Wątek kanału.
     public var onClipboardFiles: (@Sendable ([RemoteFile]) -> Void)?
 
+    /// Kursor z sesji. Wątek połączenia.
+    public enum Cursor: Sendable {
+        case image(width: Int, height: Int, hotX: Int, hotY: Int, bgra: Data)   // nieprzemnożona alfa
+        case hidden, standard
+    }
+    public var onCursor: (@Sendable (Cursor) -> Void)?
+
     /// Plik w schowku sesji: ścieżka względna z „/", rozmiar (nil = nieznany), katalog.
     public struct RemoteFile: Equatable, Sendable {
         public var path: String
@@ -213,6 +220,17 @@ public final class RdpConnection: @unchecked Sendable {
                 w.done.signal()
             }
             me.fileLock.unlock()
+        }
+        cb.cursor = { user, kind, w, h, hx, hy, bgra in
+            let me = RdpConnection.from(user)
+            switch kind {
+            case Int32(WP_CURSOR_IMAGE):
+                guard let bgra, w > 0, h > 0 else { return }
+                me.onCursor?(.image(width: Int(w), height: Int(h), hotX: Int(hx), hotY: Int(hy),
+                                    bgra: Data(bytes: bgra, count: Int(w) * Int(h) * 4)))
+            case Int32(WP_CURSOR_HIDDEN): me.onCursor?(.hidden)
+            default: me.onCursor?(.standard)
+            }
         }
         let h = wp_rdp_start(&cfg, &cb)
         lock.lock(); handle = h; lock.unlock()

@@ -20,6 +20,7 @@ final class Recorder: @unchecked Sendable {
     var certificates: [RdpConnection.Certificate] = []
     var clipboard: [String] = []
     var files: [[RdpConnection.RemoteFile]] = []
+    var cursors: [RdpConnection.Cursor] = []
     func add(_ f: () -> Void) { lock.lock(); f(); lock.unlock() }
     func read<T>(_ f: () -> T) -> T { lock.lock(); defer { lock.unlock() }; return f() }
 }
@@ -74,6 +75,7 @@ struct RdpConnectionTests {
         c.onState = { s in rec.add { rec.states.append(s) } }
         c.onFrame = { _ in rec.add { rec.frames += 1 } }
         c.onResize = { w, h in rec.add { rec.sizes.append((w, h)) } }
+        c.onCursor = { cur in rec.add { rec.cursors.append(cur) } }
         c.onVerifyCertificate = { cert in rec.add { rec.certificates.append(cert) }; return .acceptOnce }
         var cfg = RdpConnection.Config(host: t.host)
         cfg.port = t.port; cfg.username = t.user; cfg.password = t.password
@@ -125,6 +127,15 @@ struct RdpConnectionTests {
             #expect(resized, "rozmiary: \(rec.read { rec.sizes })")
             #expect(c.withFrame { _, w, h, _ in (w, h) } == (1280, 720))
         }
+        // Kursor z sesji (xrdp wysyła własny przy starcie i po ruchu myszy): obraz z sensownym punktem aktywnym.
+        c.mouse(flags: RdpMouse.move, x: 50, y: 50)
+        let cursorOK = waitUntil(10) { rec.read { rec.cursors.contains {
+            if case .image(let w, let h, let hx, let hy, let data) = $0 {
+                return w > 0 && h > 0 && hx < w && hy < h && data.count == w * h * 4 && data.contains { $0 != 0 }
+            }
+            return false
+        } } }
+        #expect(cursorOK, "kursory: \(rec.read { rec.cursors.count })")
         // Wejście nie może wywrócić połączenia.
         c.mouse(flags: RdpMouse.move, x: 100, y: 100)
         c.key(down: true, scancode: 0x1E); c.key(down: false, scancode: 0x1E)

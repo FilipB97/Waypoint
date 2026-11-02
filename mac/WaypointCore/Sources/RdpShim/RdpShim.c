@@ -36,6 +36,8 @@ int wp_rdp_error_is_auth(uint32_t e) { (void)e; return 0; }
 #include <freerdp/utils/cliprdr_utils.h>
 #include <freerdp/client/cmdline.h>
 #include <freerdp/gdi/gdi.h>
+#include <freerdp/graphics.h>
+#include <freerdp/codec/color.h>
 #include <freerdp/codecs.h>
 #include <freerdp/input.h>
 #include <freerdp/error.h>
@@ -480,6 +482,63 @@ static void send_pending_resize(wp_rdp *r) {
     (void)disp->SendMonitorLayout(disp, 1, &layout);
 }
 
+// --- Kursor z sesji (zajęty, ładowanie, kursor tekstowy, zmiana rozmiaru…) ---
+
+typedef struct {
+    rdpPointer pointer;        // musi być pierwsze — FreeRDP alokuje `size` bajtów i rzutuje
+    uint8_t *bgra;
+} wpPointer;
+
+static BOOL wp_pointer_new(rdpContext *context, rdpPointer *pointer) {
+    wpPointer *p = (wpPointer *)pointer;
+    size_t size = (size_t)pointer->width * pointer->height * 4;
+    if (size == 0) return TRUE;
+    p->bgra = calloc(1, size);
+    if (!p->bgra) return FALSE;
+    if (!freerdp_image_copy_from_pointer_data(p->bgra, PIXEL_FORMAT_BGRA32, pointer->width * 4, 0, 0,
+                                              pointer->width, pointer->height, pointer->xorMaskData,
+                                              pointer->lengthXorMask, pointer->andMaskData, pointer->lengthAndMask,
+                                              pointer->xorBpp, context->gdi ? &context->gdi->palette : NULL)) {
+        free(p->bgra);
+        p->bgra = NULL;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void wp_pointer_free(rdpContext *context, rdpPointer *pointer) {
+    (void)context;
+    wpPointer *p = (wpPointer *)pointer;
+    free(p->bgra);
+    p->bgra = NULL;
+}
+
+static BOOL wp_pointer_set(rdpContext *context, rdpPointer *pointer) {
+    wp_rdp *r = owner_of(context);
+    wpPointer *p = (wpPointer *)pointer;
+    if (r && r->cb.cursor && p->bgra)
+        r->cb.cursor(r->cb.user, WP_CURSOR_IMAGE, (int)pointer->width, (int)pointer->height,
+                     (int)pointer->xPos, (int)pointer->yPos, p->bgra);
+    return TRUE;
+}
+
+static BOOL wp_pointer_set_null(rdpContext *context) {
+    wp_rdp *r = owner_of(context);
+    if (r && r->cb.cursor) r->cb.cursor(r->cb.user, WP_CURSOR_HIDDEN, 0, 0, 0, 0, NULL);
+    return TRUE;
+}
+
+static BOOL wp_pointer_set_default(rdpContext *context) {
+    wp_rdp *r = owner_of(context);
+    if (r && r->cb.cursor) r->cb.cursor(r->cb.user, WP_CURSOR_DEFAULT, 0, 0, 0, 0, NULL);
+    return TRUE;
+}
+
+static BOOL wp_pointer_set_position(rdpContext *context, UINT32 x, UINT32 y) {
+    (void)context; (void)x; (void)y;   // mysz należy do Maca — serwer nie przesuwa kursora
+    return TRUE;
+}
+
 // --- Połączenie ---
 
 static BOOL wp_pre_connect(freerdp *instance) {
@@ -494,6 +553,15 @@ static BOOL wp_pre_connect(freerdp *instance) {
 static BOOL wp_post_connect(freerdp *instance) {
     rdpContext *context = instance->context;
     if (!gdi_init(instance, PIXEL_FORMAT_BGRA32)) return FALSE;
+    rdpPointer pointer = { 0 };
+    pointer.size = sizeof(wpPointer);
+    pointer.New = wp_pointer_new;
+    pointer.Free = wp_pointer_free;
+    pointer.Set = wp_pointer_set;
+    pointer.SetNull = wp_pointer_set_null;
+    pointer.SetDefault = wp_pointer_set_default;
+    pointer.SetPosition = wp_pointer_set_position;
+    graphics_register_pointer(context->graphics, &pointer);
     context->update->BeginPaint = wp_begin_paint;
     context->update->EndPaint = wp_end_paint;
     context->update->DesktopResize = wp_desktop_resize;
@@ -662,6 +730,19 @@ wp_rdp *wp_rdp_start(const wp_rdp_config *c, const wp_rdp_callbacks *cb) {
         && freerdp_settings_set_bool(s, FreeRDP_RedirectClipboard, c->redirect_clipboard ? TRUE : FALSE)
         && freerdp_settings_set_bool(s, FreeRDP_ConsoleSession, c->admin_session ? TRUE : FALSE)
         && freerdp_settings_set_bool(s, FreeRDP_AutoReconnectionEnabled, TRUE)
+        // Pełne wrażenia jak mstsc w sieci LAN. Domyślnie FreeRDP wyłącza kompozycję pulpitu i animacje —
+        // Windows rysuje wtedy uproszczony interfejs: bez podświetleń, przejść i animowanych wskaźników
+        // ładowania (Fluent/WinUI korzystają z kompozycji).
+        && freerdp_settings_set_uint32(s, FreeRDP_ConnectionType, CONNECTION_TYPE_LAN)
+        && freerdp_settings_set_bool(s, FreeRDP_NetworkAutoDetect, FALSE)
+        && freerdp_settings_set_bool(s, FreeRDP_AllowFontSmoothing, TRUE)
+        && freerdp_settings_set_bool(s, FreeRDP_AllowDesktopComposition, TRUE)
+        && freerdp_settings_set_bool(s, FreeRDP_DisableWallpaper, FALSE)
+        && freerdp_settings_set_bool(s, FreeRDP_DisableFullWindowDrag, FALSE)
+        && freerdp_settings_set_bool(s, FreeRDP_DisableMenuAnims, FALSE)
+        && freerdp_settings_set_bool(s, FreeRDP_DisableThemes, FALSE)
+        && freerdp_settings_set_bool(s, FreeRDP_DisableCursorShadow, FALSE)
+        && freerdp_settings_set_bool(s, FreeRDP_DisableCursorBlinking, FALSE)
         && freerdp_settings_set_bool(s, FreeRDP_IgnoreCertificate, c->ignore_certificate ? TRUE : FALSE)
         && set_str(s, FreeRDP_ConfigPath, c->config_dir)
         && set_str(s, FreeRDP_ClientHostname, c->client_hostname);

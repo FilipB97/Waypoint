@@ -13,7 +13,10 @@ import WaypointRDP
 final class RdpDisplayView: NSView {
     weak var session: RdpSession?
     var connection: RdpConnection? {
-        didSet { if connection == nil { releaseAll() } }
+        didSet {
+            if connection == nil { releaseAll(); remoteCursor = .standard; builtCursor = nil }
+            window?.invalidateCursorRects(for: self)
+        }
     }
 
     private var desktop = CGSize.zero
@@ -121,6 +124,52 @@ final class RdpDisplayView: NSView {
         CATransaction.setDisableActions(true)
         layer?.contents = image
         CATransaction.commit()
+    }
+
+    // MARK: Kursor z sesji
+
+    /// Ostatni kursor z serwera (zajęty, ładowanie, tekstowy…) i jego wersja w rozmiarze widoku.
+    private var remoteCursor: RdpConnection.Cursor = .standard
+    private var builtCursor: (cursor: NSCursor, scale: CGFloat)?
+    private static let hiddenCursor = NSCursor(image: NSImage(size: NSSize(width: 1, height: 1)), hotSpot: .zero)
+
+    func setRemoteCursor(_ c: RdpConnection.Cursor) {
+        remoteCursor = c
+        builtCursor = nil
+        window?.invalidateCursorRects(for: self)
+        // Zmiana bez ruchu myszą (np. kursor ładowania po kliknięciu) — od razu, gdy mysz jest nad pulpitem.
+        if let w = window, bounds.contains(convert(w.mouseLocationOutsideOfEventStream, from: nil)) {
+            currentCursor().set()
+        }
+    }
+
+    /// Kursor w punktach widoku: piksele sesji × skala wyświetlania (proporcje pulpitu zachowane).
+    private func currentCursor() -> NSCursor {
+        guard desktop.width > 0, bounds.width > 0 else { return .arrow }
+        let scale = min(bounds.width / desktop.width, bounds.height / desktop.height)
+        if let b = builtCursor, b.scale == scale { return b.cursor }
+        let cursor: NSCursor
+        switch remoteCursor {
+        case .standard: cursor = .arrow
+        case .hidden: cursor = Self.hiddenCursor
+        case .image(let w, let h, let hx, let hy, let bgra):
+            guard let provider = CGDataProvider(data: bgra as CFData),
+                  let img = CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: w * 4,
+                                    space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+                                    bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.first.rawValue
+                                                             | CGBitmapInfo.byteOrder32Little.rawValue),
+                                    provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+            else { cursor = .arrow; break }
+            let size = NSSize(width: CGFloat(w) * scale, height: CGFloat(h) * scale)
+            cursor = NSCursor(image: NSImage(cgImage: img, size: size),
+                              hotSpot: NSPoint(x: CGFloat(hx) * scale, y: CGFloat(hy) * scale))
+        }
+        builtCursor = (cursor, scale)
+        return cursor
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: connection == nil ? .arrow : currentCursor())
     }
 
     // MARK: Przeciąganie plików z Findera
