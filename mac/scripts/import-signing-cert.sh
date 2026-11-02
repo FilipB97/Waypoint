@@ -13,6 +13,7 @@ elif [ "$MODE" = "--ephemeral" ]; then
     echo "Brak MAC_SIGN_P12 — jednorazowy certyfikat (tylko test ścieżki podpisu)."
     "$(dirname "$0")/make-signing-cert.sh" "$W" > "$W/out.txt"
     PW="$(sed -n 's/^MAC_SIGN_PASSWORD = //p' "$W/out.txt")"
+    mv "$W/waypoint-sign.p12" "$W/sign.p12"
 else
     echo "Brak MAC_SIGN_P12 — podpis ad-hoc (macOS zapyta o dostęp do haseł po każdej aktualizacji)."
     exit 0
