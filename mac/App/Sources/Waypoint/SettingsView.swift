@@ -7,6 +7,37 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
+        TabView {
+            GeneralSettings()
+                .tabItem { Label(L("set.tab.general"), systemImage: "gearshape") }
+            RdpSettings()
+                .tabItem { Label(L("set.tab.rdp"), systemImage: "display") }
+            StartupSettings()
+                .tabItem { Label(L("set.tab.startup"), systemImage: "play.circle") }
+            PasswordSettings()
+                .tabItem { Label(L("set.tab.passwords"), systemImage: "key") }
+        }
+        .frame(width: 500)
+        .onChange(of: model.settings) { old, new in
+            model.saveSettings()
+            if old.theme != new.theme { model.applyAppearance() }
+            if old.terminalFontSize != new.terminalFontSize { model.applyTerminalFont() }
+            if old.reachabilityEnabled != new.reachabilityEnabled
+                || old.reachabilityIntervalSec != new.reachabilityIntervalSec
+                || old.probeTimeoutSeconds != new.probeTimeoutSeconds {
+                model.restartReachability()
+            }
+            if old.rdpResolution != new.rdpResolution || old.rdpScale != new.rdpScale || old.rdpRetina != new.rdpRetina {
+                for case .rdp(let d) in model.sessions { d.view.applyDisplayMode() }   // w locie, bez rozłączania
+            }
+        }
+    }
+}
+
+private struct GeneralSettings: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
         @Bindable var model = model
         Form {
             Section(L("set.look")) {
@@ -56,6 +87,23 @@ struct SettingsView: View {
                 LabeledContent(L("set.version"), value: AppModel.currentVersion)
                 Button(L("upd.menu")) { model.checkForUpdates(manual: true) }
             }
+            Section(L("set.connections")) {
+                Toggle(L("set.confirmclose"), isOn: $model.settings.confirmCloseConnected)
+                Toggle(L("set.log"), isOn: $model.settings.connectionLogEnabled)
+                Button(L("log.reveal")) { model.revealConnectionLog() }
+            }
+        }
+        .formStyle(.grouped)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct RdpSettings: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var model = model
+        Form {
             Section {
                 Picker(L("set.rdp.res"), selection: $model.settings.rdpResolution) {
                     Text(L("set.rdp.res.fit")).tag(RdpDisplay.fit)
@@ -71,28 +119,82 @@ struct SettingsView: View {
             } footer: {
                 Text(L("set.rdp.hint")).foregroundStyle(.secondary)
             }
-            Section(L("set.connections")) {
-                Toggle(L("set.confirmclose"), isOn: $model.settings.confirmCloseConnected)
-                Toggle(L("set.log"), isOn: $model.settings.connectionLogEnabled)
-                Button(L("log.reveal")) { model.revealConnectionLog() }
+        }
+        .formStyle(.grouped)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// „Połącz na starcie" — jak w Windows: zaznaczone serwery łączą się po uruchomieniu, w tej kolejności.
+private struct StartupSettings: View {
+    @Environment(AppModel.self) private var model
+
+    private var candidates: [Server] {
+        model.servers.filter { $0.proto?.supportedOnMac == true }
+            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                let chosen = model.settings.autoConnectServerIds.compactMap { id in model.servers.first { $0.id == id } }
+                if chosen.isEmpty {
+                    Text(L("set.autoconnect.none")).foregroundStyle(.secondary)
+                }
+                ForEach(Array(chosen.enumerated()), id: \.element.id) { i, s in
+                    HStack {
+                        Text("\(i + 1).").foregroundStyle(.secondary).monospacedDigit()
+                        Avatar(server: s, size: 18)
+                        Text(s.displayName)
+                        Spacer()
+                        Button { move(s, -1) } label: { Image(systemName: "chevron.up") }
+                            .buttonStyle(.borderless).disabled(i == 0)
+                        Button { move(s, 1) } label: { Image(systemName: "chevron.down") }
+                            .buttonStyle(.borderless).disabled(i == chosen.count - 1)
+                        Button { model.setAutoConnect(s, false) } label: { Image(systemName: "minus.circle") }
+                            .buttonStyle(.borderless).help(L("set.autoconnect.remove"))
+                    }
+                }
+                Menu(L("set.autoconnect.add")) {
+                    ForEach(candidates.filter { !model.isAutoConnect($0) }) { s in
+                        Button(s.displayName) { model.setAutoConnect(s, true) }
+                    }
+                }
+                .disabled(candidates.allSatisfy { model.isAutoConnect($0) })
+            } header: {
+                Text(L("set.autoconnect"))
+            } footer: {
+                Text(L("set.autoconnect.hint")).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 460)
+        .frame(minHeight: 260)
         .fixedSize(horizontal: false, vertical: true)
-        .onChange(of: model.settings) { old, new in
-            model.saveSettings()
-            if old.theme != new.theme { model.applyAppearance() }
-            if old.terminalFontSize != new.terminalFontSize { model.applyTerminalFont() }
-            if old.rdpResolution != new.rdpResolution || old.rdpScale != new.rdpScale || old.rdpRetina != new.rdpRetina {
-                for case .rdp(let d) in model.sessions { d.view.applyDisplayMode() }   // w locie, bez rozłączania
-            }
-            if old.reachabilityEnabled != new.reachabilityEnabled
-                || old.reachabilityIntervalSec != new.reachabilityIntervalSec
-                || old.probeTimeoutSeconds != new.probeTimeoutSeconds {
-                model.restartReachability()
+    }
+
+    private func move(_ s: Server, _ by: Int) {
+        var ids = model.settings.autoConnectServerIds
+        guard let i = ids.firstIndex(of: s.id), ids.indices.contains(i + by) else { return }
+        ids.swapAt(i, i + by)
+        model.settings.autoConnectServerIds = ids
+    }
+}
+
+/// Dostęp do haseł w Pęku kluczy — skąd pytanie o hasło systemu i jak go uniknąć.
+private struct PasswordSettings: View {
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent(L("set.sign.current"), value: L(Keychain.isStableSignature ? "set.sign.stable" : "set.sign.adhoc"))
+                Text(L(Keychain.isStableSignature ? "set.sign.stable.hint" : "set.sign.adhoc.hint"))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } header: {
+                Text(L("set.tab.passwords"))
             }
         }
+        .formStyle(.grouped)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

@@ -3,7 +3,8 @@
 # ikona z mac/Resources/AppIcon-1024.png i podpis ad-hoc. Wynik: mac/dist/Waypoint.app i Waypoint-mac.zip.
 #
 # Użycie (na macOS z Xcode / Command Line Tools):   mac/scripts/bundle-app.sh
-# Zmienne: VERSION (np. 0.1.0), BUILD (numer kompilacji), WAYPOINT_FREERDP (prefiks z
+# Zmienne: VERSION (np. 0.1.0), BUILD (numer kompilacji), WAYPOINT_SIGN_IDENTITY (podpis
+# certyfikatem zamiast ad-hoc), WAYPOINT_FREERDP (prefiks z
 # scripts/build-freerdp.sh — wbudowany klient RDP; bez niej RDP otwiera Microsoft Windows App).
 #
 # Podpis ad-hoc wystarcza do uruchomienia na własnym Macu. Pobrana paczka bez podpisu Developer ID
@@ -72,8 +73,11 @@ done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 rm -rf "$ICONSET"
 
-codesign --force --sign - --timestamp=none "$APP"
+# Podpis: certyfikat z WAYPOINT_SIGN_IDENTITY (stały między wersjami — Pęk kluczy nie pyta po
+# aktualizacji; scripts/make-signing-cert.sh + import-signing-cert.sh), inaczej ad-hoc.
+codesign --force --sign "${WAYPOINT_SIGN_IDENTITY:--}" --timestamp=none "$APP"
 codesign --verify --strict "$APP"
+codesign -d -r- "$APP" 2>&1 | grep -i "designated" || true
 
 (cd "$DIST" && ditto -c -k --keepParent Waypoint.app Waypoint-mac.zip)
 echo "Gotowe: $APP"

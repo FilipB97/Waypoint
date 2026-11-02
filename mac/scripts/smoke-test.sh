@@ -138,5 +138,7 @@ echo "--- root-owned.conf po teście:"; sudo ls -l "/Users/$USER_NAME/root-owned
 sudo rm -f /etc/sudoers.d/wptest
 sudo kill "$(cat "$WORK/sshd.pid")" 2>/dev/null || true
 security delete-generic-password -s Waypoint -a "$ID_KEYCHAIN" >/dev/null 2>&1 || true   # gdyby test przerwano
+security delete-generic-password -s Waypoint -a __waypoint_vault__ >/dev/null 2>&1 || true   # sejf haseł testu
+security delete-generic-password -s Waypoint -a waypoint-smoke-legacy >/dev/null 2>&1 || true
 
 [ "$CODE" = 0 ] && [ "$(cat "$OUT/result.txt" 2>/dev/null)" = OK ]

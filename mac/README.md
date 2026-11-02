@@ -29,6 +29,17 @@ i macOS, potem budowa `.app`. Gotowa paczka jest w artefakcie **Waypoint-mac** p
 notaryzacji, więc Gatekeeper ją blokuje. Prawy klik na `Waypoint.app` → **Otwórz** → Otwórz
 (albo `xattr -dr com.apple.quarantine Waypoint.app`).
 
+**Ustawienia** (⌘, albo zębatka na pasku nad listą): karty Ogólne, Pulpit zdalny (rozdzielczość,
+skalowanie), Start („Połącz na starcie" — serwery łączone po uruchomieniu, w kolejności; też w menu
+serwera na liście) i Hasła.
+
+**Hasła i pytanie o hasło systemu:** wszystkie hasła są w jednym wpisie Pęku kluczy („Waypoint —
+hasła"). macOS pyta o hasło systemu, gdy wpis czyta aplikacja o innym podpisie niż ostatnio. Przy
+podpisie ad-hoc (domyślnie) to jedno pytanie po każdej aktualizacji — „Zawsze pozwalaj" wycisza je
+do następnej wersji. Na stałe: podpis własnym certyfikatem —
+`mac/scripts/make-signing-cert.sh`, potem w repozytorium sekrety Actions `MAC_SIGN_P12` (plik
+`.base64`) i `MAC_SIGN_PASSWORD`; wydania podpisują się nim same (`import-signing-cert.sh`).
+
 **Aktualizacje:** Waypoint sam sprawdza nowe wydania; „Zainstaluj i uruchom ponownie" pobiera
 paczkę, podmienia `Waypoint.app` w miejscu i uruchamia nową wersję — bez kwarantanny, więc bez
 ponownego zatwierdzania w Ustawieniach prywatności. Warunek: aplikacja w zapisywalnym folderze

@@ -33,6 +33,8 @@ public struct MacSettings: Codable, Equatable, Sendable {
     public var rdpResolution: String = RdpDisplay.fit
     public var rdpScale: Int = 0
     public var rdpRetina: Bool = true
+    /// Serwery łączone automatycznie po uruchomieniu, w tej kolejności (jak AutoConnectServerIds w Windows).
+    public var autoConnectServerIds: [String] = []
 
     public init() {}
 
@@ -45,6 +47,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         case theme = "Theme", themeVariantDark = "ThemeVariantDark", themeVariantLight = "ThemeVariantLight"
         case accentColor = "AccentColor"
         case rdpResolution = "MacRdpResolution", rdpScale = "MacRdpScale", rdpRetina = "MacRdpRetina"
+        case autoConnectServerIds = "AutoConnectServerIds"
     }
 
     public init(from decoder: Decoder) throws {
@@ -70,6 +73,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         rdpResolution = RdpDisplay.parse(res) != nil ? res : RdpDisplay.fit
         rdpScale = (try? c.decode(Int.self, forKey: .rdpScale)).flatMap { RdpDisplay.scales.contains($0) ? $0 : nil } ?? 0
         rdpRetina = (try? c.decode(Bool.self, forKey: .rdpRetina)) ?? true
+        autoConnectServerIds = (try? c.decode([String].self, forKey: .autoConnectServerIds)) ?? []
     }
 
     /// Zakresy jak w Windows: interwał sondy 5–3600 s, limit czasu 1–60 s.
@@ -82,6 +86,12 @@ public struct MacSettings: Codable, Equatable, Sendable {
         recentIds.removeAll { $0 == id }
         recentIds.insert(id, at: 0)
         if recentIds.count > max { recentIds.removeLast(recentIds.count - max) }
+    }
+
+    /// Włącza/wyłącza „Połącz na starcie" dla serwera (nowy na końcu kolejki).
+    public mutating func setAutoConnect(_ id: String, _ on: Bool) {
+        autoConnectServerIds.removeAll { $0 == id }
+        if on { autoConnectServerIds.append(id) }
     }
 
     /// Ten sam zakres co w Windows (8–24).

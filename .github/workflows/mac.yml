@@ -69,6 +69,13 @@ jobs:
         run: echo "WAYPOINT_FREERDP=$RUNNER_TEMP/freerdp" >> "$GITHUB_ENV"
       - name: Testy WaypointCore (macOS)
         run: swift test --package-path mac/WaypointCore
+      # Stały podpis (sekrety MAC_SIGN_P12 / MAC_SIGN_PASSWORD z scripts/make-signing-cert.sh): Pęk
+      # kluczy nie pyta o hasło systemu po aktualizacji. Bez sekretu: jednorazowy certyfikat (test ścieżki).
+      - name: Certyfikat podpisu
+        env:
+          MAC_SIGN_P12: ${{ secrets.MAC_SIGN_P12 }}
+          MAC_SIGN_PASSWORD: ${{ secrets.MAC_SIGN_PASSWORD }}
+        run: mac/scripts/import-signing-cert.sh --ephemeral
       - name: Budowa Waypoint.app
         env:
           VERSION: 0.1.0

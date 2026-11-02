@@ -10,6 +10,7 @@ import WaypointRDP
 @Observable
 final class AppModel {
     static let shared = AppModel()
+    @ObservationIgnored private var startupDone = false
 
     var servers: [Server] = []
     /// Otwarte karty SSH. Aktywna karta zasłania szczegóły serwera; nil = widać szczegóły zaznaczonego.
@@ -68,6 +69,25 @@ final class AppModel {
         }
         restartReachability()
         applyAppearance()
+        if !startupDone {
+            startupDone = true
+            // Po zbudowaniu okna — karty RDP startują, gdy ich widok ma rozmiar.
+            DispatchQueue.main.async { self.startupConnect() }
+        }
+    }
+
+    /// „Połącz na starcie" (Ustawienia → Start): serwery w zapisanej kolejności, jak w Windows.
+    private func startupConnect() {
+        guard ProcessInfo.processInfo.environment["WAYPOINT_SMOKE_DIR"] == nil else { return }
+        let list = settings.autoConnectServerIds.compactMap { id in servers.first { $0.id == id } }
+        for s in list { connect(s) }
+    }
+
+    func isAutoConnect(_ s: Server) -> Bool { settings.autoConnectServerIds.contains(s.id) }
+
+    func setAutoConnect(_ s: Server, _ on: Bool) {
+        settings.setAutoConnect(s.id, on)
+        saveSettings()
     }
 
     /// Wygląd aplikacji wg ustawień: systemowy, jasny albo ciemny (jak „Motyw" w Windows).

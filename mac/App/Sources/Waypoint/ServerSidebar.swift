@@ -130,6 +130,10 @@ struct ServerSidebar: View {
             Button(L("wol.menu")) { model.wake(s) }
         }
         Button(s.pinned ? L("act.unpin") : L("act.pin")) { model.togglePin(s) }
+        if s.proto?.supportedOnMac == true {
+            Toggle(L("set.autoconnect.toggle"), isOn: Binding(get: { model.isAutoConnect(s) },
+                                                             set: { model.setAutoConnect(s, $0) }))
+        }
         Menu(L("group.moveto")) {
             ForEach(model.groupNames.filter { $0 != s.group }, id: \.self) { g in
                 Button(g) { model.moveToGroup(s, group: g) }
