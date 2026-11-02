@@ -225,7 +225,7 @@ final class RdpSession: Identifiable {
         syncPasteboard()
         // NSPasteboard nie ma powiadomień o zmianie — sprawdzanie licznika jest tanie.
         clipboardTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.syncPasteboard() }
+            MainActor.assumeIsolated { _ = self?.syncPasteboard() }
         }
     }
 
