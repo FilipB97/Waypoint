@@ -113,12 +113,12 @@ HTTPServer(("127.0.0.1", 8088), H).serve_forever()
 PY
 python3 "$WORK/http-server.py" &
 
+# Hasło w osobnym wpisie, jak zapisywały starsze wersje — aplikacja ma je przenieść do sejfu (-A: bez pytania).
+security add-generic-password -A -U -s Waypoint -a waypoint-smoke-legacy -w stare-haslo >/dev/null
 echo "== aplikacja w trybie testu"
 set +e
 WAYPOINT_DATA_DIR="$WORK/data" WAYPOINT_SMOKE_DIR="$OUT" \
 WAYPOINT_SMOKE_KEYCHAIN_SERVER="$ID_KEYCHAIN" WAYPOINT_SMOKE_PROMPT_SERVER="$ID_PROMPT" \
-# Hasło w osobnym wpisie, jak zapisywały starsze wersje — aplikacja ma je przenieść do sejfu (-A: bez pytania).
-security add-generic-password -A -U -s Waypoint -a waypoint-smoke-legacy -w stare-haslo >/dev/null
 WAYPOINT_SMOKE_PASSWORD="$PW" WAYPOINT_SMOKE_TELNET_IN="$WORK/telnet-in.txt" "$APP_BIN" > "$OUT/app-stdout.log" 2>&1 &
 APP_PID=$!
 # Zrzuty całego ekranu co kilka sekund — pokazują też okna systemowe, których zrzut okna aplikacji nie obejmie.
