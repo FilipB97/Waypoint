@@ -1,4 +1,5 @@
 import AppKit
+import Security
 import SwiftTerm
 import WaypointCore
 import WaypointRDP
@@ -581,7 +582,13 @@ enum Smoke {
         } else {
             note("uwaga: nie otworzyło się okno Ustawień", out)
         }
-        // Sejf haseł: wpis ze starszej wersji (osobny w Pęku kluczy) jest czytany i trafia do sejfu.
+        // Sejf haseł: wpis ze starszej wersji (osobny w Pęku kluczy, zapisany tą aplikacją — wpis
+        // z narzędzia `security` wywołałby systemowe pytanie) jest czytany i trafia do sejfu.
+        let legacyAdd: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: Keychain.service,
+                                        kSecAttrAccount as String: "waypoint-smoke-legacy",
+                                        kSecValueData as String: Data("stare-haslo".utf8)]
+        SecItemDelete(legacyAdd.filter { $0.key != kSecValueData as String } as CFDictionary)
+        SecItemAdd(legacyAdd as CFDictionary, nil)
         let legacy = Keychain.password(for: "waypoint-smoke-legacy")
         note(legacy == "stare-haslo" ? "OK: hasło ze starszej wersji przeniesione do sejfu (podpis: \(Keychain.isStableSignature ? "certyfikat" : "ad-hoc"))"
                                      : "FAIL: hasło ze starszej wersji: \(legacy ?? "brak")", out)

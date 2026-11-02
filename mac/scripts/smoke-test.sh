@@ -113,8 +113,6 @@ HTTPServer(("127.0.0.1", 8088), H).serve_forever()
 PY
 python3 "$WORK/http-server.py" &
 
-# Hasło w osobnym wpisie, jak zapisywały starsze wersje — aplikacja ma je przenieść do sejfu (-A: bez pytania).
-security add-generic-password -A -U -s Waypoint -a waypoint-smoke-legacy -w stare-haslo >/dev/null
 echo "== aplikacja w trybie testu"
 set +e
 WAYPOINT_DATA_DIR="$WORK/data" WAYPOINT_SMOKE_DIR="$OUT" \
@@ -140,6 +138,7 @@ echo "--- root-owned.conf po teście:"; sudo ls -l "/Users/$USER_NAME/root-owned
 sudo rm -f /etc/sudoers.d/wptest
 sudo kill "$(cat "$WORK/sshd.pid")" 2>/dev/null || true
 security delete-generic-password -s Waypoint -a "$ID_KEYCHAIN" >/dev/null 2>&1 || true   # gdyby test przerwano
-security delete-generic-password -s Waypoint -a __waypoint_vault__ >/dev/null 2>&1 || true   # sejf haseł z poprzedniego testu
+security delete-generic-password -s Waypoint -a __waypoint_vault__ >/dev/null 2>&1 || true   # sejf haseł testu
+security delete-generic-password -s Waypoint -a waypoint-smoke-legacy >/dev/null 2>&1 || true
 
 [ "$CODE" = 0 ] && [ "$(cat "$OUT/result.txt" 2>/dev/null)" = OK ]
