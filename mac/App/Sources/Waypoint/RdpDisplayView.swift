@@ -349,19 +349,42 @@ final class RdpDisplayView: NSView {
     }
 
     override func performKeyEquivalent(with e: NSEvent) -> Bool {
-        guard window?.firstResponder === self, e.type == .keyDown, e.modifierFlags.contains(.command) else {
-            return super.performKeyEquivalent(with: e)
-        }
-        // Skróty Waypointa i systemu zostają lokalne; reszta ⌘ idzie do sesji jako Ctrl+klawisz.
+        guard window?.firstResponder === self, e.type == .keyDown else { return super.performKeyEquivalent(with: e) }
+        return handleCommandKey(e) || super.performKeyEquivalent(with: e)
+    }
+
+    /// ⌘+klawisz do sesji jako Ctrl+klawisz (⌘C, ⌘V, ⌘A, ⌘Z…). Wołane też z monitora klawiszy
+    /// w AppModel — zanim skrót trafi do menu Edycja aplikacji (inaczej ⌘V wklejało „w Waypoincie").
+    /// Skróty Waypointa i systemu (⌘Q, ⌘W, ⌘H, ⌘1–9…) zostają lokalne → false.
+    func handleCommandKey(_ e: NSEvent) -> Bool {
+        guard connection != nil, e.modifierFlags.contains(.command), !e.modifierFlags.contains(.option) else { return false }
         let ch = e.charactersIgnoringModifiers?.lowercased() ?? ""
         let local: Set<String> = ["q", "w", "h", "m", ",", "`", "k", "n", "d"]
         if local.contains(ch) || Int(ch) != nil || e.modifierFlags.contains(.shift) && ["[", "]", "{", "}"].contains(ch) {
-            return super.performKeyEquivalent(with: e)
+            return false
+        }
+        if !pressed.contains(0x1D) && !pressed.contains(0x11D) {
+            key(0x1D, down: true)   // ⌘ wciśnięty zanim sesja dostała fokus — Ctrl jeszcze nie poszedł
         }
         let code = scancode(e.keyCode)
+        // Wklejenie: najpierw aktualny schowek Maca do sesji, potem Ctrl+V — inaczej (sprawdzanie co
+        // 0,5 s) świeżo skopiowany tekst docierał po wklejeniu i Windows wklejał poprzednią zawartość.
+        if ch == "v", session?.syncPasteboard() == true {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                guard let self, self.connection != nil else { return }
+                self.connection?.key(down: true, scancode: code)
+                self.connection?.key(down: false, scancode: code)
+            }
+            return true
+        }
         key(code, down: true)
         key(code, down: false)   // AppKit nie przysyła keyUp dla skrótów z ⌘
         return true
+    }
+
+    override func becomeFirstResponder() -> Bool {
+        _ = session?.syncPasteboard()   // skopiowane w innej aplikacji tuż przed kliknięciem w pulpit
+        return super.becomeFirstResponder()
     }
 
     override func resignFirstResponder() -> Bool {

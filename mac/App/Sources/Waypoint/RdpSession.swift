@@ -225,7 +225,7 @@ final class RdpSession: Identifiable {
         syncPasteboard()
         // NSPasteboard nie ma powiadomień o zmianie — sprawdzanie licznika jest tanie.
         clipboardTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.syncPasteboard() }
+            MainActor.assumeIsolated { _ = self?.syncPasteboard() }
         }
     }
 
@@ -234,9 +234,11 @@ final class RdpSession: Identifiable {
         clipboardTimer = nil
     }
 
-    private func syncPasteboard() {
+    /// Schowek Maca → sesja, jeśli się zmienił od ostatniego razu. true = wysłano nową zawartość.
+    @discardableResult
+    func syncPasteboard() -> Bool {
         let pb = NSPasteboard.general
-        guard pb.changeCount != pasteboardCount, let c = connection else { return }
+        guard server.rdpRedirectClipboard, pb.changeCount != pasteboardCount, let c = connection else { return false }
         pasteboardCount = pb.changeCount
         // Pliki skopiowane w Finderze (⌘C) → wklejenie w Eksploratorze; inaczej tekst.
         if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
@@ -245,6 +247,7 @@ final class RdpSession: Identifiable {
         } else {
             c.setClipboardText(pb.string(forType: .string))
         }
+        return true
     }
 
     /// Pliki skopiowane w sesji: pobranie od razu do pamięci podręcznej, potem do schowka Maca
