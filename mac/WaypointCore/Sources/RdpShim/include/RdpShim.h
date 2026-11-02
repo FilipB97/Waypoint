@@ -45,6 +45,9 @@ typedef struct {
     /// Kursor z sesji: WP_CURSOR_IMAGE (obraz BGRA, nieprzemnożona alfa, w pikselach sesji, punkt
     /// aktywny hot_x/hot_y), WP_CURSOR_HIDDEN albo WP_CURSOR_DEFAULT. Wątek połączenia.
     void (*cursor)(void *user, int kind, int width, int height, int hot_x, int hot_y, const uint8_t *bgra);
+    /// Serwer chce treści schowka ogłoszonego przez wp_rdp_announce_clipboard (wklejenie w Windows):
+    /// odczytaj schowek Maca i podaj go przez wp_rdp_set_clipboard_text/files. Wątek kanału — wolno blokować.
+    void (*clipboard_provide)(void *user);
 } wp_rdp_callbacks;
 
 enum { WP_CURSOR_IMAGE = 1, WP_CURSOR_HIDDEN = 0, WP_CURSOR_DEFAULT = 2 };
@@ -71,7 +74,10 @@ typedef struct {
     int ignore_certificate;
     /// Folder Maca widoczny w sesji jako dysk (Ten komputer → „<nazwa> na <Mac>"); NULL = bez.
     const char *drive_path;
-    const char *drive_name;     // tylko testy
+    const char *drive_name;
+    /// Dziennik diagnostyczny (katalog; NULL = tylko błędy na stderr). Plik waypoint-rdp.log —
+    /// przebieg połączenia i wymiany schowka (bez haseł i treści schowka). Ustawienie dla całego procesu.
+    const char *log_dir;     // tylko testy
 } wp_rdp_config;
 
 int wp_rdp_available(void);
@@ -97,6 +103,11 @@ void wp_rdp_resize(wp_rdp *r, int width, int height, int scale_percent);
 void wp_rdp_sync_locks(wp_rdp *r, uint32_t flags);
 /// Tekst ze schowka Maca dla sesji (UTF-8; NULL/pusty = brak). Serwer pobierze go przy wklejeniu.
 void wp_rdp_set_clipboard_text(wp_rdp *r, const char *utf8);
+/// Ogłasza serwerowi, że w schowku Maca jest tekst / są pliki, bez odczytu treści (ochrona schowka
+/// w macOS: odczyt w tle może wymagać zgody). Treść — dopiero na prośbę serwera (clipboard_provide).
+void wp_rdp_announce_clipboard(wp_rdp *r, int has_text, int has_files);
+/// Wpis do dziennika diagnostycznego (jeśli włączony) — zdarzenia po stronie Maca.
+void wp_rdp_log(const char *message);
 /// Pliki z Maca dla sesji (wklejenie w Eksploratorze): nazwy względne z '/' (katalogi przed zawartością),
 /// pełne ścieżki, rozmiary, katalog = 1. Zastępuje tekst w schowku.
 void wp_rdp_set_clipboard_files(wp_rdp *r, int count, const char *const *names, const char *const *paths,

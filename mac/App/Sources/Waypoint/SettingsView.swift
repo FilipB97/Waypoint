@@ -119,6 +119,16 @@ private struct RdpSettings: View {
             } footer: {
                 Text(L("set.rdp.hint")).foregroundStyle(.secondary)
             }
+            Section {
+                Toggle(L("set.rdp.diag"), isOn: $model.settings.rdpDiagnostics)
+                Button(L("set.rdp.diag.show")) {
+                    let f = RdpSession.logDirectory.appendingPathComponent("waypoint-rdp.log")
+                    if FileManager.default.fileExists(atPath: f.path) { NSWorkspace.shared.activateFileViewerSelecting([f]) }
+                    else { NSWorkspace.shared.open(RdpSession.logDirectory.deletingLastPathComponent()) }
+                }
+            } footer: {
+                Text(L("set.rdp.diag.hint")).foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .fixedSize(horizontal: false, vertical: true)

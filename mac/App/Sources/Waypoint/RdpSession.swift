@@ -39,6 +39,7 @@ final class RdpSession: Identifiable {
     /// Schowek: licznik zmian NSPasteboard — nowy tekst z Maca idzie do sesji, nasz zapis nie wraca.
     @ObservationIgnored private var pasteboardCount = -1
     @ObservationIgnored private var clipboardTimer: Timer?
+    @ObservationIgnored private var readCount = -1   // licznik schowka, którego treść już wysłano
     @ObservationIgnored private var download: CancelFlag?
 
     init(server: Server) {
@@ -79,6 +80,11 @@ final class RdpSession: Identifiable {
         cfg.ignoreCertificate = s.rdpAuthenticationLevel == 0   // jak „połącz bez ostrzeżenia” w mstsc
         cfg.configDirectory = AppModel.shared.dataDirectory.appendingPathComponent("freerdp").path
         cfg.clientHostname = Host.current().localizedName ?? "Mac"
+        if AppModel.shared.settings.rdpDiagnostics {
+            let dir = RdpSession.logDirectory
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            cfg.logDirectory = dir.path
+        }
         if !s.rdpGatewayHostname.isEmpty {
             let (h, p) = ExternalImport.splitHostPort(s.rdpGatewayHostname, defaultPort: 443)
             cfg.gatewayHost = h
@@ -108,6 +114,7 @@ final class RdpSession: Identifiable {
                     pb.clearContents()
                     pb.setString(text, forType: .string)
                     self.pasteboardCount = pb.changeCount
+                    self.readCount = pb.changeCount   // zawartość z sesji — nie odsyłać
                 }
             }
         }
@@ -123,6 +130,18 @@ final class RdpSession: Identifiable {
             // Dysk „Mac" w sesji (Ten komputer) — katalog domowy; duże pliki bez schowka.
             cfg.drivePath = FileManager.default.homeDirectoryForCurrentUser.path
             cfg.driveName = "Mac"
+        }
+        if s.rdpRedirectClipboard {
+            // Windows wkleja ogłoszoną zawartość — odczyt schowka Maca teraz (na wątku głównym; wątek
+            // kanału czeka, także na ewentualne systemowe pytanie o zgodę na wklejenie).
+            c.onClipboardProvide = { [weak self] in
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    if let self, c === self.connection { self.sendPasteboard(to: c) }
+                    done.signal()
+                }
+                _ = done.wait(timeout: .now() + 30)
+            }
         }
         c.onVerifyCertificate = { [weak self] info in
             // Wątek połączenia czeka na odpowiedź użytkownika.
@@ -234,20 +253,50 @@ final class RdpSession: Identifiable {
         clipboardTimer = nil
     }
 
-    /// Schowek Maca → sesja, jeśli się zmienił od ostatniego razu. true = wysłano nową zawartość.
+    /// Schowek Maca → sesja, jeśli się zmienił od ostatniego razu. true = coś wysłano.
+    ///
+    /// W tle (`read: false`) tylko ogłaszamy serwerowi, że jest tekst / są pliki — po typach, bez odczytu
+    /// treści (nowsze macOS chronią schowek przed czytaniem w tle). Treść czytamy, gdy Windows poprosi
+    /// o nią przy wklejeniu (`provideClipboard`), albo od razu przy ⌘V w pulpicie (`read: true`).
     @discardableResult
-    func syncPasteboard() -> Bool {
+    func syncPasteboard(read: Bool = false) -> Bool {
         let pb = NSPasteboard.general
         guard server.rdpRedirectClipboard, pb.changeCount != pasteboardCount, let c = connection else { return false }
         pasteboardCount = pb.changeCount
-        // Pliki skopiowane w Finderze (⌘C) → wklejenie w Eksploratorze; inaczej tekst.
+        if read { sendPasteboard(to: c); return true }
+        if readCount == pb.changeCount { return true }
+        let types = pb.types ?? []
+        let files = types.contains(.fileURL)
+        let text = !files && types.contains(.string)
+        RdpConnection.log("schowek Maca: zmiana \(pb.changeCount), typy: \(types.prefix(6).map(\.rawValue).joined(separator: ", "))")
+        c.announceClipboard(text: text, files: files)
+        return true
+    }
+
+    /// ⌘V w pulpicie (gest użytkownika — odczyt schowka dozwolony): treść do sesji, jeśli jeszcze jej
+    /// nie wysłano. true = wysłano teraz (Ctrl+V trzeba chwilę opóźnić).
+    func preparePaste() -> Bool {
+        let pb = NSPasteboard.general
+        guard server.rdpRedirectClipboard, let c = connection, pb.changeCount != readCount else { return false }
+        pasteboardCount = pb.changeCount
+        sendPasteboard(to: c)
+        return true
+    }
+
+    /// Odczyt schowka Maca i przekazanie treści do sesji (pliki z Findera albo tekst).
+    private func sendPasteboard(to c: RdpConnection) {
+        let pb = NSPasteboard.general
+        readCount = pb.changeCount
         if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
            !urls.isEmpty {
+            RdpConnection.log("schowek Maca: pliki \(urls.count)")
             c.setClipboardFiles(RdpConnection.clipboardEntries(for: urls))
         } else {
-            c.setClipboardText(pb.string(forType: .string))
+            let text = pb.string(forType: .string)
+            // Pusty wynik przy tekście w schowku = macOS odmówił odczytu (ochrona schowka).
+            RdpConnection.log("schowek Maca: tekst " + (text.map { "\($0.utf8.count) bajtów" } ?? "BRAK (odmowa dostępu albo nie tekst)"))
+            c.setClipboardText(text)
         }
-        return true
     }
 
     /// Pliki skopiowane w sesji: pobranie od razu do pamięci podręcznej, potem do schowka Maca
@@ -282,6 +331,7 @@ final class RdpSession: Identifiable {
                     pb.clearContents()
                     pb.writeObjects(top as [NSURL])
                     self.pasteboardCount = pb.changeCount
+                    self.readCount = pb.changeCount   // zawartość z sesji — nie odsyłać
                     self.notice = String(format: L("rdp.files.ready"), top.count)
                 }
             } catch {
@@ -333,6 +383,13 @@ final class RdpSession: Identifiable {
     func requestResize(width: Int, height: Int, scale: Int) {
         guard state == .connected else { return }
         connection?.resize(width: width, height: height, scalePercent: scale)
+    }
+}
+
+extension RdpSession {
+    /// ~/Library/Logs/Waypoint — dziennik diagnostyczny RDP (waypoint-rdp.log).
+    static var logDirectory: URL {
+        FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0].appendingPathComponent("Logs/Waypoint")
     }
 }
 

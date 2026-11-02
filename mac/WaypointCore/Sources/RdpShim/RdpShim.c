@@ -15,6 +15,8 @@ void wp_rdp_mouse_extended(wp_rdp *r, uint16_t f, int x, int y) { (void)r; (void
 void wp_rdp_resize(wp_rdp *r, int w, int h, int s) { (void)r; (void)w; (void)h; (void)s; }
 void wp_rdp_sync_locks(wp_rdp *r, uint32_t f) { (void)r; (void)f; }
 void wp_rdp_set_clipboard_text(wp_rdp *r, const char *t) { (void)r; (void)t; }
+void wp_rdp_log(const char *m) { (void)m; }
+void wp_rdp_announce_clipboard(wp_rdp *r, int t, int f) { (void)r; (void)t; (void)f; }
 void wp_rdp_set_clipboard_files(wp_rdp *r, int c, const char *const *n, const char *const *p, const int64_t *s, const int *d) { (void)r; (void)c; (void)n; (void)p; (void)s; (void)d; }
 int wp_rdp_clipboard_request_file(wp_rdp *r, uint32_t s, int i, int z, uint64_t p, uint32_t l) { (void)r; (void)s; (void)i; (void)z; (void)p; (void)l; return 0; }
 uint32_t wp_rdp_scancode_from_mac_keycode(uint32_t k) { (void)k; return 0; }
@@ -76,6 +78,7 @@ struct wp_rdp {
     int clip_pending;          // zawartość z Maca zmieniła się, trzeba ogłosić nową listę formatów
     UINT32 server_flags;       // generalFlags serwera (pliki strumieniowo, duże pliki)
     char *clip_text;           // tekst z Maca (UTF-8) — oddawany na prośbę serwera
+    int lazy_text, lazy_files; // ogłoszone bez treści — pobierane przez cb.clipboard_provide
     int lf_count;              // pliki z Maca: nazwy względne (z '\\'), ścieżki, rozmiary, katalogi
     char **lf_names, **lf_paths;
     int64_t *lf_sizes;
@@ -166,6 +169,34 @@ static BOOL wp_keyboard_indicators(rdpContext *context, UINT16 flags) { (void)co
 static BOOL wp_ime_status(rdpContext *c, UINT16 a, UINT32 b, UINT32 d) { (void)c; (void)a; (void)b; (void)d; return TRUE; }
 static BOOL wp_play_sound(rdpContext *c, const PLAY_SOUND_UPDATE *p) { (void)c; (void)p; return TRUE; }
 
+// --- Dziennik ---
+
+#define WP_TAG "com.waypoint.rdp"
+
+/// Domyślnie tylko błędy (FreeRDP pisze dużo; WLOG_LEVEL nadpisuje). Z katalogiem: plik z poziomem INFO,
+/// a schowek (FreeRDP i nasz) — DEBUG.
+static void configure_log(const char *dir) {
+    static int file_mode = -1;
+    int want = dir && *dir;
+    if (want == file_mode) return;
+    file_mode = want;
+    wLog *root = WLog_GetRoot();
+    if (want) {
+        (void)WLog_SetLogAppenderType(root, WLOG_APPENDER_FILE);
+        wLogAppender *a = WLog_GetLogAppender(root);
+        (void)WLog_ConfigureAppender(a, "outputfilepath", (void *)dir);
+        (void)WLog_ConfigureAppender(a, "outputfilename", (void *)"waypoint-rdp.log");
+        (void)WLog_OpenAppender(root);
+        (void)WLog_SetLogLevel(root, WLOG_INFO);
+        (void)WLog_AddStringLogFilters("com.freerdp.channels.cliprdr.*:DEBUG,com.waypoint.*:DEBUG");
+    } else {
+        (void)WLog_SetLogAppenderType(root, WLOG_APPENDER_CONSOLE);
+        if (!getenv("WLOG_LEVEL")) (void)WLog_SetLogLevel(root, WLOG_ERROR);
+    }
+}
+
+#define WPLOG(...) WLog_Print(WLog_Get(WP_TAG), WLOG_DEBUG, __VA_ARGS__)
+
 // --- Schowek (cliprdr): tekst Unicode i pliki (FileGroupDescriptorW + FileContents) ---
 
 #define WP_FILES_FORMAT_ID 0xC0BC          // nasz identyfikator formatu listy plików (dowolny >= 0xC000)
@@ -178,6 +209,7 @@ static void free_local_files(wp_rdp *r) {
 }
 
 static UINT clip_send_format_list(CliprdrClientContext *clip, int has_text, int has_files) {
+    WPLOG("schowek → serwer: lista formatów (tekst=%d, pliki=%d)", has_text, has_files);
     CLIPRDR_FORMAT fmts[2];
     UINT32 n = 0;
     if (has_files) fmts[n++] = (CLIPRDR_FORMAT){ .formatId = WP_FILES_FORMAT_ID, .formatName = WP_FILES_FORMAT_NAME };
@@ -202,6 +234,7 @@ static UINT clip_request_data(wp_rdp *r, CliprdrClientContext *clip, UINT32 form
 static UINT clip_monitor_ready(CliprdrClientContext *clip, const CLIPRDR_MONITOR_READY *m) {
     (void)m;
     wp_rdp *r = (wp_rdp *)clip->custom;
+    WPLOG("schowek: Monitor Ready od serwera");
     CLIPRDR_GENERAL_CAPABILITY_SET general = { .capabilitySetType = CB_CAPSTYPE_GENERAL,
         .capabilitySetLength = CB_CAPSTYPE_GENERAL_LEN, .version = CB_CAPS_VERSION_2,
         .generalFlags = CB_USE_LONG_FORMAT_NAMES | CB_STREAM_FILECLIP_ENABLED | CB_FILECLIP_NO_FILE_PATHS
@@ -213,7 +246,7 @@ static UINT clip_monitor_ready(CliprdrClientContext *clip, const CLIPRDR_MONITOR
     UINT rc = clip->ClientCapabilities(clip, &caps);
     if (rc != CHANNEL_RC_OK) return rc;
     pthread_mutex_lock(&r->disp_lock);
-    int has_text = r->clip_text != NULL, has_files = r->lf_count > 0;
+    int has_text = r->clip_text != NULL || r->lazy_text, has_files = r->lf_count > 0 || r->lazy_files;
     r->clip_ready = 1;
     r->clip_pending = 0;
     pthread_mutex_unlock(&r->disp_lock);
@@ -228,6 +261,7 @@ static UINT clip_server_caps(CliprdrClientContext *clip, const CLIPRDR_CAPABILIT
         if (set->capabilitySetType == CB_CAPSTYPE_GENERAL) {
             pthread_mutex_lock(&r->disp_lock);
             r->server_flags = ((const CLIPRDR_GENERAL_CAPABILITY_SET *)set)->generalFlags;
+            WPLOG("schowek: możliwości serwera 0x%08x", r->server_flags);
             pthread_mutex_unlock(&r->disp_lock);
         }
         p += sizeof(CLIPRDR_GENERAL_CAPABILITY_SET);   // FreeRDP rozpakowuje zestawy do tablicy tej struktury
@@ -249,6 +283,7 @@ static UINT clip_server_format_list(CliprdrClientContext *clip, const CLIPRDR_FO
         if (f->formatName && strcmp(f->formatName, WP_FILES_FORMAT_NAME) == 0) files = f->formatId;
         if (f->formatId == CF_UNICODETEXT) text = 1;
     }
+    WPLOG("schowek ← serwer: lista %u formatów (tekst=%d, pliki=0x%x)", list->numFormats, text, files);
     pthread_mutex_lock(&r->disp_lock);
     r->srv_files_format = files;
     pthread_mutex_unlock(&r->disp_lock);
@@ -284,6 +319,16 @@ static BOOL build_file_list(wp_rdp *r, BYTE **out, UINT32 *out_len) {
 
 static UINT clip_server_data_request(CliprdrClientContext *clip, const CLIPRDR_FORMAT_DATA_REQUEST *req) {
     wp_rdp *r = (wp_rdp *)clip->custom;
+    pthread_mutex_lock(&r->disp_lock);
+    int lazy = (req->requestedFormatId == CF_UNICODETEXT && r->lazy_text && !r->clip_text)
+            || (req->requestedFormatId == WP_FILES_FORMAT_ID && r->lazy_files && r->lf_count == 0);
+    pthread_mutex_unlock(&r->disp_lock);
+    if (lazy && r->cb.clipboard_provide) {
+        WPLOG("schowek: odczyt schowka Maca na prośbę serwera");
+        r->cb.clipboard_provide(r->cb.user);   // ustawia tekst/pliki (bez nowej listy formatów)
+    }
+    WPLOG("schowek ← serwer: prośba o dane formatu 0x%x (mamy tekst=%d, pliki=%d)", req->requestedFormatId,
+          r->clip_text != NULL, r->lf_count);
     BYTE *data = NULL;
     UINT32 len = 0;
     pthread_mutex_lock(&r->disp_lock);
@@ -301,12 +346,14 @@ static UINT clip_server_data_request(CliprdrClientContext *clip, const CLIPRDR_F
     resp.common.dataLen = data ? len : 0;
     resp.requestedFormatData = data;
     UINT rc = clip->ClientFormatDataResponse(clip, &resp);
+    WPLOG("schowek → serwer: odpowiedź %s, %u bajtów, wynik %u", data ? "OK" : "FAIL", len, rc);
     free(data);
     return rc;
 }
 
 static UINT clip_server_data_response(CliprdrClientContext *clip, const CLIPRDR_FORMAT_DATA_RESPONSE *resp) {
     wp_rdp *r = (wp_rdp *)clip->custom;
+    WPLOG("schowek ← serwer: dane (flagi 0x%x, %u bajtów)", resp->common.msgFlags, resp->common.dataLen);
     pthread_mutex_lock(&r->disp_lock);
     UINT32 format = r->requested_format;
     UINT32 files_format = r->srv_files_format;
@@ -399,6 +446,7 @@ static UINT clip_server_file_response(CliprdrClientContext *clip, const CLIPRDR_
 }
 
 static void clip_attach(wp_rdp *r, CliprdrClientContext *clip) {
+    WPLOG("schowek: kanał cliprdr połączony");
     clip->custom = r;
     clip->MonitorReady = clip_monitor_ready;
     clip->ServerCapabilities = clip_server_caps;
@@ -419,13 +467,19 @@ static void send_pending_clipboard(wp_rdp *r) {
     pthread_mutex_lock(&r->disp_lock);
     CliprdrClientContext *clip = r->clip_ready ? r->clip : NULL;
     int list = clip && r->clip_pending;
-    int has_text = r->clip_text != NULL, has_files = r->lf_count > 0;
+    int has_text = r->clip_text != NULL || r->lazy_text, has_files = r->lf_count > 0 || r->lazy_files;
     if (list) r->clip_pending = 0;
     int req = clip && r->req_pending;
     CLIPRDR_FILE_CONTENTS_REQUEST fr = r->req;
     if (req) r->req_pending = 0;
     pthread_mutex_unlock(&r->disp_lock);
-    if (list) (void)clip_send_format_list(clip, has_text, has_files);
+    if (list) {
+        UINT rc = clip_send_format_list(clip, has_text, has_files);
+        if (rc != CHANNEL_RC_OK) WPLOG("schowek: wysłanie listy formatów nie powiodło się (%u)", rc);
+    } else if (r->clip_pending && !r->clip_ready) {
+        static int warned = 0;
+        if (!warned) { warned = 1; WPLOG("schowek: zmiana z Maca czeka — kanał nie gotowy (brak Monitor Ready)"); }
+    }
     if (req && clip->ClientFileContentsRequest(clip, &fr) != CHANNEL_RC_OK && r->cb.clipboard_file_data)
         r->cb.clipboard_file_data(r->cb.user, fr.streamId, 0, NULL, 0);
 }
@@ -694,11 +748,7 @@ static BOOL set_str(rdpSettings *s, FreeRDP_Settings_Keys_String k, const char *
 }
 
 wp_rdp *wp_rdp_start(const wp_rdp_config *c, const wp_rdp_callbacks *cb) {
-    static int log_once = 0;
-    if (!log_once) {   // FreeRDP domyślnie pisze dużo na stdout — tylko błędy (WLOG_LEVEL nadpisuje)
-        log_once = 1;
-        if (!getenv("WLOG_LEVEL")) WLog_SetLogLevel(WLog_GetRoot(), WLOG_ERROR);
-    }
+    configure_log(c->log_dir);
     RDP_CLIENT_ENTRY_POINTS ep;
     memset(&ep, 0, sizeof(ep));
     ep.Version = RDP_CLIENT_INTERFACE_VERSION;
@@ -866,11 +916,15 @@ uint32_t wp_rdp_scancode_from_mac_keycode(uint32_t keycode) {
 void wp_rdp_set_clipboard_text(wp_rdp *r, const char *utf8) {
     if (!r) return;
     char *copy = (utf8 && *utf8) ? strdup(utf8) : NULL;
+    WPLOG("schowek z Maca: tekst %zu bajtów", copy ? strlen(copy) : 0);
     pthread_mutex_lock(&r->disp_lock);
+    // Odpowiedź na clipboard_provide (ogłoszony tekst) — sama treść, bez nowej listy formatów.
+    int providing = r->lazy_text && copy != NULL;
     free(r->clip_text);
     r->clip_text = copy;
     free_local_files(r);
-    r->clip_pending = 1;
+    r->lazy_text = r->lazy_files = 0;
+    if (!providing) r->clip_pending = 1;
     pthread_mutex_unlock(&r->disp_lock);
     SetEvent(r->wake);
 }
@@ -879,9 +933,11 @@ void wp_rdp_set_clipboard_files(wp_rdp *r, int count, const char *const *names, 
                                 const int64_t *sizes, const int *is_dir) {
     if (!r) return;
     pthread_mutex_lock(&r->disp_lock);
+    int providing = r->lazy_files && count > 0;
     free(r->clip_text);
     r->clip_text = NULL;
     free_local_files(r);
+    r->lazy_text = r->lazy_files = 0;
     if (count > 0) {
         r->lf_names = calloc((size_t)count, sizeof(char *));
         r->lf_paths = calloc((size_t)count, sizeof(char *));
@@ -898,7 +954,7 @@ void wp_rdp_set_clipboard_files(wp_rdp *r, int count, const char *const *names, 
             r->lf_count = count;
         }
     }
-    r->clip_pending = 1;
+    if (!providing) r->clip_pending = 1;
     pthread_mutex_unlock(&r->disp_lock);
     SetEvent(r->wake);
 }
@@ -923,6 +979,24 @@ int wp_rdp_clipboard_request_file(wp_rdp *r, uint32_t stream_id, int index, int 
     pthread_mutex_unlock(&r->disp_lock);
     if (ok) SetEvent(r->wake);
     return ok;
+}
+
+void wp_rdp_log(const char *message) {
+    if (message) WPLOG("%s", message);
+}
+
+void wp_rdp_announce_clipboard(wp_rdp *r, int has_text, int has_files) {
+    if (!r) return;
+    WPLOG("schowek z Maca: ogłoszenie bez treści (tekst=%d, pliki=%d)", has_text, has_files);
+    pthread_mutex_lock(&r->disp_lock);
+    free(r->clip_text);
+    r->clip_text = NULL;
+    free_local_files(r);
+    r->lazy_files = has_files != 0;
+    r->lazy_text = !r->lazy_files && has_text;
+    r->clip_pending = 1;
+    pthread_mutex_unlock(&r->disp_lock);
+    SetEvent(r->wake);
 }
 
 #endif
