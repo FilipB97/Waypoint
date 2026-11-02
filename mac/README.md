@@ -42,7 +42,8 @@ ponownego zatwierdzania w Ustawieniach prywatności. Warunek: aplikacja w zapisy
 | 2 | Terminal SSH w kartach (SwiftTerm + systemowe `ssh`: agent, `~/.ssh/config`), hasła w Pęku kluczy | ✅ |
 | 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ✅ |
 | 3b | Wbudowany klient RDP (FreeRDP) w karcie: hasło z Pęku kluczy, certyfikat, rozdzielczość okna, klawiatura, mysz, schowek tekstowy | ✅ |
-| 3c | RDP: pełny ekran, dyski i dźwięk | w toku |
+| 3c | RDP: pliki przez schowek (⌘C/⌘V w obie strony), przeciąganie z Findera, folder Maca jako dysk | ✅ |
+| 3d | RDP: pełny ekran, dźwięk | w toku |
 | 4 | Panel plików SFTP: przeglądanie, wysyłanie/pobieranie (także folderów), zmiana nazwy, usuwanie | ✅ |
 | 4b | FTP/FTPS: ten sam panel plików i edytor | ✅ |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | ✅ |
@@ -177,13 +178,20 @@ w sesji), polskie znaki z Option idą jako Unicode, Option z klawiszami specjaln
 i pełna rozdzielczość Retina — w Ustawieniach (⌘,) → Pulpit zdalny, z nadpisaniem w edycji serwera;
 zmiana działa od razu w otwartych kartach. Brama RD (te same dane logowania), sesja administracyjna, schowek tekstowy w obie strony.
 
+Pliki: skopiowane w Finderze (⌘C) wkleja się w sesji (⌘V/Ctrl+V, także całe foldery); skopiowane
+w Eksploratorze Waypoint od razu pobiera (postęp nad pulpitem, z przerwaniem) i kładzie do schowka
+Maca — wklejenie w Finderze ⌘V. Pliki przeciągnięte z Findera na pulpit trafiają do schowka sesji
+i są wklejane w miejscu upuszczenia (klik + Ctrl+V). Przeciąganie z sesji na Maca protokół RDP nie
+obsługuje (Windows App też nie) — kopiuj i wklejaj. „Udostępniaj dyski" pokazuje w sesji katalog
+domowy Maca jako dysk „Mac" (Ten komputer) — wygodne przy dużych plikach.
+
 W edycji serwera można zamiast tego wybrać Microsoft **Windows App**: „Połącz" zapisuje wtedy plik
 `.rdp` (te same pola co w wersji Windows) do `~/Library/Caches/Waypoint/rdp/` i otwiera go tam.
 RemoteApp zawsze idzie tą drogą. Plik `.rdp` z portalu firmy da się zaimportować
 (Plik → Importuj plik .rdp…), a serwer RDP wyeksportować do pliku.
 
 Testy: na Linuksie w CI prawdziwy serwer xrdp — połączenie, TLS, kolory pikseli, zmiana
-rozdzielczości, wejście, schowek w obie strony, odrzucony certyfikat, zamknięty port. Budowa lokalna z klientem:
+rozdzielczości, wejście, schowek w obie strony (tekst i pliki), udostępniony dysk, odrzucony certyfikat, zamknięty port. Budowa lokalna z klientem:
 `mac/scripts/build-freerdp.sh ~/freerdp && WAYPOINT_FREERDP=~/freerdp mac/scripts/bundle-app.sh`
 (bez `WAYPOINT_FREERDP` RDP otwiera Windows App).
 

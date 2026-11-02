@@ -27,6 +27,8 @@ final class RdpSession: Identifiable {
     var prompt: PendingPrompt?
     var certificate: CertificateQuestion?
     var notice: String?
+    /// Trwające pobieranie plików ze schowka sesji (tekst postępu nad pulpitem).
+    var transfer: String?
     private(set) var desktopSize: CGSize = .zero
 
     @ObservationIgnored let view = RdpDisplayView()
@@ -37,6 +39,7 @@ final class RdpSession: Identifiable {
     /// Schowek: licznik zmian NSPasteboard — nowy tekst z Maca idzie do sesji, nasz zapis nie wraca.
     @ObservationIgnored private var pasteboardCount = -1
     @ObservationIgnored private var clipboardTimer: Timer?
+    @ObservationIgnored private var download: CancelFlag?
 
     init(server: Server) {
         self.server = server
@@ -102,6 +105,19 @@ final class RdpSession: Identifiable {
                 }
             }
         }
+        if s.rdpRedirectClipboard {
+            c.onClipboardFiles = { [weak self] files in
+                DispatchQueue.main.async {
+                    guard let self, c === self.connection else { return }
+                    self.receiveFiles(files, from: c)
+                }
+            }
+        }
+        if s.rdpRedirectDrives {
+            // Dysk „Mac" w sesji (Ten komputer) — katalog domowy; duże pliki bez schowka.
+            cfg.drivePath = FileManager.default.homeDirectoryForCurrentUser.path
+            cfg.driveName = "Mac"
+        }
         c.onVerifyCertificate = { [weak self] info in
             // Wątek połączenia czeka na odpowiedź użytkownika.
             let done = DispatchSemaphore(value: 0)
@@ -152,6 +168,7 @@ final class RdpSession: Identifiable {
             view.window?.makeFirstResponder(view)
         case .disconnected(let error, let message):
             stopClipboardSync()
+            cancelTransfer()
             connection?.stop()
             connection = nil
             view.connection = nil
@@ -215,11 +232,84 @@ final class RdpSession: Identifiable {
         let pb = NSPasteboard.general
         guard pb.changeCount != pasteboardCount, let c = connection else { return }
         pasteboardCount = pb.changeCount
-        c.setClipboardText(pb.string(forType: .string))
+        // Pliki skopiowane w Finderze (⌘C) → wklejenie w Eksploratorze; inaczej tekst.
+        if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
+           !urls.isEmpty {
+            c.setClipboardFiles(RdpConnection.clipboardEntries(for: urls))
+        } else {
+            c.setClipboardText(pb.string(forType: .string))
+        }
+    }
+
+    /// Pliki skopiowane w sesji: pobranie od razu do pamięci podręcznej, potem do schowka Maca
+    /// (schowek Finderu chce gotowych plików). Nowa kopia w sesji przerywa poprzednie pobieranie.
+    private func receiveFiles(_ files: [RdpConnection.RemoteFile], from c: RdpConnection) {
+        download?.cancel()
+        guard !files.isEmpty else { return }
+        let flag = CancelFlag()
+        download = flag
+        let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Waypoint/rdp-clipboard")
+        try? FileManager.default.removeItem(at: root)   // poprzednie kopie
+        let dir = root.appendingPathComponent(UUID().uuidString)
+        let count = files.filter { !$0.path.contains("/") }.count
+        transfer = String(format: L("rdp.files.receiving"), count)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var lastShown = Date.distantPast
+            do {
+                let top = try c.downloadClipboardFiles(files, to: dir, progress: { done, total in
+                    guard Date().timeIntervalSince(lastShown) > 0.25, total > 0 else { return }
+                    lastShown = Date()
+                    let text = String(format: L("rdp.files.progress"), count,
+                                      ByteCountFormatter.string(fromByteCount: done, countStyle: .file),
+                                      ByteCountFormatter.string(fromByteCount: total, countStyle: .file))
+                    DispatchQueue.main.async { if self?.download === flag { self?.transfer = text } }
+                }, isCancelled: { flag.isCancelled })
+                DispatchQueue.main.async {
+                    guard let self, self.download === flag else { return }
+                    self.download = nil
+                    self.transfer = nil
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.writeObjects(top as [NSURL])
+                    self.pasteboardCount = pb.changeCount
+                    self.notice = String(format: L("rdp.files.ready"), top.count)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    guard let self, self.download === flag else { return }
+                    self.download = nil
+                    self.transfer = nil
+                    if !flag.isCancelled { self.notice = String(format: L("rdp.files.failed"), "\(error)") }
+                }
+            }
+        }
+    }
+
+    /// Pliki upuszczone na pulpit: do schowka sesji i wklejenie w miejscu upuszczenia (klik + Ctrl+V).
+    func dropFiles(_ urls: [URL], at point: (Int, Int)) {
+        guard state == .connected, let c = connection else { return }
+        guard server.rdpRedirectClipboard else { notice = L("rdp.drop.noclipboard"); return }
+        let entries = RdpConnection.clipboardEntries(for: urls)
+        guard !entries.isEmpty else { return }
+        c.setClipboardFiles(entries)
+        notice = String(format: L("rdp.drop.pasting"), urls.count)
+        // Chwila na dotarcie listy plików do serwera, zanim Eksplorator poprosi o schowek.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, self.connection === c else { return }
+            self.view.pasteAt(point)
+        }
+    }
+
+    func cancelTransfer() {
+        download?.cancel()
+        download = nil
+        transfer = nil
     }
 
     func close() {
         stopClipboardSync()
+        cancelTransfer()
         certificate?.answer(.reject)
         prompt?.answer(nil, false)
         let c = connection
@@ -243,4 +333,12 @@ extension Server {
         get { if case .string(let v)? = extra["MacRdpClient"] { return v == "windowsApp" } else { return false } }
         set { if newValue { extra["MacRdpClient"] = .string("windowsApp") } else { extra.removeValue(forKey: "MacRdpClient") } }
     }
+}
+
+/// Przerwanie pobierania z innego wątku.
+final class CancelFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return cancelled }
+    func cancel() { lock.lock(); cancelled = true; lock.unlock() }
 }

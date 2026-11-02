@@ -112,6 +112,12 @@ public enum Strings {
         "detail.password.forget": "Zapomnij",
         "detail.password.set": "Ustaw…",
 
+        "rdp.files.receiving": "Pobieranie plików z sesji (%ld)…",
+        "rdp.files.progress": "Pobieranie plików z sesji (%ld): %@ z %@",
+        "rdp.files.ready": "Skopiowano z sesji: %ld — wklej w Finderze (⌘V)",
+        "rdp.files.failed": "Nie udało się pobrać plików z sesji: %@",
+        "rdp.drop.pasting": "Wklejanie w sesji: %ld…",
+        "rdp.drop.noclipboard": "Przeciąganie plików wymaga udostępniania schowka (edycja serwera).",
         "rdp.connecting": "Łączenie z %@…",
         "rdp.ended": "Rozłączono",
         "rdp.err.start": "Nie udało się uruchomić klienta RDP.",
@@ -157,7 +163,7 @@ public enum Strings {
         "f.rdp.gateway": "Brama RD",
         "f.rdp.app": "RemoteApp",
         "f.rdp.app.ph": "program albo ||alias (puste = pulpit)",
-        "f.rdp.hint": "Wbudowany klient otwiera pulpit w karcie i bierze hasło z Pęku kluczy. RemoteApp otwiera się w Microsoft Windows App. Te same ustawienia czyta wersja Windows.",
+        "f.rdp.hint": "Wbudowany klient otwiera pulpit w karcie i bierze hasło z Pęku kluczy. Schowek przenosi tekst i pliki (⌘C/⌘V, przeciąganie z Findera); „Udostępniaj dyski” pokazuje w sesji katalog domowy Maca jako dysk „Mac”. RemoteApp otwiera się w Microsoft Windows App. Te same ustawienia czyta wersja Windows.",
 
         "act.files": "Pliki (SFTP)",
         "files.connecting": "Łączenie…",
@@ -324,6 +330,7 @@ public enum Strings {
         "set.log": "Zapisuj dziennik połączeń (bez haseł)",
 
         "menu.tools": "Narzędzia",
+        "toolbar.tools": "Narzędzia: generator haseł, profile, snippety…",
         "act.connectas": "Połącz jako…",
         "f.profile": "Profil poświadczeń",
         "f.password": "Hasło",
@@ -635,6 +642,12 @@ public enum Strings {
         "detail.password.forget": "Forget",
         "detail.password.set": "Set…",
 
+        "rdp.files.receiving": "Downloading files from the session (%ld)…",
+        "rdp.files.progress": "Downloading files from the session (%ld): %@ of %@",
+        "rdp.files.ready": "Copied from the session: %ld — paste in Finder (⌘V)",
+        "rdp.files.failed": "Could not download files from the session: %@",
+        "rdp.drop.pasting": "Pasting into the session: %ld…",
+        "rdp.drop.noclipboard": "Dragging files needs clipboard sharing (server editor).",
         "rdp.connecting": "Connecting to %@…",
         "rdp.ended": "Disconnected",
         "rdp.err.start": "Could not start the RDP client.",
@@ -680,7 +693,7 @@ public enum Strings {
         "f.rdp.gateway": "RD Gateway",
         "f.rdp.app": "RemoteApp",
         "f.rdp.app.ph": "program or ||alias (empty = desktop)",
-        "f.rdp.hint": "The built-in client shows the desktop in a tab and takes the password from Keychain. RemoteApp opens in Microsoft Windows App. The Windows version reads the same settings.",
+        "f.rdp.hint": "The built-in client shows the desktop in a tab and takes the password from Keychain. The clipboard carries text and files (⌘C/⌘V, dragging from Finder); “Share drives” shows the Mac home folder in the session as drive “Mac”. RemoteApp opens in Microsoft Windows App. The Windows version reads the same settings.",
 
         "act.files": "Files (SFTP)",
         "files.connecting": "Connecting…",
@@ -847,6 +860,7 @@ public enum Strings {
         "set.log": "Keep a connection log (no passwords)",
 
         "menu.tools": "Tools",
+        "toolbar.tools": "Tools: password generator, profiles, snippets…",
         "act.connectas": "Connect as…",
         "f.profile": "Credential profile",
         "f.password": "Password",

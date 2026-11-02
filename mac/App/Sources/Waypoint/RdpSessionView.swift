@@ -43,6 +43,20 @@ struct RdpSessionView: View {
                 .padding(.bottom, 24)
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if let t = session.transfer {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text(t).font(.callout)
+                    Button { session.cancelTransfer() } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain)
+                        .help(L("btn.cancel"))
+                }
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(.regularMaterial, in: Capsule())
+                .padding(14)
+            }
+        }
         .overlay(alignment: .top) {
             if let n = session.notice {
                 Text(n)
