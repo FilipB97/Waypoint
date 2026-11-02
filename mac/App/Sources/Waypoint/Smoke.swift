@@ -581,6 +581,12 @@ enum Smoke {
         } else {
             note("uwaga: nie otworzyło się okno Ustawień", out)
         }
+        // Sejf haseł: wpis ze starszej wersji (osobny w Pęku kluczy) jest czytany i trafia do sejfu.
+        let legacy = Keychain.password(for: "waypoint-smoke-legacy")
+        note(legacy == "stare-haslo" ? "OK: hasło ze starszej wersji przeniesione do sejfu (podpis: \(Keychain.isStableSignature ? "certyfikat" : "ad-hoc"))"
+                                     : "FAIL: hasło ze starszej wersji: \(legacy ?? "brak")", out)
+        ok = ok && legacy == "stare-haslo"
+        Keychain.delete(for: "waypoint-smoke-legacy")
         finish(out, ok: ok)
     }
 

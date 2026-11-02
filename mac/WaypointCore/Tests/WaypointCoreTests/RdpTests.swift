@@ -101,3 +101,15 @@ import Testing
         #expect(srv.extra["MacRdpResolution"] == nil && srv.extra["MacRdpScale"] == nil)
     }
 }
+
+@Suite struct AutoConnectTests {
+    @Test func kolejnoscIZapis() throws {
+        var s = MacSettings()
+        s.setAutoConnect("a", true); s.setAutoConnect("b", true); s.setAutoConnect("a", true)
+        #expect(s.autoConnectServerIds == ["b", "a"])
+        s.setAutoConnect("b", false)
+        #expect(s.autoConnectServerIds == ["a"])
+        let json = String(decoding: try JSONEncoder().encode(s), as: UTF8.self)
+        #expect(json.contains("\"AutoConnectServerIds\":[\"a\"]"))   // ta sama nazwa pola co w Windows
+    }
+}

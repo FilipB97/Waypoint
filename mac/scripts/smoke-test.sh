@@ -117,6 +117,8 @@ echo "== aplikacja w trybie testu"
 set +e
 WAYPOINT_DATA_DIR="$WORK/data" WAYPOINT_SMOKE_DIR="$OUT" \
 WAYPOINT_SMOKE_KEYCHAIN_SERVER="$ID_KEYCHAIN" WAYPOINT_SMOKE_PROMPT_SERVER="$ID_PROMPT" \
+# Hasło w osobnym wpisie, jak zapisywały starsze wersje — aplikacja ma je przenieść do sejfu (-A: bez pytania).
+security add-generic-password -A -U -s Waypoint -a waypoint-smoke-legacy -w stare-haslo >/dev/null
 WAYPOINT_SMOKE_PASSWORD="$PW" WAYPOINT_SMOKE_TELNET_IN="$WORK/telnet-in.txt" "$APP_BIN" > "$OUT/app-stdout.log" 2>&1 &
 APP_PID=$!
 # Zrzuty całego ekranu co kilka sekund — pokazują też okna systemowe, których zrzut okna aplikacji nie obejmie.
@@ -138,5 +140,6 @@ echo "--- root-owned.conf po teście:"; sudo ls -l "/Users/$USER_NAME/root-owned
 sudo rm -f /etc/sudoers.d/wptest
 sudo kill "$(cat "$WORK/sshd.pid")" 2>/dev/null || true
 security delete-generic-password -s Waypoint -a "$ID_KEYCHAIN" >/dev/null 2>&1 || true   # gdyby test przerwano
+security delete-generic-password -s Waypoint -a __waypoint_vault__ >/dev/null 2>&1 || true   # sejf haseł z poprzedniego testu
 
 [ "$CODE" = 0 ] && [ "$(cat "$OUT/result.txt" 2>/dev/null)" = OK ]

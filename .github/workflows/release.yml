@@ -248,6 +248,13 @@ jobs:
         run: mac/scripts/build-freerdp.sh "$RUNNER_TEMP/freerdp"
       - name: Ścieżka FreeRDP
         run: echo "WAYPOINT_FREERDP=$RUNNER_TEMP/freerdp" >> "$GITHUB_ENV"
+      # Stały podpis (sekrety MAC_SIGN_P12 / MAC_SIGN_PASSWORD z scripts/make-signing-cert.sh): Pęk
+      # kluczy nie pyta o hasło systemu po aktualizacji. Bez sekretu: podpis ad-hoc.
+      - name: Certyfikat podpisu
+        env:
+          MAC_SIGN_P12: ${{ secrets.MAC_SIGN_P12 }}
+          MAC_SIGN_PASSWORD: ${{ secrets.MAC_SIGN_PASSWORD }}
+        run: mac/scripts/import-signing-cert.sh
       - name: Budowa Waypoint.app
         env:
           VERSION: ${{ needs.release.outputs.version }}
