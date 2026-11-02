@@ -42,7 +42,12 @@ typedef struct {
     void (*clipboard_files)(void *user, int count, const char *const *names, const int64_t *sizes, const int *is_dir);
     /// Odpowiedź na wp_rdp_clipboard_request_file (ok = 0: błąd). Rozmiar: 8 bajtów little-endian.
     void (*clipboard_file_data)(void *user, uint32_t stream_id, int ok, const uint8_t *data, uint32_t length);
+    /// Kursor z sesji: WP_CURSOR_IMAGE (obraz BGRA, nieprzemnożona alfa, w pikselach sesji, punkt
+    /// aktywny hot_x/hot_y), WP_CURSOR_HIDDEN albo WP_CURSOR_DEFAULT. Wątek połączenia.
+    void (*cursor)(void *user, int kind, int width, int height, int hot_x, int hot_y, const uint8_t *bgra);
 } wp_rdp_callbacks;
+
+enum { WP_CURSOR_IMAGE = 1, WP_CURSOR_HIDDEN = 0, WP_CURSOR_DEFAULT = 2 };
 
 typedef struct {
     const char *host;

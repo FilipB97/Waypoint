@@ -94,6 +94,12 @@ final class RdpSession: Identifiable {
         }
         let ticker = view.ticker
         c.onFrame = { _ in ticker.tick() }
+        c.onCursor = { [weak self] cursor in
+            DispatchQueue.main.async {
+                guard let self, c === self.connection else { return }
+                self.view.setRemoteCursor(cursor)
+            }
+        }
         if s.rdpRedirectClipboard {
             c.onClipboardText = { [weak self] text in
                 DispatchQueue.main.async {
