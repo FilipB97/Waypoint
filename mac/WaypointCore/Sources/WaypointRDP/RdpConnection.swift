@@ -28,6 +28,8 @@ public final class RdpConnection: @unchecked Sendable {
         /// Folder Maca jako dysk w sesji (pusty = bez udostępniania).
         public var drivePath = ""
         public var driveName = "Mac"
+        /// Katalog dziennika diagnostycznego (pusty = tylko błędy). Plik waypoint-rdp.log.
+        public var logDirectory = ""
         public init(host: String) { self.host = host }
     }
 
@@ -81,6 +83,9 @@ public final class RdpConnection: @unchecked Sendable {
         case hidden, standard
     }
     public var onCursor: (@Sendable (Cursor) -> Void)?
+    /// Serwer chce ogłoszonej (`announceClipboard`) treści — odczytaj schowek i podaj ją przez
+    /// `setClipboardText` / `setClipboardFiles`. Wątek kanału; wolno blokować (krótko).
+    public var onClipboardProvide: (@Sendable () -> Void)?
 
     /// Plik w schowku sesji: ścieżka względna z „/", rozmiar (nil = nieznany), katalog.
     public struct RemoteFile: Equatable, Sendable {
@@ -109,6 +114,9 @@ public final class RdpConnection: @unchecked Sendable {
     private let lock = NSLock()
 
     public static var isAvailable: Bool { wp_rdp_available() != 0 }
+
+    /// Wpis do dziennika diagnostycznego RDP (gdy włączony w Ustawieniach).
+    public static func log(_ message: String) { wp_rdp_log(message) }
 
     public init() {}
 
@@ -155,6 +163,7 @@ public final class RdpConnection: @unchecked Sendable {
         cfg.ignore_certificate = c.ignoreCertificate ? 1 : 0
         cfg.drive_path = s(c.drivePath)
         cfg.drive_name = s(c.driveName)
+        cfg.log_dir = s(c.logDirectory)
 
         var cb = wp_rdp_callbacks()
         cb.user = Unmanaged.passUnretained(self).toOpaque()
@@ -232,6 +241,7 @@ public final class RdpConnection: @unchecked Sendable {
             default: me.onCursor?(.standard)
             }
         }
+        cb.clipboard_provide = { user in RdpConnection.from(user).onClipboardProvide?() }
         let h = wp_rdp_start(&cfg, &cb)
         lock.lock(); handle = h; lock.unlock()
         return h != nil
@@ -384,6 +394,11 @@ public final class RdpConnection: @unchecked Sendable {
         fileLock.unlock()
         guard let w, w.ok else { throw TransferError.failed("FileContents") }
         return w.data
+    }
+
+    /// Ogłoszenie zawartości schowka Maca bez jej odczytu (treść na żądanie — `onClipboardProvide`).
+    public func announceClipboard(text: Bool, files: Bool) {
+        if let h = current { wp_rdp_announce_clipboard(h, text ? 1 : 0, files ? 1 : 0) }
     }
 
     /// Tekst ze schowka Maca dla sesji (nil = pusty schowek / nie tekst). Końce linii → \r\n jak w Windows.

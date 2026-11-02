@@ -35,6 +35,8 @@ public struct MacSettings: Codable, Equatable, Sendable {
     public var rdpRetina: Bool = true
     /// Serwery łączone automatycznie po uruchomieniu, w tej kolejności (jak AutoConnectServerIds w Windows).
     public var autoConnectServerIds: [String] = []
+    /// Dziennik diagnostyczny RDP (~/Library/Logs/Waypoint/waypoint-rdp.log) — do zgłaszania błędów.
+    public var rdpDiagnostics: Bool = false
 
     public init() {}
 
@@ -48,6 +50,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         case accentColor = "AccentColor"
         case rdpResolution = "MacRdpResolution", rdpScale = "MacRdpScale", rdpRetina = "MacRdpRetina"
         case autoConnectServerIds = "AutoConnectServerIds"
+        case rdpDiagnostics = "MacRdpDiagnostics"
     }
 
     public init(from decoder: Decoder) throws {
@@ -74,6 +77,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         rdpScale = (try? c.decode(Int.self, forKey: .rdpScale)).flatMap { RdpDisplay.scales.contains($0) ? $0 : nil } ?? 0
         rdpRetina = (try? c.decode(Bool.self, forKey: .rdpRetina)) ?? true
         autoConnectServerIds = (try? c.decode([String].self, forKey: .autoConnectServerIds)) ?? []
+        rdpDiagnostics = (try? c.decode(Bool.self, forKey: .rdpDiagnostics)) ?? false
     }
 
     /// Zakresy jak w Windows: interwał sondy 5–3600 s, limit czasu 1–60 s.

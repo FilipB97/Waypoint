@@ -160,6 +160,10 @@ struct RdpConnectionTests {
         var cfg = RdpConnection.Config(host: t.host)
         cfg.port = t.port; cfg.username = t.user; cfg.password = t.password
         cfg.configDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("wp-rdp-\(UUID().uuidString)").path
+        // Przy okazji dziennik diagnostyczny: przebieg wymiany schowka w pliku.
+        let logDir = FileManager.default.temporaryDirectory.appendingPathComponent("wp-rdplog-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
+        cfg.logDirectory = logDir.path
         #expect(c.start(cfg))
         #expect(waitUntil(20) { rec.read { rec.states.contains(.connected) } })
         Thread.sleep(forTimeInterval: 1.5)
@@ -168,6 +172,9 @@ struct RdpConnectionTests {
         let echoed = waitUntil(15) { rec.read { rec.clipboard.contains("ECHO:" + token) } }
         #expect(echoed, "schowek: \(rec.read { rec.clipboard })")
         c.stop()
+        let log = (try? String(contentsOf: logDir.appendingPathComponent("waypoint-rdp.log"), encoding: .utf8)) ?? ""
+        #expect(log.contains("Monitor Ready") && log.contains("prośba o dane formatu 0xd"), "dziennik: \(log.suffix(2000))")
+        #expect(!log.contains(t.password) && !log.contains(token))   // bez hasła i treści schowka
     }
 
     /// Pliki z sesji: startwm.sh po „WPFILE:x" wkłada do schowka dwa pliki (mały i 3 MB) jako
@@ -257,6 +264,30 @@ struct RdpConnectionTests {
         #expect(c.start(cfg))
         #expect(waitUntil(20) { rec.read { rec.states.contains(.connected) } })
         #expect(waitUntil(20) { rec.read { rec.clipboard.contains("DRIVE:" + token) } }, "schowek: \(rec.read { rec.clipboard })")
+        c.stop()
+    }
+
+    /// Schowek „na żądanie": ogłoszenie tekstu bez treści; treść dopiero, gdy serwer o nią poprosi
+    /// (tak Waypoint unika odczytu schowka Maca w tle). Sesja testowa odsyła „WP:x" jako „ECHO:x".
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_CLIPBOARD"] == "1"))
+    func schowekNaZadanie() {
+        let t = rdpTarget!
+        let rec = Recorder()
+        let c = RdpConnection()
+        let token = "na-żądanie \(Int.random(in: 1000...9999))"
+        c.onState = { s in rec.add { rec.states.append(s) } }
+        c.onVerifyCertificate = { _ in .acceptOnce }
+        c.onClipboardText = { text in rec.add { rec.clipboard.append(text) } }
+        c.onClipboardProvide = { rec.add { rec.clipboard.append("<provide>") }; c.setClipboardText("WP:" + token) }
+        var cfg = RdpConnection.Config(host: t.host)
+        cfg.port = t.port; cfg.username = t.user; cfg.password = t.password
+        cfg.configDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("wp-rdp-\(UUID().uuidString)").path
+        #expect(c.start(cfg))
+        #expect(waitUntil(20) { rec.read { rec.states.contains(.connected) } })
+        Thread.sleep(forTimeInterval: 1.5)
+        c.announceClipboard(text: true, files: false)
+        #expect(waitUntil(15) { rec.read { rec.clipboard.contains("ECHO:" + token) } }, "schowek: \(rec.read { rec.clipboard })")
+        #expect(rec.read { rec.clipboard.contains("<provide>") })
         c.stop()
     }
 
