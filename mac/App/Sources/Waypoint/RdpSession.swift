@@ -190,6 +190,15 @@ final class RdpSession: Identifiable {
             state = .connected
             passwordRejected = false
             startClipboardSync()
+            // Serwer bez kanału schowka (zasady serwera albo usługa schowka nie wystartowała) — powiedz o tym,
+            // zamiast milcząco nie wklejać.
+            if server.rdpRedirectClipboard {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
+                    guard let self, c === self.connection, self.state == .connected, !c.isClipboardReady else { return }
+                    RdpConnection.log("[\(self.server.host)] schowek: serwer nie otworzył kanału schowka w 30 s")
+                    self.notice = L("rdp.clip.notready")
+                }
+            }
             view.window?.makeFirstResponder(view)
         case .disconnected(let error, let message):
             stopClipboardSync()
@@ -268,7 +277,7 @@ final class RdpSession: Identifiable {
         let types = pb.types ?? []
         let files = types.contains(.fileURL)
         let text = !files && types.contains(.string)
-        RdpConnection.log("schowek Maca: zmiana \(pb.changeCount), typy: \(types.prefix(6).map(\.rawValue).joined(separator: ", "))")
+        RdpConnection.log("[\(server.host)] schowek Maca: zmiana \(pb.changeCount), typy: \(types.prefix(6).map(\.rawValue).joined(separator: ", "))")
         c.announceClipboard(text: text, files: files)
         return true
     }
@@ -289,12 +298,12 @@ final class RdpSession: Identifiable {
         readCount = pb.changeCount
         if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
            !urls.isEmpty {
-            RdpConnection.log("schowek Maca: pliki \(urls.count)")
+            RdpConnection.log("[\(server.host)] schowek Maca: pliki \(urls.count)")
             c.setClipboardFiles(RdpConnection.clipboardEntries(for: urls))
         } else {
             let text = pb.string(forType: .string)
             // Pusty wynik przy tekście w schowku = macOS odmówił odczytu (ochrona schowka).
-            RdpConnection.log("schowek Maca: tekst " + (text.map { "\($0.utf8.count) bajtów" } ?? "BRAK (odmowa dostępu albo nie tekst)"))
+            RdpConnection.log("[\(server.host)] schowek Maca: tekst " + (text.map { "\($0.utf8.count) bajtów" } ?? "BRAK (odmowa dostępu albo nie tekst)"))
             c.setClipboardText(text)
         }
     }

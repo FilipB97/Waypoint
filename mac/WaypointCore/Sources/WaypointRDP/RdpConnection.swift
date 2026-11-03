@@ -279,6 +279,9 @@ public final class RdpConnection: @unchecked Sendable {
     public func resize(width: Int, height: Int, scalePercent: Int) {
         if let h = current { wp_rdp_resize(h, Int32(width), Int32(height), Int32(scalePercent)) }
     }
+    /// Czy serwer otworzył kanał schowka (bez tego wklejanie nie działa w żadną stronę).
+    public var isClipboardReady: Bool { current.map { wp_rdp_clipboard_ready($0) != 0 } ?? false }
+
     public func syncLocks(_ flags: UInt32) { if let h = current { wp_rdp_sync_locks(h, flags) } }
     /// Pliki z Maca do wklejenia w sesji (zastępuje tekst w schowku sesji).
     public func setClipboardFiles(_ files: [LocalFile]) {

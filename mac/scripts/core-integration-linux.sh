@@ -61,6 +61,8 @@ sleep 1
 # --- xrdp na 127.0.0.1:3389: sesja Xorg z jednolitym tłem #336699 (test sprawdza kolory pikseli)
 useradd -m -s /bin/bash wprdp
 echo "wprdp:$PW" | chpasswd
+useradd -m -s /bin/bash wprdp2   # druga sesja naraz (test schowka w dwóch kartach)
+echo "wprdp2:$PW" | chpasswd
 # Sesja testowa: tło #336699, echo schowka (tekst, pliki w obie strony) i odczyt udostępnionego dysku.
 cat > /etc/xrdp/startwm.sh <<'WM'
 #!/bin/sh
@@ -102,6 +104,7 @@ export WAYPOINT_RDP_TEST="127.0.0.1:3389:wprdp:$PW"
 export WAYPOINT_RDP_TEST_COLOR=336699
 export WAYPOINT_RDP_TEST_RESIZE=1
 export WAYPOINT_RDP_TEST_CLIPBOARD=1
+export WAYPOINT_RDP_TEST_USER2="wprdp2:$PW"
 export WAYPOINT_SFTP_TEST="127.0.0.1:2222:wpt:$W/clientkey:$W/known_hosts"
 export WAYPOINT_SUDO_PASSWORD="$PW"
 export WAYPOINT_FTP_TEST="127.0.0.1:wpt:$PW:2122:2121:2990"

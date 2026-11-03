@@ -291,6 +291,38 @@ struct RdpConnectionTests {
         c.stop()
     }
 
+    /// Dwie sesje naraz w jednym procesie (jak karty Waypointa): schowek ma działać w obu.
+    /// WAYPOINT_RDP_TEST_USER2=user:hasło — drugie konto (xrdp łączy to samo konto z tą samą sesją).
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_USER2"] != nil
+                   && ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_CLIPBOARD"] == "1"))
+    func schowekWDwochSesjach() {
+        let t = rdpTarget!
+        let u2 = ProcessInfo.processInfo.environment["WAYPOINT_RDP_TEST_USER2"]!.split(separator: ":", maxSplits: 1).map(String.init)
+        func open(_ user: String, _ pw: String) -> (RdpConnection, Recorder) {
+            let rec = Recorder()
+            let c = RdpConnection()
+            c.onState = { s in rec.add { rec.states.append(s) } }
+            c.onVerifyCertificate = { _ in .acceptOnce }
+            c.onClipboardText = { text in rec.add { rec.clipboard.append(text) } }
+            var cfg = RdpConnection.Config(host: t.host)
+            cfg.port = t.port; cfg.username = user; cfg.password = pw
+            cfg.configDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("wp-rdp-\(UUID().uuidString)").path
+            #expect(c.start(cfg))
+            #expect(waitUntil(20) { rec.read { rec.states.contains(.connected) } })
+            return (c, rec)
+        }
+        let (a, ra) = open(t.user, t.password)
+        let (b, rb) = open(u2[0], u2[1])
+        #expect(waitUntil(15) { a.isClipboardReady }, "pierwsza sesja bez schowka")
+        #expect(waitUntil(15) { b.isClipboardReady }, "druga sesja bez schowka")
+        Thread.sleep(forTimeInterval: 1)
+        b.setClipboardText("WP:druga")
+        a.setClipboardText("WP:pierwsza")
+        #expect(waitUntil(15) { rb.read { rb.clipboard.contains("ECHO:druga") } }, "druga: \(rb.read { rb.clipboard })")
+        #expect(waitUntil(15) { ra.read { ra.clipboard.contains("ECHO:pierwsza") } }, "pierwsza: \(ra.read { ra.clipboard })")
+        a.stop(); b.stop()
+    }
+
     @Test func certyfikatOdrzucony() {
         let t = rdpTarget!
         let rec = Recorder()
