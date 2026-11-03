@@ -61,11 +61,14 @@ struct RdpSessionView: View {
             if let n = session.notice {
                 Text(n)
                     .font(.callout)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 560)
                     .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(.regularMaterial, in: Capsule())
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     .padding(.top, 10)
                     .task(id: n) {
-                        try? await Task.sleep(for: .seconds(3))
+                        // Dłuższe komunikaty (np. o schowku) — dłużej na ekranie.
+                        try? await Task.sleep(for: .seconds(max(3, Double(n.count) / 15)))
                         session.notice = nil
                     }
             }
