@@ -200,6 +200,7 @@ final class RdpSession: Identifiable {
                 }
             }
             view.window?.makeFirstResponder(view)
+            view.syncLockKeys()
         case .disconnected(let error, let message):
             stopClipboardSync()
             cancelTransfer()

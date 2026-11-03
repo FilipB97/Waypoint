@@ -23,6 +23,10 @@ final class RdpDisplayView: NSView {
     private var resizeWork: DispatchWorkItem?
     private var tracking: NSTrackingArea?
     private var pressed = Set<UInt32>()          // kody skanowania wciśnięte po stronie serwera
+    private var buttonsDown = Set<UInt16>()      // przyciski myszy wciśnięte po stronie serwera
+    private var primaryButton: UInt16?           // lewy albo prawy (Ctrl+klik) z ostatniego mouseDown
+    private var lastMousePoint = (0, 0)
+    private var focusObservers: [NSObjectProtocol] = []
     private var altSent = false                  // Option wysłany jako Alt (dopiero przy klawiszu specjalnym)
     private var scrollY: CGFloat = 0, scrollX: CGFloat = 0
     private var started = false
@@ -234,6 +238,7 @@ final class RdpDisplayView: NSView {
 
     private func send(_ flags: UInt16, _ event: NSEvent) {
         let (x, y) = desktopPoint(event)
+        lastMousePoint = (x, y)
         connection?.mouse(flags: flags, x: x, y: y)
     }
 
@@ -243,14 +248,21 @@ final class RdpDisplayView: NSView {
     override func otherMouseDragged(with e: NSEvent) { send(RdpMouse.move, e) }
     override func mouseDown(with e: NSEvent) {
         window?.makeFirstResponder(self)
-        // Ctrl+klik na Macu = prawy przycisk (gdy nie ma drugiego przycisku).
-        send(RdpMouse.down | (e.modifierFlags.contains(.control) ? RdpMouse.right : RdpMouse.left), e)
+        // Ctrl+klik na Macu = prawy przycisk (gdy nie ma drugiego przycisku). Zapamiętujemy, który przycisk
+        // poszedł — puszczenie musi dotyczyć tego samego, nawet gdy Ctrl puszczono wcześniej.
+        let button = e.modifierFlags.contains(.control) ? RdpMouse.right : RdpMouse.left
+        primaryButton = button
+        buttonsDown.insert(button)
+        send(RdpMouse.down | button, e)
     }
     override func mouseUp(with e: NSEvent) {
-        send(e.modifierFlags.contains(.control) ? RdpMouse.right : RdpMouse.left, e)
+        let button = primaryButton ?? RdpMouse.left
+        primaryButton = nil
+        buttonsDown.remove(button)
+        send(button, e)
     }
-    override func rightMouseDown(with e: NSEvent) { send(RdpMouse.down | RdpMouse.right, e) }
-    override func rightMouseUp(with e: NSEvent) { send(RdpMouse.right, e) }
+    override func rightMouseDown(with e: NSEvent) { buttonsDown.insert(RdpMouse.right); send(RdpMouse.down | RdpMouse.right, e) }
+    override func rightMouseUp(with e: NSEvent) { buttonsDown.remove(RdpMouse.right); send(RdpMouse.right, e) }
     override func otherMouseDown(with e: NSEvent) { other(e, down: true) }
     override func otherMouseUp(with e: NSEvent) { other(e, down: false) }
 
@@ -363,9 +375,10 @@ final class RdpDisplayView: NSView {
         if local.contains(ch) || Int(ch) != nil || e.modifierFlags.contains(.shift) && ["[", "]", "{", "}"].contains(ch) {
             return false
         }
-        if !pressed.contains(0x1D) && !pressed.contains(0x11D) {
-            key(0x1D, down: true)   // ⌘ wciśnięty zanim sesja dostała fokus — Ctrl jeszcze nie poszedł
-        }
+        // ⌘ wciśnięty, zanim sesja dostała fokus — Ctrl nie poszedł; dosyłamy go tylko na czas tego skrótu.
+        let ctrlAdded = !pressed.contains(0x1D) && !pressed.contains(0x11D)
+        if ctrlAdded { connection?.key(down: true, scancode: 0x1D) }
+        defer { if ctrlAdded { connection?.key(down: false, scancode: 0x1D) } }
         let code = scancode(e.keyCode)
         // Wklejenie: najpierw aktualny schowek Maca do sesji, potem Ctrl+V — inaczej (sprawdzanie co
         // 0,5 s) świeżo skopiowany tekst docierał po wklejeniu i Windows wklejał poprzednią zawartość.
@@ -374,9 +387,13 @@ final class RdpDisplayView: NSView {
         }
         if ch == "v", session?.preparePaste() == true {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-                guard let self, self.connection != nil else { return }
-                self.connection?.key(down: true, scancode: code)
-                self.connection?.key(down: false, scancode: code)
+                guard let self, let c = self.connection else { return }
+                // ⌘ mógł zostać puszczony w tym czasie — Ctrl tylko na czas tego V.
+                let ctrlHeld = self.pressed.contains(0x1D) || self.pressed.contains(0x11D)
+                if !ctrlHeld { c.key(down: true, scancode: 0x1D) }
+                c.key(down: true, scancode: code)
+                c.key(down: false, scancode: code)
+                if !ctrlHeld { c.key(down: false, scancode: 0x1D) }
             }
             return true
         }
@@ -387,6 +404,7 @@ final class RdpDisplayView: NSView {
 
     override func becomeFirstResponder() -> Bool {
         _ = session?.syncPasteboard()   // skopiowane w innej aplikacji tuż przed kliknięciem w pulpit
+        syncLockKeys()
         return super.becomeFirstResponder()
     }
 
@@ -400,9 +418,44 @@ final class RdpDisplayView: NSView {
         if let c = connection {
             for code in pressed { c.key(down: false, scancode: code) }
             if altSent { c.key(down: false, scancode: 0x38) }
+            for b in buttonsDown { c.mouse(flags: b, x: lastMousePoint.0, y: lastMousePoint.1) }
         }
         pressed.removeAll()
+        buttonsDown.removeAll()
+        primaryButton = nil
         altSent = false
+    }
+
+    /// Stan Caps Lock / Num Lock z Maca do sesji (po połączeniu i powrocie fokusu) — bez rozjazdu,
+    /// gdy Caps Lock zmieniono poza pulpitem.
+    func syncLockKeys() {
+        let caps = NSEvent.modifierFlags.contains(.capsLock)
+        connection?.syncLocks((caps ? RdpKeyboard.syncCaps : 0) | RdpKeyboard.syncNum)
+    }
+
+    // Fokus odchodzi (⌘Tab, inne okno, zrzut ekranu, przełączenie karty): puszczenie klawiszy trafiłoby
+    // już gdzie indziej, więc wszystko, co sesja uważa za wciśnięte, puszczamy od razu.
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        releaseAll()
+        focusObservers.forEach { NotificationCenter.default.removeObserver($0) }
+        focusObservers = []
+        super.viewWillMove(toWindow: newWindow)
+        guard let w = newWindow else { return }
+        let nc = NotificationCenter.default
+        for name in [NSWindow.didResignKeyNotification] {
+            focusObservers.append(nc.addObserver(forName: name, object: w, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.releaseAll() }
+            })
+        }
+        focusObservers.append(nc.addObserver(forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.releaseAll() }
+        })
+        focusObservers.append(nc.addObserver(forName: NSWindow.didBecomeKeyNotification, object: w, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.window?.firstResponder === self else { return }
+                self.syncLockKeys()
+            }
+        })
     }
 }
 
