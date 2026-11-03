@@ -108,6 +108,8 @@ void wp_rdp_set_clipboard_text(wp_rdp *r, const char *utf8);
 void wp_rdp_announce_clipboard(wp_rdp *r, int has_text, int has_files);
 /// Wpis do dziennika diagnostycznego (jeśli włączony) — zdarzenia po stronie Maca.
 void wp_rdp_log(const char *message);
+/// Czy serwer otworzył kanał schowka (przysłał Monitor Ready). 0 = jeszcze nie / wyłączony na serwerze.
+int wp_rdp_clipboard_ready(wp_rdp *r);
 /// Pliki z Maca dla sesji (wklejenie w Eksploratorze): nazwy względne z '/' (katalogi przed zawartością),
 /// pełne ścieżki, rozmiary, katalog = 1. Zastępuje tekst w schowku.
 void wp_rdp_set_clipboard_files(wp_rdp *r, int count, const char *const *names, const char *const *paths,

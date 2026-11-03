@@ -369,6 +369,9 @@ final class RdpDisplayView: NSView {
         let code = scancode(e.keyCode)
         // Wklejenie: najpierw aktualny schowek Maca do sesji, potem Ctrl+V — inaczej (sprawdzanie co
         // 0,5 s) świeżo skopiowany tekst docierał po wklejeniu i Windows wklejał poprzednią zawartość.
+        if ch == "v" {
+            RdpConnection.log("[\(session?.server.host ?? "?")] ⌘V w pulpicie (kanał schowka gotowy: \(connection?.isClipboardReady == true))")
+        }
         if ch == "v", session?.preparePaste() == true {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
                 guard let self, self.connection != nil else { return }
