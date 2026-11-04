@@ -37,6 +37,9 @@ public struct MacSettings: Codable, Equatable, Sendable {
     public var autoConnectServerIds: [String] = []
     /// Dziennik diagnostyczny RDP (~/Library/Logs/Waypoint/waypoint-rdp.log) — do zgłaszania błędów.
     public var rdpDiagnostics: Bool = false
+    /// Option w pulpicie zdalnym jak Alt na PC (lewy = Alt, prawy = AltGr — polskie znaki prawym Option).
+    /// false: Option+litera wysyła znak z macOS (ą, ę…), Alt tylko z klawiszami specjalnymi.
+    public var rdpOptionAsAlt: Bool = true
 
     public init() {}
 
@@ -51,6 +54,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         case rdpResolution = "MacRdpResolution", rdpScale = "MacRdpScale", rdpRetina = "MacRdpRetina"
         case autoConnectServerIds = "AutoConnectServerIds"
         case rdpDiagnostics = "MacRdpDiagnostics"
+        case rdpOptionAsAlt = "MacRdpOptionAsAlt"
     }
 
     public init(from decoder: Decoder) throws {
@@ -78,6 +82,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         rdpRetina = (try? c.decode(Bool.self, forKey: .rdpRetina)) ?? true
         autoConnectServerIds = (try? c.decode([String].self, forKey: .autoConnectServerIds)) ?? []
         rdpDiagnostics = (try? c.decode(Bool.self, forKey: .rdpDiagnostics)) ?? false
+        rdpOptionAsAlt = (try? c.decode(Bool.self, forKey: .rdpOptionAsAlt)) ?? true
     }
 
     /// Zakresy jak w Windows: interwał sondy 5–3600 s, limit czasu 1–60 s.

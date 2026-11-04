@@ -461,6 +461,9 @@ final class AppModel {
                 self.sendSnippet(at: d - 1)
                 return nil
             }
+            // ⌘⌥+klawisz w pulpicie zdalnym (Option jako Alt) → Ctrl+Alt+klawisz w sesji.
+            if option, self.settings.rdpOptionAsAlt, let rdp = event.window?.firstResponder as? RdpDisplayView,
+               rdp.handleCommandKey(event) { return nil }
             if option { return event }
             if chars == "w", !shift, let s = self.activeSession {
                 self.close(s)
