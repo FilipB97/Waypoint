@@ -114,6 +114,10 @@ private struct RdpSettings: View {
                 }
                 Toggle(L("set.rdp.retina"), isOn: $model.settings.rdpRetina)
                     .disabled(model.settings.rdpResolution != RdpDisplay.fit)
+                Picker(L("set.rdp.option"), selection: $model.settings.rdpOptionAsAlt) {
+                    Text(L("set.rdp.option.alt")).tag(true)
+                    Text(L("set.rdp.option.chars")).tag(false)
+                }
             } header: {
                 Text(L("set.rdp"))
             } footer: {

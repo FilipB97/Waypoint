@@ -324,7 +324,15 @@ final class RdpDisplayView: NSView {
         return chars
     }
 
+    /// Option jak Alt na PC (Ustawienia → Pulpit zdalny): lewy = Alt, prawy = AltGr.
+    private var optionAsAlt: Bool { AppModel.shared.settings.rdpOptionAsAlt }
+
     override func keyDown(with e: NSEvent) {
+        if optionAsAlt {
+            // Alt / AltGr poszły już w flagsChanged — tu sam klawisz (Alt+C, AltGr+A = ą w układzie polskim).
+            key(scancode(e.keyCode), down: true)
+            return
+        }
         if let text = optionText(e) {
             for u in text.utf16 { connection?.unicode(down: true, u); connection?.unicode(down: false, u) }
             return
@@ -348,6 +356,8 @@ final class RdpDisplayView: NSView {
         switch e.keyCode {
         case 57:   // Caps Lock: przełącznik — wyślij naciśnięcie i puszczenie
             key(0x3A, down: true); key(0x3A, down: false)
+        case 58, 61 where optionAsAlt:
+            key(e.keyCode == 58 ? RdpKeyboard.leftAlt : RdpKeyboard.rightAlt, down: raw & masks[e.keyCode]! != 0)
         case 58, 61:
             // Option nie idzie od razu jako Alt (znaki z Option); puszczenie zwalnia Alt, jeśli był wysłany.
             if raw & masks[e.keyCode]! == 0 && altSent && raw & 0x60 == 0 {
@@ -369,7 +379,8 @@ final class RdpDisplayView: NSView {
     /// w AppModel — zanim skrót trafi do menu Edycja aplikacji (inaczej ⌘V wklejało „w Waypoincie").
     /// Skróty Waypointa i systemu (⌘Q, ⌘W, ⌘H, ⌘1–9…) zostają lokalne → false.
     func handleCommandKey(_ e: NSEvent) -> Bool {
-        guard connection != nil, e.modifierFlags.contains(.command), !e.modifierFlags.contains(.option) else { return false }
+        guard connection != nil, e.modifierFlags.contains(.command),
+              optionAsAlt || !e.modifierFlags.contains(.option) else { return false }
         let ch = e.charactersIgnoringModifiers?.lowercased() ?? ""
         let local: Set<String> = ["q", "w", "h", "m", ",", "`", "k", "n", "d"]
         if local.contains(ch) || Int(ch) != nil || e.modifierFlags.contains(.shift) && ["[", "]", "{", "}"].contains(ch) {

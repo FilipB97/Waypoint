@@ -184,7 +184,9 @@ albo profilu poświadczeń) — pytanie nad kartą pojawia się tylko, gdy go br
 („Zaufaj zawsze / Tylko teraz / Nie łącz"), zmiana certyfikatu to wyraźne ostrzeżenie; poziom
 „nie sprawdzaj" z edycji serwera pomija pytanie. Rozdzielczość sesji = rozmiar karty (Retina 200%),
 zmiana rozmiaru okna zmienia ją w locie (Display Control). Klawiatura: ⌘ działa jak Ctrl (⌘C/⌘V
-w sesji), polskie znaki z Option idą jako Unicode, Option z klawiszami specjalnymi = Alt; ⌘W, ⌘Q,
+w sesji), Option jak na PC: lewy = Alt (Alt+C, Alt+Tab w sesji…), prawy = AltGr — polskie znaki
+w układzie polskim programisty (układ sesji idzie za układem Maca); w Ustawieniach → Pulpit zdalny
+można wrócić do znaków z macOS (Option+litera jako Unicode); ⌘W, ⌘Q,
 ⌘1–9 zostają przy Waypoincie. Kursor pochodzi z sesji (zajęty, ładowanie, tekstowy, zmiana
 rozmiaru). Wrażenia jak mstsc w sieci LAN: kompozycja pulpitu, animacje, wygładzanie czcionek,
 motywy i tapeta — bez nich Windows rysuje uproszczony interfejs (bez podświetleń i animacji). Rozdzielczość (dopasowanie do okna albo stała), skalowanie

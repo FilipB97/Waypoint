@@ -113,3 +113,13 @@ import Testing
         #expect(json.contains("\"AutoConnectServerIds\":[\"a\"]"))   // ta sama nazwa pola co w Windows
     }
 }
+
+@Suite struct OptionAsAltTests {
+    @Test func domyslnieOptionJakAlt() throws {
+        #expect(MacSettings().rdpOptionAsAlt)
+        let stare = try JSONDecoder().decode(MacSettings.self, from: Data("{}".utf8))
+        #expect(stare.rdpOptionAsAlt)
+        var s = MacSettings(); s.rdpOptionAsAlt = false
+        #expect(try JSONDecoder().decode(MacSettings.self, from: JSONEncoder().encode(s)).rdpOptionAsAlt == false)
+    }
+}

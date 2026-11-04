@@ -77,7 +77,9 @@ typedef struct {
     const char *drive_name;
     /// Dziennik diagnostyczny (katalog; NULL = tylko błędy na stderr). Plik waypoint-rdp.log —
     /// przebieg połączenia i wymiany schowka (bez haseł i treści schowka). Ustawienie dla całego procesu.
-    const char *log_dir;     // tylko testy
+    const char *log_dir;
+    /// Układ klawiatury sesji (identyfikator Windows, np. 0x415 = polski programisty); 0 = domyślny serwera.
+    uint32_t keyboard_layout;
 } wp_rdp_config;
 
 int wp_rdp_available(void);

@@ -806,7 +806,8 @@ wp_rdp *wp_rdp_start(const wp_rdp_config *c, const wp_rdp_callbacks *cb) {
         && freerdp_settings_set_bool(s, FreeRDP_DisableCursorBlinking, FALSE)
         && freerdp_settings_set_bool(s, FreeRDP_IgnoreCertificate, c->ignore_certificate ? TRUE : FALSE)
         && set_str(s, FreeRDP_ConfigPath, c->config_dir)
-        && set_str(s, FreeRDP_ClientHostname, c->client_hostname);
+        && set_str(s, FreeRDP_ClientHostname, c->client_hostname)
+        && (!c->keyboard_layout || freerdp_settings_set_uint32(s, FreeRDP_KeyboardLayout, c->keyboard_layout));
     if (ok && c->scale_percent > 100) {
         ok = freerdp_settings_set_uint32(s, FreeRDP_DesktopScaleFactor, (UINT32)c->scale_percent)
             && freerdp_settings_set_uint32(s, FreeRDP_DeviceScaleFactor,

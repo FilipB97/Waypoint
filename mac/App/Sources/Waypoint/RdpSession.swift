@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import Observation
 import WaypointCore
 import WaypointRDP
@@ -80,6 +81,7 @@ final class RdpSession: Identifiable {
         cfg.ignoreCertificate = s.rdpAuthenticationLevel == 0   // jak „połącz bez ostrzeżenia” w mstsc
         cfg.configDirectory = AppModel.shared.dataDirectory.appendingPathComponent("freerdp").path
         cfg.clientHostname = Host.current().localizedName ?? "Mac"
+        cfg.keyboardLayout = RdpKeyboard.windowsLayout(forMacInputSource: Self.currentInputSourceID())
         if AppModel.shared.settings.rdpDiagnostics {
             let dir = RdpSession.logDirectory
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -397,6 +399,13 @@ final class RdpSession: Identifiable {
 }
 
 extension RdpSession {
+    /// Bieżący układ klawiatury macOS (np. com.apple.keylayout.PolishPro) — do układu sesji Windows.
+    static func currentInputSourceID() -> String {
+        guard let src = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let raw = TISGetInputSourceProperty(src, kTISPropertyInputSourceID) else { return "" }
+        return Unmanaged<CFString>.fromOpaque(raw).takeUnretainedValue() as String
+    }
+
     /// ~/Library/Logs/Waypoint — dziennik diagnostyczny RDP (waypoint-rdp.log).
     static var logDirectory: URL {
         FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0].appendingPathComponent("Logs/Waypoint")

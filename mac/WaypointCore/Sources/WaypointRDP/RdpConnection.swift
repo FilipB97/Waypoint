@@ -30,6 +30,8 @@ public final class RdpConnection: @unchecked Sendable {
         public var driveName = "Mac"
         /// Katalog dziennika diagnostycznego (pusty = tylko błędy). Plik waypoint-rdp.log.
         public var logDirectory = ""
+        /// Układ klawiatury sesji (Windows KLID, np. 0x415 — polski programisty); 0 = domyślny serwera.
+        public var keyboardLayout: UInt32 = 0
         public init(host: String) { self.host = host }
     }
 
@@ -164,6 +166,7 @@ public final class RdpConnection: @unchecked Sendable {
         cfg.drive_path = s(c.drivePath)
         cfg.drive_name = s(c.driveName)
         cfg.log_dir = s(c.logDirectory)
+        cfg.keyboard_layout = c.keyboardLayout
 
         var cb = wp_rdp_callbacks()
         cb.user = Unmanaged.passUnretained(self).toOpaque()
@@ -438,6 +441,21 @@ public enum RdpMouse {
 }
 
 public enum RdpKeyboard {
+    /// Lewy / prawy Alt (prawy = AltGr w układach europejskich, m.in. polskim programisty).
+    public static let leftAlt: UInt32 = 0x38
+    public static let rightAlt: UInt32 = 0x138
+
+    /// Układ Windows dla układu macOS (identyfikator źródła wprowadzania, np. com.apple.keylayout.PolishPro).
+    /// 0 = nieznany — serwer użyje swojego domyślnego.
+    public static func windowsLayout(forMacInputSource id: String) -> UInt32 {
+        let s = id.lowercased()
+        if s.contains("polish") { return 0x415 }            // polski (programisty) — AltGr+a = ą
+        if s.contains("german") { return 0x407 }
+        if s.hasSuffix(".us") || s.contains("abc") { return 0x409 }
+        if s.contains("british") { return 0x809 }
+        return 0
+    }
+
     public static let syncScroll: UInt32 = 0x01
     public static let syncNum: UInt32 = 0x02
     public static let syncCaps: UInt32 = 0x04
