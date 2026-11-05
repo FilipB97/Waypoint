@@ -17,6 +17,7 @@ void wp_rdp_sync_locks(wp_rdp *r, uint32_t f) { (void)r; (void)f; }
 void wp_rdp_set_clipboard_text(wp_rdp *r, const char *t) { (void)r; (void)t; }
 void wp_rdp_log(const char *m) { (void)m; }
 int wp_rdp_clipboard_ready(wp_rdp *r) { (void)r; return 0; }
+void wp_rdp_refresh(wp_rdp *r) { (void)r; }
 void wp_rdp_announce_clipboard(wp_rdp *r, int t, int f) { (void)r; (void)t; (void)f; }
 void wp_rdp_set_clipboard_files(wp_rdp *r, int c, const char *const *n, const char *const *p, const int64_t *s, const int *d) { (void)r; (void)c; (void)n; (void)p; (void)s; (void)d; }
 int wp_rdp_clipboard_request_file(wp_rdp *r, uint32_t s, int i, int z, uint64_t p, uint32_t l) { (void)r; (void)s; (void)i; (void)z; (void)p; (void)l; return 0; }
@@ -90,7 +91,8 @@ struct wp_rdp {
     CLIPRDR_FILE_CONTENTS_REQUEST req;
 
     char host[128];
-    int warned_not_ready;            // do wpisów dziennika (kilka sesji naraz)
+    int warned_not_ready;
+    int refresh_pending;       // prośba o ponowne przesłanie całego ekranu (Refresh Rect)            // do wpisów dziennika (kilka sesji naraz)
     volatile int stopping;
 };
 
@@ -490,6 +492,23 @@ static void send_pending_clipboard(wp_rdp *r) {
         r->cb.clipboard_file_data(r->cb.user, fr.streamId, 0, NULL, 0);
 }
 
+/// Serwer przysyła cały ekran od nowa (np. gdy macOS wyczyścił warstwę widoku, a w sesji nic się nie
+/// zmienia, więc nowa klatka by nie przyszła). Wątek połączenia.
+static void send_pending_refresh(wp_rdp *r) {
+    pthread_mutex_lock(&r->disp_lock);
+    int go = r->refresh_pending;
+    r->refresh_pending = 0;
+    pthread_mutex_unlock(&r->disp_lock);
+    if (!go) return;
+    rdpSettings *s = r->context->settings;
+    UINT32 w = freerdp_settings_get_uint32(s, FreeRDP_DesktopWidth);
+    UINT32 h = freerdp_settings_get_uint32(s, FreeRDP_DesktopHeight);
+    rdpUpdate *u = r->context->update;
+    if (!u || !u->RefreshRect || w == 0 || h == 0) return;
+    RECTANGLE_16 area = { 0, 0, (UINT16)(w - 1), (UINT16)(h - 1) };
+    (void)u->RefreshRect(r->context, 1, &area);
+}
+
 // --- Kanały ---
 
 static void on_channel_connected(void *context, const ChannelConnectedEventArgs *e) {
@@ -735,6 +754,7 @@ static void *run(void *arg) {
         }
         send_pending_resize(r);
         send_pending_clipboard(r);
+        send_pending_refresh(r);
     }
     UINT32 err = r->stopping ? 0 : freerdp_get_last_error(r->context);
     // Wylogowanie i rozłączenie zlecone przez użytkownika (w sesji albo z innego połączenia) to nie błąd.
@@ -1012,6 +1032,14 @@ int wp_rdp_clipboard_ready(wp_rdp *r) {
     int ready = r->clip_ready;
     pthread_mutex_unlock(&r->disp_lock);
     return ready;
+}
+
+void wp_rdp_refresh(wp_rdp *r) {
+    if (!r) return;
+    pthread_mutex_lock(&r->disp_lock);
+    r->refresh_pending = 1;
+    pthread_mutex_unlock(&r->disp_lock);
+    SetEvent(r->wake);
 }
 
 #endif

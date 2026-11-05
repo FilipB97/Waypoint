@@ -217,7 +217,7 @@ final class RdpSession: Identifiable {
                 askPassword(retry: true)
                 return
             }
-            state = .ended(error == 0 ? nil : (message.isEmpty ? String(format: L("rdp.err.code"), error) : message))
+            state = .ended(error == 0 ? nil : (Self.reason(error) ?? (message.isEmpty ? String(format: L("rdp.err.code"), error) : message)))
             onEnded?(error != 0)
         }
     }
@@ -399,6 +399,17 @@ final class RdpSession: Identifiable {
 }
 
 extension RdpSession {
+    /// Zrozumiały powód najczęstszych rozłączeń (kody ERRINFO serwera: 0x10000 | kod).
+    static func reason(_ error: UInt32) -> String? {
+        switch error {
+        case 0x10001: return L("rdp.why.rpcdisconnect")
+        case 0x10003: return L("rdp.why.idle")
+        case 0x10004: return L("rdp.why.logontime")
+        case 0x10005: return L("rdp.why.otherconnection")
+        default: return nil
+        }
+    }
+
     /// Bieżący układ klawiatury macOS (np. com.apple.keylayout.PolishPro) — do układu sesji Windows.
     static func currentInputSourceID() -> String {
         guard let src = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),

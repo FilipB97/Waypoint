@@ -35,11 +35,29 @@ final class RdpDisplayView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
+        layerContentsRedrawPolicy = .onSetNeedsDisplay
+        registerForDraggedTypes([.fileURL])
+    }
+
+    /// Ostatnia klatka. AppKit potrafi przerysować warstwę widoku (zmiana rozmiaru, pełny ekran, przełączenie
+    /// karty) — bez tego obraz znikał i zostawała czerń, dopóki w sesji coś się nie zmieniło.
+    private var image: CGImage?
+
+    override func makeBackingLayer() -> CALayer {
+        let l = CALayer()
+        l.backgroundColor = NSColor.black.cgColor
+        l.contentsGravity = .resizeAspect
+        l.magnificationFilter = .linear
+        l.minificationFilter = .linear
+        return l
+    }
+
+    override var wantsUpdateLayer: Bool { true }
+
+    override func updateLayer() {
         layer?.backgroundColor = NSColor.black.cgColor
         layer?.contentsGravity = .resizeAspect
-        layer?.magnificationFilter = .linear
-        layer?.minificationFilter = .linear
-        registerForDraggedTypes([.fileURL])
+        layer?.contents = image
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -73,12 +91,19 @@ final class RdpDisplayView: NSView {
     /// Okno przeniesione między ekranem Retina a zwykłym.
     override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
+        needsDisplay = true
         applyDisplayMode()
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         startIfReady()
+        if window != nil {
+            // Powrót na kartę / do okna: obraz z bufora od razu, a serwer i tak przyśle cały ekran od nowa.
+            needsDisplay = true
+            frameChanged()
+            connection?.refresh()
+        }
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -86,7 +111,10 @@ final class RdpDisplayView: NSView {
         startIfReady()
         // Nowa rozdzielczość dopiero po ustabilizowaniu okna (przeciąganie krawędzi = wiele zmian).
         resizeWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.applyDisplayMode() }
+        let work = DispatchWorkItem { [weak self] in
+            self?.applyDisplayMode()
+            self?.connection?.refresh()   // stała rozdzielczość: serwer nie przyśle nowej klatki sam z siebie
+        }
         resizeWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
     }
@@ -123,6 +151,7 @@ final class RdpDisplayView: NSView {
                            provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
         }
         guard let image else { return }
+        self.image = image
         desktop = CGSize(width: image.width, height: image.height)
         CATransaction.begin()
         CATransaction.setDisableActions(true)

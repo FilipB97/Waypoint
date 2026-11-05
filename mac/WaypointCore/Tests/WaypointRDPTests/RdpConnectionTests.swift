@@ -139,6 +139,10 @@ struct RdpConnectionTests {
             return false
         } } }
         #expect(cursorOK, "kursory: \(rec.read { rec.cursors.count })")
+        // Prośba o cały ekran od nowa (Refresh Rect) — serwer przysyła klatki, połączenie trwa.
+        let before = rec.read { rec.frames }
+        c.refresh()
+        #expect(waitUntil(10) { rec.read { rec.frames } > before }, "brak klatek po odświeżeniu")
         // Wejście nie może wywrócić połączenia.
         c.mouse(flags: RdpMouse.move, x: 100, y: 100)
         c.key(down: true, scancode: 0x1E); c.key(down: false, scancode: 0x1E)
