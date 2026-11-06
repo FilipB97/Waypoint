@@ -3,7 +3,8 @@
 #
 # Po co: podpis ad-hoc zmienia się z każdą wersją, więc macOS po aktualizacji pyta o hasło systemu,
 # zanim Waypoint odczyta hasła z Pęku kluczy. Wpis w Pęku kluczy pamięta „wymaganie podpisu" — przy
-# podpisie tym samym certyfikatem jest ono stałe i „Zawsze pozwalaj" działa także po aktualizacjach.
+# podpisie tym samym certyfikatem jest ono stałe. Jedno pytanie po aktualizacji zostaje i tak: bez Team ID
+# od Apple macOS przypina wpis także do skrótu kompilacji (partition_id: cdhash:…) — usuwa to tylko Developer ID.
 # (Pierwszego uruchomienia pobranej paczki to nie zmienia — do tego potrzebna jest notaryzacja Apple.)
 #
 # Użycie (macOS albo Linux z openssl):   mac/scripts/make-signing-cert.sh [katalog-wyjściowy]

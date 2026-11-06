@@ -7,7 +7,9 @@ import Security
 /// konto → hasło). Powód: macOS pyta o hasło systemu za każdym razem, gdy aplikacja o innym podpisie
 /// niż ta, która utworzyła wpis, chce go odczytać — a podpis ad-hoc zmienia się z każdą wersją. Przy
 /// osobnym wpisie na serwer po aktualizacji było to jedno pytanie na serwer, z sejfem — jedno w ogóle
-/// („Zawsze pozwalaj" je wycisza do następnej wersji; przy stałym podpisie — na stałe).
+/// („Zawsze pozwalaj" je wycisza do następnej wersji). Stały podpis własnym certyfikatem tego nie usuwa:
+/// macOS przypina wpis do kompilacji (`partition_id: cdhash:…`) każdej aplikacji bez Team ID od Apple,
+/// a każdy zapis przypina go od nowa — zdjęcie tego warunku hasłem logowania nie pomaga (sprawdzone).
 ///
 /// Starsze wersje zapisywały osobne wpisy (konto = identyfikator serwera / profilu) — są czytane
 /// i przenoszone do sejfu przy pierwszym użyciu.
