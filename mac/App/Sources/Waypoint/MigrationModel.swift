@@ -64,6 +64,45 @@ extension AppModel {
     }
 }
 
+/// Hasła z „Eksportuj hasła…" w wersji Windows (plik szyfrowany hasłem) → Pęk kluczy.
+extension AppModel {
+    func importPasswords() {
+        let panel = NSOpenPanel()
+        panel.title = L("pwimp.title")
+        panel.message = L("pwimp.msg")
+        panel.allowedContentTypes = [.json]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        let ask = NSAlert()
+        ask.messageText = L("pwimp.title")
+        ask.informativeText = L("pwimp.pass")
+        let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        ask.accessoryView = field
+        ask.addButton(withTitle: L("pwimp.ok"))
+        ask.addButton(withTitle: L("btn.cancel"))
+        ask.window.initialFirstResponder = field
+        guard ask.runModal() == .alertFirstButtonReturn else { return }
+        importPasswords(from: url, password: field.stringValue)
+    }
+
+    @discardableResult
+    func importPasswords(from url: URL, password: String) -> (saved: Int, skipped: Int)? {
+        let title = L("pwimp.title")
+        let passwords: [String: String]
+        do { passwords = try PasswordExport.decrypt(Data(contentsOf: url), password: password) }
+        catch PasswordExport.Failure.wrongPassword { alert = AppAlert(title: title, message: L("pwimp.err.password")); return nil }
+        catch { alert = AppAlert(title: title, message: L("pwimp.err.format")); return nil }
+
+        let picked = PasswordExport.select(passwords, servers: servers, profiles: profiles)
+        var saved = 0
+        for (account, pw) in picked.accepted where Keychain.save(pw, for: account, label: "Waypoint") { saved += 1 }
+        var msg = String(format: L("pwimp.done"), saved)
+        if picked.skipped > 0 { msg += "\n" + String(format: L("pwimp.skipped"), picked.skipped) }
+        alert = AppAlert(title: title, message: msg)
+        return (saved, picked.skipped)
+    }
+}
+
 /// Wake-on-LAN i sprawdzanie aktualizacji.
 extension AppModel {
     func wake(_ s: Server) {

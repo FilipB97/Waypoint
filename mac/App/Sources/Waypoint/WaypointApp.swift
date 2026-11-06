@@ -26,6 +26,7 @@ struct WaypointApp: App {
             CommandGroup(after: .newItem) {
                 Button(L("menu.import")) { model.importProfile() }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
+                Button(L("menu.importpw")) { model.importPasswords() }
                 Button(L("rdp.import")) { model.importRdp() }
                 Menu(L("migr.menu")) {
                     ForEach(ExternalImport.Source.allCases, id: \.self) { src in
