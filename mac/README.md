@@ -34,11 +34,13 @@ skalowanie), Start („Połącz na starcie" — serwery łączone po uruchomieni
 serwera na liście) i Hasła.
 
 **Hasła i pytanie o hasło systemu:** wszystkie hasła są w jednym wpisie Pęku kluczy („Waypoint —
-hasła"). macOS pyta o hasło systemu, gdy wpis czyta aplikacja o innym podpisie niż ostatnio. Przy
-podpisie ad-hoc (domyślnie) to jedno pytanie po każdej aktualizacji — „Zawsze pozwalaj" wycisza je
-do następnej wersji. Na stałe: podpis własnym certyfikatem —
-`mac/scripts/make-signing-cert.sh`, potem w repozytorium sekrety Actions `MAC_SIGN_P12` (plik
-`.base64`) i `MAC_SIGN_PASSWORD`; wydania podpisują się nim same (`import-signing-cert.sh`).
+hasła"). Po każdej aktualizacji macOS raz pyta o hasło systemu — „Zawsze pozwalaj" wycisza je do
+następnej wersji. Wydania są podpisane własnym certyfikatem (`mac/scripts/make-signing-cert.sh`,
+sekrety Actions `MAC_SIGN_P12` i `MAC_SIGN_PASSWORD`, `import-signing-cert.sh`), ale to pytania nie
+usuwa: aplikacji bez Team ID od Apple macOS przypina wpis do skrótu kompilacji
+(`partition_id: cdhash:…`), a każdy zapis hasła przypina go od nowa. Zdjęcie tego warunku hasłem
+logowania (`SecKeychainItemSetAccessWithPassword`) sprawdzone 2026-11-06 — nowa kompilacja i tak nie
+czyta wpisu. Usuwa to dopiero podpis Apple Developer ID (partycja `teamid:`).
 
 **Aktualizacje:** Waypoint sam sprawdza nowe wydania; „Zainstaluj i uruchom ponownie" pobiera
 paczkę, podmienia `Waypoint.app` w miejscu i uruchamia nową wersję — bez kwarantanny, więc bez

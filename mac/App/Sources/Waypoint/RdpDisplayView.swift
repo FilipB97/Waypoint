@@ -385,7 +385,7 @@ final class RdpDisplayView: NSView {
         switch e.keyCode {
         case 57:   // Caps Lock: przełącznik — wyślij naciśnięcie i puszczenie
             key(0x3A, down: true); key(0x3A, down: false)
-        case 58, 61 where optionAsAlt:
+        case 58 where optionAsAlt, 61 where optionAsAlt:
             key(e.keyCode == 58 ? RdpKeyboard.leftAlt : RdpKeyboard.rightAlt, down: raw & masks[e.keyCode]! != 0)
         case 58, 61:
             // Option nie idzie od razu jako Alt (znaki z Option); puszczenie zwalnia Alt, jeśli był wysłany.
