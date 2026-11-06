@@ -9,6 +9,15 @@ public enum Strings {
     public static let pl: [String: String] = [
         "menu.newserver": "Nowy serwer…",
         "menu.import": "Importuj z Waypoint dla Windows…",
+        "menu.importpw": "Importuj hasła z Waypoint dla Windows…",
+        "pwimp.title": "Import haseł",
+        "pwimp.msg": "Wybierz plik z „Ustawienia → Eksportuj hasła…” w Waypoint dla Windows.",
+        "pwimp.pass": "Hasło do pliku, ustawione przy eksporcie:",
+        "pwimp.ok": "Importuj",
+        "pwimp.err.password": "Złe hasło albo uszkodzony plik.",
+        "pwimp.err.format": "To nie jest plik z hasłami Waypoint.",
+        "pwimp.done": "Zaimportowano haseł: %d.",
+        "pwimp.skipped": "Pominięto: %d (brak takich połączeń na Macu: najpierw zaimportuj profil i profile poświadczeń).",
 
         "list.search": "Szukaj serwera",
         "list.pinned": "Przypięte",
@@ -565,6 +574,15 @@ public enum Strings {
     public static let en: [String: String] = [
         "menu.newserver": "New Server…",
         "menu.import": "Import from Waypoint for Windows…",
+        "menu.importpw": "Import passwords from Waypoint for Windows…",
+        "pwimp.title": "Import passwords",
+        "pwimp.msg": "Choose the file from “Settings → Export passwords…” in Waypoint for Windows.",
+        "pwimp.pass": "File password set during export:",
+        "pwimp.ok": "Import",
+        "pwimp.err.password": "Wrong password or damaged file.",
+        "pwimp.err.format": "This is not a Waypoint passwords file.",
+        "pwimp.done": "Passwords imported: %d.",
+        "pwimp.skipped": "Skipped: %d (no such connections on this Mac: import the profile and credential profiles first).",
 
         "list.search": "Search servers",
         "list.pinned": "Pinned",

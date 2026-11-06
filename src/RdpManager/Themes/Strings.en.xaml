@@ -477,6 +477,16 @@ Format: localPort:host:remotePort (e.g. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.msg.closeapp">There are active connections. Close the app?</sys:String>
     <sys:String x:Key="S.msg.closeapp.title">Close</sys:String>
     <sys:String x:Key="S.msg.exportprofile.fail">Could not save the profile:</sys:String>
+    <sys:String x:Key="S.set.exportpasswords">Export passwords…</sys:String>
+    <sys:String x:Key="S.msg.exportpw.title">Export passwords</sys:String>
+    <sys:String x:Key="S.msg.exportpw.none">No saved passwords to export.</sys:String>
+    <sys:String x:Key="S.msg.exportpw.pass">File password (min. 8 characters). You will need it to import on the Mac:</sys:String>
+    <sys:String x:Key="S.msg.exportpw.repeat">Repeat the file password:</sys:String>
+    <sys:String x:Key="S.msg.exportpw.short">The file password must be at least 8 characters long.</sys:String>
+    <sys:String x:Key="S.msg.exportpw.mismatch">The passwords do not match.</sys:String>
+    <sys:String x:Key="S.msg.exportpw.fail">Could not save the passwords file:</sys:String>
+    <sys:String x:Key="S.st.exportedPasswords">Passwords exported: {0} ✓</sys:String>
+    <sys:String x:Key="S.dlg.passwords.filter">Waypoint passwords (*.json)|*.json</sys:String>
     <sys:String x:Key="S.msg.exportprofile.title">Export profile</sys:String>
     <sys:String x:Key="S.msg.importprofile.bad">Invalid profile file:</sys:String>
     <sys:String x:Key="S.msg.importprofile.empty">Empty or invalid profile file.</sys:String>

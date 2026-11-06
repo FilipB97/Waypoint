@@ -62,6 +62,7 @@ struct ServerSidebar: View {
                     Button(L("pal.open")) { model.openPalette() }
                     Divider()
                     Button(L("menu.import")) { model.importProfile() }
+                    Button(L("menu.importpw")) { model.importPasswords() }
                     Menu(L("migr.menu")) {
                         ForEach(ExternalImport.Source.allCases, id: \.self) { src in
                             Button(L("migr.item." + src.rawValue)) { model.importExternal(src) }

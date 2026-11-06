@@ -1578,6 +1578,47 @@ namespace RdpManager
             }
         }
 
+        /// <summary>Hasła serwerów i profili poświadczeń do zaszyfrowanego pliku — do importu na Macu.</summary>
+        private void ExportPasswords_Click(object sender, RoutedEventArgs e)
+        {
+            string title = L("S.msg.exportpw.title");
+            var passwords = PasswordExport.Collect(_vm.Servers, _credProfiles,
+                target => CredentialStore.TryRead(target, out var pw) ? pw : null);
+            if (passwords.Count == 0)
+            {
+                MessageBox.Show(L("S.msg.exportpw.none"), title, MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var first = new InputDialog(title, L("S.msg.exportpw.pass"), "", masked: true) { Owner = this };
+            if (first.ShowDialog() != true) return;
+            var second = new InputDialog(title, L("S.msg.exportpw.repeat"), "", masked: true) { Owner = this };
+            if (second.ShowDialog() != true) return;
+            if (first.Value.Length < 8 || first.Value != second.Value)
+            {
+                MessageBox.Show(L(first.Value.Length < 8 ? "S.msg.exportpw.short" : "S.msg.exportpw.mismatch"), title,
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = title,
+                Filter = L("S.dlg.passwords.filter"),
+                FileName = $"waypoint-hasla-{DateTime.Now:yyyy-MM-dd}.json"
+            };
+            if (dlg.ShowDialog(this) != true) return;
+            try
+            {
+                System.IO.File.WriteAllText(dlg.FileName, PasswordExport.Encrypt(passwords, first.Value));
+                SettingsStatus.Text = string.Format(L("S.st.exportedPasswords"), passwords.Count);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(L("S.msg.exportpw.fail") + "\n" + ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
         private void ImportProfile_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new Microsoft.Win32.OpenFileDialog

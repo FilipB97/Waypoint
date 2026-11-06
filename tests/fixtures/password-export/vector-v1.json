@@ -1,0 +1,9 @@
+{
+  "Format": "waypoint-passwords",
+  "Version": 1,
+  "Kdf": "PBKDF2-SHA256",
+  "Iterations": 1000,
+  "Salt": "AAECAwQFBgcICQoLDA0ODw==",
+  "Nonce": "oKGio6Slpqeoqaqr",
+  "Data": "Z03/CjOYKjrx08gKUAyxfuZKYaO4fh8CyVin/3qE6UtcYrdWX6PmROYheA3506C21xUNjmJu2FY4VeTTLFpktGSIUTSXL2Krdd6q5WE6AgD+FXk5HHfHl1CyWUUETw=="
+}

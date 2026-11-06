@@ -477,6 +477,16 @@ Format: portLokalny:host:portZdalny (np. 5433:db.internal:5432)</sys:String>
     <sys:String x:Key="S.msg.closeapp">Są aktywne połączenia. Zamknąć aplikację?</sys:String>
     <sys:String x:Key="S.msg.closeapp.title">Zamknij</sys:String>
     <sys:String x:Key="S.msg.exportprofile.fail">Nie udało się zapisać profilu:</sys:String>
+    <sys:String x:Key="S.set.exportpasswords">Eksportuj hasła…</sys:String>
+    <sys:String x:Key="S.msg.exportpw.title">Eksport haseł</sys:String>
+    <sys:String x:Key="S.msg.exportpw.none">Brak zapisanych haseł do eksportu.</sys:String>
+    <sys:String x:Key="S.msg.exportpw.pass">Hasło do pliku (min. 8 znaków). Będzie potrzebne przy imporcie na Macu:</sys:String>
+    <sys:String x:Key="S.msg.exportpw.repeat">Powtórz hasło do pliku:</sys:String>
+    <sys:String x:Key="S.msg.exportpw.short">Hasło do pliku musi mieć co najmniej 8 znaków.</sys:String>
+    <sys:String x:Key="S.msg.exportpw.mismatch">Wpisane hasła się różnią.</sys:String>
+    <sys:String x:Key="S.msg.exportpw.fail">Nie udało się zapisać pliku z hasłami:</sys:String>
+    <sys:String x:Key="S.st.exportedPasswords">Wyeksportowano haseł: {0} ✓</sys:String>
+    <sys:String x:Key="S.dlg.passwords.filter">Hasła Waypoint (*.json)|*.json</sys:String>
     <sys:String x:Key="S.msg.exportprofile.title">Eksport profilu</sys:String>
     <sys:String x:Key="S.msg.importprofile.bad">Niepoprawny plik profilu:</sys:String>
     <sys:String x:Key="S.msg.importprofile.empty">Pusty lub niepoprawny plik profilu.</sys:String>
