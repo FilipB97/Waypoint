@@ -1,3 +1,4 @@
+#if canImport(CommonCrypto) && canImport(CryptoKit)
 import Foundation
 import Testing
 @testable import WaypointCore
@@ -214,3 +215,4 @@ import Testing
         #expect(result.skipped == 0)
     }
 }
+#endif

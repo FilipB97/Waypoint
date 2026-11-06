@@ -1,3 +1,5 @@
+// Tylko macOS: CommonCrypto i CryptoKit nie istnieją na Linuksie (tam rdzeń buduje się bez tej funkcji).
+#if canImport(CommonCrypto) && canImport(CryptoKit)
 import CommonCrypto
 import CryptoKit
 import Foundation
@@ -85,3 +87,4 @@ public enum PasswordExport {
         return SymmetricKey(data: key)
     }
 }
+#endif
