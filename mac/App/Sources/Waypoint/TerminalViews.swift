@@ -179,8 +179,11 @@ struct PromptCard: View {
     let prompt: PendingPrompt
     let serverName: String
     @State private var value = ""
+    @State private var login = ""
     @State private var save = true
-    @FocusState private var focused: Bool
+    @FocusState private var focused: Field?
+
+    private enum Field { case login, value }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -205,6 +208,12 @@ struct PromptCard: View {
                         .keyboardShortcut(.defaultAction)
                 }
             } else {
+                if prompt.onLogin != nil {
+                    TextField(L("prompt.loginfield"), text: $login)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focused, equals: .login)
+                        .onSubmit { focused = .value }
+                }
                 Group {
                     if prompt.kind == .other {
                         TextField("", text: $value)
@@ -213,7 +222,7 @@ struct PromptCard: View {
                     }
                 }
                 .textFieldStyle(.roundedBorder)
-                .focused($focused)
+                .focused($focused, equals: .value)
                 .onSubmit(submit)
 
                 HStack {
@@ -225,6 +234,7 @@ struct PromptCard: View {
                         .keyboardShortcut(.cancelAction)
                     Button(L("prompt.login"), action: submit)
                         .keyboardShortcut(.defaultAction)
+                        .disabled(missingLogin)
                 }
             }
         }
@@ -232,10 +242,21 @@ struct PromptCard: View {
         .frame(width: 420)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         .shadow(radius: 20)
-        .onAppear { focused = true }
+        .onAppear {
+            login = prompt.login
+            focused = prompt.onLogin != nil && prompt.login.isEmpty ? .login : .value
+        }
     }
 
-    private func submit() { prompt.answer(value, save && prompt.kind == .password) }
+    private var missingLogin: Bool {
+        prompt.onLogin != nil && login.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private func submit() {
+        guard !missingLogin else { focused = .login; return }
+        prompt.onLogin?(login)
+        prompt.answer(value, save && prompt.kind == .password)
+    }
 
     private var heading: String {
         switch prompt.kind {

@@ -11,6 +11,9 @@ struct PendingPrompt: Identifiable {
     /// Poprzednia próba (zapisane albo wpisane hasło) została odrzucona.
     let isRetry: Bool
     let answer: (String?, Bool) -> Void   // (odpowiedź albo nil = anuluj, zapisać w Pęku kluczy?)
+    /// Serwer bez loginu: karta pyta też o login (`DOMENA\user`, na start `login`), podany tu przed `answer`.
+    var onLogin: ((String) -> Void)? = nil
+    var login = ""
 }
 
 /// Hasła podane w tej sesji aplikacji (pytanie w karcie, „Połącz jako…") — tylko w pamięci, do

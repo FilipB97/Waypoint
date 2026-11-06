@@ -42,6 +42,7 @@ final class RdpSession: Identifiable {
     @ObservationIgnored private var clipboardTimer: Timer?
     @ObservationIgnored private var readCount = -1   // licznik schowka, którego treść już wysłano
     @ObservationIgnored private var download: CancelFlag?
+    @ObservationIgnored private var loginFromPrompt = false
 
     init(server: Server) {
         self.server = server
@@ -224,15 +225,29 @@ final class RdpSession: Identifiable {
 
     private func askPassword(retry: Bool) {
         let s = server
-        let label = (s.domain.isEmpty ? s.username : s.domain + "\\" + s.username) + "@" + s.host
-        prompt = PendingPrompt(kind: .password, text: label, isRetry: retry) { [weak self] value, save in
+        // Login wpisany w karcie mógł być zły — przy ponownym pytaniu znów do poprawienia.
+        let askLogin = s.username.isEmpty || loginFromPrompt
+        let label = askLogin ? s.host : s.loginText + "@" + s.host
+        var p = PendingPrompt(kind: .password, text: label, isRetry: retry) { [weak self] value, save in
             guard let self else { return }
             self.prompt = nil
             guard let value, !value.isEmpty else { self.state = .ended(L("rdp.err.nopassword")); return }
+            if askLogin && save { AppModel.shared.saveLogin(of: self.server) }
             self.remember(value, save: save)
             self.password = value
             self.start(password: value)
         }
+        if askLogin {
+            // Windows w domenie loguje bieżącym kontem bez pytania; Mac musi znać login.
+            p.login = s.loginText
+            p.onLogin = { [weak self] login in
+                guard let self else { return }
+                let (user, domain) = Credentials.splitLogin(login)
+                self.server = Credentials.connectAs(self.server, user: user, domain: domain)
+                self.loginFromPrompt = true
+            }
+        }
+        prompt = p
     }
 
     private func remember(_ value: String, save: Bool) {

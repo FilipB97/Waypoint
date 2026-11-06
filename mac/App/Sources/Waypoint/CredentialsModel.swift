@@ -49,14 +49,20 @@ extension AppModel {
         let (user, domain) = Credentials.splitLogin(login)
         let target = Credentials.connectAs(s, user: user, domain: domain)
         if !password.isEmpty { SessionPasswords.set(password, for: target) }
-        if remember, let i = servers.firstIndex(where: { $0.id == s.id }) {
-            servers[i].username = target.username
-            servers[i].domain = target.domain
-            servers[i].credentialProfileId = ""
-            persist()
+        if remember {
+            saveLogin(of: target)
             if !password.isEmpty { Keychain.save(password, for: s.id, label: "Waypoint — \(s.displayName)") }
         }
         connectAsTarget = nil
         connect(target)
+    }
+
+    /// Login i domena połączenia zapisane jako dane logowania serwera na liście (profil zdjęty).
+    func saveLogin(of target: Server) {
+        guard let i = servers.firstIndex(where: { $0.id == target.id }) else { return }
+        servers[i].username = target.username
+        servers[i].domain = target.domain
+        servers[i].credentialProfileId = ""
+        persist()
     }
 }
