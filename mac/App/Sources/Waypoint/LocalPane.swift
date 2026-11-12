@@ -63,6 +63,7 @@ struct LocalPaneView: View {
     let upload: ([URL]) -> Void
     let canUpload: Bool
     @State private var newFolder: String?
+    @State private var sortOrder = [KeyPathComparator(\LocalEntry.name, comparator: .localizedStandard)]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -107,26 +108,26 @@ struct LocalPaneView: View {
     }
 
     private var table: some View {
-        Table(of: LocalEntry.self, selection: $pane.selection) {
-            TableColumn(L("files.col.name")) { e in
+        Table(of: LocalEntry.self, selection: $pane.selection, sortOrder: $sortOrder) {
+            TableColumn(L("files.col.name"), value: \.name, comparator: .localizedStandard) { e in
                 HStack(spacing: 6) {
                     Image(nsImage: NSWorkspace.shared.icon(forFile: e.url.path)).resizable().frame(width: 16, height: 16)
                     Text(e.name).lineLimit(1).foregroundStyle(e.isHidden ? .secondary : .primary)
                 }
             }
             .width(min: 120)
-            TableColumn(L("files.col.size")) { e in
+            TableColumn(L("files.col.size"), value: \.size) { e in
                 Text(e.isDirectory ? "—" : ByteCountFormatter.string(fromByteCount: Int64(e.size), countStyle: .file))
                     .foregroundStyle(.secondary).monospacedDigit()
             }
             .width(min: 56, ideal: 70, max: 100)
-            TableColumn(L("files.col.modified")) { e in
+            TableColumn(L("files.col.modified"), value: \.modifiedSortKey) { e in
                 Text(e.modified.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "").foregroundStyle(.secondary)
             }
             .width(min: 90, ideal: 130, max: 170)
         } rows: {
             // Przeciągnięcie wiersza na prawy panel = wysłanie (prawy panel przyjmuje pliki z Findera tak samo).
-            ForEach(pane.entries) { e in
+            ForEach(FileSort.sorted(pane.entries, isDirectory: \.isDirectory, by: sortOrder)) { e in
                 TableRow(e).itemProvider { NSItemProvider(object: e.url as NSURL) }
             }
         }

@@ -404,7 +404,26 @@ final class RdpSession: Identifiable {
         view.connection = nil
         state = .ended(nil)
         // Rozłączenie czeka na koniec wątku FreeRDP — poza wątkiem głównym, żeby okno nie zamarzło.
-        DispatchQueue.global(qos: .userInitiated).async { c?.stop() }
+        Self.stopping.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            c?.stop()
+            Self.stopping.leave()
+        }
+    }
+
+    /// Rozłączenia w toku. Wyjście z aplikacji na nie czeka: `exit` sprząta OpenSSL (`OPENSSL_cleanup`),
+    /// a rozłączający się wątek FreeRDP jeszcze go używa — bez czekania aplikacja padała przy zamykaniu.
+    nonisolated static let stopping = DispatchGroup()
+
+    nonisolated static var isStopping: Bool { stopping.wait(timeout: .now()) == .timedOut }
+
+    /// `done` na wątku głównym, gdy wszystkie sesje się rozłączą (najdłużej `timeout` sekund). Przez
+    /// RunLoop w trybie modalnym: po `.terminateLater` AppKit nie wykonuje bloków z `DispatchQueue.main`.
+    nonisolated static func afterStopping(timeout: Double, _ done: @escaping @Sendable () -> Void) {
+        DispatchQueue.global().async {
+            _ = stopping.wait(timeout: .now() + timeout)
+            RunLoop.main.perform(inModes: [.default, .modalPanel], block: done)
+        }
     }
 
     /// Okno zmieniło rozmiar (po ustabilizowaniu) — nowa rozdzielczość sesji.
