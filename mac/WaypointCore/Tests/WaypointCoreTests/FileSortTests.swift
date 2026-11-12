@@ -1,3 +1,5 @@
+// Tylko macOS: porównanie `.localizedStandard` (jak w Finderze) nie istnieje w Foundation na Linuksie.
+#if canImport(Darwin)
 import Foundation
 import Testing
 @testable import WaypointCore
@@ -183,3 +185,4 @@ import Testing
         #expect(zip(out[firstFile...], out[firstFile...].dropFirst()).allSatisfy { $0.size <= $1.size })
     }
 }
+#endif
