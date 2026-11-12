@@ -12,6 +12,7 @@ struct FilesView: View {
     @State private var renameText = ""
     @State private var pendingDelete: [SftpEntry] = []
     @State private var dropTargeted = false
+    @State private var sortOrder = [KeyPathComparator(\SftpEntry.name, comparator: .localizedStandard)]
 
     private var selected: [SftpEntry] { session.entries.filter { session.selection.contains($0.id) } }
 
@@ -139,8 +140,9 @@ struct FilesView: View {
     // MARK: Tabela
 
     private var table: some View {
-        Table(session.entries, selection: $session.selection) {
-            TableColumn(L("files.col.name")) { e in
+        Table(FileSort.sorted(session.entries, isDirectory: \.isDirectory, by: sortOrder),
+              selection: $session.selection, sortOrder: $sortOrder) {
+            TableColumn(L("files.col.name"), value: \.name, comparator: .localizedStandard) { e in
                 HStack(spacing: 6) {
                     Image(nsImage: icon(for: e)).resizable().frame(width: 16, height: 16)
                     Text(e.name).lineLimit(1)
@@ -148,17 +150,17 @@ struct FilesView: View {
                 }
             }
             .width(min: 140)   // bez „ideal" — nazwa bierze resztę szerokości
-            TableColumn(L("files.col.size")) { e in
+            TableColumn(L("files.col.size"), value: \.size) { e in
                 Text(e.isDirectory ? "—" : ByteCountFormatter.string(fromByteCount: Int64(e.size), countStyle: .file))
                     .foregroundStyle(.secondary).monospacedDigit()
             }
             .width(min: 60, ideal: 76, max: 110)
-            TableColumn(L("files.col.modified")) { e in
+            TableColumn(L("files.col.modified"), value: \.modifiedSortKey) { e in
                 Text(e.attributes.modified.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "")
                     .foregroundStyle(.secondary)
             }
             .width(min: 100, ideal: 150, max: 190)
-            TableColumn(L("files.col.mode")) { e in
+            TableColumn(L("files.col.mode"), value: \.modeSortKey) { e in
                 Text(e.attributes.mode.map { UnixPermissions.symbolic(Int($0), directory: e.attributes.isDirectory) } ?? "")
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)

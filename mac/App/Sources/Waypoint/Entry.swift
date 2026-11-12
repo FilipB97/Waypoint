@@ -25,8 +25,13 @@ enum Entry {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        MainActor.assumeIsolated { EditorWindowController.confirmQuit() && AppModel.shared.confirmQuit() }
-            ? .terminateNow : .terminateCancel
+        guard MainActor.assumeIsolated({ EditorWindowController.confirmQuit() && AppModel.shared.confirmQuit() }) else {
+            return .terminateCancel
+        }
+        // Sesje RDP rozłączają się w tle — wyjście dopiero po nich (patrz RdpSession.stopping).
+        guard RdpSession.isStopping else { return .terminateNow }
+        RdpSession.afterStopping(timeout: 5) { NSApp.reply(toApplicationShouldTerminate: true) }
+        return .terminateLater
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
