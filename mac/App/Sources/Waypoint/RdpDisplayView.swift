@@ -36,6 +36,9 @@ final class RdpDisplayView: NSView {
         super.init(frame: frame)
         wantsLayer = true
         layerContentsRedrawPolicy = .onSetNeedsDisplay
+        // Bez tego AppKit przy zmianie rozmiaru (np. schowanie paska bocznego) przestawia warstwę na
+        // rozciąganie w obu osiach, a kliknięcia liczymy dla obrazu z zachowanymi proporcjami.
+        layerContentsPlacement = .scaleProportionallyToFit
         registerForDraggedTypes([.fileURL])
     }
 
