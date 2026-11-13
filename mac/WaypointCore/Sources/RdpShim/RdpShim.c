@@ -15,6 +15,23 @@ int wp_cursor_is_text(const uint8_t *inverted, int width, int height) {
     return (maxX - minX + 1) * 2 <= (maxY - minY + 1);
 }
 
+int wp_cursor_is_arrow(const uint8_t *bgra, int width, int height, int hot_x, int hot_y) {
+    int minX = width, maxX = -1, minY = height, maxY = -1;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            if (bgra[(y * width + x) * 4 + 3] < 0x80) continue;   // półprzezroczysty cień się nie liczy
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+        }
+    }
+    if (maxX < 0) return 0;
+    int dx = hot_x - minX, dy = hot_y - minY;
+    if (dx < -1 || dx > 2 || dy < -1 || dy > 2) return 0;
+    return (maxX - minX + 1) * 4 <= (maxY - minY + 1) * 3;
+}
+
 void wp_cursor_outline_inverted(uint8_t *bgra, const uint8_t *inverted, int width, int height) {
     for (int i = 0; i < width * height; i++) {
         if (!inverted[i]) continue;
@@ -604,6 +621,7 @@ typedef struct {
     rdpPointer pointer;        // musi być pierwsze — FreeRDP alokuje `size` bajtów i rzutuje
     uint8_t *bgra;
     int text;                  // ma piksele odwracające tło — w Windows to kursor tekstowy (I-beam)
+    int arrow;                 // zwykła strzałka — pokazywana jako strzałka macOS
 } wpPointer;
 
 /// Mapa pikseli „odwracających tło" (warunki jak w freerdp_image_copy_from_pointer_data, FreeRDP 3.32):
@@ -647,6 +665,7 @@ static BOOL wp_pointer_new(rdpContext *context, rdpPointer *pointer) {
     wpPointer *p = (wpPointer *)pointer;
     p->bgra = NULL;
     p->text = 0;
+    p->arrow = 0;
     size_t size = (size_t)pointer->width * pointer->height * 4;
     if (size == 0 || pointer->width > 512 || pointer->height > 512) return TRUE;
     uint8_t *bgra = calloc(1, size);
@@ -663,6 +682,8 @@ static BOOL wp_pointer_new(rdpContext *context, rdpPointer *pointer) {
             wp_cursor_outline_inverted(bgra, inv, (int)pointer->width, (int)pointer->height);
             free(inv);
         }
+        p->arrow = !p->text && wp_cursor_is_arrow(bgra, (int)pointer->width, (int)pointer->height,
+                                                  (int)pointer->xPos, (int)pointer->yPos);
         p->bgra = bgra;
     } else {
         free(bgra);
@@ -681,7 +702,7 @@ static BOOL wp_pointer_set(rdpContext *context, rdpPointer *pointer) {
     wp_rdp *r = owner_of(context);
     wpPointer *p = (wpPointer *)pointer;
     if (!r || !r->cb.cursor) return TRUE;
-    if (p->bgra)
+    if (p->bgra && !p->arrow)
         r->cb.cursor(r->cb.user, p->text ? WP_CURSOR_TEXT : WP_CURSOR_IMAGE, (int)pointer->width, (int)pointer->height,
                      (int)pointer->xPos, (int)pointer->yPos, p->bgra);
     else

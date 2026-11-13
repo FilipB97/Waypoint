@@ -180,7 +180,7 @@ final class RdpDisplayView: NSView {
         }
     }
 
-    /// Kursor macOS dla kursora z serwera: tekstowy → I-beam, strzałka (punkt aktywny w lewym górnym rogu)
+    /// Kursor macOS dla kursora z serwera: tekstowy → I-beam, strzałka (WP_CURSOR_DEFAULT, wp_cursor_is_arrow)
     /// → strzałka macOS, inne (rączka, zmiana rozmiaru, oczekiwanie) → obraz z serwera.
     enum Pointer { case arrow, text, hidden, image(NSImage, hotSpot: NSPoint) }
 
@@ -190,7 +190,6 @@ final class RdpDisplayView: NSView {
         case .text: return .text
         case .hidden: return .hidden
         case .image(let w, let h, let hx, let hy, let bgra):
-            if hx <= max(4, w / 8) && hy <= max(4, h / 8) { return .arrow }
             guard let img = Self.cgImage(w, h, bgra) else { return .arrow }
             // Piksele sesji × skala wyświetlania, ale nie mniej niż piksel sesji na piksel ekranu
             // (pomniejszony kursor był rozmyty i trudny do trafienia).
