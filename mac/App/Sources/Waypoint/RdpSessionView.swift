@@ -10,7 +10,7 @@ struct RdpSessionView: View {
 
     var body: some View {
         ZStack {
-            RdpHost(session: session)
+            RdpHost(session: session).modifier(RemotePointer(pointer: session.view.pointer(for: session.cursor)))
             if let q = session.certificate {
                 Color.black.opacity(0.35)
                 RdpCertificateCard(question: q).id(q.id)
@@ -77,6 +77,33 @@ struct RdpSessionView: View {
         .navigationTitle(session.title)
         .navigationSubtitle(session.server.username.isEmpty ? session.server.host
                             : "\(session.server.username)@\(session.server.host)")
+    }
+}
+
+/// Kursor nad pulpitem przez SwiftUI (macOS 15+): `pointerStyle` to droga, którą widok-gospodarz SwiftUI
+/// respektuje — kursor ustawiany z AppKit (obszary kursora) mógł przegrać z jego cursorUpdate.
+private struct RemotePointer: ViewModifier {
+    let pointer: RdpDisplayView.Pointer
+
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content.pointerStyle(style).pointerVisibility(isHidden ? .hidden : .automatic)
+        } else {
+            content
+        }
+    }
+
+    private var isHidden: Bool { if case .hidden = pointer { true } else { false } }
+
+    @available(macOS 15, *)
+    private var style: PointerStyle {
+        switch pointer {
+        case .arrow, .hidden: return .default
+        case .text: return .horizontalText
+        case .image(let img, let hot):
+            return .image(Image(nsImage: img),
+                          hotSpot: UnitPoint(x: hot.x / max(img.size.width, 1), y: hot.y / max(img.size.height, 1)))
+        }
     }
 }
 

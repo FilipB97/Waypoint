@@ -163,46 +163,67 @@ final class RdpDisplayView: NSView {
 
     /// Ostatni kursor z serwera (zajęty, ładowanie, tekstowy…) i jego wersja w rozmiarze widoku.
     private var remoteCursor: RdpConnection.Cursor = .standard
-    private var builtCursor: (cursor: NSCursor, scale: CGFloat)?
+    private var builtCursor: NSCursor?
     private static let hiddenCursor = NSCursor(image: NSImage(size: NSSize(width: 1, height: 1)), hotSpot: .zero)
 
     func setRemoteCursor(_ c: RdpConnection.Cursor) {
         remoteCursor = c
         builtCursor = nil
         window?.invalidateCursorRects(for: self)
+        if #available(macOS 15, *) { return }   // od macOS 15 kursor ustawia SwiftUI (RdpSessionView)
         // Zmiana bez ruchu myszą (np. kursor ładowania po kliknięciu) — od razu, gdy mysz jest nad pulpitem.
         if let w = window, bounds.contains(convert(w.mouseLocationOutsideOfEventStream, from: nil)) {
             currentCursor().set()
         }
     }
 
-    /// Kursor w punktach widoku: piksele sesji × skala wyświetlania (proporcje pulpitu zachowane).
-    private func currentCursor() -> NSCursor {
-        guard desktop.width > 0, bounds.width > 0 else { return .arrow }
-        let scale = min(bounds.width / desktop.width, bounds.height / desktop.height)
-        if let b = builtCursor, b.scale == scale { return b.cursor }
-        let cursor: NSCursor
-        switch remoteCursor {
-        case .standard: cursor = .arrow
-        case .hidden: cursor = Self.hiddenCursor
+    /// Kursor macOS dla kursora z serwera: tekstowy → I-beam, strzałka (punkt aktywny w lewym górnym rogu)
+    /// → strzałka macOS, inne (rączka, zmiana rozmiaru, oczekiwanie) → obraz z serwera.
+    enum Pointer { case arrow, text, hidden, image(NSImage, hotSpot: NSPoint) }
+
+    func pointer(for c: RdpConnection.Cursor) -> Pointer {
+        switch c {
+        case .standard: return .arrow
+        case .text: return .text
+        case .hidden: return .hidden
         case .image(let w, let h, let hx, let hy, let bgra):
-            guard let provider = CGDataProvider(data: bgra as CFData),
-                  let img = CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: w * 4,
-                                    space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
-                                    bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.first.rawValue
-                                                             | CGBitmapInfo.byteOrder32Little.rawValue),
-                                    provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
-            else { cursor = .arrow; break }
-            let size = NSSize(width: CGFloat(w) * scale, height: CGFloat(h) * scale)
-            cursor = NSCursor(image: NSImage(cgImage: img, size: size),
-                              hotSpot: NSPoint(x: CGFloat(hx) * scale, y: CGFloat(hy) * scale))
+            if hx <= max(4, w / 8) && hy <= max(4, h / 8) { return .arrow }
+            guard let img = Self.cgImage(w, h, bgra) else { return .arrow }
+            // Piksele sesji × skala wyświetlania, ale nie mniej niż piksel sesji na piksel ekranu
+            // (pomniejszony kursor był rozmyty i trudny do trafienia).
+            let scale = desktop.width > 0 && bounds.width > 0
+                ? max(min(bounds.width / desktop.width, bounds.height / desktop.height), 1 / backing) : 1
+            return .image(NSImage(cgImage: img, size: NSSize(width: CGFloat(w) * scale, height: CGFloat(h) * scale)),
+                          hotSpot: NSPoint(x: CGFloat(hx) * scale, y: CGFloat(hy) * scale))
         }
-        builtCursor = (cursor, scale)
-        return cursor
     }
 
+    private static func cgImage(_ w: Int, _ h: Int, _ bgra: Data) -> CGImage? {
+        guard let provider = CGDataProvider(data: bgra as CFData) else { return nil }
+        return CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: w * 4,
+                       space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+                       bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.first.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
+                       provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+    }
+
+    /// macOS 14: ten sam kursor jako NSCursor przez obszar kursora (zapamiętany do następnej zmiany).
+    /// Od macOS 15 obszaru nie ma: SwiftUI (`pointerStyle`) i obszar kursora walczyłyby o kursor.
     override func resetCursorRects() {
+        if #available(macOS 15, *) { return }
         addCursorRect(bounds, cursor: connection == nil ? .arrow : currentCursor())
+    }
+
+    private func currentCursor() -> NSCursor {
+        if let b = builtCursor { return b }
+        let cursor: NSCursor
+        switch pointer(for: remoteCursor) {
+        case .arrow: cursor = .arrow
+        case .text: cursor = .iBeam
+        case .hidden: cursor = Self.hiddenCursor
+        case .image(let img, let hot): cursor = NSCursor(image: img, hotSpot: hot)
+        }
+        builtCursor = cursor
+        return cursor
     }
 
     // MARK: Przeciąganie plików z Findera
