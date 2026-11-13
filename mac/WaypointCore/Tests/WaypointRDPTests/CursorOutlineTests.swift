@@ -92,8 +92,12 @@ import RdpShim
 
     @Test func R5_all_zero_inverted_changes_nothing() {
         let w = 5, h = 4
-        let pixels: [Pixel] = (0..<(w * h)).map { i in
-            [UInt8(i), UInt8(i * 3 & 0xFF), UInt8(255 - i), i % 3 == 0 ? 0 : UInt8(i * 11 & 0xFF)]
+        let pixels: [Pixel] = (0..<(w * h)).map { (i: Int) -> Pixel in
+            let b = UInt8(i)
+            let g = UInt8((i * 3) & 0xFF)
+            let r = UInt8(255 - i)
+            let a: UInt8 = i % 3 == 0 ? 0 : UInt8((i * 11) & 0xFF)
+            return [b, g, r, a]
         }
         let out = outline(pixels, [UInt8](repeating: 0, count: w * h), w, h)
         #expect(out == pixels)
