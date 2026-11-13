@@ -50,11 +50,16 @@ typedef struct {
     void (*clipboard_provide)(void *user);
 } wp_rdp_callbacks;
 
-enum { WP_CURSOR_IMAGE = 1, WP_CURSOR_HIDDEN = 0, WP_CURSOR_DEFAULT = 2 };
+/// WP_CURSOR_TEXT: jak WP_CURSOR_IMAGE, ale kursor ma piksele odwracające tło (kursor tekstowy Windows).
+enum { WP_CURSOR_IMAGE = 1, WP_CURSOR_HIDDEN = 0, WP_CURSOR_DEFAULT = 2, WP_CURSOR_TEXT = 3 };
 
 /// Kursor (BGRA, w × h): piksele oznaczone w `inverted` (Windows rysuje je negatywem tła) stają się
 /// czarne, a przezroczyste piksele obok nich — białe. Obwódka jak w kursorach macOS: widać na każdym tle.
 void wp_cursor_outline_inverted(uint8_t *bgra, const uint8_t *inverted, int width, int height);
+
+/// Czy piksele odwracające (`inverted`) tworzą kursor tekstowy: obszar co najmniej 2× wyższy niż szerszy
+/// (I-beam). Krzyżyk precyzyjnego zaznaczania też je ma, ale jest kwadratowy — zostaje obrazem.
+int wp_cursor_is_text(const uint8_t *inverted, int width, int height);
 
 typedef struct {
     const char *host;

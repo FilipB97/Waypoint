@@ -28,6 +28,8 @@ final class RdpSession: Identifiable {
     var prompt: PendingPrompt?
     var certificate: CertificateQuestion?
     var notice: String?
+    /// Kursor z serwera — od macOS 15 ustawia go SwiftUI (`pointerStyle` w RdpSessionView).
+    var cursor: RdpConnection.Cursor = .standard
     /// Trwające pobieranie plików ze schowka sesji (tekst postępu nad pulpitem).
     var transfer: String?
     private(set) var desktopSize: CGSize = .zero
@@ -106,6 +108,7 @@ final class RdpSession: Identifiable {
         c.onCursor = { [weak self] cursor in
             DispatchQueue.main.async {
                 guard let self, c === self.connection else { return }
+                self.cursor = cursor
                 self.view.setRemoteCursor(cursor)
             }
         }

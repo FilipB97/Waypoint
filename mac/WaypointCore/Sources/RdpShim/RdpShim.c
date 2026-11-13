@@ -1,5 +1,20 @@
 #include "RdpShim.h"
 
+int wp_cursor_is_text(const uint8_t *inverted, int width, int height) {
+    int minX = width, maxX = -1, minY = height, maxY = -1;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            if (!inverted[y * width + x]) continue;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+        }
+    }
+    if (maxX < 0) return 0;
+    return (maxX - minX + 1) * 2 <= (maxY - minY + 1);
+}
+
 void wp_cursor_outline_inverted(uint8_t *bgra, const uint8_t *inverted, int width, int height) {
     for (int i = 0; i < width * height; i++) {
         if (!inverted[i]) continue;
@@ -588,6 +603,7 @@ static void send_pending_resize(wp_rdp *r) {
 typedef struct {
     rdpPointer pointer;        // musi być pierwsze — FreeRDP alokuje `size` bajtów i rzutuje
     uint8_t *bgra;
+    int text;                  // ma piksele odwracające tło — w Windows to kursor tekstowy (I-beam)
 } wpPointer;
 
 /// Mapa pikseli „odwracających tło" (warunki jak w freerdp_image_copy_from_pointer_data, FreeRDP 3.32):
@@ -630,6 +646,7 @@ static uint8_t *wp_pointer_inverted_mask(const rdpPointer *p) {
 static BOOL wp_pointer_new(rdpContext *context, rdpPointer *pointer) {
     wpPointer *p = (wpPointer *)pointer;
     p->bgra = NULL;
+    p->text = 0;
     size_t size = (size_t)pointer->width * pointer->height * 4;
     if (size == 0 || pointer->width > 512 || pointer->height > 512) return TRUE;
     uint8_t *bgra = calloc(1, size);
@@ -639,7 +656,10 @@ static BOOL wp_pointer_new(rdpContext *context, rdpPointer *pointer) {
                                              pointer->lengthXorMask, pointer->andMaskData, pointer->lengthAndMask,
                                              pointer->xorBpp, context->gdi ? &context->gdi->palette : NULL)) {
         uint8_t *inv = wp_pointer_inverted_mask(pointer);
+        WPLOG("kursor: nowy %ux%u, %u bpp, punkt %u,%u, odwracające: %s", pointer->width, pointer->height,
+              pointer->xorBpp, pointer->xPos, pointer->yPos, inv ? "tak" : "nie");   // diagnostyka kursorów
         if (inv) {
+            p->text = wp_cursor_is_text(inv, (int)pointer->width, (int)pointer->height);
             wp_cursor_outline_inverted(bgra, inv, (int)pointer->width, (int)pointer->height);
             free(inv);
         }
@@ -662,7 +682,7 @@ static BOOL wp_pointer_set(rdpContext *context, rdpPointer *pointer) {
     wpPointer *p = (wpPointer *)pointer;
     if (!r || !r->cb.cursor) return TRUE;
     if (p->bgra)
-        r->cb.cursor(r->cb.user, WP_CURSOR_IMAGE, (int)pointer->width, (int)pointer->height,
+        r->cb.cursor(r->cb.user, p->text ? WP_CURSOR_TEXT : WP_CURSOR_IMAGE, (int)pointer->width, (int)pointer->height,
                      (int)pointer->xPos, (int)pointer->yPos, p->bgra);
     else
         r->cb.cursor(r->cb.user, WP_CURSOR_DEFAULT, 0, 0, 0, 0, NULL);

@@ -82,6 +82,8 @@ public final class RdpConnection: @unchecked Sendable {
     /// Kursor z sesji. Wątek połączenia.
     public enum Cursor: Sendable {
         case image(width: Int, height: Int, hotX: Int, hotY: Int, bgra: Data)   // nieprzemnożona alfa
+        /// Kursor tekstowy (piksele odwracające tło) — na Macu systemowy I-beam.
+        case text
         case hidden, standard
     }
     public var onCursor: (@Sendable (Cursor) -> Void)?
@@ -240,6 +242,7 @@ public final class RdpConnection: @unchecked Sendable {
                 guard let bgra, w > 0, h > 0 else { return }
                 me.onCursor?(.image(width: Int(w), height: Int(h), hotX: Int(hx), hotY: Int(hy),
                                     bgra: Data(bytes: bgra, count: Int(w) * Int(h) * 4)))
+            case Int32(WP_CURSOR_TEXT): me.onCursor?(.text)
             case Int32(WP_CURSOR_HIDDEN): me.onCursor?(.hidden)
             default: me.onCursor?(.standard)
             }
