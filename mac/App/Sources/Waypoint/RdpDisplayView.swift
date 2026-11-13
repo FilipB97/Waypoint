@@ -176,10 +176,11 @@ final class RdpDisplayView: NSView {
         }
     }
 
-    /// Kursor w punktach widoku: piksele sesji × skala wyświetlania (proporcje pulpitu zachowane).
+    /// Kursor w punktach widoku: piksele sesji × skala wyświetlania, ale nigdy mniejszy niż piksel sesji
+    /// na piksel ekranu. Pomniejszony (pulpit większy niż okno) robił się rozmyty i trudny do trafienia.
     private func currentCursor() -> NSCursor {
         guard desktop.width > 0, bounds.width > 0 else { return .arrow }
-        let scale = min(bounds.width / desktop.width, bounds.height / desktop.height)
+        let scale = max(min(bounds.width / desktop.width, bounds.height / desktop.height), 1 / backing)
         if let b = builtCursor, b.scale == scale { return b.cursor }
         let cursor: NSCursor
         switch remoteCursor {

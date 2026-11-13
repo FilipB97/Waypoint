@@ -1,5 +1,27 @@
 #include "RdpShim.h"
 
+void wp_cursor_outline_inverted(uint8_t *bgra, const uint8_t *inverted, int width, int height) {
+    for (int i = 0; i < width * height; i++) {
+        if (!inverted[i]) continue;
+        uint8_t *p = &bgra[i * 4];
+        p[0] = p[1] = p[2] = 0; p[3] = 0xFF;
+    }
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            uint8_t *p = &bgra[(y * width + x) * 4];
+            if (p[3] != 0) continue;
+            int near = 0;
+            for (int dy = -1; dy <= 1 && !near; dy++) {
+                for (int dx = -1; dx <= 1 && !near; dx++) {
+                    int nx = x + dx, ny = y + dy;
+                    near = nx >= 0 && ny >= 0 && nx < width && ny < height && inverted[ny * width + nx];
+                }
+            }
+            if (near) { p[0] = p[1] = p[2] = 0xFF; p[3] = 0xFF; }
+        }
+    }
+}
+
 #ifndef WP_HAVE_FREERDP
 
 // Budowa bez FreeRDP (np. testy logiki na Linuksie bez bibliotek RDP) — tylko zaślepki.
@@ -568,6 +590,40 @@ typedef struct {
     uint8_t *bgra;
 } wpPointer;
 
+/// Mapa pikseli „odwracających tło" (warunki jak w freerdp_image_copy_from_pointer_data, FreeRDP 3.32):
+/// maska AND = 1 i XOR = 1 (1 bpp) albo XOR biały (24/32 bpp). FreeRDP rysuje je szachownicą czarno-białą,
+/// która po przeskalowaniu robi się szarą, niewidoczną na ciemnym tle kreską (kursor tekstowy).
+/// NULL, gdy nie ma takich pikseli albo format jest inny (8/16 bpp — rzadkie, zostają jak są).
+static uint8_t *wp_pointer_inverted_mask(const rdpPointer *p) {
+    const uint32_t w = p->width, h = p->height, bpp = p->xorBpp;
+    if (!p->andMaskData || !p->xorMaskData || (bpp != 1 && bpp != 24 && bpp != 32)) return NULL;
+    size_t andStep = (w + 7) / 8; andStep += andStep % 2;
+    size_t xorStep = bpp == 1 ? andStep : (size_t)w * (bpp / 8);
+    xorStep += xorStep % 2;
+    if (andStep * h > p->lengthAndMask || xorStep * h > p->lengthXorMask) return NULL;
+    uint8_t *inv = calloc((size_t)w * h, 1);
+    if (!inv) return NULL;
+    int any = 0;
+    for (uint32_t y = 0; y < h; y++) {
+        const uint32_t row = bpp == 1 ? y : h - 1 - y;   // 24/32 bpp: wiersze od dołu
+        const uint8_t *andRow = &p->andMaskData[andStep * row];
+        const uint8_t *xorRow = &p->xorMaskData[xorStep * row];
+        for (uint32_t x = 0; x < w; x++) {
+            if (!(andRow[x / 8] & (0x80 >> (x % 8)))) continue;
+            int white;
+            if (bpp == 1) {
+                white = (xorRow[x / 8] & (0x80 >> (x % 8))) != 0;
+            } else {
+                const uint8_t *px = &xorRow[(size_t)x * (bpp / 8)];
+                white = px[0] == 0xFF && px[1] == 0xFF && px[2] == 0xFF && (bpp == 24 || px[3] == 0xFF);
+            }
+            if (white) { inv[(size_t)y * w + x] = 1; any = 1; }
+        }
+    }
+    if (!any) { free(inv); return NULL; }
+    return inv;
+}
+
 /// Nigdy nie zwraca FALSE: błąd tutaj FreeRDP traktuje jak błąd protokołu i zrywa sesję (Windows
 /// wysyła np. na ekranie logowania kursory bez maski, których konwersja się nie udaje). Kursor, którego
 /// nie umiemy pokazać, staje się zwykłą strzałką.
@@ -581,10 +637,16 @@ static BOOL wp_pointer_new(rdpContext *context, rdpPointer *pointer) {
     if (freerdp_image_copy_from_pointer_data(bgra, PIXEL_FORMAT_BGRA32, pointer->width * 4, 0, 0,
                                              pointer->width, pointer->height, pointer->xorMaskData,
                                              pointer->lengthXorMask, pointer->andMaskData, pointer->lengthAndMask,
-                                             pointer->xorBpp, context->gdi ? &context->gdi->palette : NULL))
+                                             pointer->xorBpp, context->gdi ? &context->gdi->palette : NULL)) {
+        uint8_t *inv = wp_pointer_inverted_mask(pointer);
+        if (inv) {
+            wp_cursor_outline_inverted(bgra, inv, (int)pointer->width, (int)pointer->height);
+            free(inv);
+        }
         p->bgra = bgra;
-    else
+    } else {
         free(bgra);
+    }
     return TRUE;
 }
 
