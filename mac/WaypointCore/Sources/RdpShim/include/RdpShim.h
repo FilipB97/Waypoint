@@ -61,6 +61,12 @@ void wp_cursor_outline_inverted(uint8_t *bgra, const uint8_t *inverted, int widt
 /// (I-beam). Krzyżyk precyzyjnego zaznaczania też je ma, ale jest kwadratowy — zostaje obrazem.
 int wp_cursor_is_text(const uint8_t *inverted, int width, int height);
 
+/// Czy kursor (BGRA, w × h) to zwykła strzałka: punkt aktywny w lewym górnym rogu kształtu (piksele
+/// z alfą ≥ 50%, bez cienia; tolerancja −1…2 px) i kształt wyższy niż szerszy (szerokość ≤ ¾ wysokości).
+/// Starsze zestawy kursorów Windows rysują strzałkę z marginesem (punkt 10,10 w 32×32), stąd kształt,
+/// a nie pozycja w obrazie. Strzałka z klepsydrą lub kółkiem (praca w tle) jest szersza i zostaje obrazem.
+int wp_cursor_is_arrow(const uint8_t *bgra, int width, int height, int hot_x, int hot_y);
+
 typedef struct {
     const char *host;
     uint16_t port;
