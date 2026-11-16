@@ -12,6 +12,8 @@
     <AssemblyName>Waypoint</AssemblyName>
     <RootNamespace>RdpManager</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <!-- PerMonitorV2: ostry obraz i właściwa skala RDP przy monitorach o różnym DPI (zgłoszenie #241). -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>1.4.2</Version>
     <Product>Waypoint</Product>
     <AssemblyTitle>Waypoint</AssemblyTitle>

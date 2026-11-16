@@ -47,6 +47,8 @@ namespace RdpManager
         private readonly DispatcherTimer _debounce;
 
         private int _lastW = -1, _lastH = -1;
+        private uint _lastScale;              // ostatnio wysłana skala DPI (0 = nic jeszcze nie wysłano)
+        private Window _window;               // okno, którego zmianę DPI obserwujemy (karta / oderwana sesja)
         private int _retries;
         private bool _disposed;
 
@@ -76,7 +78,27 @@ namespace RdpManager
             _host.SizeChanged += OnHostSizeChanged;
             if (_host.Child is System.Windows.Forms.Control child)
                 child.Resize += OnChildResize;
+
+            // Przeniesienie okna na monitor o innym DPI nie musi zmienić rozmiaru w DIP (SizeChanged milczy),
+            // a zmienia piksele fizyczne i skalę — obserwujemy DPI okna, w którym akurat jest kontrolka
+            // (karta w oknie głównym albo oderwane okno sesji; Loaded przychodzi też po przeniesieniu).
+            _host.Loaded += OnHostLoaded;
+            _host.Unloaded += OnHostUnloaded;
+            AttachWindow(Window.GetWindow(_host));
         }
+
+        private void OnHostLoaded(object sender, RoutedEventArgs e) => AttachWindow(Window.GetWindow(_host));
+        private void OnHostUnloaded(object sender, RoutedEventArgs e) => AttachWindow(null);
+
+        private void AttachWindow(Window w)
+        {
+            if (ReferenceEquals(_window, w)) return;
+            if (_window != null) _window.DpiChanged -= OnWindowDpiChanged;
+            _window = w;
+            if (_window != null && !_disposed) _window.DpiChanged += OnWindowDpiChanged;
+        }
+
+        private void OnWindowDpiChanged(object sender, DpiChangedEventArgs e) => Kick();
 
         /// <summary>Wołać z OnLoginComplete/OnConnected — pierwszy legalny moment na resize.</summary>
         public void ApplyInitial() => Kick();
@@ -173,6 +195,7 @@ namespace RdpManager
             if (rdp == null) return;
 
             _lastW = _lastH = -1;
+            _lastScale = 0;
             _lockedTargetW = _lockedTargetH = -1;   // nowe połączenie = nowa baza do zamrożenia
             _debounce.Stop();
 
@@ -200,6 +223,7 @@ namespace RdpManager
         {
             if (_disposed) return;
             _lastW = _lastH = -1;
+            _lastScale = 0;
             _lockedTargetW = _lockedTargetH = -1;   // ustawienia się zmieniły — policz zamrożony cel od nowa
             TrySetSmartSizing(_session.Rdp, WantSmartSizing(FixedRes().W > 0));
             Kick();
@@ -239,7 +263,7 @@ namespace RdpManager
             _debounce.Stop();   // ubijemy ewentualny wyścig ze ścieżką SizeChanged
             try
             {
-                UpdateDisplay(rdp, physW, physH);
+                _lastScale = UpdateDisplay(rdp, physW, physH);
                 RefreshSmartSizingAfterResize(rdp, WantSmartSizing(fx.W > 0));
                 _lastW = physW; _lastH = physH;
             }
@@ -289,13 +313,14 @@ namespace RdpManager
             }
             // Jedna decyzja zamiast dwóch warunków rozsypanych po metodzie — i testowalna bez WPF.
             // Dochodzi do nich stan okna: przy zminimalizowanym renegocjacja jest czystą stratą.
-            if (!RdpDisplay.ShouldApplyResize(IsWindowMinimized(), w, h, _lastW, _lastH)) return;
+            uint scale = RdpDisplay.DesktopScaleFactor(EffectiveScale());
+            if (!RdpDisplay.ShouldApplyResize(IsWindowMinimized(), w, h, scale, _lastW, _lastH, _lastScale)) return;
 
             try
             {
                 // Piksele fizyczne "wbite" w rozdzielczość => serwer nie skaluje bitmapy; czytelność
                 // reguluje osobno skala DPI (desktopScaleFactor), nie rozmycie.
-                UpdateDisplay(rdp, w, h);
+                _lastScale = UpdateDisplay(rdp, w, h);
                 RefreshSmartSizingAfterResize(rdp, WantSmartSizing(fx.W > 0));   // natywny (ostry) albo dobicie do okna
                 _lastW = w; _lastH = h;
                 _retries = 0;
@@ -327,21 +352,24 @@ namespace RdpManager
         /// (starsze serwery znają tylko 100/100), ponawiamy bez niej — resize jest ważniejszy niż DPI,
         /// a wołający i tak potraktowałby COMException jako „kanał jeszcze nie wstał" i włączył SmartSizing.
         /// </summary>
-        private void UpdateDisplay(AxMsRdpClient11NotSafeForScripting rdp, int w, int h)
+        /// <returns>Skala, którą faktycznie wysłano (po ewentualnym odrzuceniu przez host — 100).</returns>
+        private uint UpdateDisplay(AxMsRdpClient11NotSafeForScripting rdp, int w, int h)
         {
             uint scale = RdpDisplay.DesktopScaleFactor(EffectiveScale());
             if (scale == 100u)
             {
                 rdp.UpdateSessionDisplaySettings((uint)w, (uint)h, 0u, 0u, 0u, 100u, RdpDisplay.DeviceScaleFactor);
-                return;
+                return 100u;
             }
             try
             {
                 rdp.UpdateSessionDisplaySettings((uint)w, (uint)h, 0u, 0u, 0u, scale, RdpDisplay.DeviceScaleFactor);
+                return scale;
             }
             catch (COMException)
             {
                 rdp.UpdateSessionDisplaySettings((uint)w, (uint)h, 0u, 0u, 0u, 100u, RdpDisplay.DeviceScaleFactor);
+                return 100u;
             }
         }
 
@@ -388,29 +416,32 @@ namespace RdpManager
         }
 
         /// <summary>
-        /// Skala DPI PRZED połączeniem — kontrolka czyta ją z <c>IMsRdpExtendedSettings.set_Property</c> pod
-        /// tymi samymi nazwami, co klucze <c>desktopscalefactor</c>/<c>devicescalefactor</c> w plikach .rdp
-        /// mstsc. Po zalogowaniu DPI zmienia już Display-Update; tu chodzi o pierwszą klatkę sesji.
+        /// Skala DPI PRZED połączeniem — kontrolka czyta ją z <c>IMsRdpExtendedSettings.Property</c> pod tymi
+        /// samymi nazwami, co klucze <c>desktopscalefactor</c>/<c>devicescalefactor</c> w plikach .rdp mstsc.
+        /// Po zalogowaniu DPI zmienia już Display-Update; tu chodzi o pierwszą klatkę sesji.
         ///
-        /// Wołamy późno-wiążąco (IDispatch), a nie przez rzutowanie na interfejs interopu: w wygenerowanym
-        /// MSTSCLib para get_Property/set_Property wychodzi jako akcesory WŁAŚCIWOŚCI, a tych C# nie pozwala
-        /// wywołać wprost (CS0571). Jedno wywołanie na połączenie, więc koszt refleksji bez znaczenia.
+        /// Przez interfejs <c>IMsRdpExtendedSettings</c> (QueryInterface na kontrolce), a nie późnym wiązaniem
+        /// na domyślnym IDispatch: tam „set_Property" nie istnieje (DISP_E_UNKNOWNNAME), a wyjątek był połykany —
+        /// skala przed połączeniem po cichu nie działała (zgłoszenie #241). Akcesor indeksowanej właściwości
+        /// wołamy przez MethodInfo (C# nie pozwala na set_Property wprost — CS0571), co działa niezależnie od
+        /// tego, czy interop podaje wartość przez <c>ref object</c>.
         /// </summary>
         private static void TrySetPreConnectScale(AxMsRdpClient11NotSafeForScripting rdp, uint scale)
         {
             try
             {
-                object ocx = rdp.GetOcx();
-                if (ocx == null) return;
-                SetExtendedProperty(ocx, "DesktopScaleFactor", scale);
-                SetExtendedProperty(ocx, "DeviceScaleFactor", RdpDisplay.DeviceScaleFactor);
+                if (!(rdp.GetOcx() is MSTSCLib.IMsRdpExtendedSettings ext)) return;
+                SetExtendedProperty(ext, "DesktopScaleFactor", scale);
+                SetExtendedProperty(ext, "DeviceScaleFactor", RdpDisplay.DeviceScaleFactor);
             }
             catch (Exception) { /* kontrolka bez rozszerzonych ustawień — DPI dobije Display-Update */ }
         }
 
-        private static void SetExtendedProperty(object ocx, string name, uint value)
-            => ocx.GetType().InvokeMember("set_Property", BindingFlags.InvokeMethod, null, ocx,
-                                          new object[] { name, value });
+        private static readonly MethodInfo SetPropertyMethod =
+            typeof(MSTSCLib.IMsRdpExtendedSettings).GetMethod("set_Property");
+
+        private static void SetExtendedProperty(MSTSCLib.IMsRdpExtendedSettings ext, string name, uint value)
+            => SetPropertyMethod?.Invoke(ext, new object[] { name, (object)value });
 
         private static void TrySetSmartSizing(AxMsRdpClient11NotSafeForScripting rdp, bool on)
         {
@@ -447,6 +478,9 @@ namespace RdpManager
             _host.SizeChanged -= OnHostSizeChanged;
             if (_host.Child is System.Windows.Forms.Control child)
                 child.Resize -= OnChildResize;
+            _host.Loaded -= OnHostLoaded;
+            _host.Unloaded -= OnHostUnloaded;
+            AttachWindow(null);
         }
     }
 }

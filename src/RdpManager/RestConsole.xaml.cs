@@ -530,9 +530,13 @@ namespace RdpManager
             }
             if (string.IsNullOrWhiteSpace(eff.Url)) { SetStatus(L("S.rest.needurl"), error: true); return; }
 
-            _cts?.Cancel();
-            _cts?.Dispose();   // stary token nikomu już niepotrzebny — bez tego wyciekał przy każdym Send (A7)
+            // Poprzednie żądanie tylko ANULUJEMY — zwalnia je jego własne finally. Wcześniej Dispose stąd
+            // sprawiał, że kontynuacja starego żądania czytała cts.Token z już zwolnionego źródła
+            // (ObjectDisposedException w catch/finally: zły status nowego żądania, a w finally — wyjątek
+            // z async void, #241).
+            try { _cts?.Cancel(); } catch (ObjectDisposedException) { }
             var cts = new CancellationTokenSource();
+            var token = cts.Token;   // token zapamiętany od razu — nie sięgamy już do źródła po await
             _cts = cts;
             SendBtn.IsEnabled = false;
             SetStatus(L("S.rest.sending"));
@@ -551,8 +555,9 @@ namespace RdpManager
                 // Postmanie działa, tu nie" jest nie do zdiagnozowania (realny przypadek: 500 u klienta).
                 bool authGap = eff.AuthType == 1 && string.IsNullOrEmpty(RestClient.Subst(eff.AuthSecret ?? "", sendVars));
 
-                var resp = await RestClient.SendAsync(eff, eff.AuthSecret, sendVars, cts.Token);
-                if (cts.Token.IsCancellationRequested) return;   // nowsze żądanie przejęło przycisk (finally i tak nie odblokuje)
+                var resp = await RestClient.SendAsync(eff, eff.AuthSecret, sendVars, token);
+                // Nowsze żądanie przejęło konsolę (albo ją zamknięto) — ta odpowiedź nie dotyka już UI ani historii.
+                if (!RestRequestOwnership.IsCurrent(ReferenceEquals(_cts, cts), token.IsCancellationRequested)) return;
 
                 RenderResponse(resp);
                 RenderSent(resp, missingVars, emptyVars, authGap);
@@ -562,15 +567,24 @@ namespace RdpManager
                 RecordHistory(resp, eff);
                 SetStatus(ScriptSummary(post));
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // Anulowane przez nowsze żądanie albo zamknięcie konsoli — bez komunikatu.
+            }
             catch (Exception ex)
             {
                 // Nieoczekiwany błąd PO wysyłce (np. RecordHistory→RestStore.Put przy pełnym/zablokowanym
                 // dysku) — bez tego catch+finally SendBtn zostawałby zablokowany na stałe (A6/A7).
-                SetStatus(string.Format(L("S.rest.error"), ex.Message), error: true);
+                // Błąd starego (zastąpionego) żądania nie może nadpisać statusu nowego.
+                if (RestRequestOwnership.IsCurrent(ReferenceEquals(_cts, cts), token.IsCancellationRequested))
+                    SetStatus(string.Format(L("S.rest.error"), ex.Message), error: true);
             }
             finally
             {
-                if (!cts.Token.IsCancellationRequested) SendBtn.IsEnabled = true;
+                bool current = ReferenceEquals(_cts, cts);
+                if (current && !token.IsCancellationRequested) SendBtn.IsEnabled = true;
+                if (current) _cts = null;
+                cts.Dispose();   // każde żądanie zwalnia WYŁĄCZNIE swoje źródło
             }
         }
 
@@ -910,7 +924,8 @@ namespace RdpManager
         /// <summary>Anuluje żądanie w locie przy zamykaniu sesji.</summary>
         public void DisposeConsole()
         {
-            try { _cts?.Cancel(); _cts?.Dispose(); } catch { }
+            // Tylko anulowanie — źródło zwolni finally trwającego żądania (Dispose tutaj = ten sam wyścig).
+            try { _cts?.Cancel(); } catch (ObjectDisposedException) { }
             _cts = null;
         }
     }
