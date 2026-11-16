@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
             AppModel.shared.installKeyMonitor()
+            Notifier.shared.install()
             Smoke.startIfRequested()
             AppModel.shared.checkForUpdates(manual: false)
         }

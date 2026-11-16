@@ -412,11 +412,15 @@ namespace RdpManager.Controllers
         {
             if (!_owner._isFullscreen) { _fsCursorPoll.Stop(); return; }
             if (_owner.WindowState == WindowState.Minimized) return;   // zminimalizowane — nie pokazuj paska
+            // Ten sam polling pilnuje monitora: okno przeniesione (Win+Shift+strzałka), monitor odłączony,
+            // zmiana DPI albo powrót z minimalizacji — prostokąt i pasek idą za oknem (#241).
+            RefreshMonitor();
             if (_fsPinned) { if (!_owner.FsPopup.IsOpen) _owner.FsPopup.IsOpen = true; return; }   // przypięty: zawsze widoczny
             if (!MainWindow.GetCursorPos(out MainWindow.POINT p)) return;
 
-            bool withinX = p.X >= _fsMonRect.left && p.X < _fsMonRect.right;
-            bool atTop = withinX && p.Y <= _fsMonRect.top + 2;
+            // Tylko górna krawędź TEGO monitora — przy monitorach jeden nad drugim kursor na dolnym brzegu
+            // monitora powyżej (y < top) nie może otwierać paska; współrzędne mogą być ujemne.
+            bool atTop = Core.FullscreenEdge.IsAtTop(p.X, p.Y, _fsMonRect.left, _fsMonRect.top, _fsMonRect.right, _fsMonRect.bottom);
 
             if (atTop)
             {
@@ -429,6 +433,36 @@ namespace RdpManager.Controllers
                 // zabezpieczenie: gdy kursor zjedzie wyraźnie poniżej paska (a flyout zwinięty) — zamknij
                 if (_owner.FsPopup.IsOpen && _owner.FsFlyout.Visibility != Visibility.Visible && p.Y > _fsMonRect.top + 140)
                     _owner.FsPopup.IsOpen = false;
+            }
+        }
+
+        /// <summary>
+        /// Monitor pełnego ekranu z bieżącego położenia okna. Gdy się zmienił: okno wypełnia nowy monitor,
+        /// sesja dostaje jego natywną rozdzielczość, a pasek u góry przelicza pozycję (osobny HWND popupu
+        /// sam nie podąża za oknem między monitorami).
+        /// </summary>
+        private void RefreshMonitor()
+        {
+            var hwnd = new WindowInteropHelper(_owner).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            IntPtr mon = MainWindow.MonitorFromWindow(hwnd, MainWindow.MONITOR_DEFAULTTONEAREST);
+            var mi = new MainWindow.MONITORINFO { cbSize = Marshal.SizeOf(typeof(MainWindow.MONITORINFO)) };
+            if (!MainWindow.GetMonitorInfo(mon, ref mi)) return;
+            var r = mi.rcMonitor;
+            if (r.left == _fsMonRect.left && r.top == _fsMonRect.top && r.right == _fsMonRect.right && r.bottom == _fsMonRect.bottom)
+                return;
+
+            _fsMonRect = r;
+            int pw = r.right - r.left, ph = r.bottom - r.top;
+            MainWindow.SetWindowPos(hwnd, IntPtr.Zero, r.left, r.top, pw, ph, MainWindow.SWP_SHOWWINDOW);
+            var sess = _owner._active;
+            _owner.Dispatcher.BeginInvoke(new Action(() => { if (_owner._isFullscreen) sess?.Resizer?.ApplyExact(pw, ph); }),
+                DispatcherPriority.Background);
+            if (_owner.FsPopup.IsOpen)
+            {
+                // Zamknij/otwórz = popup liczy położenie od nowa względem okna na nowym monitorze.
+                _owner.FsPopup.IsOpen = false;
+                _owner.FsPopup.IsOpen = true;
             }
         }
 

@@ -40,6 +40,11 @@ public struct MacSettings: Codable, Equatable, Sendable {
     /// Option w pulpicie zdalnym jak Alt na PC (lewy = Alt, prawy = AltGr — polskie znaki prawym Option).
     /// false: Option+litera wysyła znak z macOS (ą, ę…), Alt tylko z klawiszami specjalnymi.
     public var rdpOptionAsAlt: Bool = true
+    /// Powiadomienia systemowe: koniec długiego przesyłania plików, nieoczekiwane rozłączenie (gdy karta
+    /// albo aplikacja nie jest na wierzchu).
+    public var notificationsEnabled: Bool = true
+    /// Serwery w wynikach Spotlight (wybranie = połączenie).
+    public var spotlightEnabled: Bool = true
 
     public init() {}
 
@@ -55,6 +60,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         case autoConnectServerIds = "AutoConnectServerIds"
         case rdpDiagnostics = "MacRdpDiagnostics"
         case rdpOptionAsAlt = "MacRdpOptionAsAlt"
+        case notificationsEnabled = "MacNotifications", spotlightEnabled = "MacSpotlight"
     }
 
     public init(from decoder: Decoder) throws {
@@ -83,6 +89,8 @@ public struct MacSettings: Codable, Equatable, Sendable {
         autoConnectServerIds = (try? c.decode([String].self, forKey: .autoConnectServerIds)) ?? []
         rdpDiagnostics = (try? c.decode(Bool.self, forKey: .rdpDiagnostics)) ?? false
         rdpOptionAsAlt = (try? c.decode(Bool.self, forKey: .rdpOptionAsAlt)) ?? true
+        notificationsEnabled = (try? c.decode(Bool.self, forKey: .notificationsEnabled)) ?? true
+        spotlightEnabled = (try? c.decode(Bool.self, forKey: .spotlightEnabled)) ?? true
     }
 
     /// Zakresy jak w Windows: interwał sondy 5–3600 s, limit czasu 1–60 s.

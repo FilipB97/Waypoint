@@ -133,10 +133,19 @@ namespace RdpManager.Core
         /// <param name="minimized">Okno sesji jest zminimalizowane.</param>
         /// <param name="lastW">Ostatnio wynegocjowana szerokość; -1 = nic jeszcze nie wysłano.</param>
         public static bool ShouldApplyResize(bool minimized, int w, int h, int lastW, int lastH)
+            => ShouldApplyResize(minimized, w, h, 0u, lastW, lastH, 0u);
+
+        /// <summary>
+        /// Jak wyżej, ale z porównaniem skali DPI: okno przeniesione między monitorami o różnym DPI może
+        /// zachować te same piksele (albo serwer wynegocjować te same wymiary), a zmienia się tylko skala —
+        /// bez tego Display-Update nie poszedłby i interfejs zdalny miałby rozmiar z poprzedniego monitora.
+        /// </summary>
+        /// <param name="lastScale">Ostatnio wysłana skala (desktopScaleFactor); 0 = nieznana.</param>
+        public static bool ShouldApplyResize(bool minimized, int w, int h, uint scale, int lastW, int lastH, uint lastScale)
         {
             if (minimized) return false;
             if (w < RdpUtils.MinDim || h < RdpUtils.MinDim) return false;
-            return w != lastW || h != lastH;
+            return w != lastW || h != lastH || scale != lastScale;
         }
 
         public static (int Width, int Height) ScaleResolution(int width, int height, int effectiveScale)

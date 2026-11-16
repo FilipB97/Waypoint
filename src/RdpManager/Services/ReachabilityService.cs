@@ -24,6 +24,12 @@ namespace RdpManager.Services
 
         private DispatcherTimer _reachTimer;
         private bool _reachBusy;
+        // Bieżąca partia sond: anulowana przy wyłączeniu sondy w Ustawieniach i przy zamykaniu aplikacji.
+        // Numer partii odrzuca wyniki partii nieaktualnej (anulowanej albo zastąpionej) — nie mogą
+        // nadpisać kropek i liczników bieżącego stanu.
+        private CancellationTokenSource _batchCts;
+        private int _batch;
+        private bool _stopped;
         // Średnie opóźnienie osiągalnych hostów per cykl (do wykresu na pulpicie); ostatnie 48, bez utrwalania.
         private readonly List<double> _latencySamples = new List<double>();
 
@@ -66,23 +72,45 @@ namespace RdpManager.Services
             else
             {
                 _reachTimer.Stop();
+                CancelBatch();   // trwające sondy przestają czekać na limit czasu i nie zmienią już statusów
             }
+        }
+
+        /// <summary>Zamykanie aplikacji: koniec cyklu i trwających sond (bez aktualizacji UI po fakcie).</summary>
+        internal void Stop()
+        {
+            _stopped = true;
+            _reachTimer?.Stop();
+            CancelBatch();
+        }
+
+        private void CancelBatch()
+        {
+            _batch++;
+            try { _batchCts?.Cancel(); } catch (ObjectDisposedException) { }
         }
 
         internal async void CheckNow()
         {
-            if (_reachBusy) return;
+            if (_reachBusy || _stopped) return;
             _reachBusy = true;
+            var cts = new CancellationTokenSource();
+            _batchCts = cts;
+            int batch = ++_batch;
             try
             {
                 var servers = _owner._vm.Servers.ToList();
+                var token = cts.Token;
                 var results = await Task.WhenAll(servers.Select(async srv =>
                 {
                     // Serial (COM), WWW i REST (URL) — sonda TCP host:port nie ma sensu, zostaw bieżący status/opóźnienie.
                     var r = srv.Protocol == RemoteProtocol.Serial || srv.Protocol == RemoteProtocol.Http || srv.Protocol == RemoteProtocol.Rest
-                        ? (srv.Status, srv.LatencyMs) : await ProbeAsync(srv.Host, srv.Port);
+                        ? (srv.Status, srv.LatencyMs) : await ProbeAsync(srv.Host, srv.Port, token);
                     return new KeyValuePair<ServerInfo, (ServerStatus status, int rttMs)>(srv, r);
                 }));
+
+                // Partia anulowana (sonda wyłączona, zamykanie) albo zastąpiona — jej wyniki są nieaktualne.
+                if (!ReachabilityBatch.IsCurrent(batch, _batch, token.IsCancellationRequested, _stopped)) return;
 
                 foreach (var kv in results)
                 {
@@ -105,6 +133,8 @@ namespace RdpManager.Services
             }
             finally
             {
+                if (ReferenceEquals(_batchCts, cts)) _batchCts = null;
+                cts.Dispose();
                 _reachBusy = false;
             }
         }
@@ -141,7 +171,7 @@ namespace RdpManager.Services
 
             _owner.SetStatus(string.Format(L("S.st.diagnosing"), host, port), StatusKind.Connecting);
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            var probe = await ProbeAsync(host, port);
+            var probe = await ProbeAsync(host, port, CancellationToken.None);
             sw.Stop();
             bool ok = probe.status == ServerStatus.Online;
             long elapsed = ok && probe.rttMs >= 0 ? probe.rttMs : sw.ElapsedMilliseconds;
@@ -154,16 +184,19 @@ namespace RdpManager.Services
         }
 
         // Zwraca status oraz zmierzone opóźnienie połączenia TCP (ms); rttMs = -1 gdy nieosiągalny/nieznany.
-        private static async Task<(ServerStatus status, int rttMs)> ProbeAsync(string host, int port)
+        private static async Task<(ServerStatus status, int rttMs)> ProbeAsync(string host, int port, CancellationToken cancel)
         {
             if (string.IsNullOrWhiteSpace(host)) return (ServerStatus.Offline, -1);
-            await ProbeConcurrency.WaitAsync();
+            // Kolejka do semafora też się kończy przy anulowaniu — zatrzymanie nie czeka na setki sond w kolejce.
+            try { await ProbeConcurrency.WaitAsync(cancel); }
+            catch (OperationCanceledException) { return (ServerStatus.Offline, -1); }
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var c = new TcpClient())
-                using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(_probeTimeoutMs)))
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancel))
                 {
+                    cts.CancelAfter(TimeSpan.FromMilliseconds(_probeTimeoutMs));
                     // Token anuluje SAMO ConnectAsync przy timeout — nie zostaje porzucone, nieobserwowane
                     // zadanie łączenia (wcześniej WaitAsync porzucał je, a jego późniejszy wyjątek był nieobserwowany).
                     await c.ConnectAsync(host, port, cts.Token);

@@ -582,6 +582,18 @@ enum Smoke {
         } else {
             note("uwaga: nie otworzyło się okno Ustawień", out)
         }
+        // Link waypoint://connect/… (Skróty): nieznany serwer → komunikat; link z menu serwera prowadzi z powrotem do niego.
+        model.alert = nil
+        model.openLink(URL(string: "waypoint://connect/nie-ma-takiego-serwera")!)
+        let linkMissing = model.alert?.title == L("link.title")
+        model.alert = nil
+        let linkBack = model.servers.first.flatMap { s in
+            ServerLink.url(for: s, among: model.servers).flatMap(ServerLink.query(from:)).flatMap { ServerLink.find($0, in: model.servers)?.id == s.id }
+        } ?? false
+        note(linkMissing && linkBack ? "OK: link waypoint:// — nieznany serwer zgłoszony, link z menu wraca do serwera"
+                                     : "FAIL: link waypoint:// (nieznany=\(linkMissing), powrót=\(linkBack))", out)
+        ok = ok && linkMissing && linkBack
+
         // Sejf haseł: wpis ze starszej wersji (osobny w Pęku kluczy, zapisany tą aplikacją — wpis
         // z narzędzia `security` wywołałby systemowe pytanie) jest czytany i trafia do sejfu.
         let legacyAdd: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: Keychain.service,

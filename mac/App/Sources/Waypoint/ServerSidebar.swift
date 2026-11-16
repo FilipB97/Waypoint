@@ -147,6 +147,7 @@ struct ServerSidebar: View {
         if s.proto == .rdp {
             Button(L("rdp.export")) { model.exportRdp(s) }
         }
+        Button(L("link.copy")) { model.copyLink(s) }
         Button(L("act.copyhost")) {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(s.host, forType: .string)

@@ -14,6 +14,8 @@ namespace RdpManager
     /// </summary>
     internal static class RdpConnect
     {
+        private static bool _cursorScalingDisabled;
+
         public static void Apply(AxMsRdpClient11NotSafeForScripting rdp, ServerInfo server, AppSettings settings,
                                  string user, string domain, string password)
         {
@@ -37,6 +39,15 @@ namespace RdpManager
             // UseMultimon = false: pełny ekran kontrolki (FullScreen + UseMultimon) crashuje w WindowsFormsHost
             // (SEH w DispatchMessage). Multi-monitor realizujemy rozpięciem NASZEGO okna, nie kontrolki.
             try { ((IMsRdpClientNonScriptable5)rdp.GetOcx()).UseMultimon = false; } catch { }
+
+            // Kursor z sesji: serwer przysyła go już w skali swojego DPI — bez tego kontrolka powiększała go
+            // jeszcze raz wg DPI lokalnego monitora (przy 200% kursor wychodził ogromny, #241). Ustawienie
+            // dotyczy całego procesu, więc raz; starsze systemy nie znają metody — wtedy nic się nie zmienia.
+            if (!_cursorScalingDisabled)
+            {
+                _cursorScalingDisabled = true;
+                try { ((IMsRdpClientNonScriptable8)rdp.GetOcx()).DisableDpiCursorScalingForProcess(); } catch { }
+            }
 
             ApplyGateway(rdp, server);
 

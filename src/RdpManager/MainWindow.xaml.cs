@@ -1071,6 +1071,7 @@ namespace RdpManager
             // Zapamiętaj otwarte karty + dograj odroczony zapis ustawień (debounce zoomu), zanim aplikacja zniknie.
             _settingsSaveTimer?.Stop();
             PersistOpenSessions();
+            _reach?.Stop();   // sondy osiągalności w tle — koniec, bez aktualizacji listy po zamknięciu
 
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
             try { UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId); } catch { }

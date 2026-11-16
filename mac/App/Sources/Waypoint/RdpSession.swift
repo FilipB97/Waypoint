@@ -222,6 +222,9 @@ final class RdpSession: Identifiable {
                 return
             }
             state = .ended(error == 0 ? nil : (Self.reason(error) ?? (message.isEmpty ? String(format: L("rdp.err.code"), error) : message)))
+            if error != 0, case .ended(let why?) = state {
+                Notifier.shared.post(String(format: L("notify.lost.title"), server.displayName), why, session: id)
+            }
             onEnded?(error != 0)
         }
     }
@@ -364,6 +367,7 @@ final class RdpSession: Identifiable {
                     self.pasteboardCount = pb.changeCount
                     self.readCount = pb.changeCount   // zawartość z sesji — nie odsyłać
                     self.notice = String(format: L("rdp.files.ready"), top.count)
+                    Notifier.shared.post(L("notify.files.title"), String(format: L("rdp.files.ready"), top.count), session: self.id)
                 }
             } catch {
                 DispatchQueue.main.async {
