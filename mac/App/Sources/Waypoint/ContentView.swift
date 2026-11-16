@@ -1,3 +1,4 @@
+import CoreSpotlight
 import SwiftUI
 import WaypointCore
 
@@ -23,6 +24,10 @@ struct ContentView: View {
             }
         }
         .tint(accent)   // nil = akcent systemowy
+        // waypoint://connect/… (Skróty, Terminal) i wyniki Spotlight — w tym oknie, bez otwierania nowego.
+        .onOpenURL { model.openLink($0) }
+        .onContinueUserActivity(CSSearchableItemActionType) { model.openSpotlight($0) }
+        .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         // Klik w serwer na liście pokazuje jego szczegóły (karty zostają na pasku i działają dalej).
         .onChange(of: model.selection) { _, new in
             if new != nil { model.activeSessionID = nil }

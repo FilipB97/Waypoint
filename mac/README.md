@@ -42,6 +42,13 @@ usuwa: aplikacji bez Team ID od Apple macOS przypina wpis do skrótu kompilacji
 logowania (`SecKeychainItemSetAccessWithPassword`) sprawdzone 2026-11-06 — nowa kompilacja i tak nie
 czyta wpisu. Usuwa to dopiero podpis Apple Developer ID (partycja `teamid:`).
 
+**Spotlight, Skróty, powiadomienia:** serwery są w Spotlight (wybranie wyniku = połączenie;
+wyłączenie w Ustawieniach → Ogólne). Link `waypoint://connect/<nazwa serwera>` (menu serwera →
+Kopiuj link do połączenia) otwiera połączenie z aplikacji Skróty („Otwórz URL" — jeden skrót może
+otworzyć kilka serwerów), z Terminala (`open waypoint://connect/MSDEV-B`) albo z zakładki.
+Powiadomienia systemowe: koniec długiego przesyłania plików i nieoczekiwane rozłączenie — tylko gdy
+nie patrzysz na tę kartę; kliknięcie przenosi do niej.
+
 **Aktualizacje:** Waypoint sam sprawdza nowe wydania; „Zainstaluj i uruchom ponownie" pobiera
 paczkę, podmienia `Waypoint.app` w miejscu i uruchamia nową wersję — bez kwarantanny, więc bez
 ponownego zatwierdzania w Ustawieniach prywatności. Warunek: aplikacja w zapisywalnym folderze

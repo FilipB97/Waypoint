@@ -27,6 +27,9 @@ struct SettingsView: View {
                 || old.probeTimeoutSeconds != new.probeTimeoutSeconds {
                 model.restartReachability()
             }
+            if old.spotlightEnabled != new.spotlightEnabled {
+                SpotlightIndex.update(model.servers, enabled: new.spotlightEnabled)
+            }
             if old.rdpResolution != new.rdpResolution || old.rdpScale != new.rdpScale || old.rdpRetina != new.rdpRetina {
                 for case .rdp(let d) in model.sessions { d.view.applyDisplayMode() }   // w locie, bez rozłączania
             }
@@ -86,6 +89,14 @@ private struct GeneralSettings: View {
                 Toggle(L("set.updates"), isOn: $model.settings.checkUpdates)
                 LabeledContent(L("set.version"), value: AppModel.currentVersion)
                 Button(L("upd.menu")) { model.checkForUpdates(manual: true) }
+            }
+            Section {
+                Toggle(L("set.notify"), isOn: $model.settings.notificationsEnabled)
+                Toggle(L("set.spotlight"), isOn: $model.settings.spotlightEnabled)
+            } header: {
+                Text(L("set.system"))
+            } footer: {
+                Text(L("set.system.hint")).foregroundStyle(.secondary)
             }
             Section(L("set.connections")) {
                 Toggle(L("set.confirmclose"), isOn: $model.settings.confirmCloseConnected)

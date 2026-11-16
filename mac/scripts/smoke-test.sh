@@ -113,6 +113,9 @@ HTTPServer(("127.0.0.1", 8088), H).serve_forever()
 PY
 python3 "$WORK/http-server.py" &
 
+# Schemat waypoint:// zarejestrowany w Info.plist (Skróty, `open waypoint://connect/…`).
+/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0:CFBundleURLSchemes:0" "$(dirname "$APP_BIN")/../Info.plist" | grep -qx waypoint \
+    || { echo "FAIL: brak schematu waypoint:// w Info.plist"; exit 1; }
 echo "== aplikacja w trybie testu"
 set +e
 WAYPOINT_DATA_DIR="$WORK/data" WAYPOINT_SMOKE_DIR="$OUT" \

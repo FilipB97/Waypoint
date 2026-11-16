@@ -69,6 +69,7 @@ final class AppModel {
         }
         restartReachability()
         applyAppearance()
+        SpotlightIndex.update(servers, enabled: settings.spotlightEnabled)
         if !startupDone {
             startupDone = true
             // Po zbudowaniu okna — karty RDP startują, gdy ich widok ma rozmiar.
@@ -102,6 +103,34 @@ final class AppModel {
     func persist() {
         do { try store.save(servers) }
         catch { alert = AppAlert(title: L("alert.save.title"), message: error.localizedDescription) }
+        SpotlightIndex.schedule(servers, enabled: settings.spotlightEnabled)
+    }
+
+    // MARK: Linki (Skróty, Terminal) i Spotlight
+
+    /// `waypoint://connect/<nazwa>` — z aplikacji Skróty („Otwórz URL"), Terminala albo zakładki.
+    func openLink(_ url: URL) {
+        guard let key = ServerLink.query(from: url) else { return }
+        guard let s = ServerLink.find(key, in: servers) else {
+            alert = AppAlert(title: L("link.title"), message: String(format: L("link.notfound"), key))
+            return
+        }
+        selection = s.id
+        connect(s)
+    }
+
+    /// Wynik Spotlight wybrany przez użytkownika.
+    func openSpotlight(_ activity: NSUserActivity) {
+        guard let id = SpotlightIndex.serverID(from: activity), let s = servers.first(where: { $0.id == id }) else { return }
+        selection = s.id
+        connect(s)
+    }
+
+    func copyLink(_ s: Server) {
+        guard let url = ServerLink.url(for: s, among: servers) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.absoluteString, forType: .string)
+        toast = String(format: L("link.copied"), url.absoluteString)
     }
 
     // MARK: Edycja
@@ -196,9 +225,12 @@ final class AppModel {
         switch s.proto {
         case .ssh?, .telnet?, .serial?:
             let t = TerminalSession(server: s)
-            t.onEnded = { [weak self] code in
+            t.onEnded = { [weak self, weak t] code in
                 // 255 = błąd samego ssh (host, uwierzytelnienie); inne kody to wyjście z powłoki.
                 self?.logConnection(code == 255 ? "FAILED" : "DISCONNECTED", s)
+                if code == 255 {   // ssh nie połączył się albo połączenie zerwane (nie zwykłe wyjście z powłoki)
+                    Notifier.shared.post(String(format: L("notify.lost.title"), s.displayName), L("notify.lost.ssh"), session: t?.id)
+                }
             }
             add(.terminal(t))
         case .sftp?, .ftp?:

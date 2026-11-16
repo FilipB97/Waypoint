@@ -48,6 +48,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
     <key>NSHighResolutionCapable</key><true/>
+    <!-- waypoint://connect/<serwer> — aplikacja Skróty („Otwórz URL"), Terminal (open …), zakładki. -->
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>io.github.filipb97.waypoint.connect</string>
+        <key>CFBundleURLSchemes</key><array><string>waypoint</string></array>
+    </dict></array>
     <key>NSHumanReadableCopyright</key><string>© 2026 Filip Benklewski · MIT</string>
     <!-- Klient REST łączy się z dowolnymi adresami, także http:// (API w sieci firmowej, localhost). -->
     <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>

@@ -29,6 +29,8 @@ final class FileSession: Identifiable {
     var selection = Set<SftpEntry.ID>()
     private(set) var busy = false
     private(set) var transfer: Transfer?
+    /// Trwające przesyłanie (etykieta + start) — długie kończy się powiadomieniem, gdy karta nie jest na wierzchu.
+    @ObservationIgnored private var transferStart: (label: String, at: Date)?
     var message: String?
     var messageIsError = false
     /// Pytanie o nadpisanie przy wysyłaniu (nazwy, które już są w katalogu).
@@ -212,6 +214,16 @@ final class FileSession: Identifiable {
                 guard let self else { return }
                 self.busy = false
                 self.transfer = nil
+                if let t = self.transferStart {
+                    self.transferStart = nil
+                    if Date().timeIntervalSince(t.at) >= Notifier.longTransfer {
+                        if case .success = result {
+                            Notifier.shared.post(L("notify.transfer.done"), "\(self.server.displayName): \(t.label)", session: self.id)
+                        } else {
+                            Notifier.shared.post(L("notify.transfer.failed"), "\(self.server.displayName): \(t.label)", session: self.id)
+                        }
+                    }
+                }
                 switch result {
                 case .success(let v): done(v)
                 case .failure(let e): self.handleFailure(e)
@@ -389,6 +401,7 @@ final class FileSession: Identifiable {
         cancelFlag.set(false)
         let flag = cancelFlag
         transfer = Transfer(label: label, done: 0, total: total)
+        transferStart = (label, Date())
         var lastUpdate = Date.distantPast
         run(label, work: { [weak self] c in
             try work(c) { bytes in
