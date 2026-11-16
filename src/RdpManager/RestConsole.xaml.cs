@@ -557,7 +557,7 @@ namespace RdpManager
 
                 var resp = await RestClient.SendAsync(eff, eff.AuthSecret, sendVars, token);
                 // Nowsze żądanie przejęło konsolę (albo ją zamknięto) — ta odpowiedź nie dotyka już UI ani historii.
-                if (!RestRequestOwnership.IsCurrent(ReferenceEquals(_cts, cts), token.IsCancellationRequested)) return;
+                if (!Core.RestRequestOwnership.IsCurrent(ReferenceEquals(_cts, cts), token.IsCancellationRequested)) return;
 
                 RenderResponse(resp);
                 RenderSent(resp, missingVars, emptyVars, authGap);
@@ -576,7 +576,7 @@ namespace RdpManager
                 // Nieoczekiwany błąd PO wysyłce (np. RecordHistory→RestStore.Put przy pełnym/zablokowanym
                 // dysku) — bez tego catch+finally SendBtn zostawałby zablokowany na stałe (A6/A7).
                 // Błąd starego (zastąpionego) żądania nie może nadpisać statusu nowego.
-                if (RestRequestOwnership.IsCurrent(ReferenceEquals(_cts, cts), token.IsCancellationRequested))
+                if (Core.RestRequestOwnership.IsCurrent(ReferenceEquals(_cts, cts), token.IsCancellationRequested))
                     SetStatus(string.Format(L("S.rest.error"), ex.Message), error: true);
             }
             finally
