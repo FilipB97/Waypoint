@@ -93,6 +93,7 @@ Kolejność wynika z priorytetu (RDP najczęściej używany) i z tych zależnoś
 - Edytor: wykrywanie zmian pliku na serwerze, rozmiar czcionki z ustawień, większe pliki niż 10 MB w trybie tylko do odczytu.
 - Lista serwerów: zaznaczanie wielu i operacje zbiorcze, przeciąganie między grupami, filtr tagów.
 - Aplikacja: okno „Co nowego”, wybór języka w aplikacji, osadzony VNC.
+- Tylko macOS: akcje dla aplikacji Skróty przez App Intents, np. „Połącz z serwerem” i „Wyślij plik na serwer” (M, rozwinięcie linków `waypoint://` z `ServerLink.swift`); „Wyślij na serwer…” w menu Usługi Findera (S, wpis `NSServices` w Info.plist, bez rozszerzenia aplikacji). Odrzucone na razie: Touch ID (brak na Mac Studio), File Provider i widżety (rozszerzenia wymagają podpisu Apple Developer, D2).
 - REST: anulowanie żądania, konfigurowalny limit czasu, multipart, duże odpowiedzi, ciasteczka, generowanie kodu.
 - RDP (zależnie od U2): przebudowa potoku klatek, H.264.
 
