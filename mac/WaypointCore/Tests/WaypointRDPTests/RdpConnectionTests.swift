@@ -64,7 +64,7 @@ func waitUntil(_ seconds: Double, _ cond: () -> Bool) -> Bool {
         #expect(RdpConnection.scancode(macKeyCode: 0x7B) == 0x14B)
         #expect(RdpConnection.isAuthenticationError(0) == false)
         #expect(RdpKeyboard.windowsLayout(forMacInputSource: "com.apple.keylayout.PolishPro") == 0x415)
-        #expect(RdpKeyboard.windowsLayout(forMacInputSource: "com.apple.keylayout.Polish") == 0x415)
+        #expect(RdpKeyboard.windowsLayout(forMacInputSource: "com.apple.keylayout.Polish") == 0x10415)  // QWERTZ = polski (214), mac-roadmap B1
         #expect(RdpKeyboard.windowsLayout(forMacInputSource: "com.apple.keylayout.Klingon") == 0)
     }
 }
