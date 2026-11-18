@@ -49,6 +49,10 @@ struct ServerSidebar: View {
                     .help(L("dash.title"))
             }
             ToolbarItem {
+                Button { model.openPalette() } label: { Label(L("pal.quick.section"), systemImage: "bolt") }
+                    .help(L("pal.quick.section") + " (⇧⌘N)")
+            }
+            ToolbarItem {
                 Button { model.beginNew() } label: { Label(L("menu.newserver"), systemImage: "plus") }
                     .help(L("menu.newserver"))
             }
