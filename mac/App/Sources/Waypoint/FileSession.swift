@@ -203,9 +203,16 @@ final class FileSession: Identifiable {
         messageIsError = error
     }
 
+    /// Panel wykonuje jedną operację naraz: kolejna w trakcie przesyłania nie znika po cichu.
+    private func rejectBusy() {
+        NSSound.beep()
+        show(L("files.busy"), error: true)
+    }
+
     /// Wykonuje pracę na kolejce SFTP; wynik (albo błąd) wraca na wątek główny.
     private func run<T>(_ label: String?, work: @escaping (RemoteFS) throws -> T, done: @escaping (T) -> Void) {
-        guard let c = client, !busy else { return }
+        guard let c = client else { return }
+        guard !busy else { rejectBusy(); return }
         busy = true
         if let label { show(label) }
         queue.async { [weak self] in
@@ -291,6 +298,7 @@ final class FileSession: Identifiable {
     /// Wysyłanie plików/katalogów z Findera (przycisk albo przeciągnięcie). Istniejące nazwy → pytanie.
     func upload(_ urls: [URL], confirmedOverwrite: Bool = false) {
         guard !urls.isEmpty else { return }
+        guard !busy else { rejectBusy(); return }
         let existing = urls.map(\.lastPathComponent).filter { n in entries.contains { $0.name == n } }
         if !existing.isEmpty && !confirmedOverwrite {
             overwriteQuestion = (existing, urls)
@@ -398,6 +406,8 @@ final class FileSession: Identifiable {
     private func startTransfer<T>(_ label: String, total: UInt64,
                                   work: @escaping (RemoteFS, @escaping (UInt64) -> Bool) throws -> T,
                                   done: @escaping (T) -> Void) {
+        // Przed zmianą wspólnego stanu: odrzucone przesyłanie nie może skasować anulowania ani opisu trwającego.
+        guard !busy else { rejectBusy(); return }
         cancelFlag.set(false)
         let flag = cancelFlag
         transfer = Transfer(label: label, done: 0, total: total)
