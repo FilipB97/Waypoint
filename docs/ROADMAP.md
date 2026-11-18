@@ -31,8 +31,10 @@ priorities. Last updated for **v1.9.4**.
 
 ### macOS (new in v1.9.4)
 
+Current macOS plan (bugs, improvements, new features, order): [specs/mac-roadmap.md](specs/mac-roadmap.md).
+
 - ✅ **Native SwiftUI app** (`mac/`, universal Apple silicon + Intel, macOS 14+) with feature parity:
-  SSH (system `ssh`, Keychain), RDP via Microsoft Windows App, SFTP/FTP/FTPS with dual pane,
+  SSH (system `ssh`, Keychain), built-in RDP (FreeRDP in a tab; Microsoft Windows App optional), SFTP/FTP/FTPS with dual pane,
   Monaco file editor with sudo save, Telnet/serial, VNC via Screen Sharing, REST client,
   credential profiles, imports, themes. Shares data formats with Windows (`servers.json`,
   `credprofiles.json`, `rest.json`, …) and ships as `Waypoint-<version>-mac.zip` in every release.

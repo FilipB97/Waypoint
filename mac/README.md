@@ -63,7 +63,7 @@ ponownego zatwierdzania w Ustawieniach prywatności. Warunek: aplikacja w zapisy
 | 3 | RDP przez aplikację Microsoft **Windows App** (plik `.rdp` jak w wersji Windows) | ✅ |
 | 3b | Wbudowany klient RDP (FreeRDP) w karcie: hasło z Pęku kluczy, certyfikat, rozdzielczość okna, klawiatura, mysz, schowek tekstowy | ✅ |
 | 3c | RDP: pliki przez schowek (⌘C/⌘V w obie strony), przeciąganie z Findera, folder Maca jako dysk | ✅ |
-| 3d | RDP: pełny ekran, dźwięk | w toku |
+| 3d | RDP: pełny ekran, dźwięk | zaplanowane: [mac-roadmap](../docs/specs/mac-roadmap.md) (U1, F1) |
 | 4 | Panel plików SFTP: przeglądanie, wysyłanie/pobieranie (także folderów), zmiana nazwy, usuwanie | ✅ |
 | 4b | FTP/FTPS: ten sam panel plików i edytor | ✅ |
 | 5 | Edytor plików (Monaco) z bezpiecznym zapisem — jak w wersji Windows | ✅ |

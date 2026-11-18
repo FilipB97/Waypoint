@@ -451,16 +451,34 @@ public enum RdpKeyboard {
     public static let leftAlt: UInt32 = 0x38
     public static let rightAlt: UInt32 = 0x138
 
-    /// Układ Windows dla układu macOS (identyfikator źródła wprowadzania, np. com.apple.keylayout.PolishPro).
-    /// 0 = nieznany — serwer użyje swojego domyślnego.
+    /// Układ Windows (KLID) dla układu macOS (identyfikator źródła wprowadzania, np. com.apple.keylayout.PolishPro).
+    /// Dokładny identyfikator, bez dopasowania fragmentów (SwissGerman to nie German). 0 = nieznany — serwer użyje swojego domyślnego.
     public static func windowsLayout(forMacInputSource id: String) -> UInt32 {
-        let s = id.lowercased()
-        if s.contains("polish") { return 0x415 }            // polski (programisty) — AltGr+a = ą
-        if s.contains("german") { return 0x407 }
-        if s.hasSuffix(".us") || s.contains("abc") { return 0x409 }
-        if s.contains("british") { return 0x809 }
-        return 0
+        windowsLayouts[id] ?? 0
     }
+
+    private static let windowsLayouts: [String: UInt32] = {
+        let mac: [String: UInt32] = [
+            "US": 0x409, "ABC": 0x409, "USInternational-PC": 0x20409, "Dvorak": 0x10409,
+            "ABC-India": 0x4009, "British": 0x809, "British-PC": 0x809, "Irish": 0x1809,
+            "Polish": 0x10415,                           // polski (214)
+            "PolishPro": 0x415,                          // polski (programisty) — AltGr+a = ą
+            "German": 0x407, "Austrian": 0x407, "SwissGerman": 0x807, "SwissFrench": 0x100C,
+            "French": 0x40C, "French-PC": 0x40C, "French-numerical": 0x40C, "Belgian": 0x80C,
+            "Spanish": 0x40A, "Spanish-ISO": 0x40A, "LatinAmerican": 0x80A,
+            "Italian": 0x410, "Italian-Pro": 0x410,
+            "Portuguese": 0x816, "Brazilian": 0x416, "Brazilian-ABNT2": 0x416,
+            "Dutch": 0x413,
+            "Czech": 0x405, "Czech-QWERTY": 0x10405,
+            "Slovak": 0x41B, "Slovak-QWERTY": 0x1041B,
+            "Hungarian": 0x40E, "Hungarian-QWERTY": 0x1040E,
+            "Swedish": 0x41D, "Swedish-Pro": 0x41D, "Norwegian": 0x414, "Danish": 0x406, "Finnish": 0x40B,
+            "Russian": 0x419, "RussianWin": 0x419, "Ukrainian": 0x422, "Ukrainian-PC": 0x422,
+            "Turkish": 0x1041F, "Turkish-QWERTY-PC": 0x41F,
+            "Greek": 0x408, "Hebrew": 0x40D,
+        ]
+        return Dictionary(uniqueKeysWithValues: mac.map { ("com.apple.keylayout." + $0.key, $0.value) })
+    }()
 
     public static let syncScroll: UInt32 = 0x01
     public static let syncNum: UInt32 = 0x02
