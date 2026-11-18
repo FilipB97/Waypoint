@@ -235,6 +235,9 @@ struct FilesView: View {
                     ProgressView().controlSize(.small)
                 }
                 Button(L("btn.cancel")) { session.cancelTransfer() }
+                if session.messageIsError, let m = session.message {
+                    Text(m).foregroundStyle(Color.red).lineLimit(1)
+                }
             } else if let m = session.message {
                 Text(m).foregroundStyle(session.messageIsError ? Color.red : Color.secondary).lineLimit(1)
                     .textSelection(.enabled)
