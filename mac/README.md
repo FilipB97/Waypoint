@@ -40,7 +40,13 @@ sekrety Actions `MAC_SIGN_P12` i `MAC_SIGN_PASSWORD`, `import-signing-cert.sh`),
 usuwa: aplikacji bez Team ID od Apple macOS przypina wpis do skrótu kompilacji
 (`partition_id: cdhash:…`), a każdy zapis hasła przypina go od nowa. Zdjęcie tego warunku hasłem
 logowania (`SecKeychainItemSetAccessWithPassword`) sprawdzone 2026-11-06 — nowa kompilacja i tak nie
-czyta wpisu. Usuwa to dopiero podpis Apple Developer ID (partycja `teamid:`).
+czyta wpisu. Usuwa to dopiero podpis certyfikatem wydanym przez Apple, który niesie Team ID
+(partycja `teamid:`). Sprawdzone 2026-11-18 z certyfikatem „Apple Development”: po „Zawsze
+pozwalaj” przy pierwszym uruchomieniu kolejna kompilacja (inny CDHash) nie pyta. Taka kompilacja
+lokalna: `WAYPOINT_SIGN_IDENTITY=<skrót z security find-identity -v -p codesigning>
+mac/scripts/bundle-app.sh`. Wydania na GitHubie zostają na własnym certyfikacie: certyfikat
+„Apple Development” służy do testów na własnych urządzeniach, a jego nazwa (imię i adres konta
+Apple) jest widoczna w podpisie. Docelowo: Developer ID.
 
 **Spotlight, Skróty, powiadomienia:** serwery są w Spotlight (wybranie wyniku = połączenie;
 wyłączenie w Ustawieniach → Ogólne). Link `waypoint://connect/<nazwa serwera>` (menu serwera →
