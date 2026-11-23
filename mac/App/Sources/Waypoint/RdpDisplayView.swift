@@ -8,6 +8,7 @@ import WaypointRDP
 /// Klawiatura po macowemu:
 ///  * ⌘ działa jak Ctrl po stronie Windows (⌘C/⌘V kopiują i wklejają w sesji); ⌘W, ⌘Q i ⌘1–9 zostają
 ///    przy Waypoincie (monitor skrótów w AppModel / menu);
+///  * prawy ⌘ (domyślnie) jak AltGr na PC: prawy ⌘ + litera pisze znak z Option (ą, ę…) jako Unicode;
 ///  * znaki pisane z Option (ą, ę, ł…) idą jako Unicode — działają niezależnie od układu klawiatury
 ///    na serwerze; Option z klawiszami specjalnymi (Tab, F4, strzałki) działa jak Alt.
 final class RdpDisplayView: NSView {
@@ -376,6 +377,23 @@ final class RdpDisplayView: NSView {
         return chars
     }
 
+    /// Prawy ⌘ jak AltGr na PC (Ustawienia → Pulpit zdalny).
+    private var rightCommandAltGr: Bool { AppModel.shared.settings.rdpRightCommandAltGr }
+
+    /// Prawy ⌘ (bez lewego) + klawisz → znak, który układ Maca daje z Option, jako Unicode
+    /// (prawy ⌘ + E = ę w Polish Pro), niezależnie od układu w Windows. Klawisz bez znaku
+    /// (strzałka, Return) → false: idzie dalej jak ⌘ = Ctrl. Wołane też z monitora skrótów w AppModel,
+    /// zanim ⌘W / ⌘1–9 przełączą karty.
+    func handleRightCommand(_ e: NSEvent) -> Bool {
+        let raw = e.modifierFlags.rawValue
+        guard rightCommandAltGr, let c = connection, e.type == .keyDown,
+              raw & 0x10 != 0, raw & 0x08 == 0,   // NX_DEVICERCMDKEYMASK bez NX_DEVICELCMDKEYMASK
+              let text = RdpKeyboard.optionCharacter(macKeyCode: e.keyCode, shift: e.modifierFlags.contains(.shift),
+                                                     inputSourceID: RdpSession.currentInputSourceID()) else { return false }
+        for u in text.utf16 { c.unicode(down: true, u); c.unicode(down: false, u) }
+        return true
+    }
+
     /// Option jak Alt na PC (Ustawienia → Pulpit zdalny): lewy = Alt, prawy = AltGr.
     private var optionAsAlt: Bool { AppModel.shared.settings.rdpOptionAsAlt }
 
@@ -410,6 +428,8 @@ final class RdpDisplayView: NSView {
             key(0x3A, down: true); key(0x3A, down: false)
         case 58 where optionAsAlt, 61 where optionAsAlt:
             key(e.keyCode == 58 ? RdpKeyboard.leftAlt : RdpKeyboard.rightAlt, down: raw & masks[e.keyCode]! != 0)
+        case 54 where rightCommandAltGr:
+            break   // prawy ⌘ jak AltGr — sam nie idzie do sesji, znak wysyła handleRightCommand
         case 58, 61:
             // Option nie idzie od razu jako Alt (znaki z Option); puszczenie zwalnia Alt, jeśli był wysłany.
             if raw & masks[e.keyCode]! == 0 && altSent && raw & 0x60 == 0 {
@@ -431,6 +451,7 @@ final class RdpDisplayView: NSView {
     /// w AppModel — zanim skrót trafi do menu Edycja aplikacji (inaczej ⌘V wklejało „w Waypoincie").
     /// Skróty Waypointa i systemu (⌘Q, ⌘W, ⌘H, ⌘1–9…) zostają lokalne → false.
     func handleCommandKey(_ e: NSEvent) -> Bool {
+        if handleRightCommand(e) { return true }
         guard connection != nil, e.modifierFlags.contains(.command),
               optionAsAlt || !e.modifierFlags.contains(.option) else { return false }
         let ch = e.charactersIgnoringModifiers?.lowercased() ?? ""

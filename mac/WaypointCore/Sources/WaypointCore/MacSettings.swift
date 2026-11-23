@@ -40,6 +40,9 @@ public struct MacSettings: Codable, Equatable, Sendable {
     /// Option w pulpicie zdalnym jak Alt na PC (lewy = Alt, prawy = AltGr — polskie znaki prawym Option).
     /// false: Option+litera wysyła znak z macOS (ą, ę…), Alt tylko z klawiszami specjalnymi.
     public var rdpOptionAsAlt: Bool = true
+    /// Prawy ⌘ w pulpicie zdalnym jak AltGr na PC: prawy ⌘ + litera pisze znak z Option (ą, ę…) jako Unicode,
+    /// niezależnie od układu w Windows. false: prawy ⌘ działa jak Ctrl, tak jak lewy.
+    public var rdpRightCommandAltGr: Bool = true
     /// Powiadomienia systemowe: koniec długiego przesyłania plików, nieoczekiwane rozłączenie (gdy karta
     /// albo aplikacja nie jest na wierzchu).
     public var notificationsEnabled: Bool = true
@@ -60,6 +63,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         case autoConnectServerIds = "AutoConnectServerIds"
         case rdpDiagnostics = "MacRdpDiagnostics"
         case rdpOptionAsAlt = "MacRdpOptionAsAlt"
+        case rdpRightCommandAltGr = "MacRdpRightCommandAltGr"
         case notificationsEnabled = "MacNotifications", spotlightEnabled = "MacSpotlight"
     }
 
@@ -89,6 +93,7 @@ public struct MacSettings: Codable, Equatable, Sendable {
         autoConnectServerIds = (try? c.decode([String].self, forKey: .autoConnectServerIds)) ?? []
         rdpDiagnostics = (try? c.decode(Bool.self, forKey: .rdpDiagnostics)) ?? false
         rdpOptionAsAlt = (try? c.decode(Bool.self, forKey: .rdpOptionAsAlt)) ?? true
+        rdpRightCommandAltGr = (try? c.decode(Bool.self, forKey: .rdpRightCommandAltGr)) ?? true
         notificationsEnabled = (try? c.decode(Bool.self, forKey: .notificationsEnabled)) ?? true
         spotlightEnabled = (try? c.decode(Bool.self, forKey: .spotlightEnabled)) ?? true
     }

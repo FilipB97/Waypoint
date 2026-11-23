@@ -1,5 +1,8 @@
 import Foundation
 import RdpShim
+#if canImport(Carbon)
+import Carbon
+#endif
 
 /// Wbudowany klient RDP (FreeRDP 3) — jedno połączenie. Wywołania zwrotne przychodzą z wątku
 /// połączenia; interfejs sam przerzuca je na główny wątek. Obraz czyta się przez `withFrame`.
@@ -456,6 +459,34 @@ public enum RdpKeyboard {
     public static func windowsLayout(forMacInputSource id: String) -> UInt32 {
         windowsLayouts[id] ?? 0
     }
+
+    #if canImport(Carbon)
+    /// Znak, który dany układ macOS daje dla klawisza z Option (i Shift), np. PolishPro + E → „ę”.
+    /// Prawy ⌘ jak AltGr na PC: znak idzie do sesji jako Unicode, więc nie zależy od układu w Windows.
+    /// nil: nieznany układ albo klawisz bez znaku (Return, strzałki…).
+    public static func optionCharacter(macKeyCode: UInt16, shift: Bool, inputSourceID: String) -> String? {
+        let filter = [kTISPropertyInputSourceID as String: inputSourceID] as CFDictionary
+        guard let list = TISCreateInputSourceList(filter, true)?.takeRetainedValue() as? [TISInputSource],
+              let source = list.first,
+              let raw = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return nil }
+        let data = Unmanaged<CFData>.fromOpaque(raw).takeUnretainedValue() as Data
+        let modifiers = UInt32((optionKey | (shift ? shiftKey : 0)) >> 8) & 0xFF
+        var deadKeys: UInt32 = 0
+        var chars = [UniChar](repeating: 0, count: 4)
+        var length = 0
+        let status = data.withUnsafeBytes { buf in
+            UCKeyTranslate(buf.baseAddress!.assumingMemoryBound(to: UCKeyboardLayout.self), macKeyCode,
+                           UInt16(kUCKeyActionDown), modifiers, UInt32(LMGetKbdType()),
+                           OptionBits(kUCKeyTranslateNoDeadKeysMask), &deadKeys, chars.count, &length, &chars)
+        }
+        guard status == noErr, length > 0 else { return nil }
+        let text = String(utf16CodeUnits: chars, count: length)
+        for u in text.unicodeScalars where u.value < 0x20 || u.value == 0x7F || (0xF700...0xF8FF).contains(u.value) {
+            return nil
+        }
+        return text
+    }
+    #endif
 
     private static let windowsLayouts: [String: UInt32] = {
         let mac: [String: UInt32] = [
