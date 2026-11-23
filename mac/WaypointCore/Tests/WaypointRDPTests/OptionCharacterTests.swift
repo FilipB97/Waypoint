@@ -4,7 +4,7 @@ import WaypointRDP
 
 /// Prawy ⌘ jako AltGr w RDP: znak, który układ klawiatury Maca daje dla klawisza z Option (i ewentualnie Shift),
 /// bez składania martwych klawiszy. Nieznany układ, pusty wynik albo znak sterujący → nil.
-@Suite struct OptionCharacterTests {
+@MainActor @Suite struct OptionCharacterTests {
     let polishPro = "com.apple.keylayout.PolishPro"
 
     func char(_ keyCode: UInt16, shift: Bool = false) -> String? {
