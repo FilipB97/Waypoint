@@ -463,7 +463,9 @@ public enum RdpKeyboard {
     #if canImport(Carbon)
     /// Znak, który dany układ macOS daje dla klawisza z Option (i Shift), np. PolishPro + E → „ę”.
     /// Prawy ⌘ jak AltGr na PC: znak idzie do sesji jako Unicode, więc nie zależy od układu w Windows.
-    /// nil: nieznany układ albo klawisz bez znaku (Return, strzałki…).
+    /// nil: nieznany układ albo klawisz bez znaku (Return, strzałki…). Tylko z wątku głównego —
+    /// HIToolbox przerywa proces, gdy API TIS jest wołane z dwóch wątków naraz.
+    @MainActor
     public static func optionCharacter(macKeyCode: UInt16, shift: Bool, inputSourceID: String) -> String? {
         let filter = [kTISPropertyInputSourceID as String: inputSourceID] as CFDictionary
         guard let list = TISCreateInputSourceList(filter, true)?.takeRetainedValue() as? [TISInputSource],
