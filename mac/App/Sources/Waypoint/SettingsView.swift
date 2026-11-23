@@ -129,6 +129,7 @@ private struct RdpSettings: View {
                     Text(L("set.rdp.option.alt")).tag(true)
                     Text(L("set.rdp.option.chars")).tag(false)
                 }
+                Toggle(L("set.rdp.rightcmd"), isOn: $model.settings.rdpRightCommandAltGr)
             } header: {
                 Text(L("set.rdp"))
             } footer: {

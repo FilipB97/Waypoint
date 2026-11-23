@@ -487,6 +487,8 @@ final class AppModel {
             // Skróty kart tylko w oknie głównym — w oknie edytora i karty odłączonej ⌘W zamyka to okno.
             let isMain = event.window.map(Self.isMainWindow) ?? false
             guard isMain else { return event }
+            // Prawy ⌘ jak AltGr w pulpicie zdalnym: znak do sesji, zanim ⌘W / ⌘1–9 przełączą karty.
+            if let rdp = event.window?.firstResponder as? RdpDisplayView, rdp.handleRightCommand(event) { return nil }
             let option = event.modifierFlags.contains(.option)
             // ⌥⌘1…9 — snippet o tym numerze (⌘⇧3/4/5 to w macOS zrzuty ekranu).
             if option, !shift, let d = Int(chars), (1...9).contains(d) {
