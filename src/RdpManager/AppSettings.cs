@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -63,6 +64,9 @@ namespace RdpManager
         // Domyślne przekierowania dla NOWO tworzonych serwerów RDP (istniejące zachowują swoje).
         public bool DefaultRedirectClipboard { get; set; } = true;
         public bool DefaultRedirectDrives { get; set; } = false;   // dyski + drukarki
+        /// <summary>Gdzie działają skróty Windows (Win, Alt+Tab) w sesji RDP: 0 = na tym komputerze,
+        /// 1 = na komputerze zdalnym. Serwer może to nadpisać (ServerInfo.KeyboardHookMode).</summary>
+        public int RdpKeyboardHookMode { get; set; }
         // Ile sekund czekać na TCP zanim serwer uznamy za offline (sonda osiągalności).
         public int ProbeTimeoutSeconds { get; set; } = 2;
 
@@ -142,6 +146,16 @@ namespace RdpManager
         /// <summary>Pokazuj opóźnienie (ms) obok kropki dostępności w liście serwerów (Compass §4.3).
         /// Domyślnie wyłączone — dane z sondowania osiągalności w tle.</summary>
         public bool ShowLatency { get; set; }
+
+        /// <summary>Szerokość panelu bocznego (lista serwerów) w px przed zoomem UI. Zmieniana przeciąganiem
+        /// prawej krawędzi panelu (issue #268); przy wczytaniu przycinana do zakresu Min–Max.</summary>
+        public double SidebarWidth { get; set; } = SidebarWidthDefault;
+        public const double SidebarWidthDefault = 228;
+        public const double SidebarWidthMin = 180;
+        public const double SidebarWidthMax = 480;
+
+        public static double ClampSidebarWidth(double width) =>
+            double.IsNaN(width) ? SidebarWidthDefault : Math.Clamp(width, SidebarWidthMin, SidebarWidthMax);
 
         /// <summary>Własny kolor akcentu („#RRGGBB"); pusty = domyślny Compass (per motyw). Compass §4.7 —
         /// nadpisuje rodzinę kluczy Accent* i akcent kontrolek WPF-UI (ThemeManager).</summary>

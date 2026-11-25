@@ -82,6 +82,10 @@ namespace RdpManager.Models
         /// <summary>Dźwięk: 0 = odtwarzaj lokalnie, 1 = nie odtwarzaj, 2 = odtwarzaj na serwerze.</summary>
         public int AudioMode { get; set; }
 
+        /// <summary>Gdzie działają skróty Windows (Win, Alt+Tab) w sesji RDP: -1 = jak w ustawieniach,
+        /// 0 = na tym komputerze, 1 = na komputerze zdalnym (issue #270).</summary>
+        public int KeyboardHookMode { get; set; } = -1;
+
         /// <summary>
         /// Weryfikacja tożsamości serwera (mapuje na IMsRdpClientAdvancedSettings.AuthenticationLevel):
         /// 0 = nie sprawdzaj (niebezpieczne, ryzyko MITM),

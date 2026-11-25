@@ -416,6 +416,17 @@
                             <!-- Import celowo bez przycisku tutaj — rail ma dedykowany NavImport (ten sam OpenImport_Click). -->
                         </StackPanel>
                     </Border>
+
+                    <!-- Uchwyt zmiany szerokości panelu (issue #268): przeciągnięcie prawej krawędzi.
+                         Wewnątrz Sidebar, więc przy peeku w trybie skupienia jedzie razem z nim. -->
+                    <Thumb x:Name="SidebarResizeThumb" Grid.RowSpan="4" Width="5" HorizontalAlignment="Right"
+                           Cursor="SizeWE" DragDelta="SidebarResize_DragDelta" DragCompleted="SidebarResize_DragCompleted">
+                        <Thumb.Template>
+                            <ControlTemplate TargetType="Thumb">
+                                <Border Background="Transparent"/>
+                            </ControlTemplate>
+                        </Thumb.Template>
+                    </Thumb>
                 </Grid>
             </Border>
 
@@ -1023,6 +1034,19 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="{DynamicResource S.set.redirclip}" Style="{DynamicResource SetLbl}"/>
                                     <ui:ToggleSwitch x:Name="SetRedirClip" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Border Style="{DynamicResource SetRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.set.kbdhook}" Style="{DynamicResource SetLbl}"/>
+                                        <TextBlock Text="{DynamicResource S.set.kbdhook.sub}" Style="{DynamicResource SetSub}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="SetKeyboardHook" Grid.Column="1" Width="190" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="{DynamicResource S.kbdhook.local}"/>
+                                        <ComboBoxItem Content="{DynamicResource S.kbdhook.remote}"/>
+                                    </ComboBox>
                                 </Grid>
                             </Border>
                             <Border Style="{DynamicResource SetRow}" BorderThickness="0">

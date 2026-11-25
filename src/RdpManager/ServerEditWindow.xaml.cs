@@ -44,6 +44,7 @@ namespace RdpManager
             TagsBox.Text = server.Tags == null ? "" : string.Join(", ", server.Tags);
             NotesBox.Text = server.Notes ?? "";
             EdAudio.SelectedIndex = Math.Clamp(server.AudioMode, 0, 2);
+            EdKeyboardHook.SelectedIndex = server.KeyboardHookMode == 0 || server.KeyboardHookMode == 1 ? server.KeyboardHookMode + 1 : 0;
             EdAuthLevel.SelectedIndex = Math.Clamp(server.AuthenticationLevel, 0, 2);
             GatewayHostBox.Text = server.GatewayHostname ?? "";
             EdGatewayUsage.SelectedIndex = Math.Clamp(server.GatewayUsageMethod, 0, 2);
@@ -434,6 +435,7 @@ namespace RdpManager
             _server.Tags = ParseTags(TagsBox.Text);
             _server.Notes = NotesBox.Text.Trim();
             _server.AudioMode = EdAudio.SelectedIndex < 0 ? 0 : EdAudio.SelectedIndex;
+            _server.KeyboardHookMode = EdKeyboardHook.SelectedIndex <= 0 ? -1 : EdKeyboardHook.SelectedIndex - 1;
             _server.AuthenticationLevel = EdAuthLevel.SelectedIndex < 0 ? 2 : EdAuthLevel.SelectedIndex;
             _server.GatewayHostname = GatewayHostBox.Text.Trim();
             _server.GatewayUsageMethod = EdGatewayUsage.SelectedIndex < 0 ? 0 : EdGatewayUsage.SelectedIndex;

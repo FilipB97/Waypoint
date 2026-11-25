@@ -238,6 +238,15 @@
                             </StackPanel>
                         </Grid>
 
+                        <StackPanel Margin="0,10,0,4" Width="260" HorizontalAlignment="Left">
+                            <TextBlock Style="{StaticResource SeLbl}" Text="{DynamicResource S.set.kbdhook}"/>
+                            <ComboBox x:Name="EdKeyboardHook" HorizontalAlignment="Stretch">
+                                <ComboBoxItem Content="{DynamicResource S.kbdhook.default}"/>
+                                <ComboBoxItem Content="{DynamicResource S.kbdhook.local}"/>
+                                <ComboBoxItem Content="{DynamicResource S.kbdhook.remote}"/>
+                            </ComboBox>
+                        </StackPanel>
+
                         <TextBlock Style="{StaticResource SeSub}" Margin="0,14,0,8" Text="{DynamicResource S.se.gateway}"/>
                         <ui:TextBox x:Name="GatewayHostBox" PlaceholderText="{DynamicResource S.se.gateway.ph}"/>
                         <StackPanel Margin="0,10,0,0" Width="260" HorizontalAlignment="Left">
