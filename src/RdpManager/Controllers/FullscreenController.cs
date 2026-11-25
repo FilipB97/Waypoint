@@ -153,13 +153,15 @@ namespace RdpManager.Controllers
             // samą skalę co panel dokowany i mieścił się na ekranie (przy <100% był ucięty od dołu).
             _owner.FocusPeekScale.ScaleX = _owner.FocusPeekScale.ScaleY = _owner.RootScale.ScaleY;
             _owner.FocusPeekClip.Height = _owner.BodyGrid.ActualHeight;
+            double peekWidth = PeekWidth();   // rail + panel o szerokości ustawionej przez użytkownika
+            _owner.FocusPeekClip.Width = peekWidth;
             // Solidne podłoże pod prześwitującym panelem (Panel ~3%) — bez niego treść sesji przebija peek.
             _owner.FocusPeekClip.Background = FocusPeekBackground();
             _owner.FocusPeekPopup.IsOpen = true;
 
-            // 260 ms = MotionSlow ze skali ruchu (Themes/Metrics.xaml): panel pokonuje 280 px, więc
+            // 260 ms = MotionSlow ze skali ruchu (Themes/Metrics.xaml): panel pokonuje ~280 px, więc
             // dostaje najdłuższy czas — przy 160 ms ruch na tym dystansie czyta się jak przeskok.
-            var slide = new System.Windows.Media.Animation.DoubleAnimation(-280, 0,
+            var slide = new System.Windows.Media.Animation.DoubleAnimation(-peekWidth, 0,
                 new Duration(TimeSpan.FromMilliseconds(260)))
             {
                 EasingFunction = new System.Windows.Media.Animation.CubicEase
@@ -168,12 +170,14 @@ namespace RdpManager.Controllers
             _owner.FocusPeekSlide.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, slide);
         }
 
+        private double PeekWidth() => _owner.Rail.Width + _owner.Sidebar.Width;
+
         internal void HideFocusPeek()
         {
             if (!_focusPeeking) return;
             _focusPeeking = false;
             _owner.FocusPeekSlide.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
-            _owner.FocusPeekSlide.X = -280;
+            _owner.FocusPeekSlide.X = -PeekWidth();
             _owner.FocusPeekPopup.IsOpen = false;
             _owner.FocusPeekHost.Children.Remove(_owner.Rail);
             _owner.FocusPeekHost.Children.Remove(_owner.Sidebar);

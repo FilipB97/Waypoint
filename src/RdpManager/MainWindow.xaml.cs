@@ -118,6 +118,7 @@ namespace RdpManager
             _vm.UseRecentIds(_settings.RecentIds);   // współdziel listę „ostatnich" z ustawieniami
             _tabs.LoadTabGroups();                    // grupy kart z poprzedniej sesji (przypisanie po Id serwera)
             ApplyUiScale(_settings.UiScale);
+            Sidebar.Width = AppSettings.ClampSidebarWidth(_settings.SidebarWidth);
 
             _fs.Init();   // pasek pełnoekranowy (opóźnienie + polling) + peek trybu skupienia (PR 5)
 
@@ -1119,6 +1120,7 @@ namespace RdpManager
             SelectColorDepthSeg(_settings.ColorDepth);
             SetRedirClip.IsChecked = _settings.DefaultRedirectClipboard;
             SetRedirDrives.IsChecked = _settings.DefaultRedirectDrives;
+            SetKeyboardHook.SelectedIndex = _settings.RdpKeyboardHookMode == 1 ? 1 : 0;
             SetProbeTimeout.Text = _settings.ProbeTimeoutSeconds.ToString();
             SetAutoReconnect.IsChecked = _settings.AutoReconnect;
             SetReachEnabled.IsChecked = _settings.ReachabilityEnabled;
@@ -1373,6 +1375,7 @@ namespace RdpManager
             _settings.RdpScalePercent = RdpDisplay.ParseScale(ComboTag(SetRdpScale));
             _settings.DefaultRedirectClipboard = SetRedirClip.IsChecked == true;
             _settings.DefaultRedirectDrives = SetRedirDrives.IsChecked == true;
+            _settings.RdpKeyboardHookMode = SetKeyboardHook.SelectedIndex == 1 ? 1 : 0;
             _settings.ProbeTimeoutSeconds = int.TryParse(SetProbeTimeout.Text.Trim(), out var pt) ? Math.Clamp(pt, 1, 60) : 2;
             _settings.AutoReconnect = SetAutoReconnect.IsChecked == true;
             _settings.ReachabilityEnabled = SetReachEnabled.IsChecked == true;
@@ -1894,6 +1897,16 @@ namespace RdpManager
         }
 
         private void FsBarThumb_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) => _fs.OnBarThumbDragDelta(e);
+
+        // Szerokość panelu bocznego (issue #268). Zapis dopiero po puszczeniu myszy, nie co ruch.
+        private void SidebarResize_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) =>
+            Sidebar.Width = AppSettings.ClampSidebarWidth(Sidebar.Width + e.HorizontalChange);
+
+        private void SidebarResize_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            _settings.SidebarWidth = Sidebar.Width;
+            QueueSettingsSave();
+        }
 
 
 
@@ -3078,7 +3091,7 @@ namespace RdpManager
                 Protocol = src.Protocol, PrivateKeyPath = src.PrivateKeyPath,
                 Tunnels = new List<string>(src.Tunnels ?? new List<string>()),
                 RedirectClipboard = src.RedirectClipboard, RedirectDrives = src.RedirectDrives,
-                RedirectPrinters = src.RedirectPrinters, AudioMode = src.AudioMode,
+                RedirectPrinters = src.RedirectPrinters, AudioMode = src.AudioMode, KeyboardHookMode = src.KeyboardHookMode,
                 AuthenticationLevel = src.AuthenticationLevel, UseAllMonitors = src.UseAllMonitors,
                 AdminSession = src.AdminSession, MacAddress = src.MacAddress,
                 RemoteAppProgram = src.RemoteAppProgram, RemoteAppArgs = src.RemoteAppArgs,

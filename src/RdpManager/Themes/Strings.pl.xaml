@@ -63,6 +63,11 @@
     <sys:String x:Key="S.set.sec.profiles">PROFILE POŚWIADCZEŃ</sys:String>
     <sys:String x:Key="S.set.redirclip">Przekieruj schowek</sys:String>
     <sys:String x:Key="S.set.redirdrives">Przekieruj dyski i drukarki</sys:String>
+    <sys:String x:Key="S.set.kbdhook">Skróty Windows (Win, Alt+Tab)</sys:String>
+    <sys:String x:Key="S.set.kbdhook.sub">Gdzie działają w sesji RDP. Zmiana działa od następnego połączenia.</sys:String>
+    <sys:String x:Key="S.kbdhook.default">Jak w ustawieniach</sys:String>
+    <sys:String x:Key="S.kbdhook.local">Na tym komputerze</sys:String>
+    <sys:String x:Key="S.kbdhook.remote">Na komputerze zdalnym</sys:String>
     <sys:String x:Key="S.set.timeout">Limit czasu połączenia (s)</sys:String>
     <sys:String x:Key="S.set.timeout.sub">Sekundy do przerwania próby (sonda osiągalności)</sys:String>
     <sys:String x:Key="S.set.about.sub">Wersja, aktualizacje i historia zmian.</sys:String>

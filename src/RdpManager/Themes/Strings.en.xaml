@@ -63,6 +63,11 @@
     <sys:String x:Key="S.set.sec.profiles">CREDENTIAL PROFILES</sys:String>
     <sys:String x:Key="S.set.redirclip">Redirect clipboard</sys:String>
     <sys:String x:Key="S.set.redirdrives">Redirect drives and printers</sys:String>
+    <sys:String x:Key="S.set.kbdhook">Windows key combinations (Win, Alt+Tab)</sys:String>
+    <sys:String x:Key="S.set.kbdhook.sub">Where they apply in an RDP session. Takes effect on the next connection.</sys:String>
+    <sys:String x:Key="S.kbdhook.default">As in settings</sys:String>
+    <sys:String x:Key="S.kbdhook.local">On this computer</sys:String>
+    <sys:String x:Key="S.kbdhook.remote">On the remote computer</sys:String>
     <sys:String x:Key="S.set.timeout">Connection timeout (s)</sys:String>
     <sys:String x:Key="S.set.timeout.sub">Seconds before aborting the attempt (reachability probe)</sys:String>
     <sys:String x:Key="S.set.about.sub">Version, updates and changelog.</sys:String>

@@ -14,6 +14,15 @@ namespace RdpManager.Core
         /// <summary>Tryb dźwięku → zakres 0..2 (mapuje na AudioRedirectionMode).</summary>
         public static uint ClampAudioMode(int mode) => (uint)Math.Clamp(mode, 0, 2);
 
+        /// <summary>Tryb skrótów Windows (SecuredSettings2.KeyboardHookMode): ustawienie serwera (0/1) wygrywa,
+        /// inaczej globalne. Tryb 2 („zdalnie tylko w pełnym ekranie") pomijamy: dotyczy pełnego ekranu
+        /// samej kontrolki, a Waypoint robi pełny ekran własnym oknem, więc 2 działało jak 0.</summary>
+        public static int KeyboardHookMode(int serverMode, int globalMode)
+        {
+            if (serverMode == 0 || serverMode == 1) return serverMode;
+            return globalMode == 1 ? 1 : 0;
+        }
+
         /// <summary>Metoda użycia bramy RD Gateway: 0 gdy brak hosta bramy; inaczej wartość skonfigurowana,
         /// a 0 przy podanym hoście traktujemy jak 1 („zawsze przez bramę").</summary>
         public static uint GatewayUsageMethod(string gatewayHostname, int configured)

@@ -66,6 +66,8 @@ namespace RdpManager.Core
             if (map.TryGetValue("drivestoredirect", out var drv))
                 s.RedirectDrives = !string.IsNullOrWhiteSpace(drv);
             if (TryGetInt(map, "audiomode", out var audio)) s.AudioMode = Clamp(audio, 0, 2);
+            // 2 = domyślne mstsc („tylko w pełnym ekranie") — u nas zostaje -1, czyli wg ustawień.
+            if (TryGetInt(map, "keyboardhook", out var kbd) && (kbd == 0 || kbd == 1)) s.KeyboardHookMode = kbd;
             if (TryGetInt(map, "authentication level", out var auth)) s.AuthenticationLevel = Clamp(auth, 0, 2);
             if (TryGetInt(map, "use multimon", out var mm)) s.UseAllMonitors = mm != 0;
             if (TryGetInt(map, "administrative session", out var admin)) s.AdminSession = admin != 0;
@@ -108,6 +110,8 @@ namespace RdpManager.Core
             sb.Append("redirectprinters:i:").Append(s.RedirectPrinters ? "1" : "0").Append("\r\n");
             sb.Append("drivestoredirect:s:").Append(s.RedirectDrives ? "*" : "").Append("\r\n");
             sb.Append("audiomode:i:").Append(Clamp(s.AudioMode, 0, 2).ToString(CultureInfo.InvariantCulture)).Append("\r\n");
+            if (s.KeyboardHookMode == 0 || s.KeyboardHookMode == 1)
+                sb.Append("keyboardhook:i:").Append(s.KeyboardHookMode.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
             sb.Append("authentication level:i:").Append(Clamp(s.AuthenticationLevel, 0, 2).ToString(CultureInfo.InvariantCulture)).Append("\r\n");
             sb.Append("use multimon:i:").Append(s.UseAllMonitors ? "1" : "0").Append("\r\n");
             sb.Append("administrative session:i:").Append(s.AdminSession ? "1" : "0").Append("\r\n");

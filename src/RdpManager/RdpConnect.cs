@@ -34,7 +34,8 @@ namespace RdpManager
             adv.RedirectDrives = server.RedirectDrives;
             adv.RedirectPrinters = server.RedirectPrinters;
             adv.AudioRedirectionMode = RdpConfigurator.ClampAudioMode(server.AudioMode);
-            try { rdp.SecuredSettings2.KeyboardHookMode = 2; } catch { }  // Alt+Tab/Win -> zdalna w pełnym ekranie
+            // Skróty Windows (Win, Alt+Tab) lokalnie albo w sesji; da się ustawić tylko przed połączeniem.
+            try { rdp.SecuredSettings2.KeyboardHookMode = RdpConfigurator.KeyboardHookMode(server.KeyboardHookMode, settings.RdpKeyboardHookMode); } catch { }
 
             // UseMultimon = false: pełny ekran kontrolki (FullScreen + UseMultimon) crashuje w WindowsFormsHost
             // (SEH w DispatchMessage). Multi-monitor realizujemy rozpięciem NASZEGO okna, nie kontrolki.
