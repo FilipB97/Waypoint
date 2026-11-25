@@ -37,7 +37,10 @@ struct RdpSessionView: View {
                     }
                 }
                 .padding(18)
-                .frame(maxWidth: 460)
+                // Stała szerokość, nie maxWidth: przy liczeniu minimalnego rozmiaru okna SwiftUI pyta o wysokość
+                // przy szerokości 0, a długi komunikat łamany wtedy po słowie miał ~2000 px. Widok sesji wypychał
+                // pasek kart nad okno, a tę kartę pod nie (czarny ekran po wejściu na rozłączoną kartę).
+                .frame(width: 460)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 .padding(.bottom, 24)
